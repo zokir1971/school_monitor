@@ -1,0 +1,119 @@
+school-monitor/
+├─ app/
+│  ├─ main.py
+│  ├─ __init__.py
+│  │
+│  ├─ core/
+│  │  ├─ config.py
+│  │  ├─ logging.py
+│  │  ├─ security.py
+│  │  ├─ constants.py
+│  │  └─ __init__.py
+│  │
+│  ├─ db/
+│  │  ├─ base.py
+│  │  ├─ models.py
+│  │  ├─ session.py
+│  │  ├─ types.py
+│  │  ├─ migrations/
+│  │  │  ├─ env.py
+│  │  │  ├─ script.py.mako
+│  │  │  └─ versions/
+│  │  └─ __init__.py
+│  │
+│  ├─ middlewares/
+│  │  ├─ auth.py
+│  │  └─ __init__.py
+│  │
+│  ├─ routers/
+│  │  ├─ web.py
+│  │  └─ __init__.py
+│  │
+│  ├─ common/
+│  │  ├─ exceptions.py
+│  │  ├─ pagination.py
+│  │  ├─ utils.py
+│  │  └─ __init__.py
+│  │
+│  ├─ modules/
+│  │  ├─ org/
+│  │  │  ├─ models.py
+│  │  │  ├─ schemas.py
+│  │  │  ├─ repo.py
+│  │  │  ├─ service.py
+│  │  │  ├─ router.py
+│  │  │  └─ __init__.py
+│  │  │
+│  │  ├─ users/
+│  │  │  ├─ models.py
+│  │  │  ├─ schemas.py
+│  │  │  ├─ repo.py
+│  │  │  ├─ service.py
+│  │  │  ├─ router.py
+│  │  │  ├─ deps.py
+│  │  │  ├─ enums.py
+│  │  │  ├─ validators.py
+│  │  │  └─ __init__.py
+│  │  │
+│  │  ├─ planning/
+│  │  │  ├─ models.py
+│  │  │  ├─ schemas.py
+│  │  │  ├─ repo.py
+│  │  │  ├─ service.py
+│  │  │  ├─ router.py
+│  │  │  └─ __init__.py
+│  │  │
+│  │  └─ monitoring/
+│  │     ├─ schemas.py
+│  │     ├─ service.py
+│  │     ├─ router.py
+│  │     └─ __init__.py
+│  │
+│  ├─ web/
+│  │  ├─ templates/
+│  │  │  ├─ base.html
+│  │  │  ├─ auth/
+│  │  │  │  ├─ login.html
+│  │  │  │  ├─ register_admin.html
+│  │  │  │  ├─ super_issue_l1.html
+│  │  │  │  └─ super_issue_l1_result.html
+│  │  │  │
+│  │  │  ├─ dashboards/
+│  │  │  │  ├─ dashboard_l0.html
+│  │  │  │  ├─ dashboard_l1.html
+│  │  │  │  ├─ dashboard_l2.html
+│  │  │  │  ├─ dashboard_l3.html
+│  │  │  │  └─ dashboard_teacher.html
+│  │  │  │
+│  │  │  └─ planning/
+│  │  │     ├─ year.html
+│  │  │     └─ month.html
+│  │  │
+│  │  └─ static/
+│  │     ├─ css/
+│  │     │  └─ app.css
+│  │     └─ js/
+│  │        └─ app.js
+│  │
+│  └─ tests/
+│     ├─ monitoring/
+│     │   ├─ test_l1_view.py
+│     │   ├─ test_l2_view.py
+│     │   └─ test_l3_view.py
+│     │
+│     ├─ planning/
+│     │   ├─ test_assinnments.py
+│     │   ├─ test_month_plan.py
+│     │   └─ test_year_plan.py
+│     ├─ users/
+│     │   ├─ test_auth.py
+│     │   ├─ test_issue_l1_code.py
+│     │   ├─ test_permissions.py
+│     │   └─ test_roles.py
+│     └─ conftest.py
+│
+├─ alembic.ini
+├─ requirements.txt
+├─ .env
+├─ .gitignore
+└─ README.md

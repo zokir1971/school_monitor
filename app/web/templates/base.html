@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>{% block title %}School Monitor{% endblock %}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="{{ url_for('static', path='css/base.css') }}">
+  {% block extra_css %}{% endblock %}
+</head>
+<body>
+
+<header class="header header--sticky">
+  <div class="header__left">
+    <a href="/dashboards" class="brand">
+      <span class="brand__icon">🏫</span>
+      <span class="brand__text">School Monitor</span>
+    </a>
+
+    {% if user is defined and user %}
+      {# role может быть Enum или строкой #}
+      {% set role = user.role %}
+
+      <a href="/dashboards" class="panel-title panel-title--btn">
+        {% if role in ["superuser", "SUPERUSER"] %}
+          Панель главного администратора
+        {% elif role in ["region_admin", "REGION_ADMIN"] %}
+          Панель администратора области
+        {% elif role in ["district_admin", "DISTRICT_ADMIN"] %}
+          Панель администратора района
+        {% elif role in ["school_admin", "SCHOOL_ADMIN"] %}
+          Панель администратора школы
+        {% else %}
+          Панель сотрудника школы
+        {% endif %}
+      </a>
+
+    {% endif %}
+  </div>
+
+  <div class="header__right">
+    {% if user is defined and user %}
+        <span class="user-info">Здравствуйте! {{ user.full_name or user.username }}</span>
+
+      <form method="post" action="/logout">
+        <button type="submit" class="header-btn">Выйти</button>
+      </form>
+    {% else %}
+      {% if can_bootstrap_superuser %}
+        <a href="/setup/superuser" class="header-btn">Регистрация суперадмина (L0)</a>
+      {% else %}
+        <a href="/register-admin" class="header-btn">Регистрация админов (по коду)</a>
+      {% endif %}
+    {% endif %}
+  </div>
+</header>
+
+<main class="app-main">
+  {# универсальный блок под сообщения, если захочешь передавать message / message_type #}
+  {% if message %}
+    <div class="container">
+      <div class="alert {% if message_type %}alert--{{ message_type }}{% endif %}">
+        {{ message }}
+      </div>
+    </div>
+  {% endif %}
+
+  {% block content %}{% endblock %}
+</main>
+
+{% block extra_js %}{% endblock %}
+</body>
+</html>

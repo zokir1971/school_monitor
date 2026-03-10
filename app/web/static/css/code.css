@@ -1,0 +1,173 @@
+/* ===== Card ===== */
+.card {
+  background: #fff;
+  border-radius: 10px;
+  padding: 24px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.06);
+}
+
+.card--medium {
+  max-width: 520px;
+  margin: 0 auto;
+}
+
+.card__title {
+  margin-bottom: 16px;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+/* ===== Form ===== */
+.form__section {
+  margin-bottom: 16px;
+}
+
+.form__label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 500;
+}
+
+.form__input {
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  font-size: 14px;
+}
+
+.form__actions {
+  margin-top: 20px;
+  text-align: right;
+}
+
+/* ===== Regions list ===== */
+.regions-box {
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  padding: 10px;
+  max-height: 220px;
+  overflow-y: auto;
+  margin-top: 8px;
+  background: #fafafa;
+}
+
+/* ===== Checkboxes ===== */
+.checkbox {
+  display: block;
+  margin: 4px 0;
+  font-size: 14px;
+}
+
+.checkbox--bold {
+  font-weight: 600;
+}
+
+/* ===== Buttons ===== */
+.btn {
+  padding: 8px 16px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.btn--primary {
+  background: #2563eb;
+  color: #fff;
+}
+
+.btn--primary:hover {
+  background: #1d4ed8;
+}
+
+/* ===== Alerts ===== */
+.alert {
+  padding: 10px 12px;
+  border-radius: 6px;
+  margin-bottom: 12px;
+  font-size: 14px;
+}
+
+.alert--error {
+  background: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+}
+
+.card--large {
+  max-width: 760px;
+  margin: 0 auto;
+}
+
+.issued-list {
+  margin-top: 16px;
+}
+
+.issued-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 14px;
+  background: #fff;
+}
+
+.issued-card__header {
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+.issued-card__code {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 10px;
+  background: #f8fafc;
+  margin-bottom: 10px;
+}
+
+.code-value {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 2px;
+}
+
+.issued-card__meta {
+  display: flex;
+  gap: 24px;
+  font-size: 14px;
+  color: #374151;
+}
+
+/* кнопка-призрак */
+.btn--ghost {
+  background: transparent;
+  border: 1px solid #cbd5e1;
+  color: #2563eb;
+  padding: 6px 12px;
+}
+
+.btn--ghost:hover {
+  background: #eff6ff;
+}
+
+/* info alert */
+.alert--info {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1e3a8a;
+}
+
+.alert--warning {
+  background: #fffbeb;
+  border: 1px solid #fcd34d;
+  color: #92400e;
+}
+
+.alert--success {
+  background: #ecfdf5;
+  border: 1px solid #6ee7b7;
+  color: #065f46;
+}

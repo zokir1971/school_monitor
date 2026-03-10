@@ -1,0 +1,438 @@
+{% extends "base.html" %}
+
+{% block title %}Список школ{% endblock %}
+
+{% block extra_css %}
+  <link rel="stylesheet" href="{{ url_for('static', path='css/schools.css') }}">
+{% endblock %}
+
+
+{% block content %}
+
+<div class="page">
+  <div class="page-head">
+    <div class="page-title">
+      <h1>Список школ</h1>
+      <div class="sub">
+        Управление школами, фильтрация и импорт из Excel
+      </div>
+    </div>
+  </div>
+
+  <div class="toolbar-card">
+    {% if error %}
+      <div class="alert alert--error">{{ error }}</div>
+    {% endif %}
+
+    {% if success %}
+      <div class="alert alert--success">{{ success }}</div>
+    {% endif %}
+
+    <div class="toolbar-top">
+
+  <div class="toolbar-left">
+    <a href="{{ request.url_for('school_create_page') }}" class="btn btn--success">
+      Добавить школу
+    </a>
+  </div>
+
+  <div class="toolbar-right">
+    <form
+      method="post"
+      action="{{ request.url_for('import_schools_xlsx') }}"
+      enctype="multipart/form-data"
+      class="import-form">
+      <span id="file-name" class="file-name">
+        Файл не выбран
+      </span>
+      <label for="schools-file" class="btn btn--secondary">
+        Выбрать файл
+      </label>
+
+      <input
+        id="schools-file"
+        type="file"
+        name="file"
+        accept=".xlsx"
+        required
+        class="file-input">
+      <button type="submit" class="btn btn--primary">
+        Импорт
+      </button>
+
+    </form>
+  </div>
+</div>
+<form method="get" action="{{ request.url_for('schools_page') }}">
+  <div class="filters">
+    <div class="field">
+      <label for="region_id">Область</label>
+      <select id="region_id" name="region_id" class="select">
+        <option value="">Выберите область</option>
+        {% for region in regions %}
+          <option value="{{ region.id }}" {% if selected_region_id == region.id %}selected{% endif %}>
+            {{ region.name }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="field">
+      <label for="district_id">Район</label>
+      <select id="district_id" name="district_id" class="select">
+        <option value="">Выберите район</option>
+        {% for district in districts %}
+          <option value="{{ district.id }}" {% if selected_district_id == district.id %}selected{% endif %}>
+            {{ district.name }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="field">
+      <label for="settlement">Елді мекен</label>
+      <select id="settlement" name="settlement" class="select">
+        <option value="">Выберите населенный пункт</option>
+        {% for item in settlements %}
+          <option value="{{ item }}" {% if selected_settlement == item %}selected{% endif %}>
+            {{ item }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="field">
+      <label for="q">Поиск школы</label>
+      <input
+        id="q"
+        type="text"
+        name="q"
+        class="input"
+        value="{{ q or '' }}"
+        placeholder="Название школы"
+      >
+    </div>
+
+    <div class="toolbar-actions">
+      <button type="submit" class="btn btn--primary">Применить</button>
+      <a href="{{ request.url_for('schools_page') }}" class="btn btn--secondary">Сбросить</a>
+    </div>
+  </div>
+</form>
+  </div>
+
+  <form method="post" action="{{ request.url_for('schools_delete_bulk') }}">
+    <div class="table-card">
+      <div class="table-wrap">
+        <table class="schools-table">
+          <thead>
+            <tr>
+              <th class="check-col">
+                <input type="checkbox" id="check-all">
+              </th>
+              <th class="nowrap">ID</th>
+              <th>Область</th>
+              <th>Район</th>
+              <th>Название школы</th>
+              <th>Адрес</th>
+              <th class="nowrap">Действия</th>
+            </tr>
+          </thead>
+          <tbody>
+
+{% if not should_show_schools %}
+  <tr>
+    <td colspan="7" class="empty">
+      Выберите область, район и населенный пункт, затем нажмите «Применить»
+    </td>
+  </tr>
+
+{% else %}
+
+  {% if schools %}
+
+    {% for school in schools %}
+      <tr>
+        <td class="check-col">
+          <input type="checkbox" name="school_ids" value="{{ school.id }}" class="row-check">
+        </td>
+
+        <td class="nowrap">{{ school.id }}</td>
+
+        <td>{{ school.district.region.name }}</td>
+
+        <td>{{ school.district.name }}</td>
+
+        <td>
+          <strong>{{ school.name }}</strong>
+        </td>
+
+        <td>
+          {{ school.address or "—" }}
+        </td>
+
+        <td class="nowrap">
+          <div class="row-actions">
+
+            <a
+              href="{{ request.url_for('school_edit_page', school_id=school.id) }}"
+              class="btn btn--secondary btn--sm"
+            >
+              Редактировать
+            </a>
+
+            <button
+              type="submit"
+              class="btn btn--danger btn--sm single-delete-btn"
+              name="school_ids"
+              value="{{ school.id }}"
+              formaction="{{ request.url_for('school_delete', school_id=school.id) }}"
+              formmethod="post"
+            >
+              Удалить
+            </button>
+
+          </div>
+        </td>
+      </tr>
+    {% endfor %}
+
+  {% else %}
+
+    <tr>
+      <td colspan="7" class="empty">
+        В выбранном населенном пункте школы не найдены
+      </td>
+    </tr>
+
+  {% endif %}
+
+{% endif %}
+
+</tbody>
+        </table>
+      </div>
+
+      <div class="footer-bar">
+        <div class="muted">
+          Всего школ: <span class="badge">{{ schools|length }}</span>
+        </div>
+
+        <div class="toolbar-actions">
+          <button
+            type="submit"
+            class="btn btn--danger"
+            onclick="return confirm('Удалить выбранные школы?');"
+          >
+            Удалить выбранные
+          </button>
+        </div>
+      </div>
+    </div>
+  </form>
+</div>
+
+<script>
+const checkAll = document.getElementById("check-all");
+const rowChecks = document.querySelectorAll(".row-check");
+const regionSelect = document.getElementById("region_id");
+const districtSelect = document.getElementById("district_id");
+const settlementSelect = document.getElementById("settlement");
+
+const schoolFileInput = document.getElementById("schools-file");
+const schoolFileName = document.getElementById("file-name");
+
+
+/* =========================
+   чекбоксы выбрать все
+========================= */
+
+if (checkAll) {
+  checkAll.addEventListener("change", function () {
+    rowChecks.forEach(cb => {
+      cb.checked = checkAll.checked;
+    });
+  });
+}
+
+
+/* =========================
+   показать имя выбранного файла
+========================= */
+
+if (schoolFileInput && schoolFileName) {
+  schoolFileInput.addEventListener("change", function () {
+    if (this.files && this.files.length > 0) {
+      schoolFileName.textContent = this.files[0].name;
+      schoolFileName.title = this.files[0].name;
+    } else {
+      schoolFileName.textContent = "Файл не выбран";
+      schoolFileName.title = "";
+    }
+  });
+}
+
+
+/* =========================
+   подтверждение удаления
+========================= */
+
+document.querySelectorAll(".single-delete-btn").forEach(btn => {
+  btn.addEventListener("click", function (e) {
+    const ok = confirm("Удалить эту школу?");
+
+    if (!ok) {
+      e.preventDefault();
+    }
+  });
+});
+
+
+/* =========================
+   загрузка районов
+========================= */
+
+async function loadDistricts(regionId, selectedDistrictId = "") {
+  if (!districtSelect || !settlementSelect) return;
+
+  districtSelect.innerHTML = '<option value="">Загрузка...</option>';
+  settlementSelect.innerHTML = '<option value="">Выберите населенный пункт</option>';
+
+  if (!regionId) {
+    districtSelect.innerHTML = '<option value="">Выберите район</option>';
+    return;
+  }
+
+  try {
+    const response = await fetch(`/api/orgs/districts?region_id=${regionId}`);
+
+    if (!response.ok) {
+      throw new Error("Ошибка загрузки районов");
+    }
+
+    const data = await response.json();
+
+    districtSelect.innerHTML = '<option value="">Выберите район</option>';
+
+    (data.items || []).forEach((district) => {
+      const option = document.createElement("option");
+
+      option.value = district.id;
+      option.textContent = district.name;
+
+      if (String(selectedDistrictId) === String(district.id)) {
+        option.selected = true;
+      }
+
+      districtSelect.appendChild(option);
+    });
+
+  } catch (error) {
+    districtSelect.innerHTML = '<option value="">Ошибка загрузки</option>';
+    console.error(error);
+  }
+}
+
+
+/* =========================
+   загрузка населенных пунктов
+========================= */
+
+async function loadSettlements(districtId, selectedSettlement = "") {
+  if (!settlementSelect) return;
+
+  settlementSelect.innerHTML = '<option value="">Загрузка...</option>';
+
+  if (!districtId) {
+    settlementSelect.innerHTML = '<option value="">Выберите населенный пункт</option>';
+    return;
+  }
+
+  try {
+    const response = await fetch(`/api/orgs/settlements?district_id=${districtId}`);
+
+    if (!response.ok) {
+      throw new Error("Ошибка загрузки населенных пунктов");
+    }
+
+    const data = await response.json();
+
+    settlementSelect.innerHTML = '<option value="">Выберите населенный пункт</option>';
+
+    (data.items || []).forEach((item) => {
+      const option = document.createElement("option");
+
+      option.value = item.name;
+      option.textContent = item.name;
+
+      if (String(selectedSettlement) === String(item.name)) {
+        option.selected = true;
+      }
+
+      settlementSelect.appendChild(option);
+    });
+
+  } catch (error) {
+    settlementSelect.innerHTML = '<option value="">Ошибка загрузки</option>';
+    console.error(error);
+  }
+}
+
+
+/* =========================
+   событие выбора региона
+========================= */
+
+if (regionSelect) {
+  regionSelect.addEventListener("change", async function () {
+    const regionId = this.value;
+
+    if (districtSelect) {
+      districtSelect.innerHTML = '<option value="">Выберите район</option>';
+    }
+
+    if (settlementSelect) {
+      settlementSelect.innerHTML = '<option value="">Выберите населенный пункт</option>';
+    }
+
+    await loadDistricts(regionId);
+  });
+}
+
+
+/* =========================
+   событие выбора района
+========================= */
+
+if (districtSelect) {
+  districtSelect.addEventListener("change", async function () {
+    const districtId = this.value;
+
+    if (settlementSelect) {
+      settlementSelect.innerHTML = '<option value="">Выберите населенный пункт</option>';
+    }
+
+    await loadSettlements(districtId);
+  });
+}
+
+
+/* =========================
+   восстановление выбранных фильтров
+========================= */
+
+window.addEventListener("DOMContentLoaded", async function () {
+  const selectedRegionId = "{{ selected_region_id or '' }}";
+  const selectedDistrictId = "{{ selected_district_id or '' }}";
+  const selectedSettlement = "{{ selected_settlement or '' }}";
+
+  if (selectedRegionId) {
+    await loadDistricts(selectedRegionId, selectedDistrictId);
+  }
+
+  if (selectedDistrictId) {
+    await loadSettlements(selectedDistrictId, selectedSettlement);
+  }
+});
+</script>
+{% endblock %}

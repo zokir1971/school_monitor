@@ -1,0 +1,55 @@
+.page-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:14px}
+.page-title{margin:0 0 4px 0;font-size:20px}
+.page-subtitle{color:#6b7280;font-size:14px}
+
+.grid-2{display:grid;grid-template-columns: 1.2fr .8fr;gap:12px}
+@media (max-width: 1100px){ .grid-2{grid-template-columns:1fr} }
+
+.card{border:1px solid var(--border,#e5e7eb);border-radius:14px;background:#fff}
+.card__header{padding:14px;border-bottom:1px solid var(--border,#e5e7eb);display:flex;justify-content:space-between;align-items:flex-end;gap:12px}
+.card__body{padding:14px}
+.card__title{margin:0;font-size:16px}
+.hint{color:#6b7280;font-size:13px}
+
+.form-grid{display:grid;grid-template-columns:1fr 220px;gap:10px}
+@media (max-width: 560px){ .form-grid{grid-template-columns:1fr} }
+
+.field{display:flex;flex-direction:column;gap:6px}
+.field label{font-size:13px;color:#374151}
+.field input,.field select,.field textarea{
+  border:1px solid var(--border,#e5e7eb);
+  border-radius:10px;
+  padding:10px 10px;
+  font-size:14px;
+  outline:none;
+}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:#93c5fd;box-shadow:0 0 0 3px rgba(147,197,253,.35)}
+
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:10px;padding:10px 12px;border:1px solid transparent;cursor:pointer;font-size:14px;text-decoration:none}
+.btn--primary{background:#2563eb;color:#fff}
+.btn--ghost{background:#fff;border-color:#e5e7eb;color:#111827}
+.btn--danger{background:#ef4444;color:#fff}
+.btn--sm{padding:6px 10px;font-size:13px;border-radius:9px}
+
+.badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px;line-height:18px;border:1px solid transparent}
+.badge--active{background:#ecfdf5;border-color:#a7f3d0;color:#065f46}
+.badge--inactive{background:#fef2f2;border-color:#fecaca;color:#991b1b}
+.badge--role{background:#f3f4f6;border-color:#e5e7eb;color:#111827}
+
+.table-wrap{width:100%;overflow:auto;border:1px solid var(--border,#e5e7eb);border-radius:12px}
+table.grid{width:100%;border-collapse:separate;border-spacing:0;min-width:900px;font-size:13px}
+table.grid thead th{
+  position:sticky;top:0;z-index:2;
+  background:#fafafa;border-bottom:1px solid var(--border,#e5e7eb);
+  padding:10px;white-space:nowrap;text-align:left;color:#374151;font-weight:600
+}
+table.grid tbody td{padding:10px;border-bottom:1px solid #f1f5f9;vertical-align:top}
+table.grid tbody tr:hover td{background:#fcfcfd}
+
+.roles-editor{margin-top:10px;border-top:1px dashed #e5e7eb;padding-top:10px}
+.role-item{display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap}
+.role-item select{min-width:260px}
+.role-item input{min-width:260px;flex:1}
+.role-item .remove{border:1px solid #e5e7eb;background:#fff;border-radius:10px;padding:8px 10px;cursor:pointer}
+.muted{color:#6b7280;font-size:12px}

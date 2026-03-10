@@ -1,0 +1,214 @@
+/* ===== Base (фикс вылезаний) ===== */
+*,
+*::before,
+*::after { box-sizing: border-box; }
+
+:root{
+  --bg: #f6f7f9;
+  --card: #ffffff;
+  --text: #111827;
+  --muted: #6b7280;
+  --border: #e5e7eb;
+
+  --primary: #2563eb;
+  --primary2: #1d4ed8;
+  --ghostBg: #ffffff;
+
+  --danger: #dc2626;
+  --danger2: #b91c1c;
+
+  --radius: 16px;
+  --shadow: 0 10px 25px rgba(15,23,42,.06);
+}
+
+/* ===== Page layout ===== */
+.page{
+  min-height: 100vh;
+  background: var(--bg);
+}
+
+.page-inner{
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 12px 14px 18px;
+}
+
+/* ===== Sticky header ===== */
+.sticky-head{
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: rgba(246,247,249,.92);
+  backdrop-filter: blur(6px);
+  border-bottom: 1px solid var(--border);
+}
+
+.head-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap: 12px;
+  padding: 10px 0;
+}
+
+.head-title{ min-width: 0; }
+
+.head-title h2{
+  margin: 0;
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--text);
+  line-height: 1.2;
+
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sub{
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--muted);
+
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.head-actions{
+  display:flex;
+  gap: 10px;
+  align-items:center;
+  flex-wrap: wrap;
+}
+
+/* ===== Card/Section ===== */
+.card.section{
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.card.section::before{
+  content:"";
+  display:block;
+  height: 4px;
+  background: var(--primary);
+}
+
+.card.section #rolesBox{
+  padding: 14px;
+}
+
+.card.section #rolesHidden{ display:none; }
+
+/* ===== Role rows (элементы внутри rolesBox) ===== */
+.role-row{
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: #fff;
+  padding: 12px;
+  margin-bottom: 10px;
+
+  display:grid;
+  grid-template-columns: minmax(0,1.1fr) minmax(0,1fr) auto;
+  gap: 10px;
+  align-items: end;
+}
+
+@media (max-width: 820px){
+  .role-row{ grid-template-columns: 1fr; }
+}
+
+.role-row .field{ min-width: 0; }
+
+.field label{
+  display:block;
+  font-size: 12px;
+  font-weight: 700;
+  color: #374151;
+  margin-bottom: 6px;
+}
+
+.field input,
+.field select{
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  border: 1px solid #d1d5db;
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 14px;
+  outline: none;
+  background: #fff;
+  color: var(--text);
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+
+.field input:focus,
+.field select:focus{
+  border-color: #93c5fd;
+  box-shadow: 0 0 0 3px rgba(59,130,246,.15);
+}
+
+.muted{
+  color: var(--muted);
+  font-size: 12px;
+  margin-top: 6px;
+  line-height: 1.35;
+}
+
+/* ===== Buttons ===== */
+.row{
+  display:flex;
+  gap:10px;
+  align-items:center;
+  flex-wrap:wrap;
+}
+
+.btn{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding: 9px 14px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 750;
+  border: 1px solid transparent;
+  cursor:pointer;
+  text-decoration:none;
+  user-select:none;
+  transition: background .15s ease, border-color .15s ease, transform .02s ease;
+}
+
+.btn:active{ transform: translateY(1px); }
+
+.btn--primary{
+  background: var(--primary);
+  color:#fff;
+}
+.btn--primary:hover{ background: var(--primary2); }
+
+.btn--ghost{
+  background: var(--ghostBg);
+  border-color: #d1d5db;
+  color: var(--text);
+}
+.btn--ghost:hover{ background: #f9fafb; }
+
+.btn--danger{
+  background: var(--danger);
+  color:#fff;
+}
+.btn--danger:hover{ background: var(--danger2); }
+
+/* ===== Form buttons row under card ===== */
+.form-actions{
+  margin-top: 12px;
+  display:flex;
+  gap: 10px;
+  align-items:center;
+  flex-wrap: wrap;
+}

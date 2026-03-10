@@ -1,0 +1,260 @@
+{# templates/staff/school_staff.html #}
+{% extends "base.html" %}
+{% block title %}Управление персоналом школы{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', path='css/staff.css') }}">
+{% endblock %}
+
+{% block content %}
+
+<div class="page-head">
+  <div>
+    <h1 class="page-title">👥 Управление персоналом</h1>
+    <div class="page-subtitle">Добавляй сотрудников, назначай должности (ResponsibleRole), увольняй и импортируй из файла.</div>
+  </div>
+
+  <div class="row">
+    <a class="btn btn--ghost" href="/planning/school">← Назад к планам</a>
+  </div>
+</div>
+
+{% if error %}
+  <div class="alert alert--error" style="margin-bottom:12px">{{ error }}</div>
+{% endif %}
+{% if success %}
+  <div class="alert alert--success" style="margin-bottom:12px">{{ success }}</div>
+{% endif %}
+
+<div class="grid-2">
+
+  {# =================== LEFT: TABLE =================== #}
+  <section class="card">
+    <div class="card__header">
+      <div>
+        <h2 class="card__title">Список персонала</h2>
+        <div class="hint">Выбирай сотрудников для назначения исполнителей в задачах. Уволенные сохраняются для истории.</div>
+      </div>
+      <div class="row">
+        <span class="muted">Всего: {{ members|length }}</span>
+      </div>
+    </div>
+
+    <div class="card__body">
+      <div class="table-wrap">
+        <table class="grid">
+          <thead>
+            <tr>
+              <th style="width:52px">ID</th>
+              <th>ФИО</th>
+              <th style="width:120px">ИИН</th>
+              <th>Должности</th>
+              <th style="width:120px">Статус</th>
+              <th style="width:220px">Действия</th>
+            </tr>
+          </thead>
+          <tbody>
+          {% for m in members %}
+            <tr>
+              <td>#{{ m.id }}</td>
+              <td>
+                <div style="font-weight:600;color:#111827">{{ m.full_name }}</div>
+                {% if m.position_text %}<div class="muted">{{ m.position_text }}</div>{% endif %}
+              </td>
+              <td>{{ m.iin }}</td>
+              <td>
+                {% if m.roles and m.roles|length > 0 %}
+                  {% for r in m.roles %}
+                    <span class="badge badge--role">
+                      {{ r.role.value }}
+                      {% if r.role_context %} — {{ r.role_context }}{% endif %}
+                      {% if not r.is_active %} (не акт.){% endif %}
+                    </span>
+                  {% endfor %}
+                {% else %}
+                  <span class="muted">—</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if m.is_active %}
+                  <span class="badge badge--active">Активен</span>
+                {% else %}
+                  <span class="badge badge--inactive">Уволен</span>
+                {% endif %}
+              </td>
+              <td>
+                <div class="row">
+                  <a class="btn btn--ghost btn--sm" href="/staff/school/members/{{ m.id }}/edit">Редактировать</a>
+
+                  {% if m.is_active %}
+                    <form method="post" action="/staff/school/members/{{ m.id }}/dismiss" style="display:inline">
+                      <button class="btn btn--danger btn--sm" type="submit"
+                              onclick="return confirm('Уволить {{ m.full_name }}?');">
+                        Уволить
+                      </button>
+                    </form>
+                  {% else %}
+                    <form method="post" action="/staff/school/members/{{ m.id }}/restore" style="display:inline">
+                      <button class="btn btn--primary btn--sm" type="submit"
+                              onclick="return confirm('Восстановить {{ m.full_name }}?');">
+                        Восстановить
+                      </button>
+                    </form>
+                  {% endif %}
+                </div>
+              </td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="muted" style="margin-top:10px">
+        Подсказка: увольнение — это soft-delete (is_active=false). История назначений в планах сохранится.
+      </div>
+    </div>
+  </section>
+
+  {# =================== RIGHT: FORMS =================== #}
+  <aside class="card">
+    <div class="card__header">
+      <div>
+        <h2 class="card__title">Добавить / Импорт</h2>
+        <div class="hint">Можно добавлять вручную или загрузить файл.</div>
+      </div>
+    </div>
+
+    <div class="card__body">
+
+      {# ----------- IMPORT ----------- #}
+      <div style="margin-bottom:16px">
+        <div style="font-weight:600;margin-bottom:6px">Импорт из файла</div>
+        <div class="muted" style="margin-bottom:10px">
+          Поддержка: CSV файл из НОБД (персонал.csv) Upsert по ИИН.
+        </div>
+
+        <form method="post" action="/staff/school/import" enctype="multipart/form-data">
+          <div class="row">
+            <input type="file" name="file" accept=".csv,.xlsx" required>
+            <button class="btn btn--ghost" type="submit">Загрузить</button>
+          </div>
+        </form>
+
+        {% if import_report %}
+          <div style="margin-top:10px" class="muted">
+            Создано: {{ import_report.created }},
+            Обновлено: {{ import_report.updated }},
+            Пропущено: {{ import_report.skipped }}
+            {% if import_report.errors and import_report.errors|length > 0 %}
+              <details style="margin-top:8px">
+                <summary>Ошибки ({{ import_report.errors|length }})</summary>
+                <ul>
+                {% for e in import_report.errors %}
+                  <li>{{ e }}</li>
+                {% endfor %}
+                </ul>
+              </details>
+            {% endif %}
+          </div>
+        {% endif %}
+      </div>
+
+      <hr style="border:none;border-top:1px solid #eef2f7;margin:14px 0">
+
+      {# ----------- ADD MEMBER ----------- #}
+      <div>
+        <div style="font-weight:600;margin-bottom:6px">Добавить сотрудника вручную</div>
+
+        <form method="post" action="/staff/school/members">
+          <div class="form-grid">
+            <div class="field">
+              <label>ФИО</label>
+              <input name="full_name" placeholder="Напр: Ахметов Ержан Серикович" required>
+            </div>
+
+            <div class="field">
+              <label>ИИН</label>
+              <input name="iin" inputmode="numeric" pattern="[0-9]{12}" maxlength="12" minlength="12"
+                     placeholder="12 цифр" required>
+            </div>
+
+            <div class="field" style="grid-column:1 / -1">
+  <label>Должность</label>
+
+  <select name="position_text" id="positionSelect" required>
+    <option value="">— выбери —</option>
+    {% for p in allowed_positions %}
+      <option value="{{ p }}">{{ p }}</option>
+    {% endfor %}
+    <option value="__other__">Другое (ввести вручную)</option>
+  </select>
+
+  <input name="position_text_other" id="positionOther"
+         placeholder="Введите должность вручную"
+         style="display:none;margin-top:8px">
+</div>
+          </div>
+
+          <div class="roles-editor">
+            <div class="row" style="margin-top:10px">
+              <button class="btn btn--primary" type="submit">Сохранить сотрудника</button>
+            </div>
+          </div>
+
+          {# сюда будем добавлять hidden inputs roles[*] #}
+        </form>
+      </div>
+      {# ----------- ADMIN ROLES NAV ----------- #}
+<div class="card card--section" style="margin-top:16px">
+  <div class="card__header">
+    <div>
+      <h3 class="card__title" style="margin:0">Администрация школы — назначение ролей</h3>
+      <div class="card__hint" style="color:#6b7280;font-size:13px;margin-top:4px">
+        Выберите сотрудника и перейдите на страницу назначения ResponsibleRole (директор, замы и т.д.).
+      </div>
+    </div>
+  </div>
+
+  <div class="card__body" style="padding:14px">
+    <div class="form-grid" style="max-width:720px">
+      <div class="field" style="grid-column:1 / -1">
+        <label>Сотрудник</label>
+        <select id="memberRoleSelect">
+          <option value="">— выбери сотрудника —</option>
+          {% for m in members %}
+            <option value="{{ m.id }}">{{ m.full_name }}</option>
+          {% endfor %}
+        </select>
+        <div class="muted">Роли назначаются отдельно и используются при формировании месячного плана.</div>
+      </div>
+    </div>
+
+    <div class="row" style="margin-top:10px">
+      <a class="btn btn--primary" id="goRolesBtn" href="#" onclick="return goToRoles()">Назначить роли</a>
+      <a class="btn btn--ghost" href="/staff/school">Обновить</a>
+    </div>
+  </div>
+</div>
+
+<script>
+  function goToRoles(){
+    const sel = document.getElementById("memberRoleSelect");
+    const id = sel ? sel.value : "";
+    if(!id){
+      alert("Выберите сотрудника");
+      return false;
+    }
+    window.location.href = `/staff/school/members/${id}/roles`;
+    return false;
+  }
+</script>
+
+
+
+    </div>
+  </aside>
+
+</div>
+
+<script src="{{ url_for('static', path='js/school_staff.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,246 @@
+{% extends "base.html" %}
+{% block title %}Редактировать сотрудника{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', path='css/member_edit.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="page">
+  <!-- sticky header (кого редактируем) -->
+  <div class="sticky-head">
+    <div class="page-inner">
+      <div class="head-row">
+        <div class="head-title">
+          <h1>{{ m.full_name }}</h1>
+          <div class="sub">ИИН: {{ m.iin }} · Редактирование карточки</div>
+        </div>
+        <div class="head-actions">
+          <a class="btn btn--ghost" href="/staff/school">← Назад</a>
+          <button class="btn btn--primary" form="editForm" type="submit">Сохранить</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-inner">
+    <form id="editForm" method="post" action="/staff/school/members/{{ m.id }}/edit">
+
+      <!-- ===== Блок: Основное ===== -->
+      <div class="card section">
+        <div class="section__head">
+          <div class="section__title">Основное</div>
+          <div class="section__hint">ФИО и ИИН нельзя менять</div>
+        </div>
+
+        <div class="card__body">
+          <div class="form-grid">
+            <div class="field">
+              <label>ФИО</label>
+              <input value="{{ m.full_name }}" disabled>
+            </div>
+            <div class="field">
+              <label>ИИН</label>
+              <input value="{{ m.iin }}" disabled>
+            </div>
+
+            <div class="field" style="grid-column:1 / -1">
+              <label>Должность</label>
+              <select name="position_text" required>
+                <option value="">— выбери —</option>
+                {% for p in allowed_positions %}
+                  <option value="{{ p }}" {% if p == m.position_text %}selected{% endif %}>{{ p }}</option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div class="field">
+              <label>Предмет</label>
+              <input name="subject" value="{{ m.subject or '' }}" placeholder="Напр: Математика">
+            </div>
+
+            <div class="field">
+              <label>Принадлежность</label>
+              <input name="affiliation" value="{{ m.affiliation or '' }}" placeholder="Напр: МО математики / кафедра">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== Блок: Образование ===== -->
+      <div class="card section">
+        <div class="section__head">
+          <div class="section__title">Образование</div>
+          <div class="section__hint">Данные диплома и обучения</div>
+        </div>
+
+        <div class="card__body">
+          <div class="form-grid">
+            <div class="field">
+              <label>Образование</label>
+              <input name="education" value="{{ m.education or '' }}" placeholder="Высшее / среднее спец.">
+            </div>
+
+            <div class="field">
+              <label>Ученая степень</label>
+              <input name="academic_degree" value="{{ m.academic_degree or '' }}" placeholder="Напр: магистр">
+            </div>
+
+            <div class="field" style="grid-column:1 / -1">
+              <label>ВУЗ</label>
+              <input name="university" value="{{ m.university or '' }}" placeholder="Название ВУЗа">
+            </div>
+
+            <div class="field">
+              <label>Дата окончания</label>
+              <input type="date" name="graduation_date" value="{{ m.graduation_date or '' }}">
+            </div>
+
+            <div class="field">
+              <label>№ диплома</label>
+              <input name="diploma_no" value="{{ m.diploma_no or '' }}">
+            </div>
+
+            <div class="field" style="grid-column:1 / -1">
+              <label>Специальность по диплому</label>
+              <input name="diploma_specialty" value="{{ m.diploma_specialty or '' }}">
+            </div>
+
+            <div class="field">
+              <label>Форма обучения</label>
+              <input name="study_type" value="{{ m.study_type or '' }}" placeholder="Очная / заочная">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== Блок: Стаж ===== -->
+      <div class="card section">
+        <div class="section__head">
+          <div class="section__title">Стаж</div>
+          <div class="section__hint">Пед. стаж и общий стаж</div>
+        </div>
+
+        <div class="card__body">
+          <div class="form-grid">
+            <div class="field">
+              <label>Начало пед. деятельности</label>
+              <input type="date" name="ped_start_date" value="{{ m.ped_start_date or '' }}">
+            </div>
+
+            <div class="field">
+              <label>Общий стаж (лет)</label>
+              <input type="number" min="0" step="1" name="total_experience_years"
+                     value="{{ m.total_experience_years if m.total_experience_years is not none else '' }}">
+            </div>
+
+            <div class="field">
+              <label>Пед. стаж (лет)</label>
+              <input type="number" min="0" step="1" name="ped_experience_years"
+                     value="{{ m.ped_experience_years if m.ped_experience_years is not none else '' }}">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== Блок: Квалификационная категория ===== -->
+      <div class="card section">
+        <div class="section__head">
+          <div class="section__title">Категория и аттестация</div>
+          <div class="section__hint">Приказы и даты</div>
+        </div>
+
+        <div class="card__body">
+          <div class="form-grid">
+            <div class="field">
+              <label>Категория</label>
+              <input name="qualification_category" value="{{ m.qualification_category or '' }}"
+                     placeholder="Напр: педагог-модератор">
+            </div>
+
+            <div class="field">
+              <label>№ приказа</label>
+              <input name="qualification_order_no" value="{{ m.qualification_order_no or '' }}">
+            </div>
+
+            <div class="field">
+              <label>Дата приказа</label>
+              <input type="date" name="qualification_order_date" value="{{ m.qualification_order_date or '' }}">
+            </div>
+
+            <div class="field">
+              <label>Дата аттестации</label>
+              <input type="date" name="attestation_date" value="{{ m.attestation_date or '' }}">
+            </div>
+
+            <div class="field">
+              <label>Дата переаттестации</label>
+              <input type="date" name="reattestation_date" value="{{ m.reattestation_date or '' }}">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== Блок: Курсы ===== -->
+      <div class="card section">
+        <div class="section__head">
+          <div class="section__title">Курсы повышения квалификации</div>
+          <div class="section__hint">Последние курсы и сроки</div>
+        </div>
+
+        <div class="card__body">
+          <div class="form-grid">
+            <div class="field">
+              <label>Курсы пройдены (дата)</label>
+              <input type="date" name="course_passed_date" value="{{ m.course_passed_date or '' }}">
+            </div>
+
+            <div class="field">
+              <label>Следующие курсы до (дата)</label>
+              <input type="date" name="course_due_date" value="{{ m.course_due_date or '' }}">
+            </div>
+
+            <div class="field" style="grid-column:1 / -1">
+              <label>Место прохождения</label>
+              <input name="course_place" value="{{ m.course_place or '' }}">
+            </div>
+
+            <div class="field">
+              <label>№ сертификата</label>
+              <input name="course_certificate_no" value="{{ m.course_certificate_no or '' }}">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== Блок: Достижения ===== -->
+      <div class="card section">
+        <div class="section__head">
+          <div class="section__title">Достижения и прочее</div>
+          <div class="section__hint">Награды, тема, заметки</div>
+        </div>
+
+        <div class="card__body">
+          <div class="form-grid">
+            <div class="field" style="grid-column:1 / -1">
+              <label>Награды</label>
+              <textarea name="awards" rows="3" placeholder="Перечисли через запятую">{{ m.awards or '' }}</textarea>
+            </div>
+
+            <div class="field" style="grid-column:1 / -1">
+              <label>Творческая тема</label>
+              <textarea name="creative_topic" rows="3">{{ m.creative_topic or '' }}</textarea>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="row" style="margin-top:12px">
+        <button class="btn btn--primary" type="submit">Сохранить</button>
+        <a class="btn btn--ghost" href="/staff/school">Отмена</a>
+      </div>
+
+    </form>
+  </div>
+</div>
+{% endblock %}

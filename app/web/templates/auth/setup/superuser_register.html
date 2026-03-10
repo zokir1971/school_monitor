@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}Создание супер-админа{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', path='css/register.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="auth-page">
+  <div class="auth-card">
+
+    <h1 class="auth-title">Первичная настройка системы</h1>
+    <p class="auth-subtitle">
+      Создайте супер-администратора (L0). Эта форма доступна только один раз.
+    </p>
+
+    {% if error %}
+      <div class="alert alert--danger" role="alert">
+        <div class="alert__icon">⚠️</div>
+        <div class="alert__text">{{ error }}</div>
+      </div>
+    {% endif %}
+
+    <form method="post" action="/setup/superuser" class="auth-form">
+
+      <div class="field">
+        <label class="field__label" for="full_name">ФИО</label>
+        <input id="full_name" class="field__input" type="text" name="full_name"
+               maxlength="120" required placeholder="Ахмедов Закиржон Октамович">
+      </div>
+
+      <div class="field">
+        <label class="field__label" for="iin">ИИН</label>
+        <input id="iin" class="field__input" type="text" name="iin"
+               required minlength="12" maxlength="12" pattern="\d{12}" inputmode="numeric"
+               placeholder="123456789012">
+        <div class="field__hint">12 цифр, без пробелов.</div>
+      </div>
+
+      <div class="field">
+        <label class="field__label" for="username">Логин</label>
+        <input id="username" class="field__input" type="text" name="username"
+               required minlength="3" maxlength="32" autocomplete="username"
+               placeholder="например: ahmed_kz">
+      </div>
+
+      <div class="field">
+        <label class="field__label" for="email">Email</label>
+        <input id="email" class="field__input" type="email" name="email"
+               required maxlength="255" autocomplete="email" placeholder="name@mail.com">
+      </div>
+
+      <div class="field">
+        <label class="field__label" for="phone">Телефон</label>
+        <input id="phone" class="field__input" type="text" name="phone"
+               required minlength="11" maxlength="11" pattern="7\d{10}" inputmode="numeric"
+               placeholder="87771112233" autocomplete="tel">
+        <div class="field__hint">Формат: 7XXXXXXXXXX (11 цифр).</div>
+      </div>
+
+      <div class="grid-2">
+        <div class="field">
+          <label class="field__label" for="password">Пароль</label>
+          <input id="password" class="field__input" type="password" name="password"
+                 required minlength="6" autocomplete="new-password"
+                 placeholder="Минимум 8 символов">
+        </div>
+
+        <div class="field">
+          <label class="field__label" for="password2">Повтор пароля</label>
+          <input id="password2" class="field__input" type="password" name="password2"
+                 required minlength="6" autocomplete="new-password"
+                 placeholder="Повторите пароль">
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn--primary btn--block">
+        Создать супер-админа
+      </button>
+
+    </form>
+  </div>
+</div>
+{% endblock %}

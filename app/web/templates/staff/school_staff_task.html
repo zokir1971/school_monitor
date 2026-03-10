@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+
+{% block title %}Мои задачи{% endblock %}
+
+{% block extra_css %}
+  <link rel="stylesheet" href="{{ url_for('static', path='css/staff_task.css') }}">
+{% endblock %}
+
+
+
+{% block content %}
+
+<div class="page">
+
+  <div class="sticky-head">
+    <div class="page-inner">
+      <div class="head-row">
+        <div class="head-title">
+          <h2>
+            Мои задачи на — {{ MONTH_NAMES.get(month, month) }} месяц
+          </h2>
+          <div class="sub">
+            Назначенные задачи на текущий месяц
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-inner">
+    <div class="card card--large">
+
+      <table class="plan">
+        <thead>
+          <tr>
+            <th class="nowrap">Неделя</th>
+            <th class="nowrap">Срок</th>
+            <th>Тақырып / Тема</th>
+            <th>Мақсаты / Цель</th>
+            <th>Объект контроля</th>
+            <th>Тип контроля</th>
+            <th>Место рассмотрения</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {% for t in tasks %}
+            <tr class="{% if current_week is defined and t.week_of_month == current_week %}row-current{% endif %}">
+              <td class="nowrap">
+                {{ t.week_of_month or "—" }}
+              </td>
+
+              <td class="nowrap">
+                {% if t.planned_start and t.planned_end %}
+                  {{ t.planned_start.strftime("%d.%m") }} – {{ t.planned_end.strftime("%d.%m") }}
+                {% elif t.planned_start %}
+                  {{ t.planned_start.strftime("%d.%m") }}
+                {% else %}
+                  —
+                {% endif %}
+              </td>
+
+              <td>{{ t.topic or "—" }}</td>
+              <td>{{ t.goal or "—" }}</td>
+              <td>{{ t.control_object or "—" }}</td>
+              <td>{{ t.control_type or "—" }}</td>
+              <td>{{ t.review_place or "—" }}</td>
+            </tr>
+          {% else %}
+            <tr>
+              <td colspan="7" class="empty">
+                На этот месяц задачи не назначены
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+
+    </div>
+  </div>
+
+</div>
+
+{% endblock %}

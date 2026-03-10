@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', path='css/register.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="auth-page">
+  <div class="page-inner">
+    <div class="card card--medium auth-card">
+      <div class="auth-head">
+        <h2>Регистрация пед.персонала школы</h2>
+        <div class="sub">Регистрация доступна только педагогам, которые уже есть в базе школы</div>
+      </div>
+
+      {% if error %}
+        <div class="alert alert-danger">
+          {{ error }}
+        </div>
+      {% endif %}
+
+      <form method="post" class="auth-form">
+        <div class="form-row">
+          <label>ИИН</label>
+          <input id="iin" class="field__input" type="text" name="iin" required minlength="12" maxlength="12" pattern="\d{12}"
+                 inputmode="numeric" placeholder="123456789012" value="{{ form.get('iin', '') }}">
+          <div class="field__hint">12 цифр, без пробелов.</div>
+        </div>
+
+        <div class="form-row">
+          <label>Логин</label>
+          <input class="field__input" type="text" name="username"
+               required minlength="3" maxlength="32" autocomplete="username"
+               placeholder="например: admin_kz" value="{{ form.get('username', '') }}">
+        </div>
+
+        <div class="form-row">
+          <label>Email</label>
+          <input id="email" class="field__input" type="email" name="email" required maxlength="255"
+                 autocomplete="email" placeholder="name@mail.com" value="{{ form.get('email', '') }}">
+        </div>
+
+        <div class="form-row">
+          <label>Телефон</label>
+          <input id="phone" class="field__input" type="text" name="phone"
+               required minlength="11" maxlength="11" pattern="7\d{10}" inputmode="numeric"
+               placeholder="87771112233" autocomplete="tel" value="{{ form.get('phone', '') }}">
+          <div class="field__hint">Формат: 7XXXXXXXXXX (11 цифр).</div>
+        </div>
+
+        <div class="form-row">
+          <label>Пароль</label>
+          <input id="password" class="field__input" type="password" name="password"
+                 required minlength="6" autocomplete="new-password"
+                 placeholder="Минимум 8 символов">
+        </div>
+
+        <div class="form-row">
+          <label>Повторите пароль</label>
+          <input id="password2" class="field__input" type="password" name="password2"
+                 required minlength="6" autocomplete="new-password"
+                 placeholder="Повторите пароль">
+        </div>
+
+        <div class="actions">
+          <button type="submit" class="btn btn--primary">Зарегистрироваться</button>
+          <a href="/login" class="btn">Войти</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

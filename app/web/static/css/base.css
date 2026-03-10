@@ -1,0 +1,139 @@
+html, body {
+  margin: 0;
+  padding: 0;
+}
+
+/* HEADER */
+.header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+
+  height: 56px;
+  padding: 0 16px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  background: #fff;
+  border-bottom: 1px solid rgba(0,0,0,.08);
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+
+  font-weight: 700;
+  font-size: 14px;
+  line-height: 1;
+
+  text-decoration: none;
+  color: inherit;
+  white-space: nowrap;
+}
+
+.brand:visited { color: inherit; }
+
+.brand:hover { opacity: 0.85; }
+
+.brand__icon {
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.header__left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-width: 0;
+}
+
+.header__right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.header__right form {
+  margin: 0;
+}
+
+.panel-title {
+  font-size: 14px;
+  color: #444;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 520px;
+}
+
+.header-btn {
+  padding: 4px 10px;
+  font-size: 13px;
+  line-height: 1;
+
+  border: 1px solid #cfcfcf;
+  border-radius: 6px;
+  background: #fff;
+  color: #222;
+
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.header-btn:hover {
+  background: #f5f5f5;
+  border-color: #999;
+}
+
+.panel-title--btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+
+  padding: 6px 12px;
+  margin-left: 12px;
+
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+
+  color: #1f2937;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  border-radius: 9999px; /* pill-style */
+
+  transition: background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.panel-title--btn:hover {
+  background: #e5e7eb;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+
+.panel-title--btn:active {
+  background: #d1d5db;
+}
+
+
+/* MAIN */
+.app-main {
+  padding: 16px;
+  padding-top: 72px; /* 56px header + 12px воздуха */
+}
+
+
+
+

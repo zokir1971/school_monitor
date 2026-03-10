@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% block title %}Планирование ВШК — Направления{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', path='css/admin.css') }}">
+
+<style>
+/* === 3 карточки в ряд === */
+.card-grid{
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 18px !important;
+  margin-top: 16px;
+}
+
+/* чтобы обёртка не ломала ширину */
+.card-wrapper{
+  position: relative;
+}
+
+/* адаптив */
+@media (max-width: 1024px){
+  .card-grid{
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+@media (max-width: 600px){
+  .card-grid{
+    grid-template-columns: 1fr !important;
+  }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="dashboard-section">
+  <div class="section-head">
+    <h2 class="section-title">Планирование ВШК — Направления</h2>
+  </div>
+
+  {% if error %}
+    <div class="alert alert--error">{{ error }}</div>
+  {% endif %}
+
+  {% if directions is not defined or directions|length == 0 %}
+    <div class="alert alert--info" style="margin: 12px 0 16px;">
+      Направления пока не созданы. Нажми “Добавить направление”.
+    </div>
+  {% endif %}
+
+  <div class="card-grid">
+
+    {% for d in directions %}
+      <div class="card-wrapper">
+
+        <!-- КНОПКА УДАЛЕНИЯ -->
+        <form method="post"
+              action="/planning/super/directions/{{ d.id }}/delete"
+              class="card-delete-form"
+              onsubmit="return confirm('Удалить направление?');"
+              onclick="event.stopPropagation();">
+          <button type="submit" class="card-delete-btn">✖</button>
+        </form>
+
+        <!-- САМА КАРТОЧКА -->
+        <a class="card"
+           href="/planning/super/builder?direction_id={{ d.id }}{% if active_template_id %}&template_id={{ active_template_id }}{% endif %}">
+          <div class="card__inner">
+            <div class="card__top">
+              <div class="card__icon">📌</div>
+            </div>
+
+            <h3 class="card__title">{{ d.short_title }}</h3>
+            <p class="card__desc">{{ d.full_title or "" }}</p>
+
+            <div class="card__footer">
+              <span>Открыть</span>
+              <span class="card__arrow">→</span>
+            </div>
+          </div>
+        </a>
+      </div>
+    {% endfor %}
+
+    {# ✅ Карточка "Добавить" ВНУТРИ сетки #}
+    <div class="card-wrapper">
+      <a class="card"
+         href="/planning/super/directions/add">
+        <div class="card__inner">
+          <div class="card__top">
+            <div class="card__icon">➕</div>
+          </div>
+
+          <h3 class="card__title">Добавить направление</h3>
+          <p class="card__desc">Создай новый раздел ВШК для шаблонов</p>
+
+          <div class="card__footer">
+            <span>Создать</span>
+            <span class="card__arrow">→</span>
+          </div>
+        </div>
+      </a>
+    </div>
+
+  </div>
+</section>
+{% endblock %}

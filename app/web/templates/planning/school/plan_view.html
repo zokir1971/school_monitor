@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}План ВШК{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', path='css/admin.css') }}">
+{% endblock %}
+
+{% block content %}
+
+<div class="card card--large">
+  <div class="card__header">
+    <div>
+      <h2 style="margin:0;">План ВШК</h2>
+      <div style="color:#6b7280; margin-top:6px;">
+        Учебный год: <b>{{ plan.academic_year }}</b> · Статус: <b>{{ plan.status }}</b>
+      </div>
+    </div>
+      <a href="{{ request.url_for('school_dashboard') }}?academic_year={{ plan.academic_year }}" class="btn btn--light">
+        ← Назад
+      </a>
+  </div>
+
+  <h3 style="margin-top:14px;">Выберите направление</h3>
+
+  <div class="card-grid" style="margin-top:12px;">
+    {% for td in template_directions %}
+      <a class="card" href="/planning/school/{{ plan.id }}/direction/{{ td.direction_id }}">
+        <div class="card__inner">
+          <div class="card__top">
+            <div class="card__icon">📌</div>
+          </div>
+          <h3 class="card__title">{{ td.direction.short_title if td.direction else ("Direction #" ~ td.direction_id) }}</h3>
+          {% if td.direction and td.direction.full_title %}
+            <div class="card__desc">{{ td.direction.full_title }}</div>
+          {% endif %}
+        </div>
+      </a>
+    {% else %}
+      <div class="empty">В шаблоне нет направлений</div>
+    {% endfor %}
+  </div>
+</div>
+
+{% endblock %}

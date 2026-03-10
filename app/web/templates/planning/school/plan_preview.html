@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+{% block title %}План ВШК — просмотр{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', path='css/admin.css') }}">
+<style>
+  .wrap{max-width:1200px;margin:0 auto}
+
+  .dir{margin-top:14px;border:1px solid #e5e7eb;border-radius:12px;background:#fff}
+  .dir__head{padding:14px;border-bottom:1px solid #e5e7eb}
+  .dir__title{margin:0}
+
+  .table-wrap{padding:14px;overflow:auto;max-height:70vh}
+
+  /* Ключевое: таблица занимает контейнер, а колонки ужимаются */
+  table{border-collapse:collapse; width:100%; table-layout:fixed}
+
+  th,td{border:1px solid #e5e7eb;padding:8px;vertical-align:top;font-size:12px;white-space:normal;overflow-wrap:anywhere;word-break:break-word;}
+
+  thead th{position:sticky;top:0;background:#f9fafb;z-index:2}
+
+  /* ЭЛЛИПСИС для заголовков, чтобы не раздували шапку */
+  th{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  }
+
+  /* Узкий столбец № (если это 1-я колонка) */
+  table th:first-child,
+  table td:first-child{width:25px}
+
+  /* Если 4 колонки: №, объект, риски, решение */
+  table.cols-4 th:nth-child(2),
+  table.cols-4 td:nth-child(2){width:34%}
+
+  table.cols-4 th:nth-child(3),
+  table.cols-4 td:nth-child(3){width:33%}
+
+  table.cols-4 th:nth-child(4),
+  table.cols-4 td:nth-child(4){width:33%}
+
+  /* Если 11 колонок — просто пусть таблица фиксируется, а просмотр через горизонтальный скролл */
+  table.cols-11 th, table.cols-11 td{min-width:140px}
+  table.cols-11 th:first-child, table.cols-11 td:first-child{min-width:60px;width:60px}
+
+  .actions{display:flex;gap:8px;flex-wrap:wrap}
+</style>
+{% endblock %}
+
+{% block content %}
+Школа: <b>{{ meta.school_name }}</b> · Директор: <b>{{ meta.director_fio }}</b>
+<div class="wrap">
+  <div class="card card--large">
+    <div class="card__header" style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;">
+      <div>
+        <h2 style="margin:0;">План ВШК (просмотр)</h2>
+        <div style="color:#6b7280; margin-top:6px;">
+          Учебный год: <b>{{ plan.academic_year }}</b> · Статус: <b>{{ plan.status }}</b>
+        </div>
+      </div>
+      <div class="actions">
+        <a class="btn btn--primary" href="{{ request.url_for('school_plan_pdf', plan_id=plan.id) }}">Скачать PDF</a>
+        <a class="btn btn--light" href="{{ request.url_for('school_dashboard') }}?academic_year={{ plan.academic_year }}">← Назад</a>
+      </div>
+    </div>
+  </div>
+
+  {% for b in directions %}
+    <div class="dir">
+      <div class="dir__head">
+        <h3 class="dir__title">{{ b.direction.short_title }}</h3>
+        {% if b.direction.full_title %}
+          <div style="color:#6b7280;margin-top:6px;">{{ b.direction.full_title }}</div>
+        {% endif %}
+      </div>
+
+      {% if b.rows4 %}
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th style="min-width:70px;">№</th>
+              <th style="min-width:260px;">Бақылау нысаны</th>
+              <th style="min-width:260px;">Мәселелер, тәуекелдер</th>
+              <th style="min-width:260px;">Басшылық шешімі</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in b.rows4 %}
+              <tr>
+                <td>{{ loop.index  }}</td>
+                <td>{{ r.control_object or "" }}</td>
+                <td>{{ r.risk_text or "" }}</td>
+                <td>{{ r.decision_text or "" }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% endif %}
+
+      {% if b.rows11 %}
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th style="min-width:70px;">№</th>
+              <th style="min-width:260px;">Тақырып</th>
+              <th style="min-width:260px;">Мақсаты</th>
+              <th style="min-width:260px;">Бақылау нысаны</th>
+              <th style="min-width:260px;">Бақылау түрі</th>
+              <th style="min-width:260px;">Әдістер</th>
+              <th style="min-width:160px;">Мерзімі</th>
+              <th style="min-width:160px;">Жауаптылар</th>
+              <th style="min-width:260px;">Қарау орны</th>
+              <th style="min-width:260px;">Басшылық шешімі</th>
+              <th style="min-width:260px;">Екінші бақылау</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {% for r in b.rows11 %}
+              {# period_type может быть Enum -> берём value если есть #}
+              {% set pt = (r.period_type.value if r.period_type is not none and r.period_type.value is defined else r.period_type) %}
+
+              <tr>
+                <td>{{ loop.index }}</td>
+                <td>{{ r.topic or "" }}</td>
+                <td>{{ r.goal or "" }}</td>
+                <td>{{ r.control_object or "" }}</td>
+                <td>{{ r.control_type or "" }}</td>
+                <td>{{ r.methods or "" }}</td>
+
+                {# ---------- ПЕРИОД (из period_*) ---------- #}
+<td class="nowrap">{{ r | row11_period }}</td>
+{# ---------- ОТВЕТСТВЕННЫЕ (из role_assignments) ---------- #}
+<td>
+  {% if r.role_assignments and r.role_assignments|length > 0 %}
+    {% for a in r.role_assignments %}
+      {% set key = a.role.value if a.role is not none and a.role.value is defined else a.role %}
+      {{ ROLE_LABELS.get(key, key) if ROLE_LABELS is defined else key }}{% if not loop.last %}, {% endif %}
+    {% endfor %}
+  {% else %}
+    {# fallback, если назначений ещё нет #}
+    {{ r.responsibles or "" }}
+  {% endif %}
+</td>
+                <td>{{ r.review_place or "" }}</td>
+                <td>{{ r.management_decision or "" }}</td>
+                <td>{{ r.second_control or "" }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+
+        </table>
+      </div>
+      {% endif %}
+    </div>
+  {% endfor %}
+</div>
+{% endblock %}

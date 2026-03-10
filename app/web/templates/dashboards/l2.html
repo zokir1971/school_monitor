@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+
+{% block title %}Панель администратора{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', path='css/admin.css') }}">
+{% endblock %}
+
+{% block content %}
+
+<div class="dashboard">
+
+  <!-- Администрирование -->
+<section class="dashboard-section">
+  <h3 class="section-title">Администрирование</h3>
+
+  {% set role = (user.role.value if user.role is not string else user.role) %}
+
+  <div class="card-grid">
+
+    {% if role in ["superuser", "region_admin", "district_admin"] %}
+    <a class="card" href="/l2/issue-l3">
+      <div class="card__inner">
+        <div class="card__top">
+          <div class="card__icon">🔐</div>
+        </div>
+        <h3 class="card__title">Выдача кодов доступа</h3>
+        <p class="card__desc">Регистрация администраторов и сотрудников</p>
+        <div class="card__footer">
+          <span>Открыть</span><span class="card__arrow">→</span>
+        </div>
+      </div>
+    </a>
+    {% endif %}
+
+    <a class="card" href="/users/admins">
+      <div class="card__inner">
+        <div class="card__top">
+          <div class="card__icon">👥</div>
+        </div>
+        <h3 class="card__title">Управление персоналом</h3>
+        <p class="card__desc">Администраторы, учителя, наблюдатели</p>
+        <div class="card__footer">
+          <span>Открыть</span><span class="card__arrow">→</span>
+        </div>
+      </div>
+    </a>
+
+    <a class="card" href="/planning/schools">
+      <div class="card__inner">
+        <div class="card__top">
+          <div class="card__icon">📅</div>
+        </div>
+        <h3 class="card__title">Планирование ВШК</h3>
+        <p class="card__desc">6 направлений, задачи и сроки, ответственные</p>
+        <div class="card__footer">
+          <span>Открыть</span><span class="card__arrow">→</span>
+        </div>
+      </div>
+    </a>
+
+  </div>
+</section>
+
+<section class="dashboard-section">
+  <h3 class="section-title">Школьный контроль</h3>
+
+  <div class="card-grid">
+    <a class="card" href="/lessons/observations">
+      <div class="card__inner">
+        <div class="card__top">
+          <div class="card__icon">📋</div>
+        </div>
+        <h3 class="card__title">Наблюдение уроков</h3>
+        <p class="card__desc">Планирование и проведение наблюдений</p>
+        <div class="card__footer">
+          <span>Открыть</span><span class="card__arrow">→</span>
+        </div>
+      </div>
+    </a>
+
+    <a class="card" href="/assessments">
+      <div class="card__inner">
+        <div class="card__top">
+          <div class="card__icon">🧠</div>
+        </div>
+        <h3 class="card__title">Оценка качества урока</h3>
+        <p class="card__desc">Критерии, шкалы, результаты</p>
+        <div class="card__footer">
+          <span>Открыть</span><span class="card__arrow">→</span>
+        </div>
+      </div>
+    </a>
+
+    <a class="card" href="/staff_school">
+      <div class="card__inner">
+        <div class="card__top">
+          <div class="card__icon">🎓</div>
+        </div>
+        <h3 class="card__title">Развитие педагогов</h3>
+        <p class="card__desc">Анализ, рекомендации, рост</p>
+        <div class="card__footer">
+          <span>Открыть</span><span class="card__arrow">→</span>
+        </div>
+      </div>
+    </a>
+  </div>
+</section>
+
+  <!-- 📊 Отчёты -->
+  <section class="dashboard-section">
+    <h3>Отчёты и аналитика</h3>
+
+    <div class="card-grid">
+      <a class="card" href="/reports/schools" >
+        <div class="card__inner">
+          <div class="card__top">
+            <div class="card__icon">📊</div>
+          </div>
+          <h3 class="card__title"> Отчёты по школам </h3>
+          <p class="card__desc">Справки и протоколы</p>
+          <div class="card__footer">
+            <span>Открыть</span><span class="card__arrow">→</span>
+          </div>
+        </div>
+      </a>
+
+      <a class="card" href="/reports/schools" >
+        <div class="card__inner">
+          <div class="card__top">
+            <div class="card__icon">📊</div>
+          </div>
+          <h3 class="card__title"> Отчёты по предметам </h3>
+          <p class="card__desc">Справки и протоколы</p>
+          <div class="card__footer">
+            <span>Открыть</span><span class="card__arrow">→</span>
+          </div>
+        </div>
+      </a>
+
+      <a class="card" href="/reports/schools" >
+        <div class="card__inner">
+          <div class="card__top">
+            <div class="card__icon">📊</div>
+          </div>
+          <h3 class="card__title"> Отчёты по учителям </h3>
+          <p class="card__desc">Справки и протоколы</p>
+          <div class="card__footer">
+            <span>Открыть</span><span class="card__arrow">→</span>
+          </div>
+        </div>
+      </a>
+
+    </div>
+  </section>
+
+</div>
+{% endblock %}

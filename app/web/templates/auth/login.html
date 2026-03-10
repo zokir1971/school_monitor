@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block title %}Вход{% endblock %}
+
+{% block content %}
+<h2>Вход</h2>
+
+{% if error %}
+  <p style="color:red">{{ error }}</p>
+{% endif %}
+
+<form method="post" action="/login">
+  <div>
+    <label for="identifier">Логин или ИИН</label><br>
+    <input id="identifier" name="identifier" required>
+  </div>
+
+  <div style="margin-top:10px;">
+    <label for="password">Пароль</label><br>
+    <input id="password" type="password" name="password" required>
+  </div>
+
+  <div style="margin-top:12px;">
+    <button type="submit">Войти</button>
+  </div>
+</form>
+
+<div style="margin-top:20px;">
+  <hr style="margin:20px 0;">
+
+  <div style="font-size:14px;">
+    Вы сотрудник школы и ещё не зарегистрированы?
+  </div>
+
+  <div style="margin-top:6px;">
+    <a href="/staff-auth/register">
+      Регистрация для персонала школы
+    </a>
+  </div>
+</div>
+
+{% endblock %}

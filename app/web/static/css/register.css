@@ -1,0 +1,261 @@
+/* ===== Base tokens ===== */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+:root{
+  --bg1:#f8fafc;
+  --bg2:#eef2ff;
+  --card:#fff;
+  --text:#111827;
+  --muted:#6b7280;
+  --border:#e5e7eb;
+  --shadow: 0 10px 25px rgba(0,0,0,.08), 0 2px 8px rgba(0,0,0,.04);
+
+  --primary:#2563eb;
+  --primary-hover:#1d4ed8;
+
+  --danger-bg:#fee2e2;
+  --danger-text:#991b1b;
+  --danger-border:#fecaca;
+}
+
+/* ===== Page + card ===== */
+.auth-page, .reg-page{
+  min-height: calc(100vh - 64px);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:24px;
+  background: linear-gradient(135deg, var(--bg1), var(--bg2));
+}
+
+.auth-card, .reg-card{
+  width:100%;
+  max-width: 980px;          /* L1/L2 может быть шире */
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  padding: 22px;
+}
+
+.auth-card{ max-width: 460px; } /* L0 уже, но класс тот же */
+
+/* ===== Titles ===== */
+.auth-title, .reg-title{
+  margin:0;
+  font-size:22px;
+  line-height:1.25;
+  font-weight:800;
+  color: var(--text);
+}
+
+.auth-subtitle, .reg-subtitle{
+  margin:6px 0 0;
+  color: var(--muted);
+  font-size:14px;
+  max-width: 720px;
+}
+
+/* ===== Header for L1/L2 ===== */
+.reg-header{
+  display:flex;
+  gap:16px;
+  align-items:flex-start;
+  justify-content:space-between;
+  flex-wrap:wrap;
+}
+
+/* ===== Alerts ===== */
+.alert{
+  padding: 12px 14px;
+  border-radius: 12px;
+  margin: 14px 0;
+  font-size: 14px;
+  border:1px solid var(--border);
+  background:#f9fafb;
+  color: var(--text);
+}
+
+.alert--error, .alert--danger{
+  display:flex;
+  gap:10px;
+  align-items:flex-start;
+  background: var(--danger-bg);
+  color: var(--danger-text);
+  border-color: var(--danger-border);
+}
+.alert__icon{font-size:18px; line-height:1; margin-top:1px;}
+.alert__text{flex:1;}
+
+/* ===== Form / fields (унификация) ===== */
+.auth-form, .form{
+  margin-top: 10px;
+  display:flex;
+  flex-direction:column;
+  gap: 14px;
+}
+
+.form-group, .field{
+  display:flex;
+  flex-direction:column;
+  gap: 6px;
+}
+
+.field__label, .field{
+  font-size:13px;
+  font-weight:700;
+  color: #374151;
+}
+
+/* inputs */
+.field__input,
+.field__select,
+.auth-form input,
+.auth-form select {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;          /* важно для grid/flex */
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid #d1d5db;
+  font-size: 14px;
+  background: #fff;
+  outline: none;
+  transition: border-color .2s, box-shadow .2s;
+}
+
+.field__input:focus,
+.field__select:focus,
+.auth-form input:focus,
+.auth-form select:focus{
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(37,99,235,.15);
+}
+
+.field__hint{
+  margin-top: 2px;
+  color: #6b7280;
+  font-size: 12px;
+}
+
+/* required helper */
+.field__select:required { border-left: 3px solid var(--primary); }
+.field__select.is-error {
+  border-color: #dc2626;
+  box-shadow: 0 0 0 3px rgba(220,38,38,.12);
+}
+
+/* ===== Grid helpers ===== */
+.grid-2{
+  display:grid;
+  grid-template-columns: repeat(2, minmax(0,1fr));
+  gap: 12px;
+}
+@media (max-width:760px){ .grid-2{ grid-template-columns:1fr; } }
+
+.divider{ height:1px; background:#eef2f7; margin: 16px 0; }
+.section-title{ margin:0; font-size:16px; font-weight:800; color:var(--text); }
+.section-subtitle{ margin:6px 0 0; color:var(--muted); font-size:13px; }
+
+/* ===== Buttons (унификация) ===== */
+.btn{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid #d1d5db;
+  background:#fff;
+  color:#111827;
+  text-decoration:none;
+  cursor:pointer;
+  font-size:14px;
+  font-weight:800;
+  transition: background .2s, transform .05s, border-color .2s, color .2s;
+}
+
+.btn--primary{
+  background: var(--primary);
+  border-color: var(--primary);
+  color:#fff;
+}
+.btn--primary:hover{ background: var(--primary-hover); border-color: var(--primary-hover); }
+.btn:active{ transform: translateY(1px); }
+
+.btn--ghost{
+  background:#fff;
+}
+.btn--ghost:hover{ background:#f3f4f6; }
+
+.btn--block{ width:100%; }
+
+/* ===== Actions row ===== */
+.actions{
+  display:flex;
+  gap:10px;
+  margin-top: 12px;
+  flex-wrap:wrap;
+}
+
+/* ===== Stepper (для L1/L2) ===== */
+.reg-steps{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin-top: 4px;
+}
+.step-dot{
+  width:28px;height:28px;border-radius:999px;
+  display:inline-flex;align-items:center;justify-content:center;
+  border:1px solid var(--border);
+  background:#f9fafb;
+  font-weight:900;color:#374151;
+}
+.step-dot--active{
+  background:#111827;
+  color:#fff;
+  border-color:#111827;
+}
+.step-line{width:38px;height:2px;background:#e7e7e7;border-radius:2px;}
+
+/* ===== Pills/info blocks ===== */
+.info-grid{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px;}
+.info-pill{
+  border:1px solid var(--border);
+  background:#f9fafb;
+  border-radius:999px;
+  padding:8px 12px;
+  display:flex;
+  gap:8px;
+  align-items:baseline;
+}
+.info-pill__label{color:var(--muted);font-size:12px;font-weight:800;}
+.info-pill__value{font-size:13px;font-weight:900;color:var(--text);}
+
+/* ===== Scope card ===== */
+.scope-card{
+  margin-top:12px;
+  border:1px solid var(--border);
+  border-radius:16px;
+  padding:12px;
+  background:#f9fafb;
+}
+.scope-card__title{font-weight:900;margin-bottom:8px;color:var(--text);}
+.scope-grid{
+  display:grid;
+  grid-template-columns: repeat(3, minmax(0,1fr));
+  gap:12px;
+}
+@media (max-width:900px){ .scope-grid{ grid-template-columns:1fr; } }
+
+/* ===== Hint card ===== */
+.hint-card{
+  padding:10px 12px;
+  border:1px dashed #d1d5db;
+  border-radius:12px;
+  background:#f9fafb;
+  color:#374151;
+  font-size:13px;
+}

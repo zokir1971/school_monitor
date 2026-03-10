@@ -1,0 +1,564 @@
+{% extends "base.html" %}
+{% block title %}Редактирование направления{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', path='css/planning_edit.css') }}">
+{% endblock %}
+
+{% block content %}
+<div id="pageRoot"
+     data-plan-id="{{ plan.id }}"
+     data-direction-id="{{ direction_id }}">
+
+<div class="page-head">
+  <div class="page-head__left">
+    <h2 class="page-title">Планирование ВШК — редактирование</h2>
+    <div class="page-subtitle">
+      План: <b>#{{ plan.id }}</b> ·
+      Направление: <b>{{ direction.full_title }}</b>
+      <small>(ID: {{ direction.id }})</small>
+    </div>
+  </div>
+
+  <div class="page-head__right">
+    <a href="{{ request.url_for('school_dashboard') }}?academic_year={{ plan.academic_year }}"
+       class="btn btn--light">← Назад</a>
+  </div>
+</div>
+
+<div class="toolbar">
+  <div class="toolbar__hint">
+    Клик по ячейке — редактирование · Enter — сохранить · Esc — отмена
+  </div>
+</div>
+
+<div id="page-meta"
+     data-school-plan-id="{{ plan.id }}"
+     data-direction-id="{{ direction_id }}">
+</div>
+
+<!-- ===================== TABLE 4 ===================== -->
+<div class="card card--section">
+  <div class="card__header">
+    <div>
+      <h3 class="card__title">Таблица (Объекты контроля)</h3>
+      <div class="card__hint">Добавляй/удаляй строки, редактируй ячейки кликом</div>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table class="grid" id="grid4">
+      <thead>
+        <tr>
+          <th class="col--num">№</th>
+          <th class="col--wide">Бақылау нысаны</th>
+          <th class="col--wide">Мәселелер, тәуекелдер</th>
+          <th class="col--wide">Басшылық шешімі / Тапсырма</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        {% for r in rows4 %}
+          <tr data-row
+            data-kind="row4"
+            data-row-id="{{ r.id }}"
+            data-is-custom="{{ 1 if r.is_custom else 0 }}">
+            <td class="cell" data-kind="row4" data-row-id="{{ r.id }}" data-field="no">
+              <div class="num">{{ loop.index }}</div>
+            </td>
+            <td class="cell" data-kind="row4" data-row-id="{{ r.id }}" data-field="control_object">
+              <div class="cell__text">{{ r.control_object or "" }}</div>
+            </td>
+            <td class="cell" data-kind="row4" data-row-id="{{ r.id }}" data-field="risk_text">
+              <div class="cell__text">{{ r.risk_text or "" }}</div>
+            </td>
+            <td class="cell" data-kind="row4" data-row-id="{{ r.id }}" data-field="decision_text">
+              <div class="cell__text">{{ r.decision_text or "" }}</div>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <div class="table-footer-actions">
+      <span class="table-hint-badge">ℹ️ Для удаления нажмите на номер строки</span>
+      <form method="post"
+        action="/planning/school/{{ plan.id }}/direction/{{ direction_id }}/rows4/add"
+        style="display:inline;">
+        <button class="btn btn--primary" type="submit">+ Добавить строку</button>
+      </form>
+
+        <button id="btnDelete-row4"
+          class="btn btn--danger"
+          type="button"
+          disabled>
+          🗑 Удалить выбранную
+        </button>
+    </div>
+    <form id="deleteForm-row4" method="post" style="display:none;"></form>
+  </div>
+</div>
+
+
+<!-- ===================== TABLE 11 ===================== -->
+<div class="card card--section">
+  <div class="card__header">
+    <div>
+      <h3 class="card__title">Таблица (Задачи контроя)</h3>
+      <div class="card__hint">Клик по ячейке — редактирование</div>
+    </div>
+
+    <div class="card__actions">
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table class="grid" id="grid11">
+      <thead>
+        <tr>
+          <th class="col--num">№</th>
+          <th class="col--topic">Тақырып</th>
+          <th class="col--topic">Мақсаты</th>
+          <th class="col--wide">Бақылау нысаны</th>
+          <th class="col--sm">Бақылау түрі</th>
+          <th class="col--wide">Әдістер</th>
+          <th class="col--mid">Мерзімі</th>
+          <th class="col--mid">Жауаптылар</th>
+          <th class="col--sm">Қарау орны</th>
+          <th class="col--xl">Басшылық шешімі</th>
+          <th class="col--sm">Екінші бақылау</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        {% for r in rows11 %}
+          {% set months_selected = row_months_selected.get(r.id, []) %}
+
+          <tr data-row
+            data-kind="row11"
+            data-row-id="{{ r.id }}"
+            data-is-custom="{{ 1 if r.is_custom else 0 }}">
+            <td class="cell cell--select"
+              data-select-cell>
+              <div class="num">{{ loop.index }}
+                <!-- DEBUG -->
+                <span style="color:red;">{{ r.is_custom }}</span>
+              </div>
+            </td>
+
+            <td class="cell" data-kind="row11" data-row-id="{{ r.id }}" data-field="topic">
+              <div class="cell__text">{{ r.topic or "" }}</div>
+            </td>
+            <td class="cell" data-kind="row11" data-row-id="{{ r.id }}" data-field="goal">
+              <div class="cell__text">{{ r.goal or "" }}</div>
+            </td>
+            <td class="cell" data-kind="row11" data-row-id="{{ r.id }}" data-field="control_object">
+              <div class="cell__text">{{ r.control_object or "" }}</div>
+            </td>
+            <td class="cell" data-kind="row11" data-row-id="{{ r.id }}" data-field="control_type">
+              <div class="cell__text">{{ r.control_type or "" }}</div>
+            </td>
+            <td class="cell" data-kind="row11" data-row-id="{{ r.id }}" data-field="methods">
+              <div class="cell__text">{{ r.methods or "" }}</div>
+            </td>
+
+            <!-- ===================== МЕРЗІМІ ===================== -->
+            <td class="meta">
+              <div class="cell-vertical">
+
+                <div class="js-period-view" id="periodView_{{ r.id }}">
+                  {% if r.period_type and r.period_type.value == 'all_year' %}
+                    <span class="badge">Жыл бойы</span>
+                  {% elif r.period_type and r.period_type.value == 'monthly' %}
+                    <span class="badge">Ай сайын</span>
+                  {% elif r.period_type and r.period_type.value == 'month' %}
+                    <span class="badge">
+                      {{ MONTH_NAMES[r.period_value_int] if r.period_value_int else '-' }}
+                    </span>
+                  {% elif r.period_type and r.period_type.value == 'months' %}
+                    {% if months_selected %}
+                      <div class="months-list">
+                        {% for m in months_selected %}
+                          <span class="badge badge--month">{{ MONTH_NAMES[m] }}</span>
+                        {% endfor %}
+                      </div>
+                    {% else %}
+                      <span class="badge">-</span>
+                    {% endif %}
+                  {% elif r.period_type and r.period_type.value == 'quarter' %}
+                    <span class="badge">Тоқсан сайын</span>
+                  {% else %}
+                    <span class="badge">-</span>
+                  {% endif %}
+                </div>
+
+                <div class="meta-hint">
+                  Үлгі:
+                  <span class="badge badge--muted">{{ r.deadlines or '-' }}</span>
+                </div>
+
+                <button type="button"
+        class="icon-btn js-open-meta"
+        data-no-edit="1"
+        data-row-id="{{ r.id }}"
+        data-action="/planning/school/{{ plan.id }}/direction/{{ direction_id }}/rows11/{{ r.id }}/meta"
+        data-period-type="{{ (r.period_type.value if r.period_type else 'all_year') }}"
+        data-period-value-int="{{ r.period_value_int if r.period_value_int is not none else '' }}"
+        data-period-values="{{ (r.period_values or '')|e }}"
+        data-roles='{{ row_roles_selected.get(r.id, []) | tojson }}'>
+  <svg class="icon" viewBox="0 0 24 24">
+    <path fill="currentColor"
+          d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zm2.92 2.83H5v-.92l8.06-8.06.92.92L5.92 20.08zM20.71 7.04a1.003 1.003 0 0 0 0-1.42L18.37 3.29a1.003 1.003 0 0 0-1.42 0l-1.83 1.83 3.75 3.75 1.84-1.83z"/>
+  </svg>
+</button>
+
+              </div>
+            </td>
+
+            <!-- ===================== ЖАУАПТЫЛАР ===================== -->
+            <td class="meta">
+  <div class="cell-vertical">
+
+    <!-- ТУТ показываем выбранные роли -->
+    <div class="js-role-view roles-pills" id="roleView_{{ r.id }}" data-row-id="{{ r.id }}">
+      {% if r.role_assignments and r.role_assignments|length %}
+        {% for ra in r.role_assignments %}
+          <span class="badge">{{ ra.role.label_kz }}</span>
+        {% endfor %}
+      {% else %}
+        <span class="badge">-</span>
+      {% endif %}
+    </div>
+
+    <div class="meta-hint">
+      Үлгі:
+      <span class="badge badge--muted">{{ r.responsibles or '-' }}</span>
+    </div>
+
+  </div>
+</td>
+            <!-- ===================== МЕСТО РАССМОТРЕНИЕ ===================== -->
+<td class="meta">
+  <div class="cell-vertical">
+
+    <div class="roles-pills" id="reviewView_{{ r.id }}">
+      {% set places = row_review_places_map.get(r.id, []) %}
+      {% if places %}
+        {% for p in review_places %}
+          {% if p.value in places %}
+            <span class="badge">{{ p.label_kz }}</span>
+          {% endif %}
+        {% endfor %}
+      {% else %}
+        <span class="badge">-</span>
+      {% endif %}
+    </div>
+
+    <div class="meta-hint">
+      Үлгі:
+      <span class="badge badge--muted">{{ r.review_place or '-' }}</span>
+    </div>
+
+    <button
+        type="button"
+        class="icon-btn js-open-review"
+        data-row-id="{{ r.id }}"
+        data-action="{{ request.url_for('school_row11_review_places_update',
+                         plan_id=plan.id,
+                         direction_id=direction_id,
+                         row11_id=r.id) }}"
+        data-places='{{ row_review_places_map.get(r.id, [])|tojson }}'>
+
+      <svg class="icon" viewBox="0 0 24 24">
+        <path fill="currentColor"
+              d="M12 3l9 4-9 4-9-4 9-4zm0 7l6 2.67V17l-6 3-6-3v-4.33L12 10z"/>
+      </svg>
+
+    </button>
+
+  </div>
+</td>
+
+
+<!-- ===================== ТИП ДОКУМЕНТА ===================== -->
+<td class="meta">
+  <div class="cell-vertical">
+
+    <div class="roles-pills" id="docView_{{ r.id }}">
+      {% set docs = row_required_docs_map.get(r.id, []) %}
+      {% if docs %}
+        {% for d in document_types %}
+          {% if d.value in docs %}
+            <span class="badge">{{ d.label_kz }}</span>
+          {% endif %}
+        {% endfor %}
+      {% else %}
+        <span class="badge">-</span>
+      {% endif %}
+    </div>
+
+    <div class="meta-hint">
+      Үлгі:
+      <span class="badge badge--muted">{{ r.management_decision or '-' }}</span>
+    </div>
+
+    <div class="cell-actions">
+      <button
+          type="button"
+          class="icon-btn js-open-docs"
+          data-row-id="{{ r.id }}"
+          data-action="{{ request.url_for('school_row11_documents_update',
+                           plan_id=plan.id,
+                           direction_id=direction_id,
+                           row11_id=r.id) }}"
+          data-docs='{{ row_required_docs_map.get(r.id, [])|tojson }}'>
+
+        <svg class="icon" viewBox="0 0 24 24">
+          <path fill="currentColor"
+                d="M6 2h9l5 5v15a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zm8 1.5V8h4.5"/>
+        </svg>
+
+      </button>
+    </div>
+
+  </div>
+</td>
+            <td class="cell" data-kind="row11" data-row-id="{{ r.id }}" data-field="second_control">
+              <div class="cell__text">{{ r.second_control or "" }}</div>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+
+    </table>
+    <div class="table-footer-actions">
+      <span class="table-hint-badge">ℹ️ Для удаления нажмите на номер строки</span>
+  <form method="post"
+        action="/planning/school/{{ plan.id }}/direction/{{ direction_id }}/rows11/add"
+        style="display:inline;">
+    <button class="btn btn--primary" type="submit">+ Добавить строку</button>
+  </form>
+
+  <button id="btnDelete-row11"
+          class="btn btn--danger"
+          type="button"
+          disabled>
+    🗑 Удалить выбранную
+  </button>
+</div>
+
+<form id="deleteForm-row11" method="post" style="display:none;"></form>
+  </div>
+</div>
+
+<!-- ===================== MODAL: META (PERIOD + RESPONSIBLE) ===================== -->
+<div class="modal" id="metaModal" aria-hidden="true">
+  <div class="modal__backdrop" data-modal-close="metaModal"></div>
+
+  <div class="modal__dialog">
+    <div class="modal__head">
+      <div class="modal__title">Параметрлерді өзгерту</div>
+      <button class="modal__close" type="button" data-modal-close="metaModal">×</button>
+    </div>
+
+    <form method="post"
+      id="metaForm"
+      action="/planning/school/{{ plan.id }}/direction/{{ direction_id }}/meta"
+      data-ajax="1">
+      <input type="hidden" name="period_values" id="pm_period_values" value="">
+      <input type="hidden" id="mm_row_id" name="row_id" value="">
+
+      <div class="modal__body">
+        <label class="field">
+          <div class="field__label">Период түрі</div>
+          <select class="select" name="period_type" id="pm_period_type">
+            <option value="all_year">Жыл бойы</option>
+            <option value="month">Нақты бір айды таңдау</option>
+            <option value="months">Бір неше айды таңдау</option>
+            <option value="monthly">Ай сайын</option>
+            <option value="quarter">Тоқсан сайын</option>
+          </select>
+        </label>
+
+        <div id="pm_block_month" style="display:none;">
+          <label class="field">
+            <div class="field__label">Ай</div>
+            <select class="select" name="month" id="pm_month">
+              {% for m in range(1, 13) %}
+                <option value="{{ m }}">{{ MONTH_NAMES[m] }}</option>
+              {% endfor %}
+            </select>
+          </label>
+        </div>
+
+        <div id="pm_block_months" style="display:none;">
+          <div class="field">
+            <div class="field__label">Айлар (бірнеше)</div>
+
+            <div class="months-actions">
+              <button type="button" class="btn btn--ghost btn--sm" id="pm_select_all">Барлығы</button>
+              <button type="button" class="btn btn--ghost btn--sm" id="pm_clear_all">Тазалау</button>
+            </div>
+
+            <div class="months-grid">
+              {% for m in range(1, 13) %}
+                <label class="months-item">
+                  <input type="checkbox" class="pm-month-cb" value="{{ m }}">
+                  <span>{{ MONTH_NAMES[m] }}</span>
+                </label>
+              {% endfor %}
+            </div>
+
+            <div class="meta__hint">
+              Таңдалған: <span id="pm_preview">—</span>
+            </div>
+          </div>
+        </div>
+
+        <div id="pm_block_quarter" style="display:none;">
+          <div class="meta__hint">Тоқсан сайын — жылдық жоспарда тоқсан таңдалмайды.</div>
+        </div>
+
+        <hr style="margin:14px 0; opacity:.2;">
+
+        <label class="field">
+  <div class="field__label">Жауаптылар (бірнеше)</div>
+
+  <!-- JSON строка массива выбранных ролей -->
+  <input type="hidden" name="responsible_roles" id="rm_roles" value="[]">
+
+  <div class="months-actions" style="margin:6px 0 10px;">
+    <button type="button" class="btn btn--ghost btn--sm" id="rm_select_all">Барлығы</button>
+    <button type="button" class="btn btn--ghost btn--sm" id="rm_clear_all">Тазалау</button>
+  </div>
+
+  <div class="months-grid" id="rm_grid">
+    {% for r in RESPONSIBLE_ROLES %}
+      <label class="months-item rm-item">
+        <input type="checkbox"
+       class="rm-role-cb"
+       name="responsible_roles_cb"
+       value="{{ r.value }}"
+       data-label="{{ r.label_kz }}">
+        <span>{{ r.label_kz }}</span>
+      </label>
+    {% endfor %}
+  </div>
+
+  <div class="meta__hint">
+    Таңдалған: <span id="rm_preview">—</span>
+  </div>
+</label>
+      </div>
+
+      <div class="modal__foot">
+        <button type="button" class="btn btn--secondary" data-modal-close="metaModal">Болдырмау</button>
+        <button type="submit" class="btn btn--primary" id="mm_submit">Сақтау</button>
+      </div>
+    </form>
+  </div>
+</div>
+<!-- ===================== MODAL: META (REVIEV + DOCUMENT) ===================== -->
+<div class="modal" id="reviewModal" aria-hidden="true">
+  <div class="modal__backdrop" onclick="closeModal('reviewModal')"></div>
+  <div class="modal__dialog">
+    <div class="modal__head">
+      <div class="modal__title">Қарау орны</div>
+      <button type="button"
+              class="modal__close"
+              onclick="closeModal('reviewModal')">
+        ×
+      </button>
+    </div>
+    <form id="reviewForm" method="post">
+      <div class="modal__body">
+        {% for p in review_places %}
+<label class="months-item">
+  <input
+      type="checkbox"
+      class="reviewChk"
+      name="review_places"
+      value="{{ p.value }}">
+  {{ p.label_kz }}
+</label>
+{% endfor %}
+      </div>
+      <div class="modal__foot">
+        <button type="button"
+                class="btn btn--light"
+                onclick="closeModal('reviewModal')">
+          Болдырмау
+        </button>
+        <button type="submit"
+                class="btn btn--primary">
+          Сақтау
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="modal" id="docsModal" aria-hidden="true">
+  <div class="modal__backdrop" onclick="closeModal('docsModal')"></div>
+  <div class="modal__dialog">
+    <div class="modal__head">
+      <div class="modal__title">Қажетті құжаттар</div>
+      <button type="button"
+              class="modal__close"
+              onclick="closeModal('docsModal')">
+        ×
+      </button>
+    </div>
+    <form id="docsForm" method="post">
+      <div class="modal__body">
+        {% for d in document_types %}
+<label class="months-item">
+  <input
+      type="checkbox"
+      class="docsChk"
+      name="required_document_types"
+      value="{{ d.value }}">
+  {{ d.label_kz }}
+</label>
+{% endfor %}
+      </div>
+      <div class="modal__foot">
+        <button type="button"
+                class="btn btn--light"
+                onclick="closeModal('docsModal')">
+          Болдырмау
+        </button>
+        <button type="submit"
+                class="btn btn--primary">
+          Сақтау
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- scripts -->
+<script>
+  window.MONTH_NAMES = {{ (MONTH_NAMES or {})|tojson }};
+</script>
+<script src="{{ url_for('static', path='js/meta_modal.js') }}"></script>
+<script src="{{ url_for('static', path='js/cell_edit.js') }}"></script>
+<script src="{{ url_for('static', path='js/row_select.js') }}"></script>
+
+{% set doc_map = {} %}
+{% for d in document_types %}
+  {% set _ = doc_map.update({d.value: d.label_kz}) %}
+{% endfor %}
+
+{% set review_map = {} %}
+{% for p in review_places %}
+  {% set _ = review_map.update({p.value: p.label_kz}) %}
+{% endfor %}
+
+<div id="docLabels" data-map='{{ doc_map | tojson }}'></div>
+<div id="reviewLabels" data-map='{{ review_map | tojson }}'></div>
+
+<script src="{{ url_for('static', path='js/modal_review_docs.js') }}"></script>
+</div>
+
+{% endblock %}

@@ -1,0 +1,216 @@
+{% extends "base.html" %}
+
+{% block title %}Назначение ответственного лица за выполнения{% endblock %}
+
+{% block extra_css %}
+  <link rel="stylesheet" href="{{ url_for('static', path='css/plan_assignees.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="page">
+  <div class="page-inner">
+
+    <div class="card card--large assignee-page">
+
+      <div class="toolbar assignee-toolbar">
+        <div class="left">
+          <h2>Назначение ответственных</h2>
+          <div class="sub">
+            Пункт месячного плана
+          </div>
+        </div>
+
+        <div class="right">
+          <a href="javascript:history.back()" class="btn">Назад</a>
+        </div>
+      </div>
+
+      <div class="info-grid">
+        <div class="info-card">
+          <div class="info-label">Направление</div>
+          <div class="info-value">
+            {{ direction_name or "—" }}
+          </div>
+        </div>
+
+        <div class="info-card">
+          <div class="info-label">Статус включения</div>
+          <div class="info-value">
+            {% if month_item.is_included %}
+              <span class="text-success">Включена в месячный план</span>
+            {% else %}
+              <span class="text-danger">Не включена в месячный план</span>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="info-card">
+          <div class="info-label">Тема</div>
+          <div class="info-value">
+            {{ topic or "—" }}
+          </div>
+        </div>
+
+        <div class="info-card">
+          <div class="info-label">Цель</div>
+          <div class="info-value">
+            {{ goal or "—" }}
+          </div>
+        </div>
+
+        <div class="info-card">
+          <div class="info-label">Дата начала</div>
+          <div class="info-value">
+            {{ planned_start.strftime("%d.%m.%Y") if planned_start else "—" }}
+          </div>
+        </div>
+
+        <div class="info-card">
+          <div class="info-label">Дата окончания</div>
+          <div class="info-value">
+            {{ planned_end.strftime("%d.%m.%Y") if planned_end else "—" }}
+          </div>
+        </div>
+      </div>
+
+      {% set no_roles = not responsible_blocks %}
+      {% set no_deadline = (not planned_start and not planned_end) %}
+      {% set not_included = not month_item.is_included %}
+
+      {% if not can_assign or no_roles %}
+        <div class="alert alert-danger">
+          <div class="alert-title">Назначение ответственных сейчас недоступно</div>
+
+          <ul>
+            {% if not_included %}
+              <li>Задача не включена в месячный план.</li>
+            {% endif %}
+
+            {% if no_deadline %}
+              <li>Не определён срок выполнения: укажите дату начала или дату окончания.</li>
+            {% endif %}
+
+            {% if no_roles %}
+              <li>Для задачи не назначены ответственные роли.</li>
+            {% endif %}
+          </ul>
+        </div>
+      {% endif %}
+
+      <div class="section">
+        <div class="section-title">
+          Текущие назначенные сотрудники
+        </div>
+
+        {% if selected_staff_role_ids %}
+          <div class="selected-list">
+            {% for block in responsible_blocks %}
+              {% for opt in block.options %}
+                {% if opt.staff_role_id in selected_staff_role_ids %}
+                  <span class="selected-chip">
+                    {{ opt.full_name }}
+                    <span class="selected-meta">
+                      — {{ opt.role_label }}{% if opt.role_context %} ({{ opt.role_context }}){% endif %}
+                    </span>
+                    {% if block.is_primary %}
+                      <span class="badge badge-danger">главный</span>
+                    {% endif %}
+                  </span>
+                {% endif %}
+              {% endfor %}
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="empty-text">Сотрудники пока не назначены.</div>
+        {% endif %}
+      </div>
+
+      {% if can_assign and not no_roles %}
+        <form
+          method="post"
+          action="{{ request.url_for('school_month_item_assignees_save', month_item_id=month_item.id) }}"
+        >
+          <div class="blocks-grid">
+            {% for block in responsible_blocks %}
+              <div class="role-block">
+                <div class="role-block__head">
+                  <div class="role-block__title">
+                    {{ block.role_label }}
+                    {% if block.role_context %}
+                      <span class="role-block__context">— {{ block.role_context }}</span>
+                    {% endif %}
+                  </div>
+
+                  <div>
+                    {% if block.is_primary %}
+                      <span class="badge badge-danger">
+                        Главный ответственный
+                      </span>
+                    {% else %}
+                      <span class="badge badge-soft">
+                        Соисполнитель
+                      </span>
+                    {% endif %}
+                  </div>
+                </div>
+
+                <div class="role-block__body">
+                  {% if block.options %}
+                    <div class="options-list">
+                      {% for opt in block.options %}
+                        <label class="option-card">
+                          <input
+                            type="checkbox"
+                            name="assignee_ids"
+                            value="{{ opt.staff_role_id }}"
+                            {% if opt.checked %}checked{% endif %}
+                            class="option-card__checkbox"
+                          >
+
+                          <span class="option-card__content">
+                            <span class="option-card__name">
+                              {{ opt.full_name }}
+                            </span>
+
+                            <span class="option-card__meta">
+                              {{ opt.role_label }}
+                              {% if opt.role_context %}
+                                — {{ opt.role_context }}
+                              {% endif %}
+                            </span>
+                          </span>
+                        </label>
+                      {% endfor %}
+                    </div>
+                  {% else %}
+                    <div class="empty-box">
+                      Для роли <strong>{{ block.role_label }}</strong> не найдено активных сотрудников.
+                    </div>
+                  {% endif %}
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+
+          <div class="actions">
+            <button type="submit" class="btn btn--primary">
+              Сохранить назначения
+            </button>
+
+            <a href="javascript:history.back()" class="btn">
+              Назад
+            </a>
+          </div>
+        </form>
+      {% else %}
+        <div class="actions">
+          <a href="javascript:history.back()" class="btn">
+            Назад
+          </a>
+        </div>
+      {% endif %}
+
+    </div>
+  </div>
+</div>
+{% endblock %}

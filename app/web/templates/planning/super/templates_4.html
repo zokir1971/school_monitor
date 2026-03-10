@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+{% block title %}Шаблон ВШК{% endblock %}
+
+{% block content %}
+
+<h2>Шаблон ВШК</h2>
+
+{# --- Выбор шаблона (если используешь) --- #}
+{% if selected_direction and templates and templates|length > 0 %}
+  <form method="post" action="/planning/super/templates4/select" style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+    <input type="hidden" name="direction_id" value="{{ selected_direction_id }}">
+    <select name="template_id">
+      {% for t in templates %}
+        <option value="{{ t.id }}" {% if selected_template_id == t.id %}selected{% endif %}>
+          {{ t.name }}
+        </option>
+      {% endfor %}
+    </select>
+    <button class="btn btn--primary">Открыть</button>
+  </form>
+  <hr>
+{% endif %}
+
+{# --- Выбранное направление --- #}
+{% if selected_direction %}
+  <div class="alert">
+    <b>Направление:</b> {{ selected_direction.short_title }}
+  </div>
+{% else %}
+  <div class="alert alert--error">
+    Сначала выберите направление.
+  </div>
+{% endif %}
+
+
+
+{# --- Если шаблонов нет — показать создание (если у тебя есть роут /templates/add) --- #}
+{% if selected_direction and (not templates or templates|length == 0) %}
+  <div class="alert alert--error">
+    Для этого направления ещё нет шаблона. Сначала создайте шаблон или импортируйте скелет.
+  </div>
+
+  <h3>Создать шаблон</h3>
+  <form method="post" action="/planning/super/templates4/add">
+    <input type="hidden" name="direction_id" value="{{ selected_direction_id }}">
+    <input name="name" placeholder="Название шаблона" required>
+    <input name="academic_year" placeholder="Напр. 2026-2027">
+    <button class="btn btn--primary" style="margin-top:10px;">Создать</button>
+  </form>
+
+{% endif %}
+
+{# --- Дальше работаем только если есть выбранный template_id --- #}
+{% if selected_template_id %}
+
+  <hr>
+
+  {# --- Разделы + таблица --- #}
+  {% for section in sections %}
+
+    <h3 style="margin-top:18px;">
+      {{ selected_direction.full_title }}
+    </h3>
+
+    <table class="table" border="2">
+      <thead>
+        <tr>
+          <th style="width:60px;">№</th>
+          <th>Бақылау нысаны</th>
+          <th>Мәселелер, тәуекелдер</th>
+          <th>Басқарушылық шешімдердің нұсқалары</th>
+          <th style="width:90px;"></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% set rows = items_by_section.get(section.id, []) %}
+        {% if rows|length == 0 %}
+          <tr>
+            <td colspan="5" style="opacity:.7;">Әзірге жолдар жоқ — төменнен қосыңыз.</td>
+          </tr>
+        {% else %}
+          {% for item in rows %}
+            <tr>
+              <td>{{ loop.index }}</td>
+              <td style="white-space:pre-wrap;">{{ item.control_object }}</td>
+              <td style="white-space:pre-wrap;">{{ item.risk_text }}</td>
+              <td style="white-space:pre-wrap;">{{ item.decision_text }}</td>
+
+              <td>
+                <form method="post" action="/planning/super/templates4/items/{{ item.id }}/delete">
+                  <input type="hidden" name="direction_id" value="{{ selected_direction_id }}">
+                  <input type="hidden" name="template_id" value="{{ selected_template_id }}">
+                  <button class="btn">Удалить</button>
+                </form>
+              </td>
+            </tr>
+          {% endfor %}
+        {% endif %}
+      </tbody>
+    </table>
+
+    {# --- Добавить строку (3 textarea, без дат) --- #}
+    <form method="post" action="/planning/super/templates4/items/add" style="margin-top:10px;">
+      <input type="hidden" name="direction_id" value="{{ selected_direction_id }}">
+      <input type="hidden" name="template_id" value="{{ selected_template_id }}">
+      <input type="hidden" name="section_id" value="{{ section.id }}">
+
+      <textarea name="control_object" placeholder="Бақылау нысаны" required></textarea>
+      <textarea name="risks" placeholder="Мәселелер, тәуекелдер"></textarea>
+      <textarea name="decisions" placeholder="Басқарушылық шешімдердің нұсқалары"></textarea>
+
+      <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:10px;">
+        <label style="opacity:.8;">№ (реті):</label>
+        <input name="sort_order" type="number" value="1" min="1" style="width:90px;">
+        <button class="btn btn--primary">Қосу</button>
+      </div>
+      <div>DEBUG section.id={{ section.id }} direction={{ selected_direction_id }}</div>
+
+    </form>
+
+    <hr>
+
+  {% endfor %}
+
+  {# --- Импорт из --- #}
+  <h3>Импорт из .docx</h3>
+  <form method="post" action="/planning/super/templates4/import" enctype="multipart/form-data">
+    <input type="hidden" name="direction_id" value="{{ selected_direction_id }}">
+    <input type="hidden" name="template_id" value="{{ selected_template_id }}">
+    <input type="file" name="file" accept=".docx" required>
+    <button class="btn btn--primary">Импорт</button>
+  </form>
+
+{% endif %}
+
+{% endblock %}

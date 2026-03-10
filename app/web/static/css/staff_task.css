@@ -1,0 +1,116 @@
+/* =========================
+   PAGE
+========================= */
+
+.page{
+  max-width:1400px;
+  margin:0 auto;
+}
+
+.page-inner{
+  padding:20px;
+}
+
+/* =========================
+   HEADER
+========================= */
+
+.sticky-head{
+  position:sticky;
+  top:0;
+  background:#fff;
+  border-bottom:1px solid #e6e8ec;
+  z-index:10;
+}
+
+.head-row{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:14px 0;
+}
+
+.head-title h2{
+  font-size:22px;
+  font-weight:600;
+  margin:0;
+}
+
+.head-title .sub{
+  font-size:13px;
+  color:#7a7a7a;
+  margin-top:3px;
+}
+
+/* =========================
+   CARD
+========================= */
+
+.card{
+  background:#fff;
+  border-radius:14px;
+  border:1px solid #e7e9ee;
+  box-shadow:0 4px 14px rgba(0,0,0,0.04);
+}
+
+.card--large{
+  padding:0;
+  overflow:hidden;
+}
+
+/* =========================
+   TABLE
+========================= */
+
+.plan{
+  width:100%;
+  border-collapse:collapse;
+  font-size:14px;
+}
+
+.plan thead{
+  background:#f6f7f9;
+}
+
+.plan th{
+  font-weight:600;
+  padding:12px 14px;
+  border-bottom:1px solid #e5e7eb;
+  text-align:left;
+  color:#444;
+}
+
+.plan td{
+  padding:12px 14px;
+  border-bottom:1px solid #f0f0f0;
+  vertical-align:top;
+}
+
+/* hover */
+
+.plan tbody tr:hover{
+  background:#f9fafc;
+}
+
+/* текущая неделя */
+
+.row-current{
+  background:#eef4ff;
+}
+
+/* nowrap */
+
+.nowrap{
+  white-space:nowrap;
+}
+
+/* =========================
+   EMPTY STATE
+========================= */
+
+.plan .empty{
+  text-align:center;
+  padding:40px;
+  color:#888;
+  font-size:14px;
+}

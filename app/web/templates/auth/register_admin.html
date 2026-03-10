@@ -1,0 +1,260 @@
+{% extends "base.html" %}
+{% block title %}Регистрация админа{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', path='css/register.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="reg-page">
+  <div class="reg-card">
+
+    <div class="reg-header">
+      <div>
+        <h1 class="reg-title">Регистрация администратора</h1>
+        <p class="reg-subtitle">Введите пригласительный код и заполните данные для доступа к системе.</p>
+      </div>
+
+      <div class="reg-steps" aria-label="Шаги регистрации">
+        <span class="step-dot {% if step == 1 %}step-dot--active{% endif %}">1</span>
+        <span class="step-line"></span>
+        <span class="step-dot {% if step == 2 %}step-dot--active{% endif %}">2</span>
+      </div>
+    </div>
+
+    {% if error %}
+      <div id="error-box" class="alert alert--danger" role="alert">
+        <div class="alert__icon">⚠️</div>
+        <div class="alert__text">{{ error }}</div>
+      </div>
+    {% endif %}
+
+    {# ==================================================
+       ШАГ 1: ввод пригласительного кода
+       ================================================== #}
+    {% if step == 1 %}
+      <form method="post" action="/register-admin/preview" class="form" id="regFormStep1">
+        <div class="field">
+          <label class="field__label" for="invite_code">Код приглашения</label>
+          <input
+            id="invite_code"
+            class="field__input"
+            name="invite_code"
+            required
+            minlength="4"
+            maxlength="64"
+            autocomplete="off"
+            placeholder="Например: L1-ABCD"
+          >
+          <div class="field__hint">
+            Код выдаётся администратором. Проверьте, чтобы не было лишних пробелов.
+          </div>
+        </div>
+
+        <div class="actions">
+          <button type="submit" class="btn btn--primary">Продолжить</button>
+          <a href="/login" class="btn btn--ghost">У меня уже есть аккаунт</a>
+        </div>
+      </form>
+    {% endif %}
+
+    {# ==================================================
+       ШАГ 2: подтверждение роли/скоупа + заполнение данных
+       ================================================== #}
+    {% if step == 2 %}
+      <div class="info-grid">
+        <div class="info-pill">
+          <span class="info-pill__label">Роль по коду</span>
+          <span class="info-pill__value">{{ role }}</span>
+        </div>
+
+        {% if region %}
+          <div class="info-pill">
+            <span class="info-pill__label">Область по коду</span>
+            <span class="info-pill__value">{{ region.name }}</span>
+          </div>
+        {% endif %}
+        {% if district %}
+          <div class="info-pill">
+            <span class="info-pill__label">Район по коду</span>
+            <span class="info-pill__value">{{ district.name }}</span>
+          </div>
+        {% endif %}
+        {% if school %}
+          <div class="info-pill">
+            <span class="info-pill__label">Школа по коду</span>
+            <span class="info-pill__value">{{ school.name }}</span>
+          </div>
+        {% endif %}
+      </div>
+
+      <form method="post" action="/register-admin" class="form" id="regFormStep2">
+        <input type="hidden" name="invite_code" value="{{ invite_code }}">
+
+        <div class="grid-2">
+          <div class="field">
+            <label class="field__label" for="full_name">ФИО</label>
+            <input id="full_name" class="field__input" name="full_name"
+                   required maxlength="120" placeholder="Ахмедов Закиржон Октамович">
+          </div>
+
+          <div class="field">
+            <label class="field__label" for="iin">ИИН (12 цифр)</label>
+            <input id="iin" class="field__input" name="iin"
+                   required minlength="12" maxlength="12" pattern="\d{12}" inputmode="numeric"
+                   placeholder="123456789012">
+            <div class="field__hint">Только цифры, без пробелов.</div>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="field">
+            <label class="field__label" for="email">Email</label>
+            <input id="email" class="field__input" type="email" name="email"
+                   required maxlength="255" autocomplete="email" placeholder="name@mail.com">
+          </div>
+
+          <div class="field">
+            <label class="field__label" for="phone">Телефон</label>
+            <input id="phone" class="field__input" name="phone"
+                   required maxlength="20" inputmode="numeric"
+                   placeholder="87771112233" autocomplete="tel">
+            <div class="field__hint">Можно вводить с пробелами/скобками — система нормализует.</div>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="field">
+            <label class="field__label" for="username">Логин</label>
+            <input id="username" class="field__input" name="username"
+                   required maxlength="50" autocomplete="username"
+                   placeholder="например: admin_kz">
+          </div>
+
+          <div class="field">
+            <label class="field__label" for="password">Пароль</label>
+            <input id="password" class="field__input" type="password" name="password"
+                   required autocomplete="new-password" placeholder="Минимум 8 символов">
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="field">
+            <label class="field__label" for="password2">Повтор пароля</label>
+            <input id="password2" class="field__input" type="password" name="password2"
+                   required autocomplete="new-password" placeholder="Повторите пароль">
+          </div>
+
+          <div class="field">
+            <label class="field__label">Подсказка</label>
+            <div class="hint-card">Проверьте правильность данных перед отправкой формы.</div>
+          </div>
+        </div>
+
+        {# ====== Селекторы выбора для L1/L2/L3 (когда backend передал списки) ====== #}
+        {% if regions or districts or schools or show_scope_selectors %}
+          <div class="divider"></div>
+          <h2 class="section-title">Организация</h2>
+          <p class="section-subtitle">Если по коду требуется выбрать область/район/школу — сделайте выбор ниже.</p>
+        {% endif %}
+
+        {% if regions %}
+          <div class="field">
+            <label class="field__label">Область</label>
+            <select class="field__select" name="region_id" required>
+              <option value="">— выберите область —</option>
+              {% for r in regions %}
+                <option value="{{ r.id }}">{{ r.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        {% endif %}
+
+        {% if districts %}
+          <div class="field">
+            <label class="field__label">Район</label>
+            <select class="field__select" name="district_id" required>
+              <option value="">— выберите район —</option>
+              {% for d in districts %}
+                <option value="{{ d.id }}">{{ d.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        {% endif %}
+
+        {% if schools %}
+          <div class="field">
+            <label class="field__label">Школа</label>
+            <select class="field__select" name="school_id" required>
+              <option value="">— выберите школу —</option>
+              {% for s in schools %}
+                <option value="{{ s.id }}">{{ s.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        {% endif %}
+
+        {% if show_scope_selectors %}
+          {% set req_region = "required" if allowed_scope in ["district","school"] else "" %}
+          {% set req_district = "required" if allowed_scope in ["district","school"] else "" %}
+          {% set req_school = "required" if allowed_scope == "school" else "" %}
+
+          <div class="scope-card">
+            <div class="scope-card__title">Выбор организации</div>
+
+            <div class="scope-grid">
+              <div class="field">
+                <label class="field__label">Область</label>
+                <select id="regionSelect" name="region_id" class="field__select" {{ req_region }}>
+                  <option value="">— выберите область —</option>
+                </select>
+              </div>
+
+              <div class="field">
+                <label class="field__label">Район</label>
+                <select id="districtSelect" name="district_id" class="field__select" {{ req_district }}>
+                  <option value="">— выберите район —</option>
+                </select>
+              </div>
+
+              <div class="field">
+                <label class="field__label">Школа</label>
+                <select id="schoolSelect" name="school_id" class="field__select" {{ req_school }}>
+                  <option value="">— выберите школу —</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <script src="{{ url_for('static', path='js/register.js') }}"></script>
+        {% endif %}
+
+        <div class="actions">
+          <button type="submit" class="btn btn--primary">Зарегистрироваться</button>
+          <a href="/register-admin" class="btn btn--ghost">Назад</a>
+        </div>
+      </form>
+    {% endif %}
+
+  </div>
+</div>
+
+<script>
+  // Скрывать ошибку при начале ввода/выбора (универсально)
+  document.addEventListener("DOMContentLoaded", () => {
+    const errorBox = document.getElementById("error-box");
+    const form1 = document.getElementById("regFormStep1");
+    const form2 = document.getElementById("regFormStep2");
+
+    const attach = (form) => {
+      if (!form || !errorBox) return;
+      const hide = () => { errorBox.style.display = "none"; };
+      form.addEventListener("input", hide);
+      form.addEventListener("change", hide);
+    };
+
+    attach(form1);
+    attach(form2);
+  });
+</script>
+{% endblock %}

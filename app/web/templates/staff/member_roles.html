@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+{% block title %}Роли сотрудника{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', path='css/member_roles.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="page">
+<div class="sticky-head">
+    <div class="page-inner">
+      <div class="head-row">
+        <div class="head-title">
+          <h2>{{ m.full_name }}</h2>
+          <div class="sub">ИИН: {{ m.iin }} · Назначения в должность в администрации школы</div>
+        </div>
+        <div class="head-actions">
+          <a class="btn btn--ghost" href="/staff/school">← Назад</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <div class="page-inner">
+<form method="post" action="/staff/school/members/{{ m.id }}/roles" id="rolesForm">
+  <div class="card section">
+    <div id="rolesBox"></div>
+    <div id="rolesHidden"></div>
+  </div>
+
+  <div class="form-actions">
+    <button class="btn btn--ghost" type="button" onclick="addRoleRow()">+ Добавить роль</button>
+    <button class="btn btn--primary" type="submit">Сохранить</button>
+  </div>
+</form>
+  </div>
+</div>
+
+<script>
+  const ROLES = {{ responsible_roles|tojson }};
+  const EXISTING = {{ member_roles|tojson }};
+
+  function roleRowHtml(idx, roleVal="", ctxVal=""){
+    const options = ROLES.map(r => {
+      const sel = r.value === roleVal ? "selected" : "";
+      return `<option value="${r.value}" ${sel}>${r.label_kz}</option>`;
+    }).join("");
+
+    return `
+      <div class="role-row" data-idx="${idx}">
+
+        <div class="field">
+          <label>Роль</label>
+          <select class="rr-role">
+            <option value="">— выбери —</option>
+            ${options}
+          </select>
+        </div>
+
+        <div class="field">
+          <label>Контекст</label>
+          <input class="rr-context"
+                value="${ctxVal || ""}"
+                placeholder="Напр: 1 смена / МО математики">
+        </div>
+
+        <div class="field">
+          <label>&nbsp;</label>
+          <button type="button"
+              class="btn btn--danger btn--sm"
+              onclick="removeRoleRow(${idx})">
+            Удалить
+          </button>
+        </div>
+
+      </div>
+`   ;
+  }
+
+  function addRoleRow(roleVal="", ctxVal=""){
+    const box = document.getElementById("rolesBox");
+    const idx = box.querySelectorAll(".role-row").length;
+    box.insertAdjacentHTML("beforeend", roleRowHtml(idx, roleVal, ctxVal));
+  }
+
+  function removeRoleRow(idx){
+    const row = document.querySelector(`.role-row[data-idx="${idx}"]`);
+    if(row) row.remove();
+    renumber();
+  }
+
+  function renumber(){
+    const rows = Array.from(document.querySelectorAll("#rolesBox .role-row"));
+    rows.forEach((row, i) => {
+      row.dataset.idx = String(i);
+      const btn = row.querySelector("button[type='button']");
+      if(btn) btn.setAttribute("onclick", `removeRoleRow(${i})`);
+    });
+  }
+
+  function buildHidden(){
+    const hidden = document.getElementById("rolesHidden");
+    hidden.innerHTML = "";
+    const rows = Array.from(document.querySelectorAll("#rolesBox .role-row"));
+    let j = 0;
+    for(const row of rows){
+      const role = (row.querySelector(".rr-role")?.value || "").trim();
+      const ctx = (row.querySelector(".rr-context")?.value || "").trim();
+      if(!role) continue;
+
+      const a = document.createElement("input");
+      a.type="hidden"; a.name=`roles[${j}].role`; a.value=role;
+      hidden.appendChild(a);
+
+      const b = document.createElement("input");
+      b.type="hidden"; b.name=`roles[${j}].context`; b.value=ctx;
+      hidden.appendChild(b);
+
+      j++;
+    }
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    if(EXISTING && EXISTING.length){
+      EXISTING.forEach(r => addRoleRow(r.role, r.context));
+    } else {
+      addRoleRow();
+    }
+    document.getElementById("rolesForm").addEventListener("submit", () => buildHidden());
+  });
+</script>
+{% endblock %}

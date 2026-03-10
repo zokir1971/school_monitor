@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% block title %}Коды L1 выданы{% endblock %}
+
+{% block extra_css %}
+  <link rel="stylesheet" href="{{ url_for('static', path='css/code.css') }}">
+{% endblock %}
+
+{% block content %}
+
+{% if not show_codes and not saved %}
+  <div class="alert alert--warning">
+    ⚠️ Вы обновили страницу. Коды больше не показываются.
+    Нажмите <b>«Сохранить PDF»</b>, чтобы сохранить все коды одной выдачи.
+  </div>
+{% endif %}
+
+<div class="card card--large">
+
+  <h2 class="card__title">Коды для регистрации администраторов регионов (L1)</h2>
+
+  {% if not saved %}
+    <div class="alert alert--warning">
+      ⚠️ Вы ещё не сохранили коды. После закрытия страницы восстановление будет невозможно.
+      Нажмите <b>«Сохранить PDF»</b>, чтобы сохранить все коды одной выдачи.
+    </div>
+  {% else %}
+    <div class="alert alert--success">
+      ✅ Коды сохранены в PDF. Можно переходить в админ-панель.
+    </div>
+  {% endif %}
+
+  <div class="alert alert--info">
+    <b>Создано кодов:</b> {{ count }}<br>
+    Каждый код показывается <b>только один раз</b>. После закрытия страницы восстановление невозможно.
+  </div>
+
+  <div class="issued-list">
+    {% for item in issued %}
+      <div class="issued-card">
+
+        <div class="issued-card__header">
+          Регион: <span>{{ item.region_name }}</span>
+        </div>
+
+        <div class="issued-card__code">
+          <span class="code-value">{{ item.raw_code }}</span>
+          <button
+            type="button"
+            class="btn btn--ghost btn-copy"
+            data-code="{{ item.raw_code }}"
+          >
+            Скопировать
+          </button>
+        </div>
+
+        <div class="issued-card__meta">
+          <div><b>Квота:</b> {{ item.quota_total }}</div>
+          <div>
+            <b>Действует до:</b>
+            {% if item.expires_at %}
+              {{ item.expires_at }}
+            {% else %}
+              без срока
+            {% endif %}
+          </div>
+        </div>
+
+      </div>
+    {% endfor %}
+  </div>
+
+  <div class="form__actions">
+    {% if not saved %}
+      <a
+        href="/super/issue-l1/pdf/{{ batch_id }}"
+        class="btn btn--primary"
+        target="_blank"
+        rel="noopener"
+        id="savePdfBtn">
+        💾 Сохранить PDF
+      </a>
+    {% endif %}
+
+    <a href="/dashboards" class="btn btn--ghost" style="margin-left:10px;">
+      В админ-панель
+    </a>
+  </div>
+
+</div>
+
+<script>
+  // копирование одного кода
+  document.querySelectorAll(".btn-copy").forEach(btn => {
+    btn.addEventListener("click", () => {
+      navigator.clipboard.writeText(btn.dataset.code);
+      btn.textContent = "Скопировано";
+      setTimeout(() => btn.textContent = "Скопировать", 1500);
+    });
+  });
+
+  // сохранить PDF в новой вкладке и перейти в админ-панель в этой вкладке
+  const savePdfBtn = document.getElementById("savePdfBtn");
+  savePdfBtn?.addEventListener("click", () => {
+    setTimeout(() => {
+      window.location.href = "/dashboards";
+    }, 150);
+  });
+</script>
+{% endblock %}
