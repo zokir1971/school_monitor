@@ -20,7 +20,7 @@ from app.utils.font import register_cyrillic_fonts
 
 @dataclass
 class ApprovalMeta:
-    district_name: str | None = None  # ✅ название района
+    district_name: str | None = None  # название района
     director_fio: str | None = None
     director_position: str | None = "Директор школы"
     approve_title: str | None = "УТВЕРЖДАЮ"
@@ -52,8 +52,8 @@ class PlanVshkPdf:
             spaceAfter=8,
         )
 
-        district = (meta.district_name or "__________")  # ✅ НАЗВАНИЕ района/города
-        school = (meta.school_name or "__________________")  # ✅ НАЗВАНИЕ школы
+        district = (meta.district_name or "__________")  # НАЗВАНИЕ района/города
+        school = (meta.school_name or "__________________")  # НАЗВАНИЕ школы
         year = getattr(dto.plan, "academic_year", "") or ""
         fio = meta.director_fio or "________________________"
 
@@ -187,7 +187,7 @@ class PlanVshkPdf:
             textColor=colors.grey,
         )
 
-        # ✅ Заголовок 2-го и 3-го листа: по центру и "чуть ниже"
+        # Заголовок 2-го и 3-го листа: по центру и "чуть ниже"
         h_center = ParagraphStyle(
             "HCENTER",
             parent=styles["Heading2"],
@@ -210,7 +210,7 @@ class PlanVshkPdf:
             spaceAfter=2,
         )
 
-        # ✅ TOC (Содержание) — можно тоже немного опустить
+        # TOC (Содержание) — можно тоже немного опустить
         toc = TableOfContents()
         toc.levelStyles = [
             ParagraphStyle(
@@ -223,7 +223,7 @@ class PlanVshkPdf:
             ),
         ]
 
-        # ✅ Какие заголовки попадают в TOC
+        # Какие заголовки попадают в TOC
         def after_flowable(flowable):
             if isinstance(flowable, Paragraph):
                 style_name = getattr(flowable.style, "name", "")
@@ -403,7 +403,7 @@ class PlanVshkPdf:
                 story.append(PlanVshkPdf._table_rows11(b.rows11, PlanVshkPdf.FONT, available_width))
                 story.append(Spacer(1, 12))
 
-        # ✅ multiBuild обязателен: TOC требует 2 прохода
+        # multiBuild обязателен: TOC требует 2 прохода
         doc.multiBuild(story)
         return buff.getvalue()
 
@@ -420,7 +420,12 @@ class PlanVshkPdf:
 
     @staticmethod
     def _cell(text: str | None, font: str) -> Paragraph:
-        safe = (text or "").replace("\n", "<br/>")
+        if text is None:
+            text = ""
+        elif not isinstance(text, str):
+            text = str(text)
+
+        safe = text.replace("\n", "<br/>")
         st = ParagraphStyle("CELL", fontName=font, fontSize=8, leading=10)
         return Paragraph(safe, st)
 
@@ -487,16 +492,16 @@ class PlanVshkPdf:
 
         for i, r in enumerate(rows, start=1):
             data.append([
-                PlanVshkPdf._cell(str(i), font),  # ✅ нумерация
+                PlanVshkPdf._cell(str(i), font),  # нумерация
                 PlanVshkPdf._cell(getattr(r, "topic", None), font),
                 PlanVshkPdf._cell(getattr(r, "goal", None), font),
                 PlanVshkPdf._cell(getattr(r, "control_object", None), font),
                 PlanVshkPdf._cell(getattr(r, "control_type", None), font),
                 PlanVshkPdf._cell(getattr(r, "methods", None), font),
-                PlanVshkPdf._cell(getattr(r, "deadlines", None), font),
-                PlanVshkPdf._cell(getattr(r, "responsibles", None), font),
-                PlanVshkPdf._cell(getattr(r, "review_place", None), font),
-                PlanVshkPdf._cell(getattr(r, "management_decision", None), font),
+                PlanVshkPdf._cell(getattr(r, "period_text", None), font),
+                PlanVshkPdf._cell(getattr(r, "responsibles_text", None), font),
+                PlanVshkPdf._cell(getattr(r, "review_places_text", None), font),
+                PlanVshkPdf._cell(getattr(r, "documents_text", None), font),
                 PlanVshkPdf._cell(getattr(r, "second_control", None), font),
             ])
 

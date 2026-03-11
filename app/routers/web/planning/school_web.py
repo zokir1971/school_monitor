@@ -538,8 +538,8 @@ async def school_plan_preview(
             "plan": dto.plan,
             "directions": dto.directions,
             "meta": dto.meta,
-            "MONTH_NAMES": MONTH_NAMES,  # ✅ месяцы
-            "ROLE_LABELS": build_role_labels_kz(),  # ✅ роли (человеческие подписи)
+            "MONTH_NAMES": MONTH_NAMES,  # месяцы
+            "ROLE_LABELS": build_role_labels_kz(),  # роли (человеческие подписи)
         },
     )
 

@@ -47,7 +47,7 @@ def validate_user_scope(
         return
 
     # TEACHER: только school_id
-    if role == UserRole.TEACHER:
+    if role == UserRole.SCHOOL_STAFF:
         if school_id is None or region_id is not None or district_id is not None:
             raise ValueError(
                 "TEACHER должен иметь school_id, а region_id/district_id должны быть NULL."

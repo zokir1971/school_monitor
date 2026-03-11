@@ -140,11 +140,11 @@
     {% endfor %}
   {% else %}
     {# fallback, если назначений ещё нет #}
-    {{ r.responsibles or "" }}
+    {{ r.responsibles_text or "" }}
   {% endif %}
 </td>
-                <td>{{ r.review_place or "" }}</td>
-                <td>{{ r.management_decision or "" }}</td>
+                <td>{{ r.review_places_text or "" }}</td>
+                <td>{{ r.documents_text or "" }}</td>
                 <td>{{ r.second_control or "" }}</td>
               </tr>
             {% endfor %}

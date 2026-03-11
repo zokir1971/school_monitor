@@ -36,27 +36,29 @@ def format_row11_period(
     month_names: dict[int, str] | None = None,
 ) -> str:
     """
-    Возвращает красивый текст периода для SchoolPlanRow11.
-    Работает и для годового шаблона, и для месячного (через source_row11).
-
-    Ожидаемые поля у row:
-      - period_type
-      - period_value_int
-      - period_values
-      - deadlines (fallback)
-
-    Красивый текст периода для SchoolPlanRow11.
-    Если передан current_month (месячный план), то для period_type="months"
-    можно показывать только выбранный месяц.
+    Возвращает красивый текст периода для SchoolPlanRow11 / ExportRow11DTO.
+    Работает и со старыми полями, и с новыми.
     """
     if not row:
         return ""
 
+    # Если сервис уже подготовил готовый текст — используем его
+    ready_text = getattr(row, "period_text", None)
+    if ready_text:
+        return str(ready_text)
+
     mn = month_names or MONTH_NAMES_KZ
 
     pt = _enum_val(getattr(row, "period_type", None))
-    pv_int = getattr(row, "period_value_int", None)
-    pv_text = getattr(row, "period_values", None)
+
+    # поддержка и старого, и нового имени поля
+    pv_int = getattr(row, "period_type_int", None)
+    if pv_int is None:
+        pv_int = getattr(row, "period_value_int", None)
+
+    pv_values = getattr(row, "period_type_values", None)
+    if pv_values is None:
+        pv_values = getattr(row, "period_values", None)
 
     if pt == "quarter":
         return "Тоқсан сайын"
@@ -68,24 +70,34 @@ def format_row11_period(
         return "Ай сайын"
 
     if pt == "month" and pv_int:
-        return f"Ай: {mn.get(int(pv_int), str(pv_int))}"
+        try:
+            month_num = int(pv_int)
+        except (TypeError, ValueError):
+            month_num = pv_int
+        return f"Ай: {mn.get(month_num, str(month_num))}"
 
-    # ✅ ключевое изменение
-    if pt == "months" and pv_text:
+    if pt == "months" and pv_values:
+        # если pv_values уже список
+        if isinstance(pv_values, list):
+            nums = []
+            for x in pv_values:
+                try:
+                    nums.append(int(x))
+                except (TypeError, ValueError):
+                    pass
+        else:
+            nums = _parse_int_list(str(pv_values))
+
         if current_month is not None:
             try:
                 cm = int(current_month)
             except (TypeError, ValueError):
                 cm = None
 
-            if cm is not None:
-                nums = set(_parse_int_list(str(pv_text)))
-                if cm in nums:
-                    return f"Ай: {mn.get(cm, str(cm))}"
+            if cm is not None and cm in set(nums):
+                return f"Ай: {mn.get(cm, str(cm))}"
 
-        # fallback: как раньше — показать список
-        nums = _parse_int_list(str(pv_text))
         names = [mn.get(n, str(n)) for n in nums]
-        return f"Айлар: {', '.join(names)}" if names else str(pv_text)
+        return f"Айлар: {', '.join(names)}" if names else str(pv_values)
 
     return str(getattr(row, "deadlines", "") or "")

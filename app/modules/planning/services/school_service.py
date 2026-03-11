@@ -151,9 +151,9 @@ class SchoolPlanningService:
                     management_decision=r.management_decision,
                     second_control=r.second_control,
 
-                    # ✅ FIX: period_type NOT NULL
+                    # FIX: period_type NOT NULL
                     period_type=getattr(r, "period_type", None) or PlanPeriodType.ALL_YEAR,
-                    # (если в шаблоне есть эти поля — скопируются, если нет — будет None)
+                    # (если в шаблоне есть эти поля — копируются, если нет — будет None)
                     period_value_int=getattr(r, "period_value_int", None),
                     period_values=getattr(r, "period_values", None),
                 )
