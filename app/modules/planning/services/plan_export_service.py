@@ -121,7 +121,7 @@ class SchoolPlanExportService:
             return ""
         try:
             return enum_cls(raw_value).label_kz
-        except Exception:
+        except (ValueError, TypeError):
             return raw_value
 
     @classmethod
@@ -185,6 +185,7 @@ class SchoolPlanExportService:
             return PlanPeriodType.ALL_YEAR.label_kz
 
         return ""
+
     @staticmethod
     def _join_responsibles(items: list[ExportResponsibleDTO]) -> str:
         parts: list[str] = []
