@@ -7,6 +7,8 @@ from dataclasses import dataclass
 
 from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
+from sqlalchemy.dialects.postgresql import insert
 
 from app.modules.staff.models_staff_school import SchoolStaffMember
 from app.modules.staff.staff_repo import SchoolStaffRepo, SchoolStaffRoleRepo
@@ -171,11 +173,15 @@ class SchoolStaffImportService:
         bad_iin_count = 0
         missing_name_count = 0
         filtered_count = 0
+        duplicate_in_file_count = 0
 
         logger.info(
             "STAFF IMPORT start school_id=%s rows=%s delimiter=%r",
             school_id, len(data.rows), data.delimiter
         )
+
+        # ключ = iin, значение = подготовленная строка для upsert
+        prepared_by_iin: dict[str, dict] = {}
 
         for idx, row in enumerate(data.rows, start=1):
             try:
@@ -238,29 +244,24 @@ class SchoolStaffImportService:
                         )
                     continue
 
-                existing = await SchoolStaffRepo.get_by_iin(
-                    db, school_id=school_id, iin=iin
-                )
+                prepared_row = {
+                    "school_id": school_id,
+                    "iin": iin,
+                    "full_name": full_name,
+                    "is_active": True,
 
-                if existing:
-                    existing.full_name = full_name
-                    existing.is_active = True
+                    # только поля, которые реально импортируются из CSV
+                    "position_text": fields.get("position_text"),
+                    "education": fields.get("education"),
+                    "academic_degree": fields.get("academic_degree"),
+                    "qualification_category": fields.get("qualification_category"),
+                }
 
-                    for k, v in fields.items():
-                        if v is not None:
-                            setattr(existing, k, v)
+                if iin in prepared_by_iin:
+                    duplicate_in_file_count += 1
 
-                    report.updated += 1
-                else:
-                    m = SchoolStaffMember(
-                        school_id=school_id,
-                        full_name=full_name,
-                        iin=iin,
-                        is_active=True,
-                        **fields,
-                    )
-                    SchoolStaffRepo.create(db, member=m)
-                    report.created += 1
+                # если ИИН повторился в этом же файле — берём последнюю строку
+                prepared_by_iin[iin] = prepared_row
 
             except Exception as e:
                 report.errors += 1
@@ -271,8 +272,56 @@ class SchoolStaffImportService:
                     str(e),
                 )
 
+        rows_for_upsert = list(prepared_by_iin.values())
+
+        if not rows_for_upsert:
+            logger.info(
+                "STAFF IMPORT done school_id=%s created=0 updated=0 skipped=%s errors=%s bad_iin=%s missing_name=%s "
+                "filtered=%s duplicate_in_file=%s",
+                school_id,
+                report.skipped,
+                report.errors,
+                bad_iin_count,
+                missing_name_count,
+                filtered_count,
+                duplicate_in_file_count,
+            )
+            return report
+
+        incoming_iins = list(prepared_by_iin.keys())
+
+        # одним запросом получаем уже существующие ИИН
+        stmt_existing = select(SchoolStaffMember.iin).where(
+            SchoolStaffMember.school_id == school_id,
+            SchoolStaffMember.iin.in_(incoming_iins),
+        )
+        result_existing = await db.execute(stmt_existing)
+        existing_iins = set(result_existing.scalars().all())
+
+        report.updated = sum(1 for iin in incoming_iins if iin in existing_iins)
+        report.created = sum(1 for iin in incoming_iins if iin not in existing_iins)
+
+        stmt = insert(SchoolStaffMember).values(rows_for_upsert)
+
+        # обновляем только нужные поля
+        stmt = stmt.on_conflict_do_update(
+            constraint="uq_staff_school_iin",
+            set_={
+                "full_name": stmt.excluded.full_name,
+                "is_active": stmt.excluded.is_active,
+                "position_text": stmt.excluded.position_text,
+                "education": stmt.excluded.education,
+                "academic_degree": stmt.excluded.academic_degree,
+                "qualification_category": stmt.excluded.qualification_category,
+            },
+        )
+
+        await db.execute(stmt)
+        await db.commit()
+
         logger.info(
-            "STAFF IMPORT done school_id=%s created=%s updated=%s skipped=%s errors=%s bad_iin=%s missing_name=%s filtered=%s",
+            "STAFF IMPORT done school_id=%s created=%s updated=%s skipped=%s errors=%s bad_iin=%s missing_name=%s "
+            "filtered=%s duplicate_in_file=%s prepared=%s",
             school_id,
             report.created,
             report.updated,
@@ -281,6 +330,8 @@ class SchoolStaffImportService:
             bad_iin_count,
             missing_name_count,
             filtered_count,
+            duplicate_in_file_count,
+            len(rows_for_upsert),
         )
 
         return report

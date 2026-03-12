@@ -2,6 +2,8 @@
 
 from passlib.context import CryptContext
 
+from passlib.exc import PasswordSizeError
+
 import hashlib
 import random
 import string
@@ -17,7 +19,10 @@ def hash_password(password: str) -> str:
 
 
 def verify_password(password: str, password_hash: str) -> bool:
-    return pwd_context.verify(password, password_hash)
+    try:
+        return pwd_context.verify(password, password_hash)
+    except (ValueError, PasswordSizeError):
+        return False
 
 
 def generate_registration_code() -> str:
