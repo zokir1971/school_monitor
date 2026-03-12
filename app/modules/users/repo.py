@@ -1,7 +1,7 @@
 # app/modules/users/pero.py
 from __future__ import annotations
 
-from sqlalchemy import select, exists
+from sqlalchemy import select, exists, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.users.models import User, RegistrationCode, RegistrationCodeUse
@@ -22,6 +22,20 @@ class UserRepo:
     @staticmethod
     async def get_by_iin(db: AsyncSession, iin: str) -> User | None:
         res = await db.execute(select(User).where(User.iin == iin))
+        return res.scalar_one_or_none()
+
+    @staticmethod
+    async def get_by_identifier(db: AsyncSession, identifier: str) -> User | None:
+        identifier = identifier.strip()
+
+        res = await db.execute(
+            select(User).where(
+                or_(
+                    User.username == identifier,
+                    User.iin == identifier,
+                )
+            )
+        )
         return res.scalar_one_or_none()
 
     @staticmethod

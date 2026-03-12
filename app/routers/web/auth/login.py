@@ -1,19 +1,25 @@
 # app/routers/web/auth/login.py
 
+import logging
+
 from fastapi import APIRouter, Depends, Form, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse
+from fastapi.responses import RedirectResponse
 from sqlalchemy import select, exists
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.routers.web.web_common import templates
 
+from app.core.security import verify_password
 from app.db.session import get_db
 from app.modules.users.enums import UserRole
 from app.modules.users.models import User
-from app.modules.users.services.auth_service import UserAuthService
+from app.modules.users.repo import UserRepo
 from app.routers.web.helpers.navigation import dashboard_url_for_role
 from app.routers.web.helpers.render import render, render_error
+from app.routers.web.web_common import templates
 
 router = APIRouter()
+
+logger = logging.getLogger(__name__)
 
 
 @router.get("/login", response_class=HTMLResponse)
@@ -44,13 +50,25 @@ async def login_submit(
     password: str = Form(...),
     db: AsyncSession = Depends(get_db),
 ):
-    user = await UserAuthService.authenticate(
-        db,
-        identifier=identifier,
-        password=password,
-    )
+    identifier = identifier.strip()
 
-    if not user:
+    user = await UserRepo.get_by_identifier(db, identifier=identifier)
+
+    logger.info("LOGIN DEBUG identifier=%r user_found=%s", identifier, bool(user))
+
+    if user:
+        logger.info(
+            "LOGIN DEBUG password_len=%s password_bytes=%s hash_prefix=%r",
+            len(password),
+            len(password.encode("utf-8")),
+            user.password_hash[:20] if user.password_hash else None,
+        )
+
+    ok = user is not None and verify_password(password, str(user.password_hash))
+
+    logger.info("LOGIN DEBUG verify_result=%s", ok)
+
+    if not user or not ok:
         return render_error(
             templates,
             request,
