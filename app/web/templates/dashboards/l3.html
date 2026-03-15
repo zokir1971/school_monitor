@@ -134,13 +134,13 @@
     <h3>Отчёты и аналитика</h3>
 
     <div class="card-grid">
-      <a class="card" href="/reports/schools" >
+      <a class="card" href="{{ request.url_for('school_plan_statistics_page') }}">
         <div class="card__inner">
           <div class="card__top">
             <div class="card__icon">📊</div>
           </div>
-          <h3 class="card__title"> Отчёты по школам </h3>
-          <p class="card__desc">Справки и протоколы</p>
+          <h3 class="card__title"> Статистика планирование ВШК </h3>
+          <p class="card__desc">Периоды запланированных задач </p>
           <div class="card__footer">
             <span>Открыть</span><span class="card__arrow">→</span>
           </div>

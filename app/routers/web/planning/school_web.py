@@ -535,6 +535,7 @@ async def school_plan_preview(
         request,
         "planning/school/plan_preview.html",
         {
+            "user": user,
             "plan": dto.plan,
             "directions": dto.directions,
             "meta": dto.meta,

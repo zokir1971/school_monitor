@@ -199,7 +199,11 @@ class SchoolPlanRow11(Base):
     second_control: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # Период выполнения
-    period_type: Mapped[PlanPeriodType] = mapped_column(PLAN_PERIOD_ENUM, nullable=False, index=True)
+    period_type: Mapped[PlanPeriodType] = mapped_column(
+        PLAN_PERIOD_ENUM,
+        nullable=False,
+        default=PlanPeriodType.ALL_YEAR,
+        index=True)
     period_value_int: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
     period_values: Mapped[str | None] = mapped_column(Text, nullable=True)
     is_custom: Mapped[bool] = mapped_column(

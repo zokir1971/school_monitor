@@ -1,0 +1,539 @@
+{% extends "base.html" %}
+
+{% block title %}Статистика планирования ВШК{% endblock %}
+{% block extra_css %}
+<style>
+  .stats-page {
+  min-height: calc(100vh - 80px);
+  padding: 28px 16px 40px;
+  background: linear-gradient(180deg, #f4f7fb 0%, #edf3f9 100%);
+}
+
+.stats-page__inner {
+  max-width: 1240px;
+  margin: 0 auto;
+}
+
+.stats-hero {
+  display: flex;
+  gap: 18px;
+  align-items: stretch;
+  justify-content: space-between;
+  margin-bottom: 18px;
+  flex-wrap: wrap;
+}
+
+.stats-hero__left {
+  flex: 1 1 720px;
+  min-width: 280px;
+  background: #fff;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 24px;
+  padding: 24px;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.05);
+}
+
+.stats-hero__eyebrow {
+  display: inline-block;
+  margin-bottom: 10px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: #eef4ff;
+  color: #3159b7;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .02em;
+}
+
+.stats-hero__title {
+  margin: 0;
+  font-size: 30px;
+  line-height: 1.15;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.stats-hero__meta {
+  margin-top: 14px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.stats-hero__school,
+.stats-hero__year {
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: #f8fafc;
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  color: #334155;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.stats-total-card {
+  flex: 0 0 280px;
+  min-width: 240px;
+  background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%);
+  color: #fff;
+  border-radius: 24px;
+  padding: 22px 24px;
+  box-shadow: 0 14px 34px rgba(37, 99, 235, 0.24);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.stats-total-card__label {
+  font-size: 14px;
+  opacity: .92;
+}
+
+.stats-total-card__value {
+  margin-top: 10px;
+  font-size: 42px;
+  line-height: 1;
+  font-weight: 800;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(280px, 1fr));
+  gap: 16px;
+  margin-bottom: 22px;
+}
+
+.stats-info-card {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  background: #fff;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 20px;
+  padding: 18px 20px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
+}
+
+.stats-info-card__icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 16px;
+  background: #f1f5f9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  flex: 0 0 48px;
+}
+
+.stats-info-card__title {
+  font-size: 16px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.stats-info-card__desc {
+  margin-top: 4px;
+  font-size: 14px;
+  color: #64748b;
+  line-height: 1.45;
+}
+
+.stats-section {
+  margin-top: 22px;
+}
+
+.stats-section__head {
+  margin-bottom: 12px;
+}
+
+.stats-section__title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.stats-section__sub {
+  margin-top: 6px;
+  color: #64748b;
+  font-size: 14px;
+}
+
+.stats-card {
+  background: #fff;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 22px;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.05);
+  overflow: hidden;
+}
+
+.table-wrap {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.stats-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 920px;
+}
+
+.stats-table thead th {
+  background: #f8fafc;
+  color: #334155;
+  font-size: 13px;
+  font-weight: 800;
+  text-align: left;
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+.stats-table tbody td {
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+  vertical-align: middle;
+  color: #0f172a;
+  font-size: 14px;
+}
+
+.stats-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.stats-table tbody tr:hover {
+  background: #fbfdff;
+}
+
+.stats-table__direction {
+  font-weight: 700;
+  color: #0f172a;
+  min-width: 260px;
+}
+
+.stats-table__planned-col {
+  width: 160px;
+}
+
+.ta-center {
+  text-align: center;
+}
+
+.stat-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+  height: 34px;
+  padding: 0 10px;
+  border-radius: 12px;
+  background: #f1f5f9;
+  color: #0f172a;
+  font-weight: 800;
+  font-size: 14px;
+}
+
+.planned-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 52px;
+  height: 36px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: #e0edff;
+  color: #1d4ed8;
+  font-weight: 800;
+  font-size: 14px;
+}
+
+.mini-progress {
+  position: relative;
+  width: 100%;
+  height: 12px;
+  background: #e9eef5;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.mini-progress__bar {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #60a5fa 0%, #2563eb 100%);
+}
+
+.plan tfoot tr {
+  border-top: 2px solid #333;
+  font-weight: 600;
+}
+
+@media (max-width: 920px) {
+  .stats-page {
+    padding: 20px 12px 28px;
+  }
+
+  .stats-hero__title {
+    font-size: 24px;
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .stats-total-card {
+    flex-basis: 100%;
+  }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="stats-page">
+  <div class="stats-page__inner">
+
+    <div class="stats-hero">
+      <div class="stats-hero__left">
+        <h1 class="stats-hero__title">Статистика планирования ВШК</h1>
+        <div class="stats-hero__meta">
+          <div class="stats-hero__school">{{ school_name }}</div>
+          <div class="stats-hero__year">{{ academic_year }} Учебный год</div>
+        </div>
+      </div>
+
+      <div class="stats-total-card">
+        <div class="stats-total-card__label">Всего запланировано задач</div>
+        <div class="stats-total-card__value">{{ total_planned_count }}</div>
+      </div>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stats-info-card">
+        <div class="stats-info-card__icon">📅</div>
+        <div class="stats-info-card__body">
+          <div class="stats-info-card__title">Периоды</div>
+          <div class="stats-info-card__desc">
+            Анализ распределения задач по типам периодов
+          </div>
+        </div>
+      </div>
+
+      <div class="stats-info-card">
+        <div class="stats-info-card__icon">📊</div>
+        <div class="stats-info-card__body">
+          <div class="stats-info-card__title">Нагрузка</div>
+          <div class="stats-info-card__desc">
+            Расчетное количество задач по направлениям
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <section class="stats-section">
+      <div class="stats-section__head">
+        <h2 class="stats-section__title">Структура плана по периодам</h2>
+        <div class="stats-section__sub">
+          Сколько строк плана относится к каждому типу периода
+        </div>
+      </div>
+
+      <div class="stats-card">
+        <div class="table-wrap">
+          <table class="stats-table">
+            <thead>
+              <tr>
+                <th>Направление</th>
+                <th class="ta-center">Нақты көрсетілген ай</th>
+                <th class="ta-center">Бір неше ай</th>
+                <th class="ta-center">Айсайын</th>
+                <th class="ta-center">Тоқсан сайын</th>
+                <th class="ta-center">Жыл бойы</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in period_stats %}
+              <tr>
+                <td class="stats-table__direction">{{ item.direction_name }}</td>
+                <td class="ta-center"><span class="stat-badge">{{ item.month_count }}</span></td>
+                <td class="ta-center"><span class="stat-badge">{{ item.months_count }}</span></td>
+                <td class="ta-center"><span class="stat-badge">{{ item.monthly_count }}</span></td>
+                <td class="ta-center"><span class="stat-badge">{{ item.quarter_count }}</span></td>
+                <td class="ta-center"><span class="stat-badge">{{ item.all_year_count }}</span></td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section class="stats-section">
+      <div class="stats-section__head">
+        <h2 class="stats-section__title">Планируемое количество задач по направлениям</h2>
+        <div class="stats-section__sub">
+          Итоговый расчет нагрузки по правилам периодичности
+        </div>
+      </div>
+
+      <div class="stats-card">
+        <div class="table-wrap">
+          <table class="stats-table">
+            <thead>
+              <tr>
+                <th>Направление</th>
+                <th class="ta-center stats-table__planned-col">Количество задач</th>
+                <th>Визуальный индикатор</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in planned_stats %}
+              <tr>
+                <td class="stats-table__direction">{{ item.direction_name }}</td>
+                <td class="ta-center">
+                  <span class="planned-pill">{{ item.planned_count }}</span>
+                </td>
+                <td>
+                  <div class="mini-progress">
+                    {% set width = (item.planned_count / total_planned_count * 100) if total_planned_count else 0 %}
+                    <div class="mini-progress__bar" style="width: {{ '%.1f'|format(width) }}%;"></div>
+                  </div>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+    <section class="stats-section">
+      <div class="stats-section__head">
+        <h2 class="stats-section__title">Статистика мест рассмотрения по направлениям</h2>
+        <div class="stats-section__sub">
+          Итоговый расчет нагрузки по правилам мест рассмотрения выполненных задач
+        </div>
+      </div>
+
+      <div class="stats-card">
+        <div class="table-wrap">
+          <h3>Диаграмма распределения мест рассмотрения</h3>
+
+
+<div style="max-width: 800px; background: #fff; padding: 16px; border: 1px solid #ddd; border-radius: 12px;">
+  <canvas id="reviewPlaceChart"></canvas>
+</div>
+
+          <table class="stats-table">
+            <thead>
+    <tr>
+      <th>Направление</th>
+      <th>Пед.кеңес</th>
+      <th>Әд.кеңес</th>
+      <th>ДЖ.кеңес</th>
+      <th>Әк.кеңес</th>
+      <th>ӘБ.отырысы</th>
+      <th>Итого</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for row in review_place_stats %}
+    <tr>
+      <td>{{ row.direction_name }}</td>
+      <td>{{ row.ped_council_count }}</td>
+      <td>{{ row.method_council_count }}</td>
+      <td>{{ row.director_council_count }}</td>
+      <td>{{ row.administrative_council_count }}</td>
+      <td>{{ row.method_assoc_count }}</td>
+      <td><strong>{{ row.total_review_places_count }}</strong></td>
+    </tr>
+    {% endfor %}
+  </tbody>
+  <tfoot>
+<tr>
+  <th>Итого</th>
+  <th>{{ review_place_totals.ped_council_count }}</th>
+  <th>{{ review_place_totals.method_council_count }}</th>
+  <th>{{ review_place_totals.director_council_count }}</th>
+  <th>{{ review_place_totals.administrative_council_count }}</th>
+  <th>{{ review_place_totals.method_assoc_count }}</th>
+  <th>{{ review_place_totals.total_review_places_count }}</th>
+</tr>
+</tfoot>
+          </table>
+        </div>
+      </div>
+    </section>
+
+
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+<script>
+const reviewPlaceData = {{ review_place_totals | tojson }};
+
+new Chart(document.getElementById("reviewPlaceChart"), {
+  type: "bar",
+  data: {
+    labels: [
+      "Пед.кеңес",
+      "Әд.кеңес",
+      "ДЖ.кеңес",
+      "Әк.кеңес",
+      "ӘБ.отырысы"
+    ],
+    datasets: [{
+      label: "Количество задач",
+      data: [
+        reviewPlaceData.ped_council_count,
+        reviewPlaceData.method_council_count,
+        reviewPlaceData.director_council_count,
+        reviewPlaceData.administrative_council_count,
+        reviewPlaceData.method_assoc_count
+      ],
+      backgroundColor: [
+        "#4e79a7",
+        "#f28e2b",
+        "#e15759",
+        "#76b7b2",
+        "#59a14f"
+      ]
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+
+      legend: {
+        display: false
+      },
+
+      datalabels: {
+        anchor: "end",
+        align: "top",
+        color: "#222",
+        font: {
+          weight: "bold",
+          size: 12
+        },
+        formatter: function(value) {
+          return value;
+        }
+      }
+
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        ticks: {
+          precision: 0
+        }
+      }
+    }
+  },
+  plugins: [ChartDataLabels]
+});
+</script>
+{% endblock %}
