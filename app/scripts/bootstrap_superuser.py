@@ -4,10 +4,16 @@ from __future__ import annotations
 
 import asyncio
 import os
+from pathlib import Path
+
+from dotenv import load_dotenv
 
 from app.core.security import hash_password
 from app.db.session import async_session_maker
 from app.modules.users.services.bootstrap import BootstrapService
+
+BASE_DIR = Path(__file__).resolve().parents[2]
+load_dotenv(BASE_DIR / ".env")
 
 
 def get_env(name: str) -> str:
@@ -46,4 +52,3 @@ async def main() -> None:
 
 if __name__ == "__main__":
     asyncio.run(main())
-    
