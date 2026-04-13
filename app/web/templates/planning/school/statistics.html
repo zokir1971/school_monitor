@@ -270,6 +270,41 @@
   font-weight: 600;
 }
 
+.comparison-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(180px, 1fr));
+  gap: 12px;
+  padding: 0 18px 16px;
+}
+
+.comparison-summary__item {
+  background: #f8fafc;
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  border-radius: 14px;
+  padding: 12px 14px;
+}
+
+.comparison-summary__label {
+  display: block;
+  font-size: 12px;
+  color: #64748b;
+  margin-bottom: 6px;
+}
+
+.comparison-summary__value {
+  font-size: 22px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.comparison-summary__value--ok {
+  color: #166534;
+}
+
+.comparison-summary__value--bad {
+  color: #991b1b;
+}
+
 @media (max-width: 920px) {
   .stats-page {
     padding: 20px 12px 28px;
@@ -465,6 +500,83 @@
       </div>
     </section>
 
+    <div class="card card--large stats-section-card">
+  <div class="section-head">
+    <div>
+      <h3 class="section-title">Контроль совпадений по направлениям</h3>
+      <div class="section-sub">
+        Проверка соответствия количества задач по периодам и местам рассмотрения
+      </div>
+    </div>
+  </div>
+
+  <div class="comparison-summary">
+    <div class="comparison-summary__item">
+      <span class="comparison-summary__label">Всего направлений</span>
+      <span class="comparison-summary__value">{{ comparison_summary.total_directions }}</span>
+    </div>
+
+    <div class="comparison-summary__item">
+      <span class="comparison-summary__label">Совпадает</span>
+      <span class="comparison-summary__value comparison-summary__value--ok">
+        {{ comparison_summary.matched_count }}
+      </span>
+    </div>
+
+    <div class="comparison-summary__item">
+      <span class="comparison-summary__label">Не совпадает</span>
+      <span class="comparison-summary__value comparison-summary__value--bad">
+        {{ comparison_summary.mismatched_count }}
+      </span>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table class="plan stats-table">
+      <thead>
+        <tr>
+          <th>Направление</th>
+          <th class="center nowrap">По периодам</th>
+          <th class="center nowrap">По плану</th>
+          <th class="center nowrap">По местам рассмотрения</th>
+          <th class="center nowrap">Разница</th>
+          <th class="center nowrap">Статус</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in comparison_stats %}
+        <tr>
+          <td class="direction-cell">{{ item.direction_name }}</td>
+
+          <td class="center">
+            <span class="num-badge">{{ item.period_total }}</span>
+          </td>
+
+          <td class="center">
+            <span class="planned-pill">{{ item.planned_count }}</span>
+          </td>
+
+          <td class="center">
+            <span class="review-pill">{{ item.review_place_total }}</span>
+          </td>
+
+          <td class="center">
+            {{ item.diff }}
+          </td>
+
+          <td class="center">
+            {% if item.is_match %}
+              <span class="status-badge status-badge--ok">Совпадает</span>
+            {% else %}
+              <span class="status-badge status-badge--bad">Не совпадает</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
 
   </div>
 </div>

@@ -11,6 +11,7 @@ from app.modules.planning.enums import ResponsibleRole, AssignmentKind
 from app.modules.planning.models_month_plan import SchoolMonthPlanItem, SchoolMonthPlanItemAssignee
 from app.modules.planning.models_school import SchoolPlanRow11, SchoolPlanRow11Assignee
 from app.modules.staff.models_staff_school import SchoolStaffRole, SchoolStaffMember
+from app.modules.users.models import User
 
 
 class SchoolMonthPlanAssigneeRepo:
@@ -217,6 +218,36 @@ class SchoolMonthPlanAssigneeRepo:
                 assignment_kind=assignment_kind,
                 assigned_by_user_id=assigned_by_user_id,
             )
+
+    @staticmethod
+    async def set_month_item_responsible(
+            db: AsyncSession,
+            *,
+            month_item_id: int,
+            responsible_role: ResponsibleRole | None,
+            responsible_user_id: int | None,
+    ) -> None:
+        item = await db.scalar(
+            select(SchoolMonthPlanItem).where(SchoolMonthPlanItem.id == month_item_id)
+        )
+        if not item:
+            raise ValueError("Задача месячного плана не найдена")
+
+        item.responsible_role = responsible_role
+        item.responsible_user_id = responsible_user_id
+
+        await db.flush()
+
+    @staticmethod
+    async def get_user_id_by_staff_member_id(
+            db: AsyncSession,
+            *,
+            staff_member_id: int,
+    ) -> int | None:
+        res = await db.execute(
+            select(User.id).where(User.staff_member_id == staff_member_id)
+        )
+        return res.scalar_one_or_none()
 
 
 @dataclass

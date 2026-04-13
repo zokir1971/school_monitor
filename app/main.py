@@ -11,7 +11,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from starlette.responses import RedirectResponse, JSONResponse
 
 from app.core.config import get_settings
-from app.core.logging import setup_logging
+from app.core.logging_config import setup_logging
 from app.middlewares.auth import AuthRedirectMiddleware
 from app.routers import router as root_router
 

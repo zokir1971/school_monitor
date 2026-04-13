@@ -7,7 +7,8 @@ from sqlalchemy import exists, update, select, func, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.modules.planning.enums import PlanStatus, PlanPeriodType, DocumentType, ReviewPlace
+from app.modules.planning.enums import PlanStatus, PlanPeriodType, ReviewPlace
+from app.modules.reports.enums import DocumentType
 from app.modules.planning.models import (
     PlanTemplate,
     PlanTemplateDirection,

@@ -6,13 +6,8 @@ from typing import Literal, Optional
 
 from pydantic import BaseModel, Field, ConfigDict
 
-from .enums import (
-    PlanPeriodType,
-    PlanStatus,
-    PlanItemStatus,
-    DocumentType,
-    DocumentStatus,
-)
+from app.modules.reports.enums import DocumentType, DocumentStatus
+from .enums import PlanPeriodType, PlanItemStatus
 
 
 # =========================================================

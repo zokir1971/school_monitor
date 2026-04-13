@@ -9,7 +9,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from starlette.datastructures import FormData
 
-from app.modules.planning.enums import ResponsibleRole, PlanPeriodType, ReviewPlace, DocumentType
+from app.modules.planning.enums import ResponsibleRole, PlanPeriodType, ReviewPlace
+from app.modules.reports.enums import DocumentType
 from app.modules.planning.models import PlanDirection, PlanTemplate
 from app.modules.planning.models_school import SchoolPlanRow4, SchoolPlanRow11, SchoolPlan, SchoolPlanRow11Responsible
 from app.modules.planning.repo_school import SchoolPlanningRepo

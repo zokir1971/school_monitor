@@ -8,12 +8,11 @@ from app.modules.planning.enums import (
     PlanPeriodType,
     PlanStatus,
     PlanItemStatus,
-    DocumentType,
-    DocumentStatus,
     ResponsibleRole,
     ReviewPlace,
-    AssignmentKind,
+    AssignmentKind
 )
+from app.modules.reports.enums import DocumentType, DocumentStatus, TaskDocumentStatus, TaskDocumentSource
 
 
 def enum_values(enum_cls):
@@ -110,4 +109,23 @@ REVIEW_PLACE_ENUM = SAEnum(
     values_callable=enum_values,
     native_enum=True,
     validate_strings=True,
+)
+
+
+TASK_DOCUMENT_STATUS_ENUM = SAEnum(
+    TaskDocumentStatus,
+    name="task_document_status_enum",
+    values_callable=enum_values,
+    native_enum=True,
+    validate_strings=True,
+    create_type=False,
+)
+
+TASK_DOCUMENT_SOURCE_ENUM = SAEnum(
+    TaskDocumentSource,
+    name="task_document_source_enum",
+    values_callable=enum_values,
+    native_enum=True,
+    validate_strings=True,
+    create_type=False,
 )

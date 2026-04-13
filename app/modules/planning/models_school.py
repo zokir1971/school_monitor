@@ -9,13 +9,15 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
 from app.db.types import PLAN_PERIOD_ENUM, RESPONSIBLE_ROLE_ENUM, REVIEW_PLACE_ENUM, DOCUMENT_TYPE_ENUM
-from app.modules.planning.enums import PlanPeriodType, ResponsibleRole, ReviewPlace, DocumentType
+from app.modules.planning.enums import PlanPeriodType, ResponsibleRole, ReviewPlace
+from app.modules.reports.enums import DocumentType
 
 if TYPE_CHECKING:
     from app.modules.org.models import School
     from app.modules.planning.models import PlanDirection, PlanTemplate
     from app.modules.planning.models_month_plan import SchoolMonthPlan, SchoolMonthPlanItem
     from app.modules.staff.models_staff_school import SchoolStaffMember
+    from app.modules.reports.models_documents import TaskExecutionDocument
 
 
 # =========================================================
@@ -405,4 +407,10 @@ class SchoolPlanRow11RequiredDocument(Base):
     row11: Mapped["SchoolPlanRow11"] = relationship(
         "SchoolPlanRow11",
         back_populates="required_documents",
+    )
+
+    task_execution_documents: Mapped[list["TaskExecutionDocument"]] = relationship(
+        "TaskExecutionDocument",
+        back_populates="required_document",
+        lazy="selectin",
     )

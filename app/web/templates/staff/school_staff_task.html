@@ -6,8 +6,6 @@
   <link rel="stylesheet" href="{{ url_for('static', path='css/staff_task.css') }}">
 {% endblock %}
 
-
-
 {% block content %}
 
 <div class="page">
@@ -20,9 +18,24 @@
             Мои задачи на — {{ MONTH_NAMES.get(month, month) }} месяц
           </h2>
           <div class="sub">
-            Назначенные задачи на текущий месяц
+            Назначенные задачи на выбранный месяц
           </div>
         </div>
+
+        <form method="get" class="month-filter">
+          <label for="month" class="month-filter__label">Выберите месяц</label>
+          <select name="month" id="month" class="month-filter__select">
+            {% for m_num, m_name in MONTH_NAMES.items() %}
+              <option value="{{ m_num }}" {% if m_num == month %}selected{% endif %}>
+                {{ m_name }}
+              </option>
+            {% endfor %}
+          </select>
+
+          <button type="submit" class="month-filter__btn">
+            Показать
+          </button>
+        </form>
       </div>
     </div>
   </div>
@@ -40,12 +53,14 @@
             <th>Объект контроля</th>
             <th>Тип контроля</th>
             <th>Место рассмотрения</th>
+            <th class="nowrap">Действие</th>
+            <th class="nowrap">Статус</th>
           </tr>
         </thead>
 
         <tbody>
           {% for t in tasks %}
-            <tr class="{% if current_week is defined and t.week_of_month == current_week %}row-current{% endif %}">
+            <tr class="{% if current_week is not none and t.week_of_month == current_week %}row-current{% endif %}">
               <td class="nowrap">
                 {{ t.week_of_month or "—" }}
               </td>
@@ -65,10 +80,63 @@
               <td>{{ t.control_object or "—" }}</td>
               <td>{{ t.control_type or "—" }}</td>
               <td>{{ t.review_place or "—" }}</td>
+
+              <td class="nowrap">
+  {% set task_status = t.status.value if t.status is not string and t.status.value is defined else t.status %}
+
+  {% if task_status in ["todo", "not_executed"] %}
+    <form method="post" action="{{ url_for('take_task_to_work') }}">
+      <input type="hidden" name="task_id" value="{{ t.month_item_id }}">
+      <input type="hidden" name="month" value="{{ month }}">
+      <button type="submit" class="btn btn-primary btn-sm">
+        Принять на исполнение
+      </button>
+    </form>
+
+  {% elif task_status == "in_progress" %}
+    <a href="{{ url_for('staff_tasks_execute_page') }}?selected_task_id={{ t.month_item_id }}&month={{ month }}"
+       class="btn btn-outline-success btn-sm">
+      Продолжить
+    </a>
+
+  {% elif task_status == "done" %}
+    <a href="{{ url_for('staff_report_execute_page', month_item_id=t.month_item_id) }}"
+       class="btn btn-outline-secondary btn-sm">
+      Просмотр
+    </a>
+
+  {% else %}
+    —
+  {% endif %}
+</td>
+
+<td>
+  <div class="traffic-status">
+    {% if t.status == "todo" %}
+      <span class="traffic traffic--yellow"></span>
+      <span class="traffic-status__text">{{ t.status_label or "Жоспарланған" }}</span>
+
+    {% elif t.status == "in_progress" %}
+      <span class="traffic traffic--green"></span>
+      <span class="traffic-status__text">{{ t.status_label or "Орындалу үстінде" }}</span>
+
+    {% elif t.status == "done" %}
+      <span class="traffic traffic--blue"></span>
+      <span class="traffic-status__text">{{ t.status_label or "Орындалды" }}</span>
+
+    {% elif t.status == "not_executed" %}
+      <span class="traffic traffic--red"></span>
+      <span class="traffic-status__text">{{ t.status_label or "Орындалмады" }}</span>
+
+    {% else %}
+      <span class="traffic-status__text">—</span>
+    {% endif %}
+  </div>
+</td>
             </tr>
           {% else %}
             <tr>
-              <td colspan="7" class="empty">
+              <td colspan="8" class="empty">
                 На этот месяц задачи не назначены
               </td>
             </tr>

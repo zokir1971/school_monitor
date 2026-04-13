@@ -67,7 +67,51 @@ class PlanItemStatus(str, enum.Enum):
     TODO = ("todo", "Жоспарланған")
     IN_PROGRESS = ("in_progress", "Орындалу үстінде")
     DONE = ("done", "Орындалды")
-    NOT_APPLICABLE = ("not_applicable", "Қолданылмайды")
+    NOT_EXECUTED = ("not_executed", "Орындалмады")
+
+    def __new__(cls, value: str, label_kz: str):
+        obj = str.__new__(cls, value)
+        obj._value_ = value
+        obj.label_kz = label_kz
+        return obj
+
+
+# Форма контроля
+class ControlForm(str, enum.Enum):
+    PERSONAL = ("personal", "Жеке бақылау")
+    CLASS_GENERALIZING = ("class_generalizing", "Сыныптық-жалпылау бақылауы")
+    SUBJECT_GENERALIZING = ("subject_generalizing", "Пәндік-жалпылау бақылауы")
+    THEMATIC_GENERALIZING = ("thematic_generalizing", "Тақырыптық-жалпылау бақылауы")
+    OVERVIEW = ("overview", "Шолу бақылауы")
+    COMPLEX_GENERALIZING = ("complex_generalizing", "Кешенді-жалпылау бақылауы")
+
+    def __new__(cls, value: str, label_kz: str):
+        obj = str.__new__(cls, value)
+        obj._value_ = value
+        obj.label_kz = label_kz
+        return obj
+
+
+# Вид контроля
+class ControlKind(str, enum.Enum):
+    FRONT = ("front", "Фронталды бақылау")
+    THEMATIC = ("thematic", "Тақырыптық бақылау")
+
+    def __new__(cls, value: str, label_kz: str):
+        obj = str.__new__(cls, value)
+        obj._value_ = value
+        obj.label_kz = label_kz
+        return obj
+
+
+# Объект контроля
+class ControlScope(str, enum.Enum):
+    CLASS = ("class", "Сынып")
+    PARALLEL = ("parallel", "Параллель")
+    SUBJECT = ("subject", "Пән")
+    TEACHER = ("teacher", "Мұғалім")
+    DOCUMENTATION = ("documentation", "Құжаттар")
+    COMPLEX = ("complex", "Кешенді")
 
     def __new__(cls, value: str, label_kz: str):
         obj = str.__new__(cls, value)
@@ -88,23 +132,3 @@ class ReviewPlace(str, enum.Enum):
         obj._value_ = value
         obj.label_kz = label_kz
         return obj
-
-
-class DocumentType(str, enum.Enum):
-    PLAN = ("plan", "Жоспар")
-    PROTOCOL = ("protocol", "Хаттама")
-    ACT = ("act", "Акт")
-    REPORT = ("report", "Есеп")
-    REFERENCE = ("reference", "Анықтама")
-    OTHER = ("other", "Басқа құжат")
-
-    def __new__(cls, value: str, label_kz: str):
-        obj = str.__new__(cls, value)
-        obj._value_ = value
-        obj.label_kz = label_kz
-        return obj
-
-
-class DocumentStatus(str, enum.Enum):
-    ACTIVE = "active"
-    ARCHIVED = "archived"

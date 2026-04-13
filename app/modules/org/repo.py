@@ -1,4 +1,4 @@
-# app/modules/org/repo.py
+# app/modules/org/report_repo.py
 # -------------------------------------------------------
 # Репозиторий для организационной структуры (Region / District / School)
 # Здесь ТОЛЬКО SQL-запросы к БД.

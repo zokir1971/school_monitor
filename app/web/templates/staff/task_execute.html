@@ -1,0 +1,588 @@
+{% extends "base.html" %}
+
+{% block title %}Исполнение задачи{% endblock %}
+
+{% block extra_css %}
+  <link rel="stylesheet" href="{{ url_for('static', path='css/staff_task.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="page">
+  <div class="page-inner">
+
+    <div class="execute-head card">
+      <div class="execute-head__left">
+        <h2>Исполнение задачи</h2>
+        <div class="sub">Подготовка материалов и справки по результатам контроля</div>
+      </div>
+
+      <div>
+        <a href="{{ request.url_for('staff_tasks_page') }}?month={{ month }}" class="btn btn-secondary">
+          Назад к задачам
+        </a>
+      </div>
+    </div>
+
+    {% if request.query_params.get("success") %}
+      <div class="card">
+        <div class="hint-box">
+          <div class="hint-box__title">Сохранено</div>
+          <div class="hint-box__text">
+            Данные по исполнению задачи успешно сохранены.
+          </div>
+        </div>
+      </div>
+    {% endif %}
+
+    {% if request.query_params.get("error") %}
+      <div class="card">
+        <div class="hint-box">
+          <div class="hint-box__title">Ошибка</div>
+          <div class="hint-box__text">
+            {{ request.query_params.get("error") }}
+          </div>
+        </div>
+      </div>
+    {% endif %}
+
+    <div class="card">
+      <h3>Выбор задачи</h3>
+
+      {% if tasks %}
+        <form method="get" action="{{ request.url_for('staff_tasks_execute_page') }}" class="form-grid">
+          <input type="hidden" name="month" value="{{ month }}">
+
+          <div class="form-field">
+            <label for="selected_task_id">Принятые задачи</label>
+            <select name="selected_task_id" id="selected_task_id" onchange="this.form.submit()">
+              {% for t in tasks %}
+                <option value="{{ t.month_item_id }}"
+                  {% if selected_task_id == t.month_item_id %}selected{% endif %}>
+                  {{ t.topic or ("Задача #" ~ t.month_item_id) }}
+                  {% if t.planned_end %} — до {{ t.planned_end.strftime("%d.%m.%Y") if t.planned_end.strftime is defined else t.planned_end }}{% endif %}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+        </form>
+      {% else %}
+        <div class="hint-box">
+          <div class="hint-box__title">Нет задач</div>
+          <div class="hint-box__text">
+            У вас пока нет задач со статусом «Орындалу үстінде».
+          </div>
+        </div>
+      {% endif %}
+    </div>
+
+    {% if selected_task %}
+      {% set task = selected_task %}
+      {% set task_status = task.status.value if task.status is not string and task.status.value is defined else task.status %}
+
+      <div class="card task-info">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;">
+          <h3 style="margin:0;">Информация о задаче</h3>
+
+          <div class="traffic-status">
+            {% if task_status == "todo" %}
+              <span class="traffic traffic--yellow"></span>
+              <span class="traffic-status__text">Жоспарланған</span>
+            {% elif task_status == "in_progress" %}
+              <span class="traffic traffic--green"></span>
+              <span class="traffic-status__text">Орындалу үстінде</span>
+            {% elif task_status == "done" %}
+              <span class="traffic traffic--blue"></span>
+              <span class="traffic-status__text">Орындалды</span>
+            {% elif task_status == "not_executed" %}
+              <span class="traffic traffic--red"></span>
+              <span class="traffic-status__text">Орындалмады</span>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="info-grid">
+          <div class="info-item">
+            <div class="label">Тема</div>
+            <div class="value">
+              {{ task.source_row11.topic if task.source_row11 and task.source_row11.topic else task.topic if task.topic is defined else "—" }}
+            </div>
+          </div>
+
+          <div class="info-item">
+            <div class="label">Цель</div>
+            <div class="value">
+              {{ task.source_row11.goal if task.source_row11 and task.source_row11.goal else task.goal if task.goal is defined else "—" }}
+            </div>
+          </div>
+
+          <div class="info-item">
+            <div class="label">Объект контроля по задаче</div>
+            <div class="value">
+              {{ task.source_row11.control_object if task.source_row11 and task.source_row11.control_object else task.control_object if task.control_object is defined else "—" }}
+            </div>
+          </div>
+
+          <div class="info-item">
+            <div class="label">Тип контроля по задаче</div>
+            <div class="value">
+              {{ task.source_row11.control_type if task.source_row11 and task.source_row11.control_type else task.control_type if task.control_type is defined else "—" }}
+            </div>
+          </div>
+
+          <div class="info-item">
+            <div class="label">Форма контроля по задаче</div>
+            <div class="value">
+              {{ task.source_row11.control_form if task.source_row11 and task.source_row11.control_form else task.control_form if task.control_form is defined else "—" }}
+            </div>
+          </div>
+
+          <div class="info-item">
+            <div class="label">Место рассмотрения</div>
+            <div class="value">
+              {% if task.review_places %}
+                {% for rp in task.review_places %}
+                  {% set place = rp.review_place %}
+
+                  {% if place.label_kz is defined %}
+                    {{ place.label_kz }}
+                  {% else %}
+                    {{ place }}
+                  {% endif %}
+
+                  {% if not loop.last %}, {% endif %}
+                {% endfor %}
+              {% else %}
+                —
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="info-item">
+            <div class="label">Срок</div>
+            <div class="value">
+              {% if task.planned_start and task.planned_end %}
+                {{ task.planned_start.strftime("%d.%m.%Y") }} – {{ task.planned_end.strftime("%d.%m.%Y") }}
+              {% elif task.planned_start %}
+                {{ task.planned_start.strftime("%d.%m.%Y") }}
+              {% elif task.planned_end %}
+                {{ task.planned_end.strftime("%d.%m.%Y") }}
+              {% else %}
+                —
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {% if control_flow %}
+        <div class="card">
+          <h3>Алгоритм действий</h3>
+
+          <div class="hint-box">
+            <div class="hint-box__title">Порядок выполнения</div>
+            <div class="hint-box__text">
+              Сначала выберите параметры контроля. Затем подготовьте материалы, заполните справку, распечатайте документ, подпишите и загрузите итоговый файл.
+            </div>
+          </div>
+        </div>
+      {% endif %}
+
+      <form method="post"
+            action="{{ url_for('staff_task_execute_save', month_item_id=task.id) }}"
+            class="execute-form"
+            enctype="multipart/form-data">
+        <input type="hidden" name="month" value="{{ month }}">
+        <input type="hidden" name="selected_task_id" value="{{ task.id }}">
+
+        <div class="card">
+          <h3>1. Выбор параметров контроля</h3>
+
+          <div class="form-grid">
+            <div class="form-field">
+              <label for="control_scope">Объект контроля</label>
+              <select name="control_scope" id="control_scope" required>
+                <option value="">Выберите</option>
+              </select>
+            </div>
+
+            <div class="form-field">
+              <label for="control_form">Форма контроля</label>
+              <select name="control_form" id="control_form" required disabled>
+                <option value="">Сначала выберите объект</option>
+              </select>
+            </div>
+
+            <div class="form-field">
+              <label for="control_kind">Вид контроля</label>
+              <select name="control_kind" id="control_kind" required disabled>
+                <option value="">Сначала выберите форму</option>
+              </select>
+            </div>
+
+            <div class="form-field">
+              <label class="form-label">Тип отчета</label>
+              <div id="report_type" class="checkbox-group">
+                <!-- чекбоксы сюда -->
+              </div>
+            </div>
+          </div>
+
+          <div class="hint-box">
+            <div class="hint-box__title">Подсказка</div>
+            <div class="hint-box__text" id="control_hint">
+              Сначала выберите объект контроля. После этого система предложит допустимые формы, виды и рекомендованные типы отчета.
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>2. Подготовка материалов</h3>
+
+          <div class="form-grid">
+            <div class="form-field">
+              <label for="evidence_note">Какие материалы подготовлены</label>
+              <input
+                type="text"
+                id="evidence_note"
+                name="evidence_note"
+                value="{{ execution.evidence_note if execution else '' }}"
+                placeholder="Например: посещено 3 урока, собрана таблица качества знаний, изучены журналы"
+              >
+            </div>
+
+            <div class="form-field">
+              <label for="planned_review_place">Запланированное место рассмотрения</label>
+              <input
+                type="text"
+                id="planned_review_place"
+                name="planned_review_place"
+                value="{{ execution.planned_review_place if execution else task.review_place if task.review_place is defined else '' }}"
+                placeholder="Например: педагогический совет"
+              >
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>3. Справка</h3>
+
+          <div class="hint-box">
+            <div class="hint-box__title">Порядок работы</div>
+            <div class="hint-box__text">
+              Сначала заполните справку в системе и сохраните черновик. Затем распечатайте документ,
+              подпишите, при необходимости поставьте печать и после этого загрузите итоговый файл.
+            </div>
+          </div>
+
+          <div class="form-field">
+            <label for="reference_text">Текст справки</label>
+            <textarea
+              id="reference_text"
+              name="reference_text"
+              rows="12"
+              placeholder="Опишите ход контроля, результаты, выявленные проблемы, выводы и предложения"
+            >{{ execution.reference_text if execution else '' }}</textarea>
+          </div>
+
+          <div class="form-grid">
+            <div class="form-field">
+              <label for="conclusion">Вывод</label>
+              <textarea
+                id="conclusion"
+                name="conclusion"
+                rows="5"
+                placeholder="Краткий вывод по результатам контроля"
+              >{{ execution.conclusion if execution else '' }}</textarea>
+            </div>
+
+            <div class="form-field">
+              <label for="recommendations">Рекомендации</label>
+              <textarea
+                id="recommendations"
+                name="recommendations"
+                rows="5"
+                placeholder="Рекомендации, поручения, предложения"
+              >{{ execution.recommendations if execution else '' }}</textarea>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>4. Рассмотрение</h3>
+
+          <div class="form-grid">
+            <div class="form-field">
+              <label for="review_result">Что выносится на рассмотрение</label>
+              <input
+                type="text"
+                id="review_result"
+                name="review_result"
+                value="{{ execution.review_result if execution else '' }}"
+                placeholder="Например: справка, аналитическая таблица, проект решения"
+              >
+            </div>
+
+            <div class="form-field">
+              <label for="task_status_view">Текущий статус</label>
+              <input
+                type="text"
+                id="task_status_view"
+                value="{% if task_status == 'todo' %}Жоспарланған{% elif task_status == 'in_progress' %}Орындалу үстінде{% elif task_status == 'done' %}Орындалды{% elif task_status == 'not_executed' %}Орындалмады{% else %}—{% endif %}"
+                readonly
+              >
+            </div>
+          </div>
+        </div>
+
+        <div class="card action-panel">
+          {% if current_draft and execution %}
+            <a href="/staff/reports/{{ task.id }}/execute" class="btn btn-secondary">
+              Перейти на завершение
+            </a>
+          {% else %}
+            <button type="submit" name="action" value="save" class="btn btn-secondary">
+              Сохранить черновик
+            </button>
+          {% endif %}
+          <button type="submit" name="action" value="export_draft" class="btn btn-secondary">
+            Сохранить и выгрузить черновой отчет
+          </button>
+
+          <button type="submit" name="action" value="not_executed" class="btn btn-danger">
+            Отметить как не выполнено
+          </button>
+        </div>
+      </form>
+
+    {% else %}
+      <div class="card">
+        <div class="hint-box">
+          <div class="hint-box__title">Выберите задачу</div>
+          <div class="hint-box__text">
+            Для начала выберите одну из принятых задач в верхнем списке.
+          </div>
+        </div>
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+<script>
+  const CONTROL_FLOW = {{ control_flow | tojson if control_flow else '{}' }};
+
+  const savedScope = {{ (execution.control_scope if execution and execution.control_scope else '') | tojson }};
+  const savedForm = {{ (execution.control_form if execution and execution.control_form else '') | tojson }};
+  const savedKind = {{ (execution.control_kind if execution and execution.control_kind else '') | tojson }};
+
+  /*
+    ВАЖНО:
+    execution.report_type раньше был одним значением.
+    Теперь для чекбоксов лучше передавать массив, например:
+    execution.report_types = ["act", "analysis"]
+    Но если пока приходит одна строка, скрипт тоже это обработает.
+  */
+  const savedReportRaw = {{ (execution.report_types if execution and execution.report_types else execution.report_type if execution and execution.report_type else []) | tojson }};
+
+  const savedReports = Array.isArray(savedReportRaw)
+    ? savedReportRaw
+    : (savedReportRaw ? [savedReportRaw] : []);
+
+  const scopeEl = document.getElementById("control_scope");
+  const formEl = document.getElementById("control_form");
+  const kindEl = document.getElementById("control_kind");
+  const reportEl = document.getElementById("report_type");
+  const hintEl = document.getElementById("control_hint");
+
+  if (scopeEl && formEl && kindEl && reportEl && hintEl) {
+    function resetSelect(selectEl, placeholder, disabled = true) {
+      selectEl.innerHTML = "";
+
+      const option = document.createElement("option");
+      option.value = "";
+      option.textContent = placeholder;
+      selectEl.appendChild(option);
+
+      selectEl.disabled = disabled;
+      selectEl.value = "";
+    }
+
+    function fillSelect(selectEl, items, selectedValue, placeholder) {
+      resetSelect(selectEl, placeholder, false);
+
+      (items || []).forEach(item => {
+        const option = document.createElement("option");
+        option.value = item.code;
+        option.textContent = item.label;
+
+        if (selectedValue && selectedValue === item.code) {
+          option.selected = true;
+        }
+
+        selectEl.appendChild(option);
+      });
+    }
+
+    function resetReportCheckboxes(message = "Сначала выберите объект") {
+      reportEl.innerHTML = `<div class="checkbox-placeholder">${message}</div>`;
+    }
+
+    function fillReportCheckboxes(items, selectedValues = []) {
+      reportEl.innerHTML = "";
+
+      if (!items || !items.length) {
+        resetReportCheckboxes("Нет доступных типов отчета");
+        return;
+      }
+
+      items.forEach(item => {
+        const wrapper = document.createElement("div");
+        wrapper.className = "checkbox-item";
+
+        const input = document.createElement("input");
+        input.type = "checkbox";
+        input.name = "report_types";
+        input.value = item.code;
+        input.id = `report_${item.code}`;
+        input.checked = selectedValues.includes(item.code);
+
+        const label = document.createElement("label");
+        label.setAttribute("for", input.id);
+        label.textContent = item.label;
+
+        wrapper.appendChild(input);
+        wrapper.appendChild(label);
+
+        reportEl.appendChild(wrapper);
+      });
+    }
+
+    function getScopeLabel(scopeCode) {
+      return (CONTROL_FLOW.scopes || []).find(x => x.code === scopeCode)?.label || "";
+    }
+
+    function getFormLabel(scopeCode, formCode) {
+      return (CONTROL_FLOW.forms_by_scope?.[scopeCode] || []).find(x => x.code === formCode)?.label || "";
+    }
+
+    function getKindLabel(kindCode) {
+      return (CONTROL_FLOW.kinds || []).find(x => x.code === kindCode)?.label || "";
+    }
+
+    function getReportLabels(scopeCode) {
+      const checkedValues = Array.from(
+        reportEl.querySelectorAll('input[name="report_types"]:checked')
+      ).map(el => el.value);
+
+      const reports = CONTROL_FLOW.reports_by_scope?.[scopeCode] || [];
+
+      return reports
+        .filter(x => checkedValues.includes(x.code))
+        .map(x => x.label);
+    }
+
+    function buildScopeOptions() {
+      fillSelect(scopeEl, CONTROL_FLOW.scopes || [], savedScope, "Выберите");
+    }
+
+    function buildFormOptions(selectedForm = "") {
+      const scopeCode = scopeEl.value;
+      const forms = CONTROL_FLOW.forms_by_scope?.[scopeCode] || [];
+
+      if (!scopeCode || !forms.length) {
+        resetSelect(formEl, "Сначала выберите объект", true);
+        hintEl.textContent =
+          "Сначала выберите объект контроля. После этого система предложит допустимые формы, виды и типы отчета.";
+        return;
+      }
+
+      fillSelect(formEl, forms, selectedForm, "Выберите форму");
+      hintEl.textContent = "Форма контроля доступна в зависимости от выбранного объекта.";
+    }
+
+    function buildKindOptions(selectedKind = "") {
+      const scopeCode = scopeEl.value;
+
+      if (!scopeCode) {
+        resetSelect(kindEl, "Сначала выберите объект", true);
+        hintEl.textContent = "Сначала выберите объект контроля.";
+        return;
+      }
+
+      fillSelect(kindEl, CONTROL_FLOW.kinds || [], selectedKind, "Выберите вид");
+      hintEl.textContent = "Для любого объекта доступны два вида контроля: фронтальный и тематический.";
+    }
+
+    function buildReportOptions(selectedReports = []) {
+      const scopeCode = scopeEl.value;
+      const reports = CONTROL_FLOW.reports_by_scope?.[scopeCode] || [];
+
+      if (!scopeCode || !reports.length) {
+        resetReportCheckboxes("Сначала выберите объект");
+        hintEl.textContent = "Сначала выберите объект контроля.";
+        return;
+      }
+
+      fillReportCheckboxes(reports, selectedReports);
+      hintEl.textContent = "Можно выбрать один или несколько типов отчета.";
+    }
+
+    function updateHint() {
+      const scopeCode = scopeEl.value;
+      const formCode = formEl.value;
+      const kindCode = kindEl.value;
+
+      if (!scopeCode) {
+        hintEl.textContent =
+          "Сначала выберите объект контроля. После этого система предложит допустимые формы, виды и типы отчета.";
+        return;
+      }
+
+      const scopeLabel = getScopeLabel(scopeCode);
+      const formLabel = formCode ? getFormLabel(scopeCode, formCode) : "";
+      const kindLabel = kindCode ? getKindLabel(kindCode) : "";
+      const reportLabels = getReportLabels(scopeCode);
+
+      let parts = [scopeLabel];
+      if (formLabel) parts.push(formLabel);
+      if (kindLabel) parts.push(kindLabel);
+      if (reportLabels.length) parts.push(reportLabels.join(", "));
+
+      hintEl.textContent = "Выбрано: " + parts.join(" → ");
+    }
+
+    scopeEl.addEventListener("change", function () {
+      buildFormOptions();
+      buildKindOptions();
+      buildReportOptions([]);
+      updateHint();
+    });
+
+    formEl.addEventListener("change", function () {
+      updateHint();
+    });
+
+    kindEl.addEventListener("change", function () {
+      updateHint();
+    });
+
+    reportEl.addEventListener("change", function (event) {
+      if (event.target && event.target.matches('input[name="report_types"]')) {
+        updateHint();
+      }
+    });
+
+    buildScopeOptions();
+
+    if (savedScope) {
+      buildFormOptions(savedForm);
+      buildKindOptions(savedKind);
+      buildReportOptions(savedReports);
+      updateHint();
+    } else {
+      resetSelect(formEl, "Сначала выберите объект", true);
+      resetSelect(kindEl, "Сначала выберите объект", true);
+      resetReportCheckboxes("Сначала выберите объект");
+    }
+  }
+</script>
+{% endblock %}

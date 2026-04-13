@@ -10,12 +10,14 @@ from sqlalchemy import (
     CheckConstraint,
     DateTime,
     ForeignKey,
+    String,
     Index,
     Integer,
     Text,
     UniqueConstraint,
     func)
 from sqlalchemy import Date
+from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -27,6 +29,7 @@ if TYPE_CHECKING:
     from app.modules.planning.models_school import SchoolPlanRow11, SchoolPlan
     from app.modules.staff.models_staff_school import SchoolStaffRole
     from app.modules.users.models import User
+    from app.modules.reports.models_documents import TaskExecutionDocument
 
 
 class SchoolMonthPlan(Base):
@@ -109,7 +112,10 @@ class SchoolMonthPlanItem(Base):
         ),
         Index("ix_month_plan_items_plan_included_week", "month_plan_id", "is_included", "week_of_month"),
         Index("ix_month_plan_items_source_status", "source_row11_id", "status"),
-        Index("ix_month_plan_items_plan_dates", "month_plan_id", "planned_start", "planned_end")
+        Index("ix_month_plan_items_plan_dates", "month_plan_id", "planned_start", "planned_end"),
+        Index("ix_month_plan_items_executed_at", "executed_at"),
+        Index("ix_month_plan_items_completed_at", "completed_at"),
+        Index("ix_month_plan_items_completed_by", "completed_by_user_id"),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -120,7 +126,6 @@ class SchoolMonthPlanItem(Base):
         index=True,
     )
 
-    # Идеально: если в годовом плане строку удалили — item не умирает, а просто теряет ссылку
     source_row11_id: Mapped[int | None] = mapped_column(
         ForeignKey("school_plan_rows_11.id", ondelete="SET NULL"),
         nullable=True,
@@ -129,11 +134,10 @@ class SchoolMonthPlanItem(Base):
 
     is_included: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, index=True)
 
-    # обязательна для включённых задач (проверим в сервисе при переводе DRAFT->ACTIVE)
     week_of_month: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
 
     status: Mapped[PlanItemStatus] = mapped_column(
-        PLAN_ITEM_STATUS_ENUM,  # ✅ общий enum из app/db/types.py
+        PLAN_ITEM_STATUS_ENUM,
         nullable=False,
         default=PlanItemStatus.TODO,
         index=True,
@@ -148,9 +152,8 @@ class SchoolMonthPlanItem(Base):
         index=True,
     )
 
-    # Ответственные (роль + конкретный пользователь)
     responsible_role: Mapped[ResponsibleRole | None] = mapped_column(
-        RESPONSIBLE_ROLE_ENUM,  # ✅ общий enum из app/db/types.py
+        RESPONSIBLE_ROLE_ENUM,
         nullable=True,
         index=True,
     )
@@ -161,11 +164,26 @@ class SchoolMonthPlanItem(Base):
         index=True,
     )
 
-    # недели
     planned_start: Mapped[date | None] = mapped_column(Date, nullable=True, index=True)
     planned_end: Mapped[date | None] = mapped_column(Date, nullable=True, index=True)
 
-    # relationships
+    # фактическая дата исполнения задачи
+    executed_at: Mapped[date | None] = mapped_column(Date, nullable=True, index=True)
+
+    # когда задача была закрыта в системе статусом DONE
+    completed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+        index=True,
+    )
+
+    # кто закрыл задачу
+    completed_by_user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+
     month_plan: Mapped["SchoolMonthPlan"] = relationship(
         "SchoolMonthPlan",
         back_populates="items",
@@ -185,6 +203,12 @@ class SchoolMonthPlanItem(Base):
         lazy="selectin",
     )
 
+    completed_by: Mapped[User | None] = relationship(
+        "User",
+        foreign_keys=[completed_by_user_id],
+        lazy="selectin",
+    )
+
     review_places: Mapped[list["SchoolMonthPlanItemReviewPlace"]] = relationship(
         "SchoolMonthPlanItemReviewPlace",
         back_populates="month_item",
@@ -200,6 +224,51 @@ class SchoolMonthPlanItem(Base):
         passive_deletes=True,
         lazy="selectin",
     )
+
+    execution: Mapped["SchoolMonthPlanItemExecution | None"] = relationship(
+        "SchoolMonthPlanItemExecution",
+        back_populates="month_item",
+        uselist=False,
+        cascade="all, delete-orphan",
+        lazy="selectin",
+    )
+
+    execution_documents: Mapped[list["TaskExecutionDocument"]] = relationship(
+        "TaskExecutionDocument",
+        back_populates="month_item",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+    )
+
+    execution_data: Mapped["TaskExecutionData | None"] = relationship(
+        "TaskExecutionData",
+        back_populates="month_item",
+        uselist=False,
+        cascade="all, delete-orphan",
+        lazy="selectin",
+    )
+
+    @property
+    def is_completed_on_time(self) -> bool:
+        return (
+                self.status == PlanItemStatus.DONE
+                and self.executed_at is not None
+                and self.planned_end is not None
+                and self.executed_at <= self.planned_end
+        )
+
+    @property
+    def is_completed_late(self) -> bool:
+        return (
+                self.status == PlanItemStatus.DONE
+                and self.executed_at is not None
+                and self.planned_end is not None
+                and self.executed_at > self.planned_end
+        )
+
+    @property
+    def is_not_executed(self) -> bool:
+        return self.status == PlanItemStatus.NOT_EXECUTED
 
 
 class SchoolMonthPlanItemAssignee(Base):
@@ -256,6 +325,12 @@ class SchoolMonthPlanItemAssignee(Base):
         lazy="selectin",
     )
 
+    assigned_by: Mapped["User | None"] = relationship(
+        "User",
+        foreign_keys=[assigned_by_user_id],
+        lazy="selectin",
+    )
+
 
 class SchoolMonthPlanItemReviewPlace(Base):
     __tablename__ = "school_month_plan_item_review_places"
@@ -280,4 +355,123 @@ class SchoolMonthPlanItemReviewPlace(Base):
     month_item: Mapped["SchoolMonthPlanItem"] = relationship(
         "SchoolMonthPlanItem",
         back_populates="review_places",
+        lazy="selectin",
+    )
+
+
+class SchoolMonthPlanItemExecution(Base):
+    __tablename__ = "school_month_plan_item_executions"
+
+    __table_args__ = (
+        UniqueConstraint(
+            "month_item_id",
+            name="uq_month_item_execution_one",
+        ),
+        Index("ix_execution_month_item", "month_item_id"),
+        Index("ix_execution_control_form", "control_form"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+
+    # ---------------------------
+    # 🔗 связь с задачей
+    # ---------------------------
+    month_item_id: Mapped[int] = mapped_column(
+        ForeignKey("school_month_plan_items.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+
+    # ---------------------------
+    # 🎯 логика ВШК
+    # ---------------------------
+    control_scope: Mapped[str | None] = mapped_column(
+        String(50),
+        nullable=True,
+    )
+
+    control_form: Mapped[str | None] = mapped_column(
+        String(50),
+        nullable=True,
+    )
+
+    control_kind: Mapped[str | None] = mapped_column(
+        String(50),
+        nullable=True,
+    )
+
+    report_types: Mapped[list[str] | None] = mapped_column(
+        ARRAY(String),
+        nullable=True,
+    )
+
+    # ---------------------------
+    # 📊 материалы
+    # ---------------------------
+    evidence_note: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+    )
+
+    # ---------------------------
+    # 📝 справка
+    # ---------------------------
+    reference_text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    conclusion: Mapped[str | None] = mapped_column(Text, nullable=True)
+    recommendations: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    # ---------------------------
+    # 📌 рассмотрение
+    # ---------------------------
+    review_result: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    planned_review_place: Mapped[str | None] = mapped_column(
+        String(255),
+        nullable=True,
+    )
+
+    # ---------------------------
+    # 👤 аудит
+    # ---------------------------
+    created_by_user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+
+    updated_by_user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+    )
+
+    updated_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        onupdate=func.now(),
+        nullable=True,
+    )
+
+    # ---------------------------
+    # 🔗 relationships
+    # ---------------------------
+    month_item: Mapped["SchoolMonthPlanItem"] = relationship(
+        "SchoolMonthPlanItem",
+        back_populates="execution",
+        lazy="selectin",
+    )
+
+    created_by: Mapped["User"] = relationship(
+        "User",
+        foreign_keys=[created_by_user_id],
+        lazy="selectin",
+    )
+
+    updated_by: Mapped["User"] = relationship(
+        "User",
+        foreign_keys=[updated_by_user_id],
+        lazy="selectin",
     )

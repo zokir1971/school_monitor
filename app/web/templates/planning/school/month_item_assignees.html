@@ -112,7 +112,7 @@
                     <span class="selected-meta">
                       — {{ opt.role_label }}{% if opt.role_context %} ({{ opt.role_context }}){% endif %}
                     </span>
-                    {% if block.is_primary %}
+                    {% if opt.is_primary or block.is_primary %}
                       <span class="badge badge-danger">главный</span>
                     {% endif %}
                   </span>
@@ -161,7 +161,7 @@
                         <label class="option-card">
                           <input
                             type="checkbox"
-                            name="assignee_ids"
+                            name="staff_role_ids"
                             value="{{ opt.staff_role_id }}"
                             {% if opt.checked %}checked{% endif %}
                             class="option-card__checkbox"
@@ -177,6 +177,18 @@
                               {% if opt.role_context %}
                                 — {{ opt.role_context }}
                               {% endif %}
+                            </span>
+
+                            <span class="option-card__meta">
+                              <label>
+                                <input
+                                  type="radio"
+                                  name="primary_staff_role_id"
+                                  value="{{ opt.staff_role_id }}"
+                                  {% if opt.is_primary %}checked{% endif %}
+                                >
+                                Главный ответственный
+                              </label>
                             </span>
                           </span>
                         </label>

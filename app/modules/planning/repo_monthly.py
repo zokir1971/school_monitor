@@ -10,10 +10,13 @@ from sqlalchemy.orm import selectinload
 
 from app.modules.planning.enums import PlanStatus, PlanItemStatus
 # твои модели/enum/dto
-from app.modules.planning.models_month_plan import SchoolMonthPlan, SchoolMonthPlanItem, SchoolMonthPlanItemReviewPlace
+from app.modules.planning.models_month_plan import SchoolMonthPlan, SchoolMonthPlanItem, \
+    SchoolMonthPlanItemReviewPlace, \
+    SchoolMonthPlanItemAssignee
 from app.modules.planning.models_school import SchoolPlan, SchoolPlanRow11
 from app.modules.planning.schemas import MonthItemUpdate
 from app.modules.planning.utils.month_plan_utils import month_to_quarter
+from app.modules.staff.models_staff_school import SchoolStaffRole
 
 ACADEMIC_MONTHS = {9, 10, 11, 12, 1, 2, 3, 4, 5}
 
@@ -106,7 +109,14 @@ class SchoolMonthlyPlanRepo:
         stmt = (
             select(SchoolMonthPlanItem)
             .where(SchoolMonthPlanItem.month_plan_id == month_plan_id)
-            .order_by(SchoolMonthPlanItem.id.asc())  # стабильная сортировка
+            .order_by(SchoolMonthPlanItem.id.asc())
+            .options(
+                selectinload(SchoolMonthPlanItem.review_places),
+
+                selectinload(SchoolMonthPlanItem.assignees)
+                .selectinload(SchoolMonthPlanItemAssignee.staff_role)
+                .selectinload(SchoolStaffRole.staff_member),
+            )
         )
 
         if with_source:
@@ -119,7 +129,7 @@ class SchoolMonthlyPlanRepo:
             )
 
         res = await db.execute(stmt)
-        return list(res.scalars().all())
+        return list(res.scalars().unique().all())
 
     @staticmethod
     async def get_item(
@@ -370,6 +380,55 @@ class SchoolMonthlyPlanRepo:
             )
         )
         return int(res.scalar() or 0)
+
+    @staticmethod
+    def _previous_months_in_quarter(month: int) -> list[int]:
+        if month in (9, 10):
+            quarter_months = [9, 10]
+        elif month in (11, 12):
+            quarter_months = [11, 12]
+        elif month in (1, 2, 3):
+            quarter_months = [1, 2, 3]
+        elif month in (4, 5):
+            quarter_months = [4, 5]
+        else:
+            return []
+
+        result: list[int] = []
+        for m in quarter_months:
+            if m == month:
+                break
+            result.append(m)
+        return result
+
+    @staticmethod
+    async def quarterly_already_included_before_current_month(
+            db: AsyncSession,
+            *,
+            school_plan_id: int,
+            source_row11_id: int,
+            target_month: int,
+    ) -> bool:
+        previous_months = SchoolMonthlyPlanRepo._previous_months_in_quarter(target_month)
+
+        if not previous_months:
+            return False
+
+        res = await db.execute(
+            select(SchoolMonthPlanItem.id)
+            .join(
+                SchoolMonthPlan,
+                SchoolMonthPlan.id == SchoolMonthPlanItem.month_plan_id,
+            )
+            .where(
+                SchoolMonthPlan.school_plan_id == school_plan_id,
+                SchoolMonthPlan.month.in_(previous_months),
+                SchoolMonthPlanItem.source_row11_id == source_row11_id,
+                SchoolMonthPlanItem.is_included.is_(True),
+            )
+            .limit(1)
+        )
+        return res.scalar_one_or_none() is not None
 
 
 class SchoolMonthPlanItemRepo:

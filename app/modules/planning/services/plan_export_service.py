@@ -12,8 +12,8 @@ from app.modules.planning.enums import (
     AssignmentKind,
     PlanPeriodType,
     ReviewPlace,
-    DocumentType,
 )
+from app.modules.reports.enums import DocumentType
 from app.modules.planning.models_school import (
     SchoolPlan,
     SchoolPlanRow4,

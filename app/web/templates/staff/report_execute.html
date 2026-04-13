@@ -1,0 +1,511 @@
+{% extends "base.html" %}
+
+{% block title %}Исполнение задачи{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{{ url_for('static', path='css/staff_task.css') }}">
+<style>
+  .page {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 24px 16px 48px;
+  }
+
+  .page-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    margin-bottom: 20px;
+  }
+
+  .page-head__title h1 {
+    margin: 0 0 6px;
+    font-size: 30px;
+    line-height: 1.2;
+  }
+
+  .page-head__title p {
+    margin: 0;
+    color: #6b7280;
+    font-size: 14px;
+  }
+
+  .card {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 18px;
+    padding: 20px;
+    margin-bottom: 18px;
+    box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04);
+  }
+
+  .card h2,
+  .card h3 {
+    margin-top: 0;
+    margin-bottom: 14px;
+  }
+
+  .alert {
+    border-radius: 14px;
+    padding: 14px 16px;
+    margin-bottom: 16px;
+    border: 1px solid transparent;
+    font-size: 14px;
+  }
+
+  .alert-success {
+    background: #ecfdf5;
+    color: #065f46;
+    border-color: #a7f3d0;
+  }
+
+  .alert-warning,
+  .alert-error {
+    background: #fef2f2;
+    color: #991b1b;
+    border-color: #fecaca;
+  }
+
+  .task-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px 18px;
+  }
+
+  .task-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .task-field--full {
+    grid-column: 1 / -1;
+  }
+
+  .task-field__label {
+    font-size: 13px;
+    color: #6b7280;
+  }
+
+  .task-field__value {
+    font-size: 15px;
+    color: #111827;
+    font-weight: 500;
+    word-break: break-word;
+  }
+
+  .status-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 8px 12px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 600;
+    background: #eff6ff;
+    color: #1d4ed8;
+  }
+
+  .doc-list {
+    display: grid;
+    gap: 12px;
+  }
+
+  .doc-item {
+    border: 1px solid #e5e7eb;
+    border-radius: 14px;
+    padding: 14px 16px;
+    background: #fafafa;
+  }
+
+  .doc-item__title {
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+
+  .doc-item__meta {
+    display: grid;
+    gap: 4px;
+    font-size: 14px;
+    color: #4b5563;
+  }
+
+  .doc-item__content {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px dashed #d1d5db;
+    font-size: 14px;
+    color: #111827;
+  }
+
+  .form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+  }
+
+  .form-field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .form-field--full {
+    grid-column: 1 / -1;
+  }
+
+  .form-field label {
+    font-size: 14px;
+    font-weight: 600;
+    color: #374151;
+  }
+
+  .form-field input,
+  .form-field textarea {
+    width: 100%;
+    border: 1px solid #d1d5db;
+    border-radius: 12px;
+    padding: 12px 14px;
+    font-size: 14px;
+    background: #fff;
+    box-sizing: border-box;
+  }
+
+  .form-field textarea {
+    resize: vertical;
+    min-height: 110px;
+  }
+
+  .hint {
+    font-size: 12px;
+    color: #6b7280;
+  }
+
+  .action-panel {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: 12px;
+    padding: 11px 16px;
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+  }
+
+  .btn-secondary {
+    background: #eef2ff;
+    color: #3730a3;
+  }
+
+  .btn-primary {
+    background: #2563eb;
+    color: #fff;
+  }
+
+  .btn-success {
+    background: #059669;
+    color: #fff;
+  }
+
+  .btn-danger {
+    background: #dc2626;
+    color: #fff;
+  }
+
+  .btn-light {
+    background: #f3f4f6;
+    color: #111827;
+  }
+
+  .empty-box {
+    padding: 16px;
+    border: 1px dashed #cbd5e1;
+    border-radius: 14px;
+    color: #6b7280;
+    background: #f8fafc;
+  }
+
+  a.disabled {
+    pointer-events: none;
+    opacity: 0.6;
+  }
+
+  @media (max-width: 860px) {
+    .task-grid,
+    .form-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .page-head {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .action-panel {
+      flex-direction: column;
+    }
+
+    .btn {
+      width: 100%;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page">
+
+  <div class="page-head">
+    <div class="page-head__title">
+      <h1>Исполнение задачи</h1>
+      <p>Проверка черновика, загрузка итогового документа и завершение задачи</p>
+    </div>
+
+    <a href="/staff/tasks" class="btn btn-light">Назад к задачам</a>
+  </div>
+
+  {% if success %}
+    <div class="alert alert-success">{{ success }}</div>
+  {% endif %}
+
+  {% if warning %}
+    <div class="alert alert-warning">{{ warning }}</div>
+  {% endif %}
+
+  {% if error %}
+    <div class="alert alert-error">{{ error }}</div>
+  {% endif %}
+
+  {% if task %}
+    <div class="card">
+  <h2>Сведения о задаче</h2>
+
+  <div class="task-grid">
+    <div class="task-field">
+      <div class="task-field__label">Статус</div>
+      <div class="task-field__value">
+        <span class="status-badge">
+          {{ task.status.label_kz if task.status is defined and task.status else "—" }}
+        </span>
+      </div>
+    </div>
+
+    <div class="task-field">
+      <div class="task-field__label">Период</div>
+      <div class="task-field__value">
+        {% if task.planned_start and task.planned_end %}
+          {{ task.planned_start.strftime("%d.%m.%Y") }} – {{ task.planned_end.strftime("%d.%m.%Y") }}
+        {% else %}
+          —
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="task-field task-field--full">
+      <div class="task-field__label">Тема</div>
+      <div class="task-field__value">
+        {{ task_topic or "—" }}
+      </div>
+    </div>
+
+    <div class="task-field task-field--full">
+      <div class="task-field__label">Цель</div>
+      <div class="task-field__value">
+        {{ task_goal or "—" }}
+      </div>
+    </div>
+
+    <div class="task-field">
+      <div class="task-field__label">Место рассмотрения</div>
+      <div class="task-field__value">
+        {{ review_place_text or "—" }}
+      </div>
+    </div>
+  </div>
+</div>
+    <div class="card">
+      <div class="action-panel">
+        <a href="{% if not is_done %}{{ url_for('staff_tasks_execute_page') }}?selected_task_id={{ task.id }}{% if month %}&month={{ month }}{% endif %}{% else %}#{% endif %}"
+   class="btn btn-secondary {% if is_done %}disabled{% endif %}">
+  Редактировать черновик
+</a>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Текущий черновик</h3>
+
+      {% if current_draft %}
+        <div class="doc-item">
+          <div class="doc-item__title">
+            {{ current_draft.title or "Черновик справки" }}
+          </div>
+
+          <div class="doc-item__meta">
+            <div><strong>Тип:</strong> {{ current_draft.document_type.value if current_draft.document_type else "—" }}</div>
+            <div><strong>Статус:</strong> {{ current_draft.status.value if current_draft.status else "—" }}</div>
+            <div><strong>Версия:</strong> {{ current_draft.version if current_draft.version is not none else "—" }}</div>
+          </div>
+
+          {% if current_draft.content_html %}
+            <div class="doc-item__content">
+              {{ current_draft.content_html | safe }}
+            </div>
+          {% endif %}
+        </div>
+      {% else %}
+        <div class="empty-box">Черновик пока не сохранен.</div>
+      {% endif %}
+    </div>
+
+    <form method="post"
+          action="{{ url_for('staff_task_execute_save', month_item_id=task.id) }}"
+          enctype="multipart/form-data">
+
+      <input type="hidden" name="month_item_id" value="{{ task.id }}">
+      {% if task.planned_start %}
+        <input type="hidden" name="month" value="{{ task.planned_start.month }}">
+      {% endif %}
+      <input type="hidden" name="selected_task_id" value="{{ task.id }}">
+
+      {% set current_required_document = required_documents[0] if required_documents else None %}
+      {% if current_required_document %}
+        <input type="hidden" name="required_document_id" value="{{ current_required_document.id }}">
+      {% endif %}
+
+      <div class="card">
+        <h3>Итоговый документ</h3>
+
+        <div class="form-grid">
+          <div class="form-field form-field--full">
+            <label for="reference_file">Загрузить подписанный итоговый документ</label>
+            <input id="reference_file" name="reference_file" type="file" {% if is_done %}disabled{% endif %}>
+            <div class="hint">Загрузите подписанную итоговую справку.</div>
+          </div>
+
+          <div class="form-field form-field--full">
+            <label for="reference_file_note">Примечание к итоговому документу</label>
+            <input id="reference_file_note"
+                    name="reference_file_note"
+                    type="text"
+                    placeholder="Комментарий к файлу"
+                    value="{{ execution.reference_file_note if execution else '' }}"
+                    {% if is_done %}readonly{% endif %}>
+          </div>
+
+          <div class="form-field form-field--full">
+            <label for="review_result">Комментарий при отметке «не выполнено»</label>
+            <textarea id="review_result"
+                      name="review_result"
+                      placeholder="Укажите причину, если задача не выполнена"
+                      {% if is_done %}readonly{% endif %}>{{ execution.review_result if execution else '' }}</textarea>
+          </div>
+        </div>
+      </div>
+      {% if is_done %}
+        <div class="card">
+          <div class="alert alert-success">
+            <strong>Задача завершена и отправлена на рассмотрение.</strong><br>
+
+            {% if task.review_place_text %}
+              Место рассмотрения: {{ task.review_place_text }}
+            {% elif execution and execution.planned_review_place %}
+              Место рассмотрения: {{ execution.planned_review_place }}
+            {% endif %}
+          </div>
+        </div>
+{%    endif %}
+
+      <div class="card action-panel">
+        <button type="submit" name="action" value="upload_final" class="btn btn-primary" {% if is_done %}disabled{% endif %}>
+          Загрузить итоговый документ
+        </button>
+
+        <button type="submit" name="action" value="done" class="btn btn-success" {% if is_done %}disabled{% endif %}>
+          Завершить и отправить на рассмотрение
+        </button>
+
+        <button type="submit" name="action" value="not_executed" class="btn btn-danger" {% if is_done %}disabled{% endif %}>
+          Отметить как не выполнено
+        </button>
+      </div>
+
+    </form>
+
+    <div class="card">
+      <h3>Текущие документы</h3>
+
+      {% if current_documents %}
+        <div class="doc-list">
+          {% for doc in current_documents %}
+            <div class="doc-item">
+              <div class="doc-item__title">
+                {{ doc.title or "Без названия" }}
+              </div>
+              <div class="doc-item__meta">
+                <div><strong>Тип:</strong> {{ doc.document_type.label_kz if doc.document_type else "—" }}</div>
+                <div><strong>Статус:</strong> {{ doc.status.label_kz if doc.status else "—" }}</div>
+                <div><strong>Источник:</strong> {{ doc.source.label_kz if doc.source else "—" }}</div>
+                <div><strong>Версия:</strong> {{ doc.version if doc.version is not none else "—" }}</div>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="empty-box">Текущих документов пока нет.</div>
+      {% endif %}
+    </div>
+
+    <div class="card">
+  <h3>Итоговые документы</h3>
+
+  {% if final_documents %}
+    <div class="doc-list">
+      {% for doc in final_documents %}
+        <div class="doc-item">
+          <div class="doc-item__title">
+            {{ doc.title or "Без названия" }}
+          </div>
+          <div class="doc-item__meta">
+            <div><strong>Тип:</strong> {{ doc.document_type.label_kz if doc.document_type else "—" }}</div>
+            <div><strong>Статус:</strong> {{ doc.status.label_kz if doc.status else "—" }}</div>
+            <div><strong>Файл:</strong> {{ doc.original_file_name or "—" }}</div>
+            <div><strong>Источник:</strong> {{ doc.source.label_kz if doc.source else "—" }}</div>
+          </div>
+
+          {% if doc.file_path %}
+            <div class="action-panel" style="margin-top:10px;">
+              <a href="{{ url_for('staff_report_document_view', document_id=doc.id) }}"
+                 class="btn btn-secondary"
+                 target="_blank">
+                Просмотреть
+              </a>
+
+              <a href="{{ url_for('staff_report_document_download', document_id=doc.id) }}"
+                 class="btn btn-primary">
+                Скачать
+              </a>
+            </div>
+          {% endif %}
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty-box">Итоговые документы пока не загружены.</div>
+  {% endif %}
+</div>
+  {% else %}
+    <div class="card">
+      <div class="empty-box">Задача не найдена или недоступна.</div>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

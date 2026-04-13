@@ -114,3 +114,293 @@
   color:#888;
   font-size:14px;
 }
+
+.page {
+  padding: 20px 0 32px;
+}
+
+.page-inner {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 16px;
+}
+
+.card {
+  background: #fff;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 18px;
+  padding: 18px;
+  margin-bottom: 18px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
+}
+
+.execute-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.execute-head h2 {
+  margin: 0 0 6px;
+}
+
+.sub {
+  color: #64748b;
+  font-size: 14px;
+}
+
+.traffic-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.traffic {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.traffic--yellow {
+  background: #facc15;
+  box-shadow: 0 0 0 4px rgba(250, 204, 21, 0.18);
+}
+
+.traffic--green {
+  background: #22c55e;
+  box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.18);
+}
+
+.traffic--blue {
+  background: #3b82f6;
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.18);
+}
+
+.traffic--red {
+  background: #ef4444;
+  box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.18);
+}
+
+.traffic-status__text {
+  font-weight: 700;
+}
+
+.info-grid,
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.info-item,
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.label {
+  font-size: 13px;
+  color: #64748b;
+}
+
+.value {
+  font-size: 15px;
+  color: #0f172a;
+  line-height: 1.45;
+}
+
+.form-field label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #334155;
+}
+
+.form-field input:not([type="checkbox"]):not([type="radio"]),
+.form-field select,
+.form-field textarea {
+  width: 100%;
+  border: 1px solid #dbe2ea;
+  border-radius: 12px;
+  padding: 11px 12px;
+  font-size: 14px;
+  box-sizing: border-box;
+  background: #fff;
+}
+
+.form-field textarea {
+  resize: vertical;
+  min-height: 110px;
+}
+
+.form-field input:not([type="checkbox"]):not([type="radio"]):focus,
+.form-field select:focus,
+.form-field textarea:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+}
+
+.hint-box {
+  margin-top: 14px;
+  border-radius: 14px;
+  padding: 14px;
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+}
+
+.hint-box__title {
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.hint-box__text {
+  color: #475569;
+  line-height: 1.5;
+}
+
+.action-panel {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.btn {
+  border: none;
+  border-radius: 12px;
+  padding: 12px 18px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.btn-secondary {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+.btn-success {
+  background: #16a34a;
+  color: #fff;
+}
+
+.btn-danger {
+  background: #dc2626;
+  color: #fff;
+}
+
+@media (max-width: 840px) {
+  .execute-head,
+  .info-grid,
+  .form-grid {
+    grid-template-columns: 1fr;
+    display: grid;
+  }
+
+  .execute-head {
+    gap: 12px;
+  }
+}
+
+/* =========================
+   FIX: центр только для таблицы
+========================= */
+
+/* центрируем ТОЛЬКО если внутри есть таблица */
+.page-inner:has(.plan){
+  display:flex;
+  justify-content:center;
+}
+
+/* карточка с таблицей */
+.page-inner:has(.plan) .card--large{
+  width:100%;
+  max-width:1400px;
+  margin:0 auto;
+  overflow-x:auto;
+}
+
+/* таблица */
+.page-inner:has(.plan) .plan{
+  width:100%;
+  table-layout:auto;
+}
+
+/* чтобы не ломалась верстка */
+.page-inner:has(.plan) .plan th,
+.page-inner:has(.plan) .plan td{
+  white-space:nowrap;
+}
+
+/* перенос длинного текста */
+.page-inner:has(.plan) .plan td:nth-child(3),
+.page-inner:has(.plan) .plan td:nth-child(4),
+.page-inner:has(.plan) .plan td:nth-child(5){
+  white-space:normal;
+}
+/* таблица занимает всю ширину */
+.plan {
+  width: 100%;
+  table-layout: auto;
+}
+
+/* если много колонок — добавляем скролл */
+.card--large {
+  overflow-x: auto;
+}
+
+/* чтобы таблица не сжималась */
+.plan th,
+.plan td {
+  white-space: nowrap;
+}
+
+.checkbox-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.checkbox-item {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  width: 100%;
+}
+
+.checkbox-item input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  padding: 0;
+  flex: 0 0 16px;
+  vertical-align: middle;
+  cursor: pointer;
+}
+
+.checkbox-item label {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #334155;
+  line-height: 1.4;
+  cursor: pointer;
+}
+
+.checkbox-placeholder {
+  color: #64748b;
+  font-size: 14px;
+  padding: 10px 12px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 12px;
+  background: #f8fafc;
+}
+
+a.disabled {
+    pointer-events: none;
+    opacity: 0.6;
+  }

@@ -128,8 +128,31 @@ class SchoolMonthlyPlanningService:
 
     @staticmethod
     def _quarter_of_month(m: int) -> int:
-        # 1..12 -> 1..4
         return (m - 1) // 3 + 1
+
+    @staticmethod
+    def _quarter_months(m: int) -> list[int]:
+        if m in (9, 10):
+            return [9, 10]
+        if m in (11, 12):
+            return [11, 12]
+        if m in (1, 2, 3):
+            return [1, 2, 3]
+        if m in (4, 5):
+            return [4, 5]
+        return []
+
+    @staticmethod
+    def _previous_months_in_quarter(m: int) -> list[int]:
+        months = SchoolMonthlyPlanningService._quarter_months(m)
+        result: list[int] = []
+
+        for x in months:
+            if x == m:
+                break
+            result.append(x)
+
+        return result
 
     @staticmethod
     async def _build_items_for_month(
@@ -149,7 +172,11 @@ class SchoolMonthlyPlanningService:
         3) ежемесячно
         4) весь учебный год
         5) ежеквартально
-           (создаются выключенными)
+
+        Для QUARTER:
+        - если задача уже была включена в предыдущих месяцах текущей четверти,
+          в текущий черновик не добавляем её вообще;
+        - если не была, добавляем выключенной (is_included=False).
         """
         if not (1 <= month <= 12):
             raise ValueError(f"month must be 1..12, got {month}")
@@ -177,6 +204,8 @@ class SchoolMonthlyPlanningService:
         monthly_ids: list[int] = []
         all_year_ids: list[int] = []
         quarter_ids: list[int] = []
+
+        skipped_quarter_ids: list[int] = []
 
         row_map: dict[int, SchoolPlanRow11] = {}
 
@@ -216,12 +245,29 @@ class SchoolMonthlyPlanningService:
                 continue
 
             if pt_val == PlanPeriodType.QUARTER.value:
-                if in_academic:
-                    pv_raw = getattr(row, "period_value_int", None)
-                    pv_set = SchoolMonthlyPlanningService._parse_int_set(pv_raw)
+                if not in_academic:
+                    continue
 
-                    if pv_raw is None or not pv_set or target_q in pv_set:
-                        quarter_ids.append(row.id)
+                pv_raw = getattr(row, "period_value_int", None)
+                pv_set = SchoolMonthlyPlanningService._parse_int_set(pv_raw)
+
+                if pv_raw is not None and pv_set and target_q not in pv_set:
+                    continue
+
+                already_in_previous_months = (
+                    await SchoolMonthlyPlanRepo.quarterly_already_included_before_current_month(
+                        db,
+                        school_plan_id=school_plan_id,
+                        source_row11_id=row.id,
+                        target_month=month,
+                    )
+                )
+
+                if already_in_previous_months:
+                    skipped_quarter_ids.append(row.id)
+                    continue
+
+                quarter_ids.append(row.id)
                 continue
 
             print("WARN: unknown period_type:", pt_val, "row_id=", row.id)
@@ -233,6 +279,7 @@ class SchoolMonthlyPlanningService:
             "monthly=", len(monthly_ids),
             "all_year=", len(all_year_ids),
             "quarter=", len(quarter_ids),
+            "skipped_quarter=", len(skipped_quarter_ids),
             "target_q=", target_q,
             "in_academic=", in_academic,
         )
@@ -370,7 +417,7 @@ class SchoolMonthlyPlanningService:
                 continue
 
             if src.period_type == PlanPeriodType.QUARTER:
-                exists = await SchoolMonthlyPlanRepo.quarterly_already_planned_in_quarter(
+                exists = await SchoolMonthlyPlanRepo.quarterly_already_included_before_current_month(
                     db,
                     school_plan_id=month_plan.school_plan_id,
                     source_row11_id=src.id,

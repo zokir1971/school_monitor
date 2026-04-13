@@ -59,6 +59,16 @@ class ReviewPlaceTotalsDTO:
     total_review_places_count: int = 0
 
 
+@dataclass
+class DirectionComparisonStatDTO:
+    direction_id: int
+    direction_name: str
+    period_total: int
+    planned_count: int
+    is_match: bool
+    diff: int
+
+
 class SchoolPlanStatisticsService:
     @classmethod
     async def _get_direction_map(cls, db: AsyncSession) -> dict[int, str]:
@@ -339,11 +349,100 @@ class SchoolPlanStatisticsService:
 
         total_planned_count = sum(x.planned_count for x in planned_stats)
 
+        # -----------------------------
+        # Упрощенный контроль совпадений
+        # -----------------------------
+        planned_map = {x.direction_id: x for x in planned_stats}
+        review_place_map = {x.direction_id: x for x in review_place_stats}
+
+        comparison_stats = []
+
+        for period_item in period_stats:
+            planned_item = planned_map.get(period_item.direction_id)
+            review_place_item = review_place_map.get(period_item.direction_id)
+
+            planned_count = planned_item.planned_count if planned_item else 0
+
+            period_total = (
+                    period_item.month_count
+                    + period_item.months_count
+                    + period_item.monthly_count
+                    + period_item.quarter_count
+                    + period_item.all_year_count
+            )
+
+            review_place_total = 0
+            if review_place_item:
+                review_place_total = (
+                        review_place_item.ped_council_count
+                        + review_place_item.method_council_count
+                        + review_place_item.director_council_count
+                        + review_place_item.administrative_council_count
+                        + review_place_item.method_assoc_count
+                )
+
+            comparison_stats.append(
+                {
+                    "direction_id": period_item.direction_id,
+                    "direction_name": period_item.direction_name,
+                    "period_total": period_total,
+                    "planned_count": planned_count,
+                    "review_place_total": review_place_total,
+                    "is_match": period_total == review_place_total,
+                    "diff": review_place_total - period_total,
+                }
+            )
+
+        comparison_summary = {
+            "total_directions": len(comparison_stats),
+            "matched_count": sum(1 for x in comparison_stats if x["is_match"]),
+        }
+        comparison_summary["mismatched_count"] = (
+                comparison_summary["total_directions"] - comparison_summary["matched_count"]
+        )
+
         return {
             "period_stats": period_stats,
             "planned_stats": planned_stats,
             "review_place_stats": review_place_stats,
             "review_place_totals": asdict(totals),
             "total_planned_count": total_planned_count,
-            "total_review_places_count": totals.total_review_places_count,  # ← добавить
+            "total_review_places_count": totals.total_review_places_count,
+            "comparison_stats": comparison_stats,
+            "comparison_summary": comparison_summary,
         }
+
+    @classmethod
+    def build_direction_comparison(
+            cls,
+            *,
+            period_stats,
+            planned_stats,
+    ):
+        planned_map = {x.direction_id: x for x in planned_stats}
+
+        result = []
+
+        for p in period_stats:
+            planned_item = planned_map.get(p.direction_id)
+
+            planned_count = planned_item.planned_count if planned_item else 0
+
+            period_total = (
+                    p.month_count +
+                    p.months_count +
+                    p.monthly_count +
+                    p.quarter_count +
+                    p.all_year_count
+            )
+
+            result.append({
+                "direction_id": p.direction_id,
+                "direction_name": p.direction_name,
+                "period_total": period_total,
+                "planned_count": planned_count,
+                "is_match": period_total == planned_count,
+                "diff": planned_count - period_total,
+            })
+
+        return result

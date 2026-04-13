@@ -1,4 +1,4 @@
-# app/modules/org/models.py (Таблицы)
+# app/modules/org/models_documents.py (Таблицы)
 
 from __future__ import annotations
 

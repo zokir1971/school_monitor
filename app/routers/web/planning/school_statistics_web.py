@@ -52,5 +52,7 @@ async def school_plan_statistics_page(
             "total_planned_count": data["total_planned_count"],
             "review_place_totals": data["review_place_totals"],
             "total_review_places_count": data["total_review_places_count"],
+            "comparison_stats": data["comparison_stats"],
+            "comparison_summary": data["comparison_summary"],
         },
     )

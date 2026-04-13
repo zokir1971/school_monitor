@@ -18,13 +18,9 @@
     <div class="alert alert--warning">{{ warning }}</div>
   {% endif %}
 
-  {# ===========================
-     TOP CARD (toolbar + actions)
-     =========================== #}
   <div class="card card--large">
     <div class="toolbar">
       <div class="left">
-        {# ====== Выбор месяца (GET) ====== #}
         <form
           method="get"
           action="/planning/school/monthly"
@@ -44,17 +40,16 @@
           <button class="btn btn--primary" type="submit">Открыть план</button>
         </form>
 
-        {# ====== Статус month_plan ====== #}
         {% if month %}
           {% if month_plan %}
-            {% if month_plan.status == 'draft' %}
+            {% if month_plan.status.value == 'draft' %}
               <span class="badge badge--draft">Черновик</span>
-            {% elif month_plan.status == 'active' %}
-              <span class="badge badge--active">На исполнении</span>
+            {% elif month_plan.status.value == 'active' %}
+              <span class="badge badge--active">Задачи отправлены на исполнение</span>
             {% else %}
               <span class="badge badge--arch">Архив</span>
             {% endif %}
-            <span class="muted">ID: {{ month_plan.id }}</span>
+        <span class="muted">ID: {{ month_plan.id }}</span>
           {% else %}
             <span class="badge badge--draft">Черновик не создан</span>
           {% endif %}
@@ -62,7 +57,6 @@
       </div>
 
       <div class="right">
-        {# ====== Основное действие справа ====== #}
         {% if active_plan and can_build and month %}
           <form method="post" action="{{ request.url_for('school_monthly_build_draft', month=month) }}">
             <input type="hidden" name="school_plan_id" value="{{ school_plan_id or '' }}">
@@ -76,17 +70,16 @@
       </div>
     </div>
 
-    {# ====== Удалить план (вынесено из toolbar) ====== #}
     <div>
-    {% if month_plan and month_plan.status == 'draft' %}
-    <form method="post" action="{{ request.url_for('school_monthly_delete_draft') }}">
-      <input type="hidden" name="month_plan_id" value="{{ month_plan.id }}">
-      <input type="hidden" name="month" value="{{ month }}">
-      <button class="btn btn-danger" type="submit">
-        Удалить черновик
-      </button>
-    </form>
-    {% endif %}
+      {% if month_plan and month_plan.status.value == 'draft' %}
+      <form method="post" action="{{ request.url_for('school_monthly_delete_draft') }}">
+        <input type="hidden" name="month_plan_id" value="{{ month_plan.id }}">
+        <input type="hidden" name="month" value="{{ month }}">
+        <button class="btn btn-danger" type="submit">
+          Удалить черновик
+        </button>
+      </form>
+      {% endif %}
     </div>
 
     <div class="muted" style="margin-top:10px;">
@@ -94,20 +87,17 @@
     </div>
   </div>
 
-  {# ===========================
-     CONTENT (table / form)
-     =========================== #}
   {% if not month_plan %}
     <div class="alert alert--info" style="margin-top:12px;">
       Сформируй черновик на выбранный месяц, чтобы увидеть список задач.
     </div>
   {% else %}
 
-    <form method="post" action="/planning/school/monthly/{{ month }}/save">
+    <form id="monthly-save-form" method="post" action="/planning/school/monthly/{{ month }}/save">
       <input type="hidden" name="month_plan_id" value="{{ month_plan.id }}">
       <input type="hidden" name="school_plan_id" value="{{ month_plan.school_plan_id }}">
 
-      {% set readonly = (month_plan.status != 'draft') %}
+      {% set readonly = (month_plan.status.value != 'draft') %}
 
       {% for b in blocks %}
         {% set dir = b["direction"] %}
@@ -126,135 +116,192 @@
               Нет задач для этого направления.
             </div>
           {% else %}
-            <div class="table-wrap" style="margin-top:10px;">
+            <div class="table-wrap direction-table" style="margin-top:10px;">
 
               <table class="plan">
-  <thead>
-    <tr>
-      <th class="nowrap-num">Включить</th>
-      <th class="nowrap-weeks">Неделя</th>
-      <th>Тақырып / Тема</th>
-      <th>Мақсаты / Цель</th>
-      <th class="nowrap">Мерзімі</th>
-      <th class="nowrap">Жауаптылар</th>
-      <th class="nowrap">Қарау орны / Место рассмотрения</th>
-      <th>Жауаптыны тағайындау / Назначение ответственного</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for it in items %}
-      {% set src = it.source_row11 %}
-      <tr>
-        <td class="nowrap-num">
-  <input type="hidden" name="item_ids" value="{{ it.id }}">
-  <label>
-    <input
-      type="checkbox"
-      name="item_{{ it.id }}_included"
-      value="1"
-      {% if it.is_included %}checked{% endif %}
-      {% if readonly %}disabled{% endif %}
-    >
-    в план
-  </label>
-</td>
-        <td class="nowrap-weeks">
-          <select class="input input-week" name="item_{{ it.id }}_week" {% if readonly %}disabled{% endif %}>
-            <option value="" {% if not it.week_of_month %}selected{% endif %}>—</option>
+                <thead>
+                  <tr>
+                    <th class="nowrap-num">
+                      <label>
+                        <input
+                          type="checkbox"
+                          class="select-all"
+                          {% if readonly %}disabled{% endif %}
+                        >
+                        Выбрать все задачи
+                      </label>
+                    </th>
+                    <th class="nowrap-weeks">Неделя</th>
+                    <th>Тақырып / Тема</th>
+                    <th>Мақсаты / Цель</th>
+                    <th class="nowrap">Мерзімі</th>
+                    <th class="nowrap">Жауаптылар</th>
+                    <th class="nowrap">Қарау орны / Место рассмотрения</th>
+                    <th>Жауаптыны тағайындау / Назначение ответственного</th>
+                  </tr>
+                </thead>
 
-            {% for w in weeks %}
-              <option value="{{ w.week }}"
-                  title="{{ w.start }} - {{ w.end }}"
-                  {% if it.week_of_month == w.week %}selected{% endif %}>
-                {{ w.week }} ({{ w.start.strftime("%d.%m") }} – {{ w.end.strftime("%d.%m") }})
-              </option>
-            {% endfor %}
-          </select>
+                <tbody>
+                  {% for it in items %}
+                    {% set src = it.source_row11 %}
+                    <tr>
+                      <td class="nowrap-num">
+                        <input type="hidden" name="item_ids" value="{{ it.id }}">
+                        <label>
+                          <input
+                            type="checkbox"
+                            class="item-checkbox"
+                            name="item_{{ it.id }}_included"
+                            value="1"
+                            {% if it.is_included %}checked{% endif %}
+                            {% if readonly %}disabled{% endif %}
+                          >
+                          в план
+                        </label>
+                      </td>
 
-          <div class="row-tags">
-            {% if src and src.period_type %}
-              <span class="tag">{{ src.period_type }}</span>
-            {% endif %}
-            {% if src and src.period_type == 'month' and src.period_value_int %}
-              <span class="tag">ай: {{ src.period_value_int }}</span>
-            {% endif %}
-          </div>
-        </td>
+                      <td class="nowrap-weeks">
+                        <select class="input input-week" name="item_{{ it.id }}_week" {% if readonly %}disabled{% endif %}>
+                          <option value="" {% if not it.week_of_month %}selected{% endif %}>—</option>
 
-        <td>
-          <div>{{ (src.topic if src else "") or "" }}</div>
-          <div class="muted">{{ (src.control_object if src else "") or "" }}</div>
-        </td>
+                          {% for w in weeks %}
+                            <option value="{{ w.week }}"
+                                title="{{ w.start }} - {{ w.end }}"
+                                {% if it.week_of_month == w.week %}selected{% endif %}>
+                              {{ w.week }} ({{ w.start.strftime("%d.%m") }} – {{ w.end.strftime("%d.%m") }})
+                            </option>
+                          {% endfor %}
+                        </select>
 
-        <td>
-          <div>{{ (src.goal if src else "") or "" }}</div>
-          <div class="muted">{{ (src.methods if src else "") or "" }}</div>
-        </td>
+                        <div class="row-tags">
+                          {% if src and src.period_type == 'month' and src.period_value_int %}
+                            <span class="tag">ай: {{ src.period_value_int }}</span>
+                          {% endif %}
+                        </div>
+                      </td>
 
-        <td class="nowrap">{{ src | row11_period(month) }}</td>
+                      <td>
+                        <div>{{ (src.topic if src else "") or "" }}</div>
+                        <div class="muted">{{ (src.control_object if src else "") or "" }}</div>
+                      </td>
 
-        <td class="nowrap">
-          {% if src and src.role_assignments and src.role_assignments|length %}
-            {% for ra in src.role_assignments %}
-              <div>
-                {{ ra.role.label_kz if ra.role else '' }}
-                {% if ra.is_primary %}
-                  <span class="tag">негізгі</span>
-                {% endif %}
-              </div>
-            {% endfor %}
-          {% else %}
-            <span class="muted">—</span>
-          {% endif %}
-        </td>
+                      <td>
+                        <div>{{ (src.goal if src else "") or "" }}</div>
+                        <div class="muted">{{ (src.methods if src else "") or "" }}</div>
+                      </td>
 
-        <td>
-  {% set places = it.review_places if it.review_places else [] %}
-  {% if places %}
-    {% for rp in places %}
-      <span class="review-badge">
-  {{ review_place_labels.get(rp.review_place.value, rp.review_place.value) }}
-</span>
-    {% endfor %}
-  {% else %}
-    —
-  {% endif %}
-</td>
+                      <td class="nowrap">{{ src | row11_period(month) }}</td>
 
-        <td>
-          <a class="btn btn--sm" href="{{ request.url_for('school_month_item_assignees', month_item_id=it.id) }}">
-            Назначить
-          </a>
-        </td>
-      </tr>
-    {% endfor %}
-  </tbody>
-</table>
+                      <td class="nowrap">
+                        {% set assignees = it.assignees if it.assignees else [] %}
+                        {% if assignees %}
+                        {% for a in assignees %}
+                        <div>
+                          {{ a.staff_role.staff_member.full_name if a.staff_role and a.staff_role.staff_member else "—" }}
+                          {% if a.assignment_kind and a.assignment_kind.value == 'primary' %}
+                            <span class="tag">негізгі</span>
+                          {% endif %}
+                        </div>
+                        {% endfor %}
+                        {% else %}
+                          <span class="muted">—</span>
+                        {% endif %}
+                      </td>
+
+                      <td>
+                        {% set places = it.review_places if it.review_places else [] %}
+                        {% if places %}
+                          {% for rp in places %}
+                            <span class="review-badge">
+                              {{ review_place_labels.get(rp.review_place.value, rp.review_place.value) }}
+                            </span>
+                          {% endfor %}
+                        {% else %}
+                          —
+                        {% endif %}
+                      </td>
+
+                      <td>
+                        <a class="btn btn--sm" href="{{ request.url_for('school_month_item_assignees', month_item_id=it.id) }}">
+                          Назначить
+                        </a>
+                      </td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+
             </div>
           {% endif %}
         </div>
       {% endfor %}
-
-      <div class="actions">
-        <button type="submit" class="btn btn--primary" {% if readonly %}disabled{% endif %}>
-          Сохранить черновик
-        </button>
-
-        <button
-          type="submit"
-          class="btn btn--primary"
-          formaction="/planning/school/monthly/{{ month }}/submit"
-          {% if readonly %}disabled{% endif %}
-        >
-          На исполнение
-        </button>
-
-        {% if readonly %}
-          <span class="muted">Редактирование отключено, потому что план не в статусе “Черновик”.</span>
-        {% endif %}
-      </div>
     </form>
+
+    <div class="actions">
+      <button
+        type="submit"
+        form="monthly-save-form"
+        class="btn btn--primary"
+        {% if readonly %}disabled{% endif %}
+      >
+        Сохранить черновик
+      </button>
+
+      <form method="post" action="{{ request.url_for('school_monthly_submit', month=month) }}" style="display:inline;">
+        <input type="hidden" name="month_plan_id" value="{{ month_plan.id }}">
+        <input type="hidden" name="school_plan_id" value="{{ month_plan.school_plan_id }}">
+        <button type="submit" class="btn btn--primary" {% if readonly %}disabled{% endif %}>
+          Отправить на исполнение
+        </button>
+      </form>
+
+      {% if readonly %}
+        <span class="muted">Редактирование отключено, потому что план не в статусе “Черновик”.</span>
+      {% endif %}
+    </div>
 
   {% endif %}
 </section>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const directionTables = document.querySelectorAll(".direction-table");
+
+  directionTables.forEach(function (tableBlock) {
+    const selectAll = tableBlock.querySelector(".select-all");
+    const checkboxes = tableBlock.querySelectorAll(".item-checkbox");
+
+    if (!selectAll || !checkboxes.length) return;
+
+    function updateSelectAllState() {
+      const activeCheckboxes = Array.from(checkboxes).filter(cb => !cb.disabled);
+
+      if (!activeCheckboxes.length) {
+        selectAll.checked = false;
+        selectAll.indeterminate = false;
+        return;
+      }
+
+      const checkedCount = activeCheckboxes.filter(cb => cb.checked).length;
+
+      selectAll.checked = checkedCount === activeCheckboxes.length;
+      selectAll.indeterminate = checkedCount > 0 && checkedCount < activeCheckboxes.length;
+    }
+
+    selectAll.addEventListener("change", function () {
+      checkboxes.forEach(function (cb) {
+        if (!cb.disabled) {
+          cb.checked = selectAll.checked;
+        }
+      });
+      updateSelectAllState();
+    });
+
+    checkboxes.forEach(function (cb) {
+      cb.addEventListener("change", updateSelectAllState);
+    });
+
+    updateSelectAllState();
+  });
+});
+</script>
 {% endblock %}

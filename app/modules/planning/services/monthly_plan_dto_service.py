@@ -1,3 +1,4 @@
+from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.planning.enums import AssignmentKind
@@ -163,6 +164,7 @@ class SchoolMonthPlanAssigneeService:
             school_id: int,
             month_item_id: int,
             selected_staff_role_ids: list[int],
+            primary_staff_role_id: int | None,
             assigned_by_user_id: int | None,
     ) -> bool:
         item = await SchoolMonthPlanAssigneeRepo.get_month_item_with_row11(
@@ -183,20 +185,23 @@ class SchoolMonthPlanAssigneeService:
                 assignees=[],
                 assigned_by_user_id=assigned_by_user_id,
             )
-            await db.commit()
+
+            await SchoolMonthPlanAssigneeRepo.set_month_item_responsible(
+                db,
+                month_item_id=month_item_id,
+                responsible_role=None,
+                responsible_user_id=None,
+            )
             return True
 
-        # все доступные SchoolStaffRole для нужных ролей задачи
         staff_roles = await SchoolMonthPlanAssigneeRepo.list_staff_roles_for_row11_roles(
             db,
             school_id=school_id,
             roles=roles,
         )
 
-        # карта: staff_role_id -> SchoolStaffRole
         staff_role_map = {sr.id: sr for sr in staff_roles}
 
-        # допустимые выбранные staff_role_id
         unique_selected_ids: list[int] = []
         seen: set[int] = set()
 
@@ -205,23 +210,45 @@ class SchoolMonthPlanAssigneeService:
                 unique_selected_ids.append(x)
                 seen.add(x)
 
-        # карта по типу роли задачи: role.value -> is_primary
-        role_primary_map: dict[str, bool] = {}
-        for ra in role_assignments:
-            role_primary_map[ra.role.value] = bool(ra.is_primary)
+        if not unique_selected_ids:
+            await SchoolMonthPlanAssigneeRepo.replace_month_item_assignees(
+                db,
+                month_item_id=month_item_id,
+                assignees=[],
+                assigned_by_user_id=assigned_by_user_id,
+            )
+
+            await SchoolMonthPlanAssigneeRepo.set_month_item_responsible(
+                db,
+                month_item_id=month_item_id,
+                responsible_role=None,
+                responsible_user_id=None,
+            )
+            return True
+
+        if len(unique_selected_ids) == 1:
+            primary_staff_role_id = unique_selected_ids[0]
+
+        if primary_staff_role_id is None:
+            raise HTTPException(
+                status_code=400,
+                detail="Не выбран главный ответственный",
+            )
+
+        if primary_staff_role_id not in unique_selected_ids:
+            raise HTTPException(
+                status_code=400,
+                detail="Главный ответственный должен входить в список выбранных сотрудников",
+            )
 
         assignees: list[tuple[int, AssignmentKind]] = []
 
         for staff_role_id in unique_selected_ids:
-            sr = staff_role_map[staff_role_id]
-
-            is_primary_role = role_primary_map.get(sr.role.value, False)
-
-            if is_primary_role:
-                kind = AssignmentKind.PRIMARY
-            else:
-                kind = AssignmentKind.CO_EXECUTOR
-
+            kind = (
+                AssignmentKind.PRIMARY
+                if staff_role_id == primary_staff_role_id
+                else AssignmentKind.CO_EXECUTOR
+            )
             assignees.append((staff_role_id, kind))
 
         await SchoolMonthPlanAssigneeRepo.replace_month_item_assignees(
@@ -231,5 +258,17 @@ class SchoolMonthPlanAssigneeService:
             assigned_by_user_id=assigned_by_user_id,
         )
 
-        await db.commit()
+        primary_sr = staff_role_map[primary_staff_role_id]
+
+        responsible_user_id = await SchoolMonthPlanAssigneeRepo.get_user_id_by_staff_member_id(
+            db,
+            staff_member_id=primary_sr.staff_member_id,
+        )
+
+        await SchoolMonthPlanAssigneeRepo.set_month_item_responsible(
+            db,
+            month_item_id=month_item_id,
+            responsible_role=primary_sr.role,
+            responsible_user_id=responsible_user_id,
+        )
         return True

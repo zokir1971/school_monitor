@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from typing import Any
+from typing import cast
 
 from fastapi import APIRouter, Depends, Form, Request, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -101,6 +102,8 @@ def _group_items_by_direction(items):
 async def school_monthly_page(
         request: Request,
         month: int | None = Query(default=None),
+        success: str | None = Query(default=None),
+        warning: str | None = Query(default=None),
         db: AsyncSession = Depends(get_db),
         user: User = Depends(require_roles(UserRole.SCHOOL_ADMIN)),
 ):
@@ -139,6 +142,9 @@ async def school_monthly_page(
                 "can_build": False,
                 "open_month_plan_id": None,
                 "review_place_labels": review_place_labels,
+                "success": success,
+                "warning": warning,
+                "PlanStatus": PlanStatus,
             },
         )
 
@@ -159,6 +165,9 @@ async def school_monthly_page(
                 "can_build": False,
                 "open_month_plan_id": None,
                 "review_place_labels": review_place_labels,
+                "success": success,
+                "warning": warning,
+                "PlanStatus": PlanStatus,
             },
         )
 
@@ -171,6 +180,10 @@ async def school_monthly_page(
         month=month,
     )
 
+    print("MONTH PLAN:", month_plan)
+    print("MONTH PLAN STATUS:", month_plan.status if month_plan else None)
+    print("MONTH PLAN STATUS TYPE:", type(month_plan.status) if month_plan else None)
+
     blocks = []
 
     if month_plan:
@@ -179,34 +192,6 @@ async def school_monthly_page(
             month_plan_id=month_plan.id,
             with_source=True,
         )
-
-        # ===== ОТЛАДКА review_places =====
-        for it in items:
-            print("=" * 80)
-            print("ITEM ID:", getattr(it, "id", None))
-            print("ITEM TYPE:", type(it))
-
-            item_places = getattr(it, "review_places", None)
-            print("ITEM review_places:", item_places)
-
-            if item_places:
-                for rp in item_places:
-                    print("  ITEM RP OBJ:", rp)
-                    print("  ITEM RP DICT:", getattr(rp, "__dict__", {}))
-
-            src = getattr(it, "source_row11", None)
-            print("SOURCE_ROW11:", src)
-            print("SOURCE_ROW11 ID:", getattr(src, "id", None) if src else None)
-
-            src_places = getattr(src, "review_places", None) if src else None
-            print("SRC review_places:", src_places)
-
-            if src_places:
-                for rp in src_places:
-                    print("  SRC RP OBJ:", rp)
-                    print("  SRC RP DICT:", getattr(rp, "__dict__", {}))
-        # ===== /ОТЛАДКА review_places =====
-
         blocks = _group_items_by_direction(items)
 
     weeks = month_weeks_grid(year, month)
@@ -226,6 +211,9 @@ async def school_monthly_page(
             "can_build": month_plan is None,
             "open_month_plan_id": month_plan.id if month_plan else None,
             "review_place_labels": review_place_labels,
+            "success": success,
+            "warning": warning,
+            "PlanStatus": PlanStatus,
         },
     )
 
@@ -251,24 +239,28 @@ async def school_monthly_build_draft(
     if not active_plan:
         raise HTTPException(status_code=400, detail="Нет активного годового плана")
 
-    # ✅ вычисляем год по учебному году
+    # вычисляем год по учебному году
     year = calc_year_from_academic(active_plan.academic_year, month)
 
-    # ✅ создаём/берём черновик (ВАЖНО: передай year в сервис, если он у тебя обязателен)
+    # создаём/берём черновик (ВАЖНО: передай year в сервис, если он у тебя обязателен)
     month_plan = await SchoolMonthlyPlanningService.get_or_create_draft(
         db,
         school_id=user.school_id,
         school_plan_id=active_plan.id,
-        year=year,  # ⭐ добавь, если сервис принимает
+        year=year,  # добавь, если сервис принимает
         month=month,
     )
     await db.commit()
 
-    # ✅ недели считаем уже от фактического month_plan
+    # недели считаем уже от фактического month_plan
     weeks = month_weeks_grid(month_plan.year, month_plan.month)
 
     months = _months_list()
-    role_labels = {r.value: getattr(r, "label_kz", r.value) for r in ResponsibleRole}
+
+    role_labels = {
+        cast(ResponsibleRole, r).value: cast(ResponsibleRole, r).label_kz
+        for r in ResponsibleRole
+    }
     print("MONTH_PLAN:", month_plan)
     print("YEAR:", month_plan.year if month_plan else None)
     print("MONTH:", month_plan.month if month_plan else None)
@@ -382,7 +374,6 @@ async def school_monthly_save_draft(
             month=month,
         )
 
-        items = []
         blocks = []
         review_place_labels = {
             "ped_council": "Педагогикалық кеңес",
@@ -459,101 +450,61 @@ async def school_monthly_save_draft(
         )
 
 
-@router.post("/monthly/{month}/submit")
+@router.post("/monthly/{month}/submit", name="school_monthly_submit")
 async def school_monthly_submit(
         request: Request,
         month: int,
         month_plan_id: int = Form(...),
         school_plan_id: int = Form(...),
         db: AsyncSession = Depends(get_db),
-        user: User = Depends(require_roles(UserRole.SCHOOL_ADMIN)),
+        _user: User = Depends(require_roles(UserRole.SCHOOL_ADMIN)),
 ):
-    months = _months_list()
+    print("ROUTE HIT")
+    print("month =", month)
+    print("month_plan_id =", month_plan_id)
+    print("school_plan_id =", school_plan_id)
 
     try:
-        # переводим план в ACTIVE
+        print("BEFORE SERVICE")
         await SchoolMonthlyPlanningService.submit_month_plan(
             db,
             month_plan_id=month_plan_id
         )
+        print("AFTER SERVICE")
 
-        month_plan = await SchoolMonthlyPlanRepo.get_month_plan_by_id(
-            db,
-            month_plan_id=month_plan_id
+        return RedirectResponse(
+            url=(
+                f"/planning/school/monthly"
+                f"?month={month}"
+                f"&school_plan_id={school_plan_id}"
+                f"&success=План отправлен на исполнение."
+            ),
+            status_code=303,
         )
 
-        items = await SchoolMonthlyPlanRepo.list_items(
-            db,
-            month_plan_id=month_plan.id,
-            with_source=True
-        ) if month_plan else []
-
-        blocks = _group_items_by_direction(items)
-
-        weeks = []
-        if month_plan:
-            weeks = month_weeks_grid(month_plan.year, month_plan.month)
-
-        print("MONTH_PLAN:", month_plan)
-        print("YEAR:", month_plan.year if month_plan else None)
-        print("MONTH:", month_plan.month if month_plan else None)
-        print("WEEKS:", weeks)
-
-        return render(
-            templates,
-            request,
-            "planning/school/monthly_tasks.html",
-            {
-                "request": request,
-                "user": user,
-                "months": months,
-                "month": month,
-                "school_plan_id": school_plan_id,
-                "month_plan": month_plan,
-                "blocks": blocks,
-                "weeks": weeks,
-                "success": "План отправлен на исполнение.",
-            },
+    except HTTPException as e:
+        print("HTTPException:", e.detail)
+        return RedirectResponse(
+            url=(
+                f"/planning/school/monthly"
+                f"?month={month}"
+                f"&school_plan_id={school_plan_id}"
+                f"&warning={e.detail}"
+            ),
+            status_code=303,
         )
 
     except Exception as e:
         await db.rollback()
-
-        month_plan = await SchoolMonthlyPlanRepo.get_month_plan_by_id(
-            db,
-            month_plan_id=month_plan_id
-        )
-
-        items = await SchoolMonthlyPlanRepo.list_items(
-            db,
-            month_plan_id=month_plan.id,
-            with_source=True
-        ) if month_plan else []
-
-        blocks = _group_items_by_direction(items)
-
-        weeks = []
-        if month_plan:
-            weeks = month_weeks_grid(month_plan.year, month_plan.month)
-
-        print("WEEKS DEBUG:", weeks)
-
-        return render(
-            templates,
-            request,
-            "planning/school/monthly_tasks.html",
-            {
-                "request": request,
-                "user": user,
-                "months": months,
-                "month": month,
-                "school_plan_id": school_plan_id,
-                "month_plan": month_plan,
-                "blocks": blocks,
-                "weeks": weeks,
-                "error": str(e),
-            },
-            status_code=400,
+        print("Exception:", repr(e))
+        return RedirectResponse(
+            url=(
+                f"/planning/school/monthly"
+                f"?month={month}"
+                f"&school_plan_id={school_plan_id}"
+                f"&warning=Ошибка при отправке плана на исполнение: {str(e)}"
+            ),
+            status_code=303,
         )
 
 
@@ -569,18 +520,39 @@ async def school_monthly_delete_draft(
     if not getattr(user, "school_id", None):
         raise HTTPException(400, "У пользователя не задана school_id")
 
-    await SchoolMonthlyPlanningService.delete_draft_month_plan(
-        db,
-        month_plan_id=month_plan_id,
-        school_id=user.school_id,
-    )
+    try:
+        await SchoolMonthlyPlanningService.delete_draft_month_plan(
+            db,
+            month_plan_id=month_plan_id,
+            school_id=user.school_id,
+        )
+    except HTTPException as exc:
+        if exc.status_code == 404:
+            return RedirectResponse(
+                url=f"/planning/school/monthly?month={month}&warning=Месячный план не найден",
+                status_code=303,
+            )
+
+        if exc.status_code == 400:
+            return RedirectResponse(
+                url=(
+                    f"/planning/school/monthly?"
+                    f"month={month}"
+                    f"&warning=Нельзя удалить месячный план. "
+                    f"Вы можете добавить задачи и назначить новых ответственных."
+                ),
+                status_code=303,
+            )
+
+        raise
 
     return RedirectResponse(
-        url=f"/planning/school/monthly?month={month}",
-        status_code=303
+        url=f"/planning/school/monthly?month={month}&info=Черновик месячного плана удалён",
+        status_code=303,
     )
 
 
+# Эти роуты надо в отдельны файл перенести
 # страница назначения
 @router.get(
     "/monthly/{month_item_id}/assignees",
@@ -641,7 +613,8 @@ async def school_month_item_assignees_save(
     school_id = require_school_id(user)
 
     form = await request.form()
-    raw_ids = form.getlist("assignee_ids")
+
+    raw_ids = form.getlist("staff_role_ids")
 
     selected_staff_role_ids: list[int] = []
     for x in raw_ids:
@@ -649,11 +622,18 @@ async def school_month_item_assignees_save(
         if s.isdigit():
             selected_staff_role_ids.append(int(s))
 
+    primary_raw = (form.get("primary_staff_role_id") or "").strip()
+
+    primary_staff_role_id: int | None = None
+    if primary_raw.isdigit():
+        primary_staff_role_id = int(primary_raw)
+
     ok = await SchoolMonthPlanAssigneeService.save_assignments(
         db,
         school_id=school_id,
         month_item_id=month_item_id,
         selected_staff_role_ids=selected_staff_role_ids,
+        primary_staff_role_id=primary_staff_role_id,
         assigned_by_user_id=user.id,
     )
 
