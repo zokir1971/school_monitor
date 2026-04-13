@@ -15,6 +15,10 @@ from app.modules.reports.enums import (
 from app.modules.reports.models_documents import TaskExecutionDocument
 from app.modules.reports.report_repo import ReportRepo
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 @dataclass
 class ExecutionTemplateData:
@@ -39,9 +43,9 @@ class ExecutionTemplateData:
 class FileStorageService:
     @staticmethod
     async def save_task_execution_file(
-        *,
-        file_name: str,
-        content: bytes,
+            *,
+            file_name: str,
+            content: bytes,
     ) -> tuple[str, str]:
         import os
         import uuid
@@ -76,8 +80,8 @@ class ReportService:
 
     @classmethod
     def _normalize_report_type_codes(
-        cls,
-        report_type_codes: list[str] | tuple[str, ...] | None,
+            cls,
+            report_type_codes: list[str] | tuple[str, ...] | None,
     ) -> list[str]:
         if not report_type_codes:
             return []
@@ -98,10 +102,10 @@ class ReportService:
 
     @classmethod
     async def _get_report_type_ids_by_codes(
-        cls,
-        db: AsyncSession,
-        *,
-        report_type_codes: list[str] | None,
+            cls,
+            db: AsyncSession,
+            *,
+            report_type_codes: list[str] | None,
     ) -> list[int]:
         codes = cls._normalize_report_type_codes(report_type_codes)
         if not codes:
@@ -120,11 +124,11 @@ class ReportService:
 
     @classmethod
     def validate_reference_form(
-        cls,
-        *,
-        reference_text: str | None,
-        conclusion: str | None,
-        recommendations: str | None,
+            cls,
+            *,
+            reference_text: str | None,
+            conclusion: str | None,
+            recommendations: str | None,
     ) -> None:
         reference_text = cls._normalize_text(reference_text)
         conclusion = cls._normalize_text(conclusion)
@@ -139,14 +143,14 @@ class ReportService:
 
     @classmethod
     def build_reference_html(
-        cls,
-        *,
-        task_title: str | None,
-        task_goal: str | None,
-        review_place: str | None,
-        reference_text: str | None,
-        conclusion: str | None,
-        recommendations: str | None,
+            cls,
+            *,
+            task_title: str | None,
+            task_goal: str | None,
+            review_place: str | None,
+            reference_text: str | None,
+            conclusion: str | None,
+            recommendations: str | None,
     ) -> str:
         task_title = escape(task_title or "—")
         task_goal = escape(task_goal or "—")
@@ -176,10 +180,10 @@ class ReportService:
 
     @classmethod
     async def _get_required_documents_for_task(
-        cls,
-        db: AsyncSession,
-        *,
-        month_item_id: int,
+            cls,
+            db: AsyncSession,
+            *,
+            month_item_id: int,
     ) -> list:
         documents = await ReportRepo.get_required_documents_for_month_item(
             db,
@@ -219,11 +223,11 @@ class ReportService:
 
     @classmethod
     async def get_task_for_execution(
-        cls,
-        db: AsyncSession,
-        *,
-        month_item_id: int,
-        user_id: int,
+            cls,
+            db: AsyncSession,
+            *,
+            month_item_id: int,
+            user_id: int,
     ):
         task = await ReportRepo.get_executor_month_item(
             db,
@@ -332,29 +336,29 @@ class ReportService:
 
     @classmethod
     async def save_reference_draft(
-        cls,
-        db: AsyncSession,
-        *,
-        month_item_id: int,
-        user_id: int,
-        required_document_id: int,
-        document_type: DocumentType,
-        report_type_codes: list[str] | None,
-        title: str | None,
-        task_title: str | None,
-        task_goal: str | None,
-        review_place: str | None,
-        control_scope: str | None,
-        control_form: str | None,
-        control_kind: str | None,
-        evidence_note: str | None,
-        planned_review_place: str | None,
-        reference_text: str | None,
-        conclusion: str | None,
-        recommendations: str | None,
-        reference_file_note: str | None,
-        review_result: str | None,
-        notes: str | None = None,
+            cls,
+            db: AsyncSession,
+            *,
+            month_item_id: int,
+            user_id: int,
+            required_document_id: int,
+            document_type: DocumentType,
+            report_type_codes: list[str] | None,
+            title: str | None,
+            task_title: str | None,
+            task_goal: str | None,
+            review_place: str | None,
+            control_scope: str | None,
+            control_form: str | None,
+            control_kind: str | None,
+            evidence_note: str | None,
+            planned_review_place: str | None,
+            reference_text: str | None,
+            conclusion: str | None,
+            recommendations: str | None,
+            reference_file_note: str | None,
+            review_result: str | None,
+            notes: str | None = None,
     ) -> TaskExecutionDocument:
         task = await ReportRepo.get_executor_month_item_by_status(
             db,
@@ -473,22 +477,22 @@ class ReportService:
 
     @classmethod
     async def upload_final_document(
-        cls,
-        db: AsyncSession,
-        *,
-        month_item_id: int,
-        user_id: int,
-        required_document_id: int,
-        document_type: DocumentType,
-        title: str | None,
-        original_file_name: str,
-        stored_file_name: str,
-        file_path: str,
-        mime_type: str | None,
-        file_size: int | None,
-        reference_file_note: str | None = None,
-        review_result: str | None = None,
-        auto_complete_task: bool = True,
+            cls,
+            db: AsyncSession,
+            *,
+            month_item_id: int,
+            user_id: int,
+            required_document_id: int,
+            document_type: DocumentType,
+            title: str | None,
+            original_file_name: str,
+            stored_file_name: str,
+            file_path: str,
+            mime_type: str | None,
+            file_size: int | None,
+            reference_file_note: str | None = None,
+            review_result: str | None = None,
+            auto_complete_task: bool = True,
     ) -> TaskExecutionDocument:
         task = await ReportRepo.get_executor_month_item_by_status(
             db,
@@ -573,10 +577,10 @@ class ReportService:
 
     @classmethod
     async def can_mark_task_as_done(
-        cls,
-        db: AsyncSession,
-        *,
-        month_item_id: int,
+            cls,
+            db: AsyncSession,
+            *,
+            month_item_id: int,
     ) -> bool:
         task = await ReportRepo.get_month_item_with_required_documents(
             db,
@@ -602,17 +606,17 @@ class ReportService:
                 required_document_id=required_document.id,
                 allowed_statuses=cls.DONE_ALLOWED_DOCUMENT_STATUSES,
             )
-            if not ok:
-                return False
+            if ok:
+                return True
 
-        return True
+        return False
 
     @classmethod
     async def try_mark_task_as_done(
-        cls,
-        db: AsyncSession,
-        *,
-        month_item_id: int,
+            cls,
+            db: AsyncSession,
+            *,
+            month_item_id: int,
     ) -> bool:
         can_done = await cls.can_mark_task_as_done(
             db,
@@ -631,10 +635,10 @@ class ReportService:
 
     @classmethod
     async def get_task_with_draft(
-        cls,
-        db: AsyncSession,
-        month_item_id: int,
-        user_id: int,
+            cls,
+            db: AsyncSession,
+            month_item_id: int,
+            user_id: int,
     ):
         task = await cls.get_task_for_execution(
             db,

@@ -6,7 +6,7 @@ from pathlib import Path
 from urllib.parse import urlencode
 
 from fastapi import APIRouter, Depends, File, Form, Request, UploadFile, status
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.responses import FileResponse
 
@@ -154,6 +154,7 @@ async def staff_report_upload_final(
     name="staff_task_execute_save",
 )
 async def staff_task_execute_save(
+        request: Request,
         month_item_id: int,
         month: int | None = Form(default=None),
         selected_task_id: int | None = Form(default=None),
@@ -183,7 +184,7 @@ async def staff_task_execute_save(
     redirect_month = month or date.today().month
     redirect_selected_task_id = selected_task_id or month_item_id
 
-    def redirect_with_message(param_name: str, message: str) -> RedirectResponse:
+    def redirect_to_list(param_name: str, message: str) -> RedirectResponse:
         query = urlencode(
             {
                 "month": redirect_month,
@@ -193,6 +194,23 @@ async def staff_task_execute_save(
         )
         return RedirectResponse(
             url=f"/staff/tasks/execute?{query}",
+            status_code=status.HTTP_303_SEE_OTHER,
+        )
+
+    def redirect_to_same_page(param_name: str, message: str) -> RedirectResponse:
+        base_url = request.url_for(
+            "staff_report_execute_page",
+            month_item_id=month_item_id,
+        )
+        query = urlencode(
+            {
+                "month": redirect_month,
+                "selected_task_id": redirect_selected_task_id,
+                param_name: message,
+            }
+        )
+        return RedirectResponse(
+            url=f"{base_url}?{query}",
             status_code=status.HTTP_303_SEE_OTHER,
         )
 
@@ -210,7 +228,13 @@ async def staff_task_execute_save(
             user_id=current_user_id,
         )
 
-        if task.status == PlanItemStatus.DONE and action in {"upload_final", "done", "not_executed", "save", "print_prepare"}:
+        if task.status == PlanItemStatus.DONE and action in {
+            "upload_final",
+            "done",
+            "not_executed",
+            "save",
+            "export_draft",
+        }:
             raise ValueError("Задача уже завершена и отправлена на рассмотрение")
 
         source_row11 = getattr(task, "source_row11", None)
@@ -225,19 +249,19 @@ async def staff_task_execute_save(
         draft_document_type = DocumentType.REFERENCE
 
         task_title = (
-                getattr(source_row11, "topic", None)
-                or getattr(task, "topic", None)
-                or f"Задача #{task.id}"
+            getattr(source_row11, "topic", None)
+            or getattr(task, "topic", None)
+            or f"Задача #{task.id}"
         )
         task_goal = (
-                getattr(source_row11, "goal", None)
-                or getattr(task, "goal", None)
+            getattr(source_row11, "goal", None)
+            or getattr(task, "goal", None)
         )
 
         review_place = planned_review_place or None
         draft_title = "Справка"
         final_title = reference_file_note or "Подписанная справка"
-        # ---------- SAVE DRAW----------
+
         if action == "save":
             await ReportService.save_reference_draft(
                 db,
@@ -262,8 +286,9 @@ async def staff_task_execute_save(
                 review_result=review_result,
                 notes=evidence_note,
             )
-            return redirect_with_message("success", "Черновик сохранен")
-        # ---------- EXPORT DRAFT ----------
+            await db.commit()
+            return redirect_to_list("success", "Черновик сохранен")
+
         if action == "export_draft":
             draft = await ReportService.save_reference_draft(
                 db,
@@ -288,11 +313,10 @@ async def staff_task_execute_save(
                 review_result=review_result,
                 notes=evidence_note,
             )
+            await db.commit()
 
             if not draft.content_html:
                 raise ValueError("Черновой отчет пустой")
-
-            from fastapi.responses import Response
 
             file_name = f"draft_report_{month_item_id}.html"
             html_content = draft.content_html
@@ -304,7 +328,7 @@ async def staff_task_execute_save(
                     "Content-Disposition": f'attachment; filename="{file_name}"'
                 },
             )
-        # ---------- UPLOAD ----------
+
         if action == "upload_final":
             if reference_file is None or not reference_file.filename:
                 raise ValueError("Выберите итоговый файл для загрузки")
@@ -334,9 +358,9 @@ async def staff_task_execute_save(
                 review_result=review_result,
                 auto_complete_task=False,
             )
-            return redirect_with_message("success", "Итоговый документ загружен")
+            await db.commit()
+            return redirect_to_same_page("success", "Итоговый документ загружен")
 
-            # ---------- DONE ----------
         if action == "done":
             done = await ReportService.try_mark_task_as_done(
                 db,
@@ -345,14 +369,13 @@ async def staff_task_execute_save(
             await db.commit()
 
             if done:
-                return redirect_with_message("success", "Задача завершена")
+                return redirect_to_same_page("success", "Задача завершена")
 
-            return redirect_with_message(
+            return redirect_to_same_page(
                 "error",
                 "Нельзя завершить задачу: сначала загрузите итоговый документ",
             )
 
-            # ---------- NOT EXECUTED ----------
         if action == "not_executed":
             if not (review_result and review_result.strip()):
                 raise ValueError("Укажите причину, почему задача не выполнена")
@@ -365,13 +388,17 @@ async def staff_task_execute_save(
                 notes=evidence_note,
             )
             await db.commit()
-            return redirect_with_message("success", "Задача отмечена как не выполненная")
+            return redirect_to_same_page("success", "Задача отмечена как не выполненная")
 
         raise ValueError("Неизвестное действие")
 
     except ValueError as e:
         await db.rollback()
-        return redirect_with_message("error", str(e))
+
+        if action == "save":
+            return redirect_to_list("error", str(e))
+
+        return redirect_to_same_page("error", str(e))
 
     except Exception as e:  # noqa: BLE001
         await db.rollback()
