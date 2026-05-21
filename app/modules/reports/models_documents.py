@@ -14,9 +14,11 @@ from sqlalchemy import (
     UniqueConstraint,
     func,
 )
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
+
 from app.db.types import (
     DOCUMENT_TYPE_ENUM,
     TASK_DOCUMENT_SOURCE_ENUM,
@@ -39,14 +41,39 @@ class TaskExecutionDocument(Base):
     __table_args__ = (
         UniqueConstraint(
             "month_item_id",
-            "document_type",
+            "required_document_id",
+            "report_code",
             "version",
-            name="uq_task_exec_doc_type_version",
+            name="uq_task_exec_doc_required_report_version",
+        ),
+        UniqueConstraint(
+            "selected_report_id",
+            "version",
+            name="uq_task_exec_doc_selected_report_version",
+        ),
+        Index(
+            "ix_task_exec_docs_selected_report_current",
+            "selected_report_id",
+            "is_current",
         ),
         Index("ix_task_exec_docs_month_item_status", "month_item_id", "status"),
         Index("ix_task_exec_docs_month_item_current", "month_item_id", "is_current"),
         Index("ix_task_exec_docs_required_document", "required_document_id"),
         Index("ix_task_exec_docs_uploaded_by", "uploaded_by_user_id"),
+        Index(
+            "ix_task_exec_docs_month_required_current",
+            "month_item_id",
+            "required_document_id",
+            "is_current",
+        ),
+        Index(
+            "ix_task_exec_docs_month_report_current",
+            "month_item_id",
+            "report_code",
+            "is_current",
+        ),
+        Index("ix_task_exec_docs_template_mode", "template_mode"),
+        Index("ix_task_exec_docs_custom_template", "custom_template_id"),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -61,6 +88,29 @@ class TaskExecutionDocument(Base):
         ForeignKey("school_plan_row_11_required_documents.id", ondelete="SET NULL"),
         nullable=True,
         index=True,
+    )
+
+    report_type_id: Mapped[int | None] = mapped_column(
+        ForeignKey("report_types.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+
+    selected_report_id: Mapped[int | None] = mapped_column(
+        ForeignKey("task_execution_selected_reports.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+
+    report_code: Mapped[str | None] = mapped_column(
+        String(100),
+        nullable=True,
+        index=True,
+    )
+
+    report_label: Mapped[str | None] = mapped_column(
+        String(255),
+        nullable=True,
     )
 
     document_type: Mapped[DocumentType] = mapped_column(
@@ -108,8 +158,6 @@ class TaskExecutionDocument(Base):
     mime_type: Mapped[str | None] = mapped_column(String(100), nullable=True)
     file_size: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
-    content_html: Mapped[str | None] = mapped_column(Text, nullable=True)
-
     review_comment: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     uploaded_by_user_id: Mapped[int | None] = mapped_column(
@@ -150,6 +198,33 @@ class TaskExecutionDocument(Base):
         nullable=True,
     )
 
+    custom_template_id: Mapped[int | None] = mapped_column(
+        ForeignKey("user_report_templates.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+
+    template_mode: Mapped[str | None] = mapped_column(
+        String(50),
+        nullable=True,
+        index=True,
+    )
+
+    custom_content_html: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+    )
+
+    custom_content_text: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+    )
+    # копия с UserReportTemplate применяется к конкретной задаче
+    schema_json: Mapped[dict | None] = mapped_column(
+        JSONB,
+        nullable=True,
+    )
+
     month_item: Mapped["SchoolMonthPlanItem"] = relationship(
         "SchoolMonthPlanItem",
         back_populates="execution_documents",
@@ -158,6 +233,16 @@ class TaskExecutionDocument(Base):
     required_document: Mapped["SchoolPlanRow11RequiredDocument | None"] = relationship(
         "SchoolPlanRow11RequiredDocument",
         back_populates="task_execution_documents",
+    )
+
+    report_type: Mapped["ReportTypeModel | None"] = relationship(
+        "ReportTypeModel",
+        lazy="selectin",
+    )
+
+    selected_report: Mapped["TaskExecutionSelectedReport | None"] = relationship(
+        "TaskExecutionSelectedReport",
+        lazy="selectin",
     )
 
     uploaded_by_user: Mapped["User | None"] = relationship(
@@ -175,6 +260,11 @@ class TaskExecutionDocument(Base):
     reviewed_by_user: Mapped["User | None"] = relationship(
         "User",
         foreign_keys=[reviewed_by_user_id],
+        lazy="selectin",
+    )
+
+    custom_template: Mapped["UserReportTemplate | None"] = relationship(
+        "UserReportTemplate",
         lazy="selectin",
     )
 
@@ -206,8 +296,8 @@ class ReportTypeModel(Base):
         default=100,
     )
 
-    task_execution_data_links: Mapped[list["TaskExecutionDataReportType"]] = relationship(
-        "TaskExecutionDataReportType",
+    selected_report_links: Mapped[list["TaskExecutionSelectedReport"]] = relationship(
+        "TaskExecutionSelectedReport",
         back_populates="report_type",
         lazy="selectin",
     )
@@ -231,17 +321,13 @@ class TaskExecutionData(Base):
     control_form: Mapped[str | None] = mapped_column(Text, nullable=True)
     control_kind: Mapped[str | None] = mapped_column(Text, nullable=True)
 
-    evidence_note: Mapped[str | None] = mapped_column(Text, nullable=True)
-    planned_review_place: Mapped[str | None] = mapped_column(Text, nullable=True)
-
-    reference_text: Mapped[str | None] = mapped_column(Text, nullable=True)
-    conclusion: Mapped[str | None] = mapped_column(Text, nullable=True)
-    recommendations: Mapped[str | None] = mapped_column(Text, nullable=True)
-
-    reference_file_note: Mapped[str | None] = mapped_column(Text, nullable=True)
     review_result: Mapped[str | None] = mapped_column(Text, nullable=True)
 
-    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    completion_mode: Mapped[str | None] = mapped_column(
+        String(50),
+        nullable=True,
+        index=True,
+    )
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
@@ -261,29 +347,36 @@ class TaskExecutionData(Base):
         back_populates="execution_data",
     )
 
-    report_type_links: Mapped[list["TaskExecutionDataReportType"]] = relationship(
-        "TaskExecutionDataReportType",
+    selected_reports: Mapped[list["TaskExecutionSelectedReport"]] = relationship(
+        "TaskExecutionSelectedReport",
         back_populates="execution_data",
         cascade="all, delete-orphan",
         lazy="selectin",
     )
 
 
-class TaskExecutionDataReportType(Base):
-    __tablename__ = "task_execution_data_report_types"
+class TaskExecutionSelectedReport(Base):
+    __tablename__ = "task_execution_selected_reports"
     __table_args__ = (
         UniqueConstraint(
             "execution_data_id",
             "report_type_id",
-            name="uq_task_execution_data_report_type",
+            "target_kind",
+            "target_value",
+            name="uq_task_exec_selected_report_unique",
         ),
         Index(
-            "ix_task_execution_data_report_types_execution_data_id",
+            "ix_task_exec_selected_reports_execution_data",
             "execution_data_id",
         ),
         Index(
-            "ix_task_execution_data_report_types_report_type_id",
+            "ix_task_exec_selected_reports_report_type",
             "report_type_id",
+        ),
+        Index(
+            "ix_task_exec_selected_reports_target",
+            "target_kind",
+            "target_value",
         ),
     )
 
@@ -299,13 +392,32 @@ class TaskExecutionDataReportType(Base):
         nullable=False,
     )
 
+    target_kind: Mapped[str] = mapped_column(
+        String(50),
+        nullable=False,
+    )
+    target_value: Mapped[str] = mapped_column(
+        String(255),
+        nullable=False,
+    )
+    target_label: Mapped[str | None] = mapped_column(
+        String(255),
+        nullable=True,
+    )
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+    )
+
     execution_data: Mapped["TaskExecutionData"] = relationship(
         "TaskExecutionData",
-        back_populates="report_type_links",
+        back_populates="selected_reports",
     )
 
     report_type: Mapped["ReportTypeModel"] = relationship(
         "ReportTypeModel",
-        back_populates="task_execution_data_links",
+        back_populates="selected_report_links",
         lazy="selectin",
     )

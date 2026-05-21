@@ -186,15 +186,6 @@ class SchoolMonthlyPlanningService:
             school_plan_id=school_plan_id,
         )
 
-        print(
-            "BUILD rows:",
-            len(rows),
-            "school_plan_id=",
-            school_plan_id,
-            "month=",
-            month,
-        )
-
         academic_months = {9, 10, 11, 12, 1, 2, 3, 4, 5}
         in_academic = month in academic_months
         target_q = SchoolMonthlyPlanningService._quarter_of_month(month)
@@ -270,20 +261,6 @@ class SchoolMonthlyPlanningService:
                 quarter_ids.append(row.id)
                 continue
 
-            print("WARN: unknown period_type:", pt_val, "row_id=", row.id)
-
-        print(
-            "BUILD counts:",
-            "month=", len(month_ids),
-            "months=", len(months_ids),
-            "monthly=", len(monthly_ids),
-            "all_year=", len(all_year_ids),
-            "quarter=", len(quarter_ids),
-            "skipped_quarter=", len(skipped_quarter_ids),
-            "target_q=", target_q,
-            "in_academic=", in_academic,
-        )
-
         non_quarter_ids = month_ids + months_ids + monthly_ids + all_year_ids
 
         created_items: list[SchoolMonthPlanItem] = []
@@ -344,13 +321,6 @@ class SchoolMonthlyPlanningService:
             )
 
         await db.flush()
-
-        print(
-            "BUILD: flush OK",
-            "month_plan_id=", month_plan_id,
-            "created_items=", len(created_items),
-            "review_places=", len(review_place_rows),
-        )
 
     # сохраняем и активируем месячный план
     @staticmethod

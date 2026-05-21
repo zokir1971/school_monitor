@@ -1,0 +1,802 @@
+{% extends "base.html" %}
+
+{% block title %}Исполнение задачи{% endblock %}
+
+{% block extra_css %}
+  <link rel="stylesheet" href="{{ url_for('static', path='css/staff_task.css') }}">
+  <style>
+    .page {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 24px 16px 48px;
+    }
+
+    .page-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .page-head__title h1 {
+      margin: 0 0 6px;
+      font-size: 30px;
+      line-height: 1.2;
+    }
+
+    .page-head__title p {
+      margin: 0;
+      color: #6b7280;
+      font-size: 14px;
+    }
+
+    .card {
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 18px;
+      padding: 20px;
+      margin-bottom: 18px;
+      box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04);
+    }
+
+    .card h2,
+    .card h3 {
+      margin-top: 0;
+      margin-bottom: 14px;
+    }
+
+    .alert {
+      border-radius: 14px;
+      padding: 14px 16px;
+      margin-bottom: 16px;
+      border: 1px solid transparent;
+      font-size: 14px;
+    }
+
+    .alert-success {
+      background: #ecfdf5;
+      color: #065f46;
+      border-color: #a7f3d0;
+    }
+
+    .alert-warning,
+    .alert-error {
+      background: #fef2f2;
+      color: #991b1b;
+      border-color: #fecaca;
+    }
+
+    .task-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px 18px;
+    }
+
+    .task-field {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .task-field--full {
+      grid-column: 1 / -1;
+    }
+
+    .task-field__label {
+      font-size: 13px;
+      color: #6b7280;
+    }
+
+    .task-field__value {
+      font-size: 15px;
+      color: #111827;
+      font-weight: 500;
+      word-break: break-word;
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 8px 12px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 600;
+      background: #eff6ff;
+      color: #1d4ed8;
+    }
+
+    .doc-list {
+      display: grid;
+      gap: 12px;
+    }
+
+    .doc-item {
+      border: 1px solid #e5e7eb;
+      border-radius: 14px;
+      padding: 14px 16px;
+      background: #fafafa;
+    }
+
+    .doc-item__title {
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .doc-item__meta {
+      display: grid;
+      gap: 4px;
+      font-size: 14px;
+      color: #4b5563;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .form-field {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .form-field--full {
+      grid-column: 1 / -1;
+    }
+
+    .form-field label {
+      font-size: 14px;
+      font-weight: 600;
+      color: #374151;
+    }
+
+    .form-field input,
+    .form-field textarea {
+      width: 100%;
+      border: 1px solid #d1d5db;
+      border-radius: 12px;
+      padding: 12px 14px;
+      font-size: 14px;
+      background: #fff;
+      box-sizing: border-box;
+    }
+
+    .form-field textarea {
+      resize: vertical;
+      min-height: 110px;
+    }
+
+    .hint {
+      font-size: 12px;
+      color: #6b7280;
+    }
+
+    .action-panel {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: none;
+      border-radius: 12px;
+      padding: 11px 16px;
+      font-size: 14px;
+      font-weight: 600;
+      text-decoration: none;
+      cursor: pointer;
+    }
+
+    .btn-secondary {
+      background: #eef2ff;
+      color: #3730a3;
+    }
+
+    .btn-primary {
+      background: #2563eb;
+      color: #fff;
+    }
+
+    .btn-success {
+      background: #059669;
+      color: #fff;
+    }
+
+    .btn-light {
+      background: #f3f4f6;
+      color: #111827;
+    }
+
+    .empty-box {
+      padding: 16px;
+      border: 1px dashed #cbd5e1;
+      border-radius: 14px;
+      color: #6b7280;
+      background: #f8fafc;
+    }
+
+    a.disabled {
+      pointer-events: none;
+      opacity: 0.6;
+    }
+
+    @media (max-width: 860px) {
+      .task-grid,
+      .form-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .page-head {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .action-panel {
+        flex-direction: column;
+      }
+
+      .btn {
+        width: 100%;
+      }
+    }
+
+    .radio-group-horizontal {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.radio-card-horizontal {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+
+  width: 320px;
+  min-height: 70px;
+
+  padding: 16px 18px;
+  border: 1px solid #cfd8e3;
+  border-radius: 12px;
+  background: #fff;
+
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.radio-card-horizontal input {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+}
+
+.radio-card-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.radio-title {
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.2;
+  color: #111827;
+}
+
+.radio-desc {
+  font-size: 14px;
+  line-height: 1.25;
+  color: #6b7280;
+}
+
+.radio-card-horizontal:hover {
+  border-color: #2563eb;
+  background: #f8fbff;
+}
+
+.radio-card-horizontal:has(input:checked) {
+  border-color: #2563eb;
+  background: #eff6ff;
+  box-shadow: 0 0 0 1px #2563eb;
+}
+
+.radio-card-horizontal:has(input:checked) .radio-title {
+  color: #1d4ed8;
+}
+
+.radio-card-horizontal:has(input:disabled) {
+  opacity: 0.65;
+  cursor: not-allowed;
+  background: #f3f4f6;
+}
+
+    .completion-mode-hint {
+  margin-top: 12px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  color: #334155;
+  font-size: 14px;
+  line-height: 1.45;
+}
+  </style>
+{% endblock %}
+
+{% block content %}
+<div class="page">
+
+  <div class="page-head">
+    <div class="page-head__title">
+      <h1>Исполнение задачи</h1>
+      <p>Загрузка итогового документа и завершение задачи</p>
+    </div>
+
+    <a href="/staff/tasks" class="btn btn-light">
+      Назад к задачам
+    </a>
+  </div>
+
+  {% if success %}
+    <div class="alert alert-success">
+      {{ success }}
+    </div>
+  {% endif %}
+
+  {% if warning %}
+    <div class="alert alert-warning">
+      {{ warning }}
+    </div>
+  {% endif %}
+
+  {% if error %}
+    <div class="alert alert-error">
+      {{ error }}
+    </div>
+  {% endif %}
+
+  {% if task %}
+
+    <!-- ИНФОРМАЦИЯ -->
+    <div class="card">
+
+      <h2>Сведения о задаче</h2>
+
+      <div class="task-grid">
+
+        <div class="task-field">
+          <div class="task-field__label">
+            Статус
+          </div>
+
+          <div class="task-field__value">
+            <span class="status-badge">
+              {{ task.status.label_kz if task.status else "—" }}
+            </span>
+          </div>
+        </div>
+
+        <div class="task-field">
+          <div class="task-field__label">
+            Период
+          </div>
+
+          <div class="task-field__value">
+            {% if task.planned_start and task.planned_end %}
+              {{ task.planned_start.strftime("%d.%m.%Y") }}
+              –
+              {{ task.planned_end.strftime("%d.%m.%Y") }}
+            {% else %}
+              —
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="task-field task-field--full">
+          <div class="task-field__label">
+            Тема
+          </div>
+
+          <div class="task-field__value">
+            {{ task_topic or "—" }}
+          </div>
+        </div>
+
+        <div class="task-field task-field--full">
+          <div class="task-field__label">
+            Цель
+          </div>
+
+          <div class="task-field__value">
+            {{ task_goal or "—" }}
+          </div>
+        </div>
+
+        <div class="task-field">
+          <div class="task-field__label">
+            Место рассмотрения
+          </div>
+
+          <div class="task-field__value">
+            {{ review_place_text or "—" }}
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- ПАРАМЕТРЫ -->
+    <div class="card">
+
+      <div class="action-panel">
+
+        <a href="{{ url_for('staff_tasks_execute_page') }}?selected_task_id={{ task.id }}{% if month %}&month={{ month }}{% endif %}"
+           class="btn btn-secondary {% if is_done %}disabled{% endif %}">
+
+          Редактировать параметры
+
+        </a>
+
+      </div>
+
+    </div>
+
+    <!-- ФОРМА -->
+    <form method="post"
+          action="{{ url_for('staff_report_execute_submit', month_item_id=task.id) }}"
+          enctype="multipart/form-data"
+          id="task-completion-form">
+
+      <input type="hidden"
+             name="month_item_id"
+             value="{{ task.id }}">
+
+      {% set current_required_document = required_documents[0] if required_documents else None %}
+
+      {% if current_required_document %}
+        <input type="hidden"
+               name="required_document_id"
+               value="{{ current_required_document.id }}">
+      {% endif %}
+
+      <div class="card">
+
+        <h3>Завершение задачи</h3>
+
+        {% if is_done %}
+          <div class="alert alert-success">
+            <strong>
+              Задача завершена.
+            </strong>
+
+            <div style="margin-top:8px;">
+              Документ отправлен на рассмотрение.
+            </div>
+          </div>
+        {% endif %}
+
+        <!-- ВАРИАНТ -->
+        <div class="form-field">
+
+          <label>
+            Вариант завершения
+          </label>
+
+          <div class="radio-group-horizontal">
+
+            {% for mode in completion_modes %}
+
+              <label class="radio-card-horizontal">
+
+                <input type="radio"
+                       name="completion_mode"
+                       value="{{ mode.value }}"
+                       required
+                       {% if execution and execution.completion_mode == mode.value %}checked{% endif %}
+                       {% if is_done %}disabled{% endif %}>
+
+                <div class="radio-card-content">
+
+                  <div class="radio-title">
+                    {{ mode.label_kz }}
+                  </div>
+
+                  {% if mode.value == "simple_final_document" %}
+                    <div class="radio-desc">
+                      Только итоговый документ
+                    </div>
+                  {% endif %}
+
+                  {% if mode.value == "final_with_system_reports" %}
+                    <div class="radio-desc">
+                      Итоговый документ после заполнения системных отчетов
+                    </div>
+                  {% endif %}
+
+                </div>
+
+              </label>
+
+            {% endfor %}
+
+          </div>
+
+        </div>
+
+        <!-- ФАЙЛ -->
+        <div id="final-document-block"
+             style="display:none; margin-top:18px;">
+
+          <div class="form-field">
+
+            <label for="reference_file">
+              Итоговый документ
+            </label>
+
+            <input type="file"
+                   id="reference_file"
+                   name="reference_file"
+                   {% if is_done %}disabled{% endif %}>
+
+            <div class="hint">
+              Загрузите итоговый документ.
+            </div>
+
+          </div>
+
+          <div class="form-field">
+
+            <label for="review_result">
+              Комментарий
+            </label>
+
+            <textarea id="review_result"
+                      name="review_result"
+                      rows="4"
+                      placeholder="Комментарий"
+                      {% if is_done %}readonly{% endif %}>{{ execution.review_result if execution else '' }}</textarea>
+
+          </div>
+
+        </div>
+
+        <!-- КНОПКИ -->
+        <div class="action-panel"
+             id="completion-action-panel"
+             style="display:none; margin-top:20px;">
+
+          <button type="submit"
+                  id="btn-upload-final"
+                  name="action"
+                  value="upload_final"
+                  class="btn btn-primary"
+                  {% if is_done %}disabled{% endif %}>
+
+            Загрузить документ
+
+          </button>
+
+          <button type="submit"
+                  id="btn-done"
+                  name="action"
+                  value="done"
+                  class="btn btn-success"
+                  {% if is_done %}disabled{% endif %}>
+
+            Завершить и отправить
+
+          </button>
+
+          <a id="btn-open-system-reports"
+             href="{{ url_for('staff_report_templates_page', month_item_id=task.id) }}{% if month %}?month={{ month }}{% endif %}"
+             class="btn btn-secondary">
+
+            Перейти к заполнению отчетов
+
+          </a>
+
+        </div>
+
+      </div>
+
+    </form>
+
+    <!-- ДОКУМЕНТЫ -->
+    <div class="card">
+
+      <h3>Итоговые документы</h3>
+
+      {% if final_documents %}
+
+        <div class="doc-list">
+
+          {% for doc in final_documents %}
+
+            <div class="doc-item">
+
+              <div class="doc-item__title">
+                {{ doc.original_file_name or "Без названия" }}
+              </div>
+
+              <div class="doc-item__meta">
+
+                <div>
+                  <strong>Статус:</strong>
+                  {{ doc.status.label_kz if doc.status else "—" }}
+                </div>
+
+                <div>
+                  <strong>Тип:</strong>
+                  {{ doc.document_type.label_kz if doc.document_type else "—" }}
+                </div>
+
+              </div>
+
+              {% if doc.file_path %}
+
+                <div class="action-panel">
+
+                  <a href="{{ url_for('staff_report_document_view', document_id=doc.id) }}"
+                     class="btn btn-secondary"
+                     target="_blank">
+
+                    Просмотреть
+
+                  </a>
+
+                  <a href="{{ url_for('staff_report_document_download', document_id=doc.id) }}"
+                     class="btn btn-primary">
+
+                    Скачать
+
+                  </a>
+
+                </div>
+
+              {% endif %}
+
+            </div>
+
+          {% endfor %}
+
+        </div>
+
+      {% else %}
+
+        <div class="empty-box">
+          Итоговые документы пока не загружены.
+        </div>
+
+      {% endif %}
+
+    </div>
+
+  {% endif %}
+
+</div>
+
+<script>
+
+document.addEventListener("DOMContentLoaded", function () {
+
+    const isDone = {{ "true" if is_done else "false" }};
+
+    const radios = document.querySelectorAll(
+        'input[name="completion_mode"]'
+    );
+
+    const finalDocBlock = document.getElementById(
+        "final-document-block"
+    );
+
+    const actionPanel = document.getElementById(
+        "completion-action-panel"
+    );
+
+    const btnUpload = document.getElementById(
+        "btn-upload-final"
+    );
+
+    const btnDone = document.getElementById(
+        "btn-done"
+    );
+
+    const btnSystemReports = document.getElementById(
+        "btn-open-system-reports"
+    );
+
+    const fileInput = document.getElementById(
+        "reference_file"
+    );
+
+    function hideAll() {
+
+        if (finalDocBlock) {
+            finalDocBlock.style.display = "none";
+        }
+
+        if (actionPanel) {
+            actionPanel.style.display = "none";
+        }
+
+        if (btnUpload) {
+            btnUpload.style.display = "none";
+        }
+
+        if (btnDone) {
+            btnDone.style.display = "none";
+        }
+
+        if (btnSystemReports) {
+            btnSystemReports.style.display = "none";
+        }
+
+        if (fileInput) {
+            fileInput.required = false;
+        }
+    }
+
+    function updateUI() {
+
+        hideAll();
+
+        if (isDone) {
+            return;
+        }
+
+        const selected = document.querySelector(
+            'input[name="completion_mode"]:checked'
+        );
+
+        if (!selected) {
+            return;
+        }
+
+        actionPanel.style.display = "flex";
+
+        if (
+            selected.value === "simple_final_document"
+        ) {
+
+            finalDocBlock.style.display = "block";
+
+            btnUpload.style.display = "inline-flex";
+
+            btnDone.style.display = "inline-flex";
+
+            fileInput.required = true;
+        }
+
+        if (
+            selected.value === "final_with_system_reports"
+        ) {
+
+            btnSystemReports.style.display = "inline-flex";
+        }
+    }
+
+    radios.forEach(function (radio) {
+
+        radio.addEventListener(
+            "change",
+            updateUI
+        );
+
+    });
+
+    updateUI();
+
+});
+
+</script>
+
+{% endblock %}

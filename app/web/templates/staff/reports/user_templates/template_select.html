@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+
+{% block title %}Пользовательский шаблон отчета лист наблюдение урока{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', path='css/template_report.css') }}">
+{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <h2>Выбрать мой шаблон</h2>
+
+    <div class="muted">
+      Отчет:
+      <strong>{{ report_label or report_code or "—" }}</strong>
+    </div>
+
+    {% if target_label %}
+      <div class="muted">
+        {% if target_kind == "teacher" %}
+          Учитель:
+        {% elif target_kind == "class" %}
+          Сынып:
+        {% elif target_kind == "subject" %}
+          Пән:
+        {% else %}
+          Нысан:
+        {% endif %}
+        <strong>{{ target_label }}</strong>
+      </div>
+    {% endif %}
+  </div>
+
+  {% if month_item_id %}
+  <a href="{{ url_for('', month_item_id=month_item_id) }}"
+     class="btn btn-secondary">
+    Назад к отчетам
+  </a>
+{% endif %}
+</div>
+
+{% if error %}
+  <div class="alert alert-danger">{{ error }}</div>
+{% endif %}
+
+<div class="card report-card">
+  <div class="card-title-row">
+    <div>
+      <h3>Доступные личные шаблоны</h3>
+      <div class="muted">
+        Выберите готовый шаблон или создайте новый.
+      </div>
+    </div>
+
+    <a href="{{ url_for('staff_user_template_create_page') }}?report_code={{ report_code }}{% if month_item_id and selected_report_id %}&month_item_id={{ month_item_id }}&selected_report_id={{ selected_report_id }}{% endif %}"
+   class="btn btn-primary">
+  + Создать новый шаблон
+</a>
+  </div>
+
+  {% if templates_list %}
+    <div class="template-list">
+      {% for t in templates_list %}
+        <div class="template-item">
+          <div class="template-item__header">
+            <div>
+              <div class="template-item__title">
+                {{ t.title }}
+              </div>
+
+              <div class="template-item__meta">
+                <strong>Тип:</strong>
+                {{ t.report_label or t.report_code or "—" }}
+              </div>
+            </div>
+          </div>
+
+          {% if t.description %}
+            <div class="template-item__description">
+              <strong>Описание:</strong>
+              {{ t.description }}
+            </div>
+          {% endif %}
+
+          {% if t.content_text %}
+            <div class="template-preview">
+              {{ t.content_text[:300] }}{% if t.content_text|length > 300 %}...{% endif %}
+            </div>
+          {% endif %}
+
+          <div class="template-item__actions">
+            <form method="post"
+                  action="{{ url_for(
+                    'staff_report_apply_my_template',
+                    month_item_id=month_item_id,
+                    selected_report_id=selected_report_id
+                  ) }}">
+              <input type="hidden" name="template_id" value="{{ t.id }}">
+
+              <button type="submit" class="btn btn-success">
+                Использовать этот шаблон
+              </button>
+            </form>
+
+            <a href="{{ url_for('staff_user_template_edit_page', template_id=t.id) }}{% if month_item_id and selected_report_id %}?month_item_id={{ month_item_id }}&selected_report_id={{ selected_report_id }}{% endif %}"
+               class="btn btn-secondary">
+              Редактировать
+            </a>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty-box">
+      Для этого типа отчета личные шаблоны пока не созданы.
+    </div>
+  {% endif %}
+</div>
+
+{% endblock %}

@@ -1,7 +1,9 @@
 # app/core/config.py (инициализация проекта)
-
+import os
 from functools import lru_cache
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+USE_S3 = os.getenv("USE_S3", "false").lower() == "true"
 
 
 class Settings(BaseSettings):

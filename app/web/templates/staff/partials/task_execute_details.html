@@ -1,0 +1,250 @@
+<div id="task-execution-details">
+  {% set task = selected_task %}
+  {% set task_status = task.status %}
+
+  {% set task_execute_state = {
+    "control_scope": execution.control_scope if execution and execution.control_scope else "",
+    "control_form": execution.control_form if execution and execution.control_form else "",
+    "control_kind": execution.control_kind if execution and execution.control_kind else "",
+    "report_types": execution.report_types if execution and execution.report_types else (
+      [execution.report_type] if execution and execution.report_type else []
+    ),
+    "subjects": execution.subjects if execution and execution.subjects else [],
+    "class_groups": execution.class_groups if execution and execution.class_groups else [],
+    "parallel_classes": execution.parallel_classes if execution and execution.parallel_classes else [],
+    "teacher_ids": execution.teacher_ids if execution and execution.teacher_ids else [],
+    "teacher_id": execution.teacher_id if execution and execution.teacher_id else ""
+  } %}
+
+<div class="card task-info">
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;">
+    <h3 style="margin:0;">Информация о задаче</h3>
+
+    <div class="traffic-status">
+      {% if task_status == "todo" %}
+        <span class="traffic traffic--yellow"></span>
+        <span class="traffic-status__text">{{ task.status_label or "Жоспарланған" }}</span>
+      {% elif task_status == "in_progress" %}
+        <span class="traffic traffic--green"></span>
+        <span class="traffic-status__text">{{ task.status_label or "Орындалу үстінде" }}</span>
+      {% elif task_status == "done" %}
+        <span class="traffic traffic--blue"></span>
+        <span class="traffic-status__text">{{ task.status_label or "Орындалды" }}</span>
+      {% elif task_status == "not_executed" %}
+        <span class="traffic traffic--red"></span>
+        <span class="traffic-status__text">{{ task.status_label or "Орындалмады" }}</span>
+      {% else %}
+        <span class="traffic-status__text">—</span>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="info-grid">
+    <div class="info-item">
+      <div class="label">Тема</div>
+      <div class="value">{{ task.topic or "—" }}</div>
+    </div>
+
+    <div class="info-item">
+      <div class="label">Цель</div>
+      <div class="value">{{ task.goal or "—" }}</div>
+    </div>
+
+    <div class="info-item">
+      <div class="label">Объект контроля по задаче</div>
+      <div class="value">{{ task.control_object or "—" }}</div>
+    </div>
+
+    <div class="info-item">
+      <div class="label">Тип контроля по задаче</div>
+      <div class="value">{{ task.control_type or "—" }}</div>
+    </div>
+
+    <div class="info-item">
+      <div class="label">Форма контроля по задаче</div>
+      <div class="value">{{ task.control_form or "—" }}</div>
+    </div>
+
+    <div class="info-item">
+      <div class="label">Место рассмотрения</div>
+      <div class="value">{{ task.review_place or "—" }}</div>
+    </div>
+
+    <div class="info-item">
+      <div class="label">Срок</div>
+      <div class="value">{{ task.period_text or "—" }}</div>
+    </div>
+  </div>
+</div>
+
+{% if control_flow %}
+  <div class="card">
+    <h3>Алгоритм действий</h3>
+
+    <div class="hint-box">
+      <div class="hint-box__title">Порядок выполнения</div>
+      <div class="hint-box__text">
+        Сначала выберите параметры контроля. Затем подготовьте материалы, заполните справку, выгрузите документ, подпишите и загрузите итоговый файл.
+      </div>
+    </div>
+  </div>
+{% endif %}
+
+<form method="post"
+      action="{{ request.url_for('staff_task_execute_save', month_item_id=task.month_item_id) }}"
+      class="execute-form"
+      enctype="multipart/form-data">
+
+  <div id="task-execution-json-data"
+     data-control-flow='{{ control_flow | tojson | safe }}'
+     data-state='{{ state_json | safe }}'
+     style="display:none;"></div>
+
+  <input type="hidden" name="month" value="{{ month }}">
+  <input type="hidden" name="selected_task_id" value="{{ task.month_item_id }}">
+
+  <div class="card">
+    <h3>1. Выбор параметров контроля</h3>
+
+    <div class="control-grid">
+      <div class="control-col control-col--left">
+        <div class="form-field">
+          <label for="control_scope">Объект контроля</label>
+          <select name="control_scope" id="control_scope" required>
+            <option value="">Выберите</option>
+          </select>
+        </div>
+
+        <div class="form-field" id="scope-detail-wrapper" style="display:none;">
+          <label id="scope-detail-label" class="form-label">Дополнительный параметр</label>
+          <div id="scope-detail-container"></div>
+        </div>
+
+        <div class="form-field" id="teacher-detail-wrapper" style="display:none;">
+          <label id="teacher-detail-label" class="form-label">Мұғалімдер</label>
+          <div id="teacher-detail-container"></div>
+        </div>
+      </div>
+
+      <div class="control-col control-col--right">
+        <div class="form-field">
+          <label for="control_kind">Вид контроля</label>
+          <select name="control_kind" id="control_kind" required disabled>
+            <option value="">Сначала выберите объект</option>
+          </select>
+        </div>
+
+        <div class="form-field">
+          <label for="control_form">Форма контроля</label>
+          <select name="control_form" id="control_form" required disabled>
+            <option value="">Сначала выберите объект</option>
+          </select>
+        </div>
+
+        <div class="form-field">
+          <label class="form-label">Тип отчета</label>
+          <div id="report_type" class="checkbox-group">
+            <div class="checkbox-placeholder">Сначала выберите объект</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="hint-box">
+      <div class="hint-box__title">Подсказка</div>
+      <div class="hint-box__text" id="control_hint">
+        Сначала выберите объект контроля. После этого система предложит допустимые формы, виды и рекомендованные типы отчета.
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+  <h3>2. Подготовка материалов на рассмотрения</h3>
+
+  <div class="form-grid">
+
+    <!-- Левая колонка -->
+    <div class="form-field">
+      <label>Запланированное место рассмотрения</label>
+      <div class="value">
+        {{ task.review_place or "—" }}
+      </div>
+    </div>
+
+    <!-- Правая колонка -->
+    <div class="form-field">
+      <label>Сформированные материалы</label>
+
+      <div class="form-field" id="materials-preview-box">
+        <div class="hint-box__text" id="materials-preview-summary">
+          После выбора параметров здесь появится список материалов, которые нужно подготовить.
+        </div>
+
+        <ul id="materials-preview-list" style="margin-top:8px;"></ul>
+      </div>
+    </div>
+
+  </div>
+
+  <input
+    type="hidden"
+    name="generated_reports_json"
+    id="generated_reports_json"
+    value='{{ execution.generated_reports_json if execution else "[]" }}'
+  />
+</div>
+
+  <div class="card">
+    <h3>3. Рассмотрение</h3>
+
+    <div class="form-grid">
+      <div class="form-field">
+        <label for="review_result">Что выносится на рассмотрение</label>
+        <input
+          type="text"
+          id="review_result"
+          name="review_result"
+          value="{{ execution.review_result if execution else '' }}"
+          placeholder="Например: справка, аналитическая таблица, проект решения"
+          readonly
+        >
+      </div>
+
+      <div class="form-field">
+        <label for="task_status_view">Текущий статус</label>
+        <input
+          type="text"
+          id="task_status_view"
+          value="{{ task.status_label or '—' }}"
+          readonly
+        >
+      </div>
+    </div>
+  </div>
+
+  <div class="card action-panel">
+
+  {% if request.query_params.get("success") == "saved" %}
+    <div class="alert alert-success" style="margin-bottom: 16px;">
+      Параметры отчета успешно сохранены
+    </div>
+  {% endif %}
+
+  <button type="submit" name="action" value="save" class="btn btn-secondary">
+    {% if current_draft is not none %}
+      Сохранить изменения
+    {% else %}
+      Сохранить черновик
+    {% endif %}
+  </button>
+
+  {% if current_draft is not none %}
+    <a href="{{ request.url_for('staff_report_execute_page', month_item_id=task.month_item_id) }}?month={{ month }}"
+   class="btn btn-primary">
+  Перейти к завершению
+</a>
+  {% endif %}
+
+</div>
+</form>
+</div>

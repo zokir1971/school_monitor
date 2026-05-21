@@ -27,19 +27,6 @@ async def staff_register_page(request: Request):
 
 
 # принимаем данные из формы регистрации
-'''
-@router.post("/register", name="staff_register_submit")
-async def staff_register_submit(
-    request: Request,
-    db: AsyncSession = Depends(get_db),
-):
-    form = await request.form()
-    print("FORM DATA:", dict(form))
-    return {"form": dict(form)}
-
-'''
-
-
 @router.post("/register", name="staff_register_submit")
 async def staff_register_submit(
         request: Request,

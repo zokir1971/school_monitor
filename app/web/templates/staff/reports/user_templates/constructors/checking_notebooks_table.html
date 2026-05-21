@@ -1,0 +1,322 @@
+{% extends "base.html" %}
+
+{% block title %}Пользовательский шаблон проверки тетрадей{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', path='css/template_report.css') }}">
+{% endblock %}
+
+{% block content %}
+
+{% set criteria_list = criteria or default_criteria or schema.get("criteria", []) %}
+{% set info_fields_list = info_fields or schema.get("info_fields", []) or schema.get("columns", []) %}
+{% set rating_data = rating or schema.get("rating", {}) %}
+
+{% set info_labels = {
+  "school_name": "Мектеп атауы",
+  "checker_name": "Тексеруші",
+  "checker_post": "Тексерушінің лауазымы",
+  "teacher_name": "Мұғалім",
+  "class_name": "Сынып",
+  "subject_name": "Пән",
+  "check_date": "Тексеру күні"
+} %}
+
+<form method="post"
+      action="{% if template %}{{ url_for('staff_user_template_update', template_id=template.id) }}{% else %}{{ url_for('staff_user_template_create') }}{% endif %}"
+      id="templateConstructorForm">
+
+  <div class="page-header">
+    <div>
+      <h2>Создать шаблон</h2>
+      <div class="muted">
+        Личный шаблон: {{ report_label or "Дәптер тексеру кестесі" }}
+      </div>
+    </div>
+
+    <a href="{{ url_for(
+        'staff_user_template_select_page',
+        month_item_id=month_item_id,
+        selected_report_id=selected_report_id
+      ) }}"
+       class="btn btn-secondary">
+      ← Назад
+    </a>
+  </div>
+
+  <input type="hidden" name="report_code" value="{{ report_code or 'checking_notebooks_table' }}">
+  <input type="hidden" name="context_month_item_id" value="{{ month_item_id or '' }}">
+  <input type="hidden" name="context_selected_report_id" value="{{ selected_report_id or '' }}">
+  <input type="hidden" name="schema_json" id="schema_json">
+
+  <div class="card report-card">
+  <h3>1. Основные данные шаблона</h3>
+  <div class="muted">Название и тип личного шаблона</div>
+
+  <div class="form-grid">
+    <div class="form-field">
+      <label>Название шаблона</label>
+      <input type="text"
+             name="title"
+             id="template_title"
+             value="{{ template.title if template else '' }}"
+             placeholder="Мысалы: Дәптер тексеру кестесі"
+             required>
+    </div>
+
+    <div class="form-field">
+      <label>Тип отчета</label>
+      <input type="text"
+             value="{{ report_label or 'Дәптер тексеру кестесі' }}"
+             disabled>
+    </div>
+  </div>
+
+  <div class="form-field">
+    <label>Сипаттама</label>
+    <textarea name="description"
+              rows="2"
+              placeholder="Шаблон туралы қысқаша сипаттама">{{ template.description if template else '' }}</textarea>
+  </div>
+</div>
+
+<div class="card report-card">
+  <h3>2. Общая информация о проверке тетрадей</h3>
+  <div class="muted">Выберите поля, которые будут отображаться в отчете</div>
+
+  <div class="form-grid">
+    {% for field_code in info_fields_list %}
+      <label class="checkbox-row">
+        <input type="checkbox"
+               name="info_fields"
+               value="{{ field_code }}"
+               checked>
+        {{ info_labels.get(field_code, field_code) }}
+      </label>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="card report-card">
+  <div class="card-title-row">
+    <div>
+      <h3>3. Разделы и критерии оценки</h3>
+      <div class="muted">
+        Каждый критерий оценивается от 0-2 балла
+      </div>
+    </div>
+
+    <button type="button"
+            class="btn btn-primary"
+            onclick="addNotebookCriterion()">
+      + Добавить критерий
+    </button>
+  </div>
+
+  <div id="criteria-list">
+    {% for c in criteria_list %}
+      <div class="criteria-section" data-index="{{ loop.index0 }}">
+
+        <input type="hidden"
+               name="criteria[{{ loop.index0 }}][key]"
+               value="{{ c.key }}">
+
+        <div class="section-header">
+          <strong>Критерий {{ loop.index }}</strong>
+
+          <button type="button"
+                  class="btn btn-danger"
+                  onclick="this.closest('.criteria-section').remove()">
+            Удалить
+          </button>
+        </div>
+
+        <div class="form-grid">
+          <div class="form-field">
+            <label>Название критерия</label>
+            <input type="text"
+                   name="criteria[{{ loop.index0 }}][label_kz]"
+                   value="{{ c.label_kz }}"
+                   required>
+          </div>
+        </div>
+
+        <div class="form-grid">
+          <div class="form-field">
+            <label>2 балл</label>
+            <input type="text"
+                   name="criteria[{{ loop.index0 }}][score_2_kz]"
+                   value="{{ c.scores['2'].label_kz }}"
+                   required>
+          </div>
+
+          <div class="form-field">
+            <label>1 балл</label>
+            <input type="text"
+                   name="criteria[{{ loop.index0 }}][score_1_kz]"
+                   value="{{ c.scores['1'].label_kz }}"
+                   required>
+          </div>
+
+          <div class="form-field">
+            <label>0 балл</label>
+            <input type="text"
+                   name="criteria[{{ loop.index0 }}][score_0_kz]"
+                   value="{{ c.scores['0'].label_kz }}"
+                   required>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="card report-card">
+  <h3>4. Рейтинг учителя</h3>
+  <div class="muted">
+    Рейтинг считается по среднему баллу: набранный балл / максимальный балл × 100%.
+  </div>
+
+  <div class="empty-box">
+  {% for level in rating_data.get("levels", []) %}
+    <strong>{{ level.get("from") }}–{{ level.get("to") }}%</strong>
+    — {{ level.get("label_kz", "") }}<br>
+  {% endfor %}
+</div>
+
+</div>
+
+<div class="card action-panel">
+  <button type="submit" class="btn btn-primary">
+    Сохранить шаблон
+  </button>
+
+  <a href="{{ url_for(
+      'staff_user_template_select_page',
+      month_item_id=month_item_id,
+      selected_report_id=selected_report_id
+    ) }}"
+     class="btn btn-secondary">
+    Отмена
+  </a>
+</div>
+
+</form>
+
+<script>
+let notebookCriterionIndex = {{ criteria_list|length }};
+
+function addNotebookCriterion() {
+  const list = document.getElementById("criteria-list");
+  const i = notebookCriterionIndex++;
+
+  const div = document.createElement("div");
+  div.className = "criteria-section";
+  div.dataset.index = i;
+
+  div.innerHTML = `
+    <input type="hidden"
+           name="criteria[${i}][key]"
+           value="criterion_${i}">
+
+    <div class="section-header">
+      <strong>Критерий ${i + 1}</strong>
+
+      <button type="button"
+              class="btn btn-danger"
+              onclick="this.closest('.criteria-section').remove()">
+        Жою
+      </button>
+    </div>
+
+    <div class="form-grid">
+      <div class="form-field">
+        <label>Критерий атауы</label>
+        <input type="text"
+               name="criteria[${i}][label_kz]"
+               placeholder="Мысалы: Ұқыптылық"
+               required>
+      </div>
+    </div>
+
+    <div class="form-grid">
+      <div class="form-field">
+        <label>2 балл</label>
+        <input type="text"
+               name="criteria[${i}][score_2_kz]"
+               value="толық орындайды"
+               required>
+      </div>
+
+      <div class="form-field">
+        <label>1 балл</label>
+        <input type="text"
+               name="criteria[${i}][score_1_kz]"
+               value="ішінара орындайды"
+               required>
+      </div>
+
+      <div class="form-field">
+        <label>0 балл</label>
+        <input type="text"
+               name="criteria[${i}][score_0_kz]"
+               value="орындамайды"
+               required>
+      </div>
+    </div>
+  `;
+
+  list.appendChild(div);
+}
+
+function buildCheckingNotebooksSchema() {
+  const infoFields = Array.from(
+    document.querySelectorAll('input[name="info_fields"]:checked')
+  ).map(el => el.value);
+
+  const criteria = [];
+
+  document.querySelectorAll(".criteria-section").forEach(section => {
+    const index = section.dataset.index;
+
+    const key = section.querySelector(`[name="criteria[${index}][key]"]`)?.value.trim();
+    const labelKz = section.querySelector(`[name="criteria[${index}][label_kz]"]`)?.value.trim();
+
+    const score2Kz = section.querySelector(`[name="criteria[${index}][score_2_kz]"]`)?.value.trim();
+    const score1Kz = section.querySelector(`[name="criteria[${index}][score_1_kz]"]`)?.value.trim();
+    const score0Kz = section.querySelector(`[name="criteria[${index}][score_0_kz]"]`)?.value.trim();
+
+    if (!key || !labelKz) {
+      return;
+    }
+
+    criteria.push({
+      key: key,
+      label_kz: labelKz,
+      scores: {
+        "2": {
+          label_kz: score2Kz || "толық орындайды"
+        },
+        "1": {
+          label_kz: score1Kz || "ішінара орындайды"
+        },
+        "0": {
+          label_kz: score0Kz || "орындамайды"
+        }
+      }
+    });
+  });
+
+  return {
+    type: "checking_notebooks_table",
+    info_fields: infoFields,
+    criteria: criteria,
+    rating: {{ rating_data | tojson }}
+  };
+}
+
+document.getElementById("templateConstructorForm").addEventListener("submit", function () {
+  document.getElementById("schema_json").value = JSON.stringify(buildCheckingNotebooksSchema());
+});
+</script>
+{% endblock %}

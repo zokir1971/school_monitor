@@ -180,10 +180,6 @@ async def school_monthly_page(
         month=month,
     )
 
-    print("MONTH PLAN:", month_plan)
-    print("MONTH PLAN STATUS:", month_plan.status if month_plan else None)
-    print("MONTH PLAN STATUS TYPE:", type(month_plan.status) if month_plan else None)
-
     blocks = []
 
     if month_plan:
@@ -261,10 +257,7 @@ async def school_monthly_build_draft(
         cast(ResponsibleRole, r).value: cast(ResponsibleRole, r).label_kz
         for r in ResponsibleRole
     }
-    print("MONTH_PLAN:", month_plan)
-    print("YEAR:", month_plan.year if month_plan else None)
-    print("MONTH:", month_plan.month if month_plan else None)
-    print("WEEKS:", weeks)
+
     return render(
         templates,
         request,
@@ -459,18 +452,11 @@ async def school_monthly_submit(
         db: AsyncSession = Depends(get_db),
         _user: User = Depends(require_roles(UserRole.SCHOOL_ADMIN)),
 ):
-    print("ROUTE HIT")
-    print("month =", month)
-    print("month_plan_id =", month_plan_id)
-    print("school_plan_id =", school_plan_id)
-
     try:
-        print("BEFORE SERVICE")
         await SchoolMonthlyPlanningService.submit_month_plan(
             db,
             month_plan_id=month_plan_id
         )
-        print("AFTER SERVICE")
 
         return RedirectResponse(
             url=(
@@ -483,7 +469,6 @@ async def school_monthly_submit(
         )
 
     except HTTPException as e:
-        print("HTTPException:", e.detail)
         return RedirectResponse(
             url=(
                 f"/planning/school/monthly"
@@ -496,7 +481,7 @@ async def school_monthly_submit(
 
     except Exception as e:
         await db.rollback()
-        print("Exception:", repr(e))
+
         return RedirectResponse(
             url=(
                 f"/planning/school/monthly"

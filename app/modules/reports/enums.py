@@ -32,7 +32,7 @@ class ReportType(str, enum.Enum):
     LESSON_OBSERVATION = ("lesson_observation", "Сабақты бақылау парағы")
     KNOWLEDGE_QUALITY_TABLE = ("knowledge_quality_table", "Білім сапасының кестесі")
     CHECKING_NOTEBOOKS_TABLE = ("checking_notebooks_table", "Дәптер тексеру кестесі")
-    READING_SPEED_TABLE = ("Reading_speed_table", "Оқу жылдамдығы")
+    READING_SPEED_TABLE = ("reading_speed_table", "Оқу жылдамдығы")
     DOCUMENT_ANALYSIS = ("document_analysis", "Құжаттарды талдау")
     ANALYTICAL_REFERENCE = ("analytical_reference", "Анықтама")
     CLASS_SUMMARY = ("class_summary", "Жалпылама талдау кестесі")
@@ -66,6 +66,35 @@ class TaskDocumentSource(str, enum.Enum):
     UPLOAD = ("upload", "Файл жүктеу")
     GENERATED = ("generated", "Жүйеде қалыптастырылған")
     TEMPLATE = ("template", "Шаблон негізінде")
+
+    def __new__(cls, value: str, label_kz: str):
+        obj = str.__new__(cls, value)
+        obj._value_ = value
+        obj.label_kz = label_kz
+        return obj
+
+
+class TaskCompletionMode(str, enum.Enum):
+    SIMPLE_FINAL_DOCUMENT = (
+        "simple_final_document",
+        "Тек қорытынды құжат"
+    )
+
+    FINAL_WITH_SYSTEM_REPORTS = (
+        "final_with_system_reports",
+        "Қорытынды құжат + жүйелік есептер"
+    )
+
+    def __new__(cls, value: str, label_kz: str):
+        obj = str.__new__(cls, value)
+        obj._value_ = value
+        obj.label_kz = label_kz
+        return obj
+
+
+class ReportTemplateMode(str, enum.Enum):
+    STANDARD = ("standard", "Стандартты шаблон")
+    CUSTOM = ("custom", "Жеке шаблон")
 
     def __new__(cls, value: str, label_kz: str):
         obj = str.__new__(cls, value)

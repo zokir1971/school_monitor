@@ -2,6 +2,7 @@
 cd C:\Users\user\PycharmProjects\school_monitor
 .\venv\Scripts\Activate.ps1
 uvicorn app.main:app --reload
+python run_dev.py
 
 Очистка таблицы от записей вместе и связи:
 TRUNCATE TABLE school_staff_members RESTART IDENTITY CASCADE;

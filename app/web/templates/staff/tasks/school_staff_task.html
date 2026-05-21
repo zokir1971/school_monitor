@@ -8,6 +8,8 @@
 
 {% block content %}
 
+{% set accepted_task_id = request.query_params.get("accepted_task_id") %}
+
 <div class="page">
 
   <div class="sticky-head">
@@ -43,6 +45,24 @@
   <div class="page-inner">
     <div class="card card--large">
 
+      {% if request.query_params.get("success") == "accepted" %}
+        <div class="hint-box" style="margin-bottom:16px;">
+          <div class="hint-box__title">Задача принята</div>
+          <div class="hint-box__text">
+            Задача успешно принята в исполнение. Теперь можно нажать «Продолжить».
+          </div>
+        </div>
+      {% endif %}
+
+      {% if request.query_params.get("error") %}
+        <div class="hint-box" style="margin-bottom:16px;">
+          <div class="hint-box__title">Ошибка</div>
+          <div class="hint-box__text">
+            {{ request.query_params.get("error") }}
+          </div>
+        </div>
+      {% endif %}
+
       <table class="plan">
         <thead>
           <tr>
@@ -60,7 +80,8 @@
 
         <tbody>
           {% for t in tasks %}
-            <tr class="{% if current_week is not none and t.week_of_month == current_week %}row-current{% endif %}">
+            {% set task_status = t.status %}
+            <tr class="{% if accepted_task_id and accepted_task_id|int == t.month_item_id %}row-current{% elif current_week is not none and t.week_of_month == current_week %}row-current{% endif %}">
               <td class="nowrap">
                 {{ t.week_of_month or "—" }}
               </td>
@@ -82,61 +103,63 @@
               <td>{{ t.review_place or "—" }}</td>
 
               <td class="nowrap">
-  {% set task_status = t.status.value if t.status is not string and t.status.value is defined else t.status %}
 
   {% if task_status in ["todo", "not_executed"] %}
     <form method="post" action="{{ url_for('take_task_to_work') }}">
       <input type="hidden" name="task_id" value="{{ t.month_item_id }}">
       <input type="hidden" name="month" value="{{ month }}">
+
       <button type="submit" class="btn btn-primary btn-sm">
         Принять на исполнение
       </button>
     </form>
 
-  {% elif task_status == "in_progress" %}
-    <a href="{{ url_for('staff_tasks_execute_page') }}?selected_task_id={{ t.month_item_id }}&month={{ month }}"
-       class="btn btn-outline-success btn-sm">
-      Продолжить
-    </a>
-
-  {% elif task_status == "done" %}
-    <a href="{{ url_for('staff_report_execute_page', month_item_id=t.month_item_id) }}"
-       class="btn btn-outline-secondary btn-sm">
-      Просмотр
+  {% elif t.action_url %}
+    <a href="{{ t.action_url }}"
+       class="btn
+              {% if t.action_kind == 'continue' %}
+                btn-outline-success
+              {% elif t.action_kind == 'view' %}
+                btn-outline-secondary
+              {% else %}
+                btn-outline-primary
+              {% endif %}
+              btn-sm">
+      {{ t.action_label or "Открыть" }}
     </a>
 
   {% else %}
     —
   {% endif %}
+
 </td>
+              <td>
+                <div class="traffic-status">
+                  {% if task_status == "todo" %}
+                    <span class="traffic traffic--yellow"></span>
+                    <span class="traffic-status__text">{{ t.status_label or "Жоспарланған" }}</span>
 
-<td>
-  <div class="traffic-status">
-    {% if t.status == "todo" %}
-      <span class="traffic traffic--yellow"></span>
-      <span class="traffic-status__text">{{ t.status_label or "Жоспарланған" }}</span>
+                  {% elif task_status == "in_progress" %}
+                    <span class="traffic traffic--green"></span>
+                    <span class="traffic-status__text">{{ t.status_label or "Орындалу үстінде" }}</span>
 
-    {% elif t.status == "in_progress" %}
-      <span class="traffic traffic--green"></span>
-      <span class="traffic-status__text">{{ t.status_label or "Орындалу үстінде" }}</span>
+                  {% elif task_status == "done" %}
+                    <span class="traffic traffic--blue"></span>
+                    <span class="traffic-status__text">{{ t.status_label or "Орындалды" }}</span>
 
-    {% elif t.status == "done" %}
-      <span class="traffic traffic--blue"></span>
-      <span class="traffic-status__text">{{ t.status_label or "Орындалды" }}</span>
+                  {% elif task_status == "not_executed" %}
+                    <span class="traffic traffic--red"></span>
+                    <span class="traffic-status__text">{{ t.status_label or "Орындалмады" }}</span>
 
-    {% elif t.status == "not_executed" %}
-      <span class="traffic traffic--red"></span>
-      <span class="traffic-status__text">{{ t.status_label or "Орындалмады" }}</span>
-
-    {% else %}
-      <span class="traffic-status__text">—</span>
-    {% endif %}
-  </div>
-</td>
+                  {% else %}
+                    <span class="traffic-status__text">—</span>
+                  {% endif %}
+                </div>
+              </td>
             </tr>
           {% else %}
             <tr>
-              <td colspan="8" class="empty">
+              <td colspan="9" class="empty">
                 На этот месяц задачи не назначены
               </td>
             </tr>

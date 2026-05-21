@@ -64,7 +64,7 @@ async def school_staff_page(
     members = (await db.execute(q)).scalars().all()
     allowed_positions = sorted(ALLOWED_POSITIONS["kz"])
     return templates.TemplateResponse(
-        "staff/school_staff.html",
+        "staff/members/school_staff.html",
         {
             "user": user,
             "request": request,
@@ -168,7 +168,7 @@ async def school_staff_member_edit(
     allowed_positions = sorted(ALLOWED_POSITIONS["kz"])
 
     return templates.TemplateResponse(
-        "staff/member_edit.html",
+        "staff/members/member_edit.html",
         {"user": user, "request": request, "m": m, "allowed_positions": allowed_positions},
     )
 
@@ -324,7 +324,7 @@ async def roles_page(
     responsible_roles = [{"value": r.value, "label_kz": r.label_kz} for r in ResponsibleRole.__members__.values()]
 
     return templates.TemplateResponse(
-        "staff/member_roles.html",
+        "staff/members/member_roles.html",
         {"user": user, "request": request, "m": m, "responsible_roles": responsible_roles, "member_roles": member_roles},
     )
 

@@ -289,17 +289,6 @@ class SchoolPlanExportService:
         review_places_text = cls._join_review_places(review_places)
         documents_text = cls._join_documents(documents)
 
-        print(
-            "ROW PERIOD DEBUG:",
-            row.id,
-            "period_type=", getattr(row, "period_type", None),
-            "period_type_int=", getattr(row, "period_type_int", None),
-            "period_value_int=", getattr(row, "period_value_int", None),
-            "period_type_values=", getattr(row, "period_type_values", None),
-            "period_values=", getattr(row, "period_values", None),
-            "period_text=", cls._build_period_text(row),
-        )
-
         return ExportRow11DTO(
             id=row.id,
             row_order=row.row_order,

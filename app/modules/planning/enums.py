@@ -67,6 +67,7 @@ class PlanItemStatus(str, enum.Enum):
     TODO = ("todo", "Жоспарланған")
     IN_PROGRESS = ("in_progress", "Орындалу үстінде")
     DONE = ("done", "Орындалды")
+    REVIEWED = ("reviewed", "Қаралды")
     NOT_EXECUTED = ("not_executed", "Орындалмады")
 
     def __new__(cls, value: str, label_kz: str):

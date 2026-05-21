@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Акт проверки тетрадей</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: "DejaVu Sans", Arial, sans-serif;
+            font-size: 12px;
+            color: #111827;
+            margin: 0;
+            padding: 24px;
+            line-height: 1.45;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 4px;
+            font-size: 22px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #6b7280;
+            margin-bottom: 24px;
+        }
+
+        h2 {
+            margin-top: 28px;
+            margin-bottom: 10px;
+            padding: 8px 10px;
+            background: #f3f4f6;
+            border-left: 4px solid #2563eb;
+            font-size: 15px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 18px;
+        }
+
+        th,
+        td {
+            border: 1px solid #d1d5db;
+            padding: 8px 10px;
+            vertical-align: top;
+        }
+
+        th {
+            width: 30%;
+            background: #f9fafb;
+            text-align: left;
+            font-weight: 700;
+        }
+
+        .criteria-table th,
+        .criteria-table td {
+            text-align: center;
+        }
+
+        .criteria-table .criterion-text {
+            text-align: left;
+        }
+
+        .summary-table td {
+            font-weight: 600;
+        }
+
+        .muted {
+            color: #6b7280;
+        }
+
+        .signature-box {
+            margin-top: 30px;
+            display: flex;
+            justify-content: space-between;
+            gap: 24px;
+            align-items: flex-start;
+        }
+
+        .sign-info {
+            flex: 1;
+        }
+
+        .qr-box {
+            width: 170px;
+            text-align: center;
+        }
+
+        .qr-box img {
+            width: 150px;
+            height: 150px;
+            object-fit: contain;
+            border: 1px solid #d1d5db;
+            padding: 6px;
+            background: white;
+        }
+
+        .footer {
+            margin-top: 30px;
+            text-align: center;
+            font-size: 11px;
+            color: #6b7280;
+        }
+
+        @page {
+            size: A4;
+            margin: 15mm;
+        }
+    </style>
+</head>
+
+<body>
+
+{% set data = report.criteria_scores or report.rows_json or {} %}
+{% set info = data.get("info") or {} %}
+{% set scores = data.get("scores") or {} %}
+{% set total_score = data.get("total_score") or report.total_score or 0 %}
+{% set max_score = data.get("max_score") or report.max_score or 0 %}
+{% set percent = data.get("percent") or report.percent or 0 %}
+{% set level = data.get("level") or report.level or info.get("level") or "—" %}
+
+<h1>Дәптер тексеруді бағалау парағы</h1>
+
+<div class="subtitle">
+    Электронды қол қойылған / электронно подписанный
+</div>
+
+<h2>1. Жалпы мәлімет / Общая информация</h2>
+
+<table>
+    <tbody>
+
+    <tr>
+        <th>Білім беру ұйымы / Организация образования</th>
+        <td>{{ info.get("school_name") or "—" }}</td>
+    </tr>
+
+    <tr>
+        <th>Тексеру күні / Дата проверки</th>
+        <td>{{ info.get("check_date") or "—" }}</td>
+    </tr>
+
+    <tr>
+        <th>Тексеруші / Проверяющий</th>
+        <td>{{ info.get("checker_name") or "—" }}</td>
+    </tr>
+
+    <tr>
+        <th>Тексерушінің лауазымы / Должность проверяющего</th>
+        <td>{{ info.get("checker_post") or "—" }}</td>
+    </tr>
+
+    <tr>
+        <th>Мұғалім / Учитель</th>
+        <td>{{ info.get("teacher_name") or "—" }}</td>
+    </tr>
+
+    <tr>
+        <th>Сынып / Класс</th>
+        <td>{{ info.get("class_name") or "—" }}</td>
+    </tr>
+
+    <tr>
+        <th>Пән / Предмет</th>
+        <td>{{ info.get("subject_name") or "—" }}</td>
+    </tr>
+
+    </tbody>
+</table>
+
+<h2>2. Бағалау критерийлері / Критерий оценки</h2>
+
+<table class="criteria-table">
+    <thead>
+    <tr>
+        <th style="width: 50px;">№</th>
+        <th>Критерий</th>
+        <th style="width: 100px;">Балл</th>
+    </tr>
+    </thead>
+
+    <tbody>
+
+    {% for criterion in schema.criteria or [] %}
+
+        {% set criterion_index = loop.index0 %}
+
+        {% if criterion is string %}
+            {% set criterion_key = "criterion_" ~ criterion_index %}
+            {% set criterion_text = criterion %}
+        {% else %}
+            {% set criterion_key = criterion.get("key") or "criterion_" ~ criterion_index %}
+            {% set criterion_text =
+                criterion.get("label_kz")
+                or criterion.get("text")
+                or criterion.get("name")
+                or ("Критерий " ~ loop.index)
+            %}
+        {% endif %}
+
+        {% set score_name = "score_" ~ criterion_key %}
+
+        {% set saved_score = scores.get(criterion_key) %}
+
+        {% if saved_score is none %}
+            {% set saved_score = scores.get(score_name) %}
+        {% endif %}
+
+        <tr>
+            <td>{{ loop.index }}</td>
+
+            <td class="criterion-text">
+                {{ criterion_text }}
+            </td>
+
+            <td>
+                {{ saved_score if saved_score is not none else "—" }}
+            </td>
+        </tr>
+
+    {% endfor %}
+
+    </tbody>
+</table>
+
+<h2>3. Қорытында / Итог</h2>
+
+<table class="summary-table">
+    <tbody>
+
+    <tr>
+        <th>Жалпы балл / Общий балл</th>
+        <td>{{ total_score }}</td>
+    </tr>
+
+    <tr>
+        <th>Макисмалды былл / Максимальный балл</th>
+        <td>{{ report.max_score or "—" }}</td>
+    </tr>
+
+    <tr>
+        <th>Пайыз / Процент</th>
+        <td>{{ report.percent or "—" }}%</td>
+    </tr>
+
+    <tr>
+        <th>Деңгейі / Уровень</th>
+        <td>{{ report.level or info.get("level") or "—" }}</td>
+    </tr>
+
+    </tbody>
+</table>
+
+<h2>4. Кері байланыс және ұсыныстар / Рекомендации и обратная связь</h2>
+
+<table>
+    <tbody>
+
+    <tr>
+        <th>Кері байланыс / Обратная связь</th>
+        <td>
+            {{ report.conclusion or info.get("conclusion") or "—" }}
+        </td>
+    </tr>
+
+    <tr>
+        <th>Ұсыныс / Рекомендации</th>
+        <td>
+            {{ report.recommendations or info.get("recommendations") or "—" }}
+        </td>
+    </tr>
+
+    </tbody>
+</table>
+
+<div class="signature-box">
+
+    <div class="sign-info">
+
+        <h2>Электронды қолтаңба / Электронная подпись</h2>
+
+        <table>
+            <tbody>
+
+            <tr>
+                <th>Статус</th>
+                <td>Қол қойылған / Подписан</td>
+            </tr>
+
+            <tr>
+                <th>Уақыты / Дата</th>
+                <td>
+                    {% if report.submitted_at %}
+                        {{ report.submitted_at.strftime("%d.%m.%Y %H:%M") }}
+                    {% else %}
+                        —
+                    {% endif %}
+                </td>
+            </tr>
+
+            <tr>
+                <th>ID есеп / отчета</th>
+                <td>{{ report.id }}</td>
+            </tr>
+
+            </tbody>
+        </table>
+
+    </div>
+
+    {% if qr_file %}
+        <div class="qr-box">
+            <img src="{{ qr_file }}" alt="QR">
+
+            <div class="muted">
+                Нақтылығын тексеру / Проверка подлинности
+            </div>
+        </div>
+    {% endif %}
+
+</div>
+
+<div class="footer">
+    Құжат school_monitor жүйесінда автоматты жасалған <br>
+    Документ сформирован автоматически системой school_monitor.
+</div>
+
+</body>
+</html>

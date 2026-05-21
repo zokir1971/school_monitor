@@ -10,7 +10,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 from app.db.session import async_session_maker
-from app.modules.staff.service_task import (
+from app.modules.tasks.month_plan_item_status_service import (
     SchoolMonthPlanItemStatusService,
 )
 

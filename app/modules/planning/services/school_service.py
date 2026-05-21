@@ -208,16 +208,6 @@ class SchoolPlanEditService:
         # 4) Читаем строки после возможного создания
         rows4 = await SchoolPlanningRepo.list_rows4_by_direction(db, plan_id=plan_id, direction_id=direction_id)
         rows11 = await SchoolPlanningRepo.list_rows11_by_direction(db, plan_id=plan_id, direction_id=direction_id)
-        # ===== DEBUG ПРОВЕРКА =====
-        print("====== DEBUG ROWS11 ======")
-        for r in rows11:
-            print(
-                "ROW ID:", r.id,
-                "PERIOD:", r.period_type, r.period_value_int, r.period_values,
-                "ROLES:", [a.role.value for a in getattr(r, "role_assignments", [])]
-            )
-        print("====== END DEBUG ======")
-        # ==========================
 
         return DirectionEditDTO(direction=direction, rows4=rows4, rows11=rows11)
 

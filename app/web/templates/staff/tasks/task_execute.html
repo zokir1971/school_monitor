@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+
+{% block title %}Исполнение задачи{% endblock %}
+
+{% block extra_css %}
+  <link rel="stylesheet" href="{{ url_for('static', path='css/staff_task.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="page">
+  <div class="page-inner">
+
+    <div class="execute-head card">
+      <div class="execute-head__left">
+        <h2>Исполнение задачи</h2>
+        <div class="sub">Подготовка материалов и справки по результатам контроля</div>
+      </div>
+
+      <div>
+        <a href="{{ request.url_for('staff_tasks_page') }}?month={{ month }}" class="btn btn-secondary">
+          Назад к задачам
+        </a>
+      </div>
+    </div>
+
+    {% if request.query_params.get("success") == "accepted" %}
+      <div class="card">
+        <div class="hint-box">
+          <div class="hint-box__title">Задача принята</div>
+          <div class="hint-box__text">
+            Задача успешно принята в исполнение. Теперь выберите её в списке и заполните материалы.
+          </div>
+        </div>
+      </div>
+    {% endif %}
+
+    {% if request.query_params.get("success") == "saved" %}
+      <div class="card">
+        <div class="hint-box">
+          <div class="hint-box__title">Сохранено</div>
+          <div class="hint-box__text">
+            Данные по исполнению задачи успешно сохранены.
+          </div>
+        </div>
+      </div>
+    {% endif %}
+
+    {% if request.query_params.get("error") %}
+      <div class="card">
+        <div class="hint-box">
+          <div class="hint-box__title">Ошибка</div>
+          <div class="hint-box__text">
+            {{ request.query_params.get("error") }}
+          </div>
+        </div>
+      </div>
+    {% endif %}
+
+    <div class="card">
+      <h3>Выбор задачи</h3>
+
+      {% if tasks %}
+        <form class="form-grid" onsubmit="return false;">
+          <input type="hidden" name="month" id="month" value="{{ month }}">
+
+          <div class="form-field">
+            <label for="selected_task_id">Принятые задачи</label>
+
+            <select
+              name="selected_task_id"
+              id="selected_task_id"
+              hx-get="{{ request.url_for('staff_task_execute_details') }}"
+              hx-trigger="change"
+              hx-target="#task-execution-details"
+              hx-swap="innerHTML"
+              hx-include="#month, #selected_task_id"
+              hx-indicator="#task-details-loader"
+            >
+              <option value="">Выберите задачу</option>
+
+              {% for t in tasks %}
+                {% set is_selected = selected_task_id and selected_task_id == t.month_item_id %}
+                <option value="{{ t.month_item_id }}" {% if is_selected %}selected{% endif %}>
+                  {{ t.topic or ("Задача #" ~ t.month_item_id) }}
+                  {% if t.planned_end %}
+                    — до {{ t.planned_end.strftime("%d.%m.%Y") if t.planned_end.strftime is defined else t.planned_end }}
+                  {% endif %}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+        </form>
+      {% else %}
+        <div class="hint-box">
+          <div class="hint-box__title">Нет задач</div>
+          <div class="hint-box__text">
+            У вас пока нет задач со статусом «Орындалу үстінде».
+          </div>
+        </div>
+      {% endif %}
+    </div>
+
+    <div id="task-details-loader" class="card htmx-indicator" style="display:none;">
+      <div class="hint-box">
+        <div class="hint-box__title">Загрузка</div>
+        <div class="hint-box__text">
+          Загружаем данные по выбранной задаче...
+        </div>
+      </div>
+    </div>
+
+    <div id="task-execution-details">
+      <div class="card">
+        <div class="hint-box">
+          <div class="hint-box__title">Выберите задачу</div>
+          <div class="hint-box__text">
+            Для начала выберите одну из принятых задач в верхнем списке.
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+  <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+  <script src="{{ url_for('static', path='js/task_execute.js') }}"></script>
+
+{% endblock %}

@@ -1,5 +1,11 @@
 # app/main.py
 
+import asyncio
+import sys
+
+if sys.platform == "win32":
+    asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
+
 import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -14,7 +20,6 @@ from app.core.config import get_settings
 from app.core.logging_config import setup_logging
 from app.middlewares.auth import AuthRedirectMiddleware
 from app.routers import router as root_router
-
 # -------------------------------
 # Settings & Logging
 # -------------------------------
@@ -60,9 +65,6 @@ app.mount(
 )
 
 app.include_router(root_router)
-for r in app.router.routes:
-    if getattr(r, "name", "") == "school_staff_dismiss_member":
-        print("FOUND:", r.path, r.methods)
 
 
 # -------------------------------

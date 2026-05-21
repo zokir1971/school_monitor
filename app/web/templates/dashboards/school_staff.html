@@ -30,21 +30,20 @@
         </div>
       </a>
 
-      <a class="card" href="{{ request.url_for('staff_tasks_execute_page') }}">
-        <div class="card__inner">
-          <div class="card__top">
-            <div class="card__icon">📋</div>
-          </div>
-          <h3 class="card__title">
-            Перейти на выполнение поставленных задач
-          </h3>
-          <p class="card__desc">Алгоритм выполнения задач</p>
-          <div class="card__footer">
-            <span>Открыть</span><span class="card__arrow">→</span>
-          </div>
-        </div>
-      </a>
-
+      <a class="card" href="{{ request.url_for('staff_tasks_execute_page') }}?month={{ today.month }}">
+  <div class="card__inner">
+    <div class="card__top">
+      <div class="card__icon">📋</div>
+    </div>
+    <h3 class="card__title">
+      Перейти на выполнение поставленных задач
+    </h3>
+    <p class="card__desc">Построения алгоритма выполнение задач на {{ MONTH_NAMES[today.month] }} месяц</p>
+    <div class="card__footer">
+      <span>Открыть</span><span class="card__arrow">→</span>
+    </div>
+  </div>
+</a>
       <a class="card" href="">
         <div class="card__inner">
           <div class="card__top">

@@ -20,65 +20,6 @@ def normalize_text(value: str | None) -> str:
     return " ".join(value.strip().split())
 
 
-'''
-class OrgRepo:
-    # ---------------------------------------------------
-    # Получить список областей (Region) для селектора
-    # Используется в API /api/org/regions
-    # ---------------------------------------------------
-    @staticmethod
-    async def list_regions(db: AsyncSession) -> list[Region]:
-        res = await db.execute(select(Region).order_by(Region.name))
-        return list(res.scalars())
-
-    # ---------------------------------------------------
-    # Получить список районов по области (Region -> District)
-    # Используется в API /api/org/districts
-    # ---------------------------------------------------
-    @staticmethod
-    async def list_districts_by_region(db: AsyncSession, *, region_id: int) -> list[District]:
-        res = await db.execute(select(District).where(District.region_id == region_id).order_by(District.name))
-        # scalars() отдаёт итератор District-объектов, list() даёт list[District]
-        return list(res.scalars())
-
-    # ---------------------------------------------------
-    # Получить список школ по району (District -> School)
-    # Используется в API /api/org/schools
-    # ---------------------------------------------------
-    @staticmethod
-    async def list_schools_by_district(db: AsyncSession, *, district_id: int) -> list[School]:
-        res = await db.execute(
-            select(School)
-            .where(School.district_id == district_id)
-            .order_by(School.name)
-        )
-        return list(res.scalars())
-
-    # ---------------------------------------------------
-    # проверки принадлежности (регион-район-школа)
-    # ---------------------------------------------------
-    @staticmethod
-    async def district_belongs_to_region(db: AsyncSession, *, district_id: int, region_id: int) -> bool:
-        res = await db.execute(
-            select(District.id).where(
-                District.id == district_id,
-                District.region_id == region_id,
-            )
-        )
-        return res.scalar_one_or_none() is not None
-
-    @staticmethod
-    async def school_belongs_to_district(db: AsyncSession, *, school_id: int, district_id: int) -> bool:
-        res = await db.execute(
-            select(School.id).where(
-                School.id == school_id,
-                School.district_id == district_id,
-            )
-        )
-        return res.scalar_one_or_none() is not None
-'''
-
-
 class OrgRepo:
     @staticmethod
     async def list_regions(db: AsyncSession) -> list[Region]:

@@ -12,10 +12,11 @@ from .reports import router as reports_router
 from .org import router as org_router
 from .planning import router as planning_router
 from .staff import router as staff_router
+from .tasks import router as tasks_router
 
 
 router = APIRouter()
-router.include_router(core_router)     # <-- ВАЖНО
+router.include_router(core_router)
 router.include_router(auth_router)
 router.include_router(setup_router)
 router.include_router(dashboards_router)
@@ -24,3 +25,4 @@ router.include_router(reports_router)
 router.include_router(org_router)
 router.include_router(planning_router)
 router.include_router(staff_router)
+router.include_router(tasks_router)

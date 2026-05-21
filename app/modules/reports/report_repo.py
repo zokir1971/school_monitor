@@ -1,611 +1,75 @@
+# app/modules/reports/report_repo.py
 from __future__ import annotations
 
-from collections.abc import Iterable
+from datetime import datetime, timezone
 
-from sqlalchemy import func, select, update, delete
+from sqlalchemy import select, delete, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.modules.planning.enums import PlanItemStatus
-from app.modules.planning.models_month_plan import (
-    SchoolMonthPlanItem,
-    SchoolMonthPlanItemAssignee, SchoolMonthPlanItemReviewPlace,
+from app.modules.planning.models_month_plan import SchoolMonthPlanItem, SchoolMonthPlanItemAssignee
+from app.modules.planning.models_school import SchoolPlanRow11RequiredDocument, SchoolPlanRow11
+from app.modules.reports.enums import DocumentType, TaskDocumentSource, TaskDocumentStatus
+from app.modules.reports.models_documents import (
+    TaskExecutionData,
+    TaskExecutionDocument,
+    TaskExecutionSelectedReport,
 )
-from app.modules.planning.models_school import (
-    SchoolPlanRow11,
-    SchoolPlanRow11RequiredDocument,
-)
-from app.modules.reports.enums import TaskDocumentSource, TaskDocumentStatus
-from app.modules.reports.models_documents import ReportTypeModel, TaskExecutionDocument, TaskExecutionData, \
-    TaskExecutionDataReportType
+from app.modules.reports.report_schemas import ExecutionPageBundle
 from app.modules.staff.models_staff_school import SchoolStaffRole, SchoolStaffMember
 from app.modules.users.models import User
 
 
 class ReportRepo:
-    @staticmethod
-    def _task_with_relations_stmt():
-        execution_documents_load = selectinload(SchoolMonthPlanItem.execution_documents)
-        execution_data_load = selectinload(SchoolMonthPlanItem.execution_data)
+    """
+    Repo reports-domain для страницы исполнения задачи.
 
-        return (
-            select(SchoolMonthPlanItem)
-            .options(
-                selectinload(SchoolMonthPlanItem.source_row11).selectinload(
-                    SchoolPlanRow11.required_documents
-                ),
+    Здесь оставлены только методы, которые реально нужны
+    для staff_task_execute_details() и StaffTasksService.get_execution_page_payload().
 
-                execution_documents_load.selectinload(
-                    TaskExecutionDocument.required_document
-                ),
-                execution_documents_load.selectinload(
-                    TaskExecutionDocument.uploaded_by_user
-                ),
-                execution_documents_load.selectinload(
-                    TaskExecutionDocument.submitted_by_user
-                ),
-                execution_documents_load.selectinload(
-                    TaskExecutionDocument.reviewed_by_user
-                ),
+    Что repo делает:
+    - получает execution_data
+    - получает current_draft
+    - объединяет их в bundle
 
-                execution_data_load.selectinload(
-                    TaskExecutionData.report_type_links
-                ).selectinload(
-                    TaskExecutionDataReportType.report_type
-                ),
+    Что repo не делает:
+    - не собирает DTO
+    - не знает про шаблон
+    - не строит control_flow
+    """
 
-                selectinload(SchoolMonthPlanItem.assignees).selectinload(
-                    SchoolMonthPlanItemAssignee.staff_role
-                ),
-
-                selectinload(SchoolMonthPlanItem.review_places),
-            )
-        )
-
-    @staticmethod
-    def _apply_executor_user_filter(stmt, *, user_id: int):
+    @classmethod
+    async def get_execution_page_bundle(
+            cls,
+            db: AsyncSession,
+            *,
+            month_item_id: int,
+    ) -> ExecutionPageBundle:
         """
-        Оставляем только те задачи, где текущий пользователь назначен исполнителем.
-        Фильтр должен идти через assignees -> staff_role -> staff_member -> user_account.
+        Получить bundle данных execution-страницы.
+
+        Зачем нужен:
+        - сервису удобно получать execution_data и current_draft
+          одной repo-точкой
+        - сервис остается чище
+        - внутреннюю реализацию можно позже оптимизировать
+          без изменения сервисного слоя
         """
-        return stmt.where(
-            SchoolMonthPlanItem.assignees.any(
-                SchoolMonthPlanItemAssignee.staff_role.has(
-                    SchoolStaffRole.is_active.is_(True),
-                )
-            ),
-            SchoolMonthPlanItem.assignees.any(
-                SchoolMonthPlanItemAssignee.staff_role.has(
-                    SchoolStaffRole.staff_member.has(
-                        SchoolStaffMember.is_active.is_(True)
-                    )
-                )
-            ),
-            SchoolMonthPlanItem.assignees.any(
-                SchoolMonthPlanItemAssignee.staff_role.has(
-                    SchoolStaffRole.staff_member.has(
-                        SchoolStaffMember.user_account.has(User.id == user_id)
-                    )
-                )
-            ),
+        current_draft = await cls.get_current_draft(
+            db,
+            month_item_id=month_item_id,
         )
-
-    @classmethod
-    async def get_month_item_with_required_documents(
-            cls,
-            db: AsyncSession,
-            *,
-            month_item_id: int,
-    ) -> SchoolMonthPlanItem | None:
-        stmt = cls._task_with_relations_stmt().where(
-            SchoolMonthPlanItem.id == month_item_id
-        )
-
-        result = await db.execute(stmt)
-        return result.scalars().unique().one_or_none()
-
-    @classmethod
-    async def get_executor_month_item(
-            cls,
-            db: AsyncSession,
-            *,
-            month_item_id: int,
-            user_id: int,
-    ) -> SchoolMonthPlanItem | None:
-        stmt = cls._task_with_relations_stmt().where(
-            SchoolMonthPlanItem.id == month_item_id
-        )
-        stmt = cls._apply_executor_user_filter(stmt, user_id=user_id)
-
-        result = await db.execute(stmt)
-        return result.scalars().unique().one_or_none()
-
-    @classmethod
-    async def get_executor_month_item_by_status(
-            cls,
-            db: AsyncSession,
-            *,
-            month_item_id: int,
-            user_id: int,
-            allowed_statuses: Iterable[PlanItemStatus],
-    ) -> SchoolMonthPlanItem | None:
-        stmt = cls._task_with_relations_stmt().where(
-            SchoolMonthPlanItem.id == month_item_id,
-            SchoolMonthPlanItem.status.in_(list(allowed_statuses)),
-        )
-        stmt = cls._apply_executor_user_filter(stmt, user_id=user_id)
-
-        result = await db.execute(stmt)
-        return result.scalars().unique().one_or_none()
-
-    @classmethod
-    async def get_required_document_for_task(
-            cls,
-            db: AsyncSession,
-            *,
-            month_item_id: int,
-            required_document_id: int,
-    ) -> SchoolPlanRow11RequiredDocument | None:
-        stmt = (
-            select(SchoolPlanRow11RequiredDocument)
-            .join(
-                SchoolPlanRow11,
-                SchoolPlanRow11.id == SchoolPlanRow11RequiredDocument.row11_id,
-            )
-            .join(
-                SchoolMonthPlanItem,
-                SchoolMonthPlanItem.source_row11_id == SchoolPlanRow11.id,
-            )
-            .where(SchoolMonthPlanItem.id == month_item_id)
-            .where(SchoolPlanRow11RequiredDocument.id == required_document_id)
-        )
-
-        result = await db.execute(stmt)
-        return result.scalar_one_or_none()
-
-    @classmethod
-    async def get_required_documents_for_task(
-            cls,
-            db: AsyncSession,
-            *,
-            month_item_id: int,
-    ) -> list[SchoolPlanRow11RequiredDocument]:
-        stmt = (
-            select(SchoolPlanRow11RequiredDocument)
-            .join(
-                SchoolPlanRow11,
-                SchoolPlanRow11.id == SchoolPlanRow11RequiredDocument.row11_id,
-            )
-            .join(
-                SchoolMonthPlanItem,
-                SchoolMonthPlanItem.source_row11_id == SchoolPlanRow11.id,
-            )
-            .where(SchoolMonthPlanItem.id == month_item_id)
-            .order_by(SchoolPlanRow11RequiredDocument.id.asc())
-        )
-
-        result = await db.execute(stmt)
-        return list(result.scalars().all())
-
-    @classmethod
-    async def get_required_documents_for_month_item(
-            cls,
-            db: AsyncSession,
-            *,
-            month_item_id: int,
-    ) -> list[SchoolPlanRow11RequiredDocument]:
-        """
-        Алиас под сервис.
-        """
-        return await cls.get_required_documents_for_task(
+        execution_data = await cls.get_execution_data_for_task(
             db,
             month_item_id=month_item_id,
         )
 
-    @classmethod
-    async def get_current_document(
-            cls,
-            db: AsyncSession,
-            *,
-            month_item_id: int,
-            required_document_id: int | None,
-            document_type,
-            source: TaskDocumentSource,
-            is_final: bool,
-    ) -> TaskExecutionDocument | None:
-        stmt = (
-            select(TaskExecutionDocument)
-            .where(TaskExecutionDocument.month_item_id == month_item_id)
-            .where(TaskExecutionDocument.document_type == document_type)
-            .where(TaskExecutionDocument.source == source)
-            .where(TaskExecutionDocument.is_final.is_(is_final))
-            .where(TaskExecutionDocument.is_current.is_(True))
-            .options(
-                selectinload(TaskExecutionDocument.required_document),
-                selectinload(TaskExecutionDocument.uploaded_by_user),
-                selectinload(TaskExecutionDocument.submitted_by_user),
-                selectinload(TaskExecutionDocument.reviewed_by_user),
-            )
-            .order_by(
-                TaskExecutionDocument.version.desc(),
-                TaskExecutionDocument.id.desc(),
-            )
+        return ExecutionPageBundle(
+            current_draft=current_draft,
+            execution_data=execution_data,
         )
 
-        if required_document_id is None:
-            stmt = stmt.where(TaskExecutionDocument.required_document_id.is_(None))
-        else:
-            stmt = stmt.where(
-                TaskExecutionDocument.required_document_id == required_document_id
-            )
-
-        result = await db.execute(stmt)
-        return result.scalars().first()
-
-    @classmethod
-    async def get_document_by_id(
-            cls,
-            db: AsyncSession,
-            *,
-            document_id: int,
-    ) -> TaskExecutionDocument | None:
-        stmt = (
-            select(TaskExecutionDocument)
-            .where(TaskExecutionDocument.id == document_id)
-            .options(
-                selectinload(TaskExecutionDocument.required_document),
-                selectinload(TaskExecutionDocument.uploaded_by_user),
-                selectinload(TaskExecutionDocument.submitted_by_user),
-                selectinload(TaskExecutionDocument.reviewed_by_user),
-            )
-        )
-
-        result = await db.execute(stmt)
-        return result.scalar_one_or_none()
-
-    @classmethod
-    async def get_documents_for_task(
-            cls,
-            db: AsyncSession,
-            *,
-            month_item_id: int,
-            only_current: bool | None = None,
-    ) -> list[TaskExecutionDocument]:
-        stmt = (
-            select(TaskExecutionDocument)
-            .where(TaskExecutionDocument.month_item_id == month_item_id)
-            .options(
-                selectinload(TaskExecutionDocument.required_document),
-                selectinload(TaskExecutionDocument.uploaded_by_user),
-                selectinload(TaskExecutionDocument.submitted_by_user),
-                selectinload(TaskExecutionDocument.reviewed_by_user),
-            )
-            .order_by(
-                TaskExecutionDocument.document_type.asc(),
-                TaskExecutionDocument.version.desc(),
-                TaskExecutionDocument.created_at.desc(),
-            )
-        )
-
-        if only_current is True:
-            stmt = stmt.where(TaskExecutionDocument.is_current.is_(True))
-        elif only_current is False:
-            stmt = stmt.where(TaskExecutionDocument.is_current.is_(False))
-
-        result = await db.execute(stmt)
-        return list(result.scalars().all())
-
-    @classmethod
-    async def get_current_final_documents_for_task(
-            cls,
-            db: AsyncSession,
-            *,
-            month_item_id: int,
-    ) -> list[TaskExecutionDocument]:
-        stmt = (
-            select(TaskExecutionDocument)
-            .where(TaskExecutionDocument.month_item_id == month_item_id)
-            .where(TaskExecutionDocument.is_current.is_(True))
-            .where(TaskExecutionDocument.is_final.is_(True))
-            .options(
-                selectinload(TaskExecutionDocument.required_document),
-                selectinload(TaskExecutionDocument.uploaded_by_user),
-                selectinload(TaskExecutionDocument.submitted_by_user),
-                selectinload(TaskExecutionDocument.reviewed_by_user),
-            )
-            .order_by(
-                TaskExecutionDocument.document_type.asc(),
-                TaskExecutionDocument.version.desc(),
-                TaskExecutionDocument.created_at.desc(),
-            )
-        )
-
-        result = await db.execute(stmt)
-        return list(result.scalars().all())
-
-    @classmethod
-    async def get_next_version(
-            cls,
-            db: AsyncSession,
-            *,
-            month_item_id: int,
-            required_document_id: int | None,
-            document_type,
-    ) -> int:
-        stmt = (
-            select(func.coalesce(func.max(TaskExecutionDocument.version), 0))
-            .where(TaskExecutionDocument.month_item_id == month_item_id)
-            .where(TaskExecutionDocument.document_type == document_type)
-        )
-
-        if required_document_id is None:
-            stmt = stmt.where(TaskExecutionDocument.required_document_id.is_(None))
-        else:
-            stmt = stmt.where(
-                TaskExecutionDocument.required_document_id == required_document_id
-            )
-
-        result = await db.execute(stmt)
-        max_version = result.scalar_one()
-        return int(max_version) + 1
-
-    @classmethod
-    async def mark_not_current_documents(
-            cls,
-            db: AsyncSession,
-            *,
-            month_item_id: int,
-            required_document_id: int | None,
-            document_type,
-            sources: Iterable[TaskDocumentSource] | None = None,
-            final_only: bool | None = None,
-    ) -> None:
-        stmt = (
-            update(TaskExecutionDocument)
-            .where(TaskExecutionDocument.month_item_id == month_item_id)
-            .where(TaskExecutionDocument.document_type == document_type)
-            .where(TaskExecutionDocument.is_current.is_(True))
-            .values(is_current=False)
-        )
-
-        if required_document_id is None:
-            stmt = stmt.where(TaskExecutionDocument.required_document_id.is_(None))
-        else:
-            stmt = stmt.where(
-                TaskExecutionDocument.required_document_id == required_document_id
-            )
-
-        if sources:
-            stmt = stmt.where(TaskExecutionDocument.source.in_(list(sources)))
-
-        if final_only is True:
-            stmt = stmt.where(TaskExecutionDocument.is_final.is_(True))
-        elif final_only is False:
-            stmt = stmt.where(TaskExecutionDocument.is_final.is_(False))
-
-        await db.execute(stmt)
-
-    @classmethod
-    async def create_document(
-            cls,
-            db: AsyncSession,
-            *,
-            month_item_id: int,
-            required_document_id: int | None,
-            document_type,
-            source: TaskDocumentSource,
-            status: TaskDocumentStatus,
-            version: int,
-            is_current: bool,
-            is_final: bool,
-            title: str | None = None,
-            original_file_name: str | None = None,
-            stored_file_name: str | None = None,
-            file_path: str | None = None,
-            mime_type: str | None = None,
-            file_size: int | None = None,
-            content_html: str | None = None,
-            review_comment: str | None = None,
-            uploaded_by_user_id: int | None = None,
-            submitted_by_user_id: int | None = None,
-            reviewed_by_user_id: int | None = None,
-            submitted_at=None,
-            reviewed_at=None,
-    ) -> TaskExecutionDocument:
-        doc = TaskExecutionDocument(
-            month_item_id=month_item_id,
-            required_document_id=required_document_id,
-            document_type=document_type,
-            source=source,
-            status=status,
-            version=version,
-            is_current=is_current,
-            is_final=is_final,
-            title=title,
-            original_file_name=original_file_name,
-            stored_file_name=stored_file_name,
-            file_path=file_path,
-            mime_type=mime_type,
-            file_size=file_size,
-            content_html=content_html,
-            review_comment=review_comment,
-            uploaded_by_user_id=uploaded_by_user_id,
-            submitted_by_user_id=submitted_by_user_id,
-            reviewed_by_user_id=reviewed_by_user_id,
-            submitted_at=submitted_at,
-            reviewed_at=reviewed_at,
-        )
-        db.add(doc)
-        await db.flush()
-        return doc
-
-    @classmethod
-    async def update_document_fields(
-            cls,
-            db: AsyncSession,
-            *,
-            document: TaskExecutionDocument,
-            title: str | None = None,
-            status: TaskDocumentStatus | None = None,
-            content_html: str | None = None,
-            review_comment: str | None = None,
-            original_file_name: str | None = None,
-            stored_file_name: str | None = None,
-            file_path: str | None = None,
-            mime_type: str | None = None,
-            file_size: int | None = None,
-            uploaded_by_user_id: int | None = None,
-            submitted_by_user_id: int | None = None,
-            reviewed_by_user_id: int | None = None,
-            submitted_at=None,
-            reviewed_at=None,
-            is_current: bool | None = None,
-            is_final: bool | None = None,
-    ) -> TaskExecutionDocument:
-        if title is not None:
-            document.title = title
-        if status is not None:
-            document.status = status
-        if content_html is not None:
-            document.content_html = content_html
-        if review_comment is not None:
-            document.review_comment = review_comment
-        if original_file_name is not None:
-            document.original_file_name = original_file_name
-        if stored_file_name is not None:
-            document.stored_file_name = stored_file_name
-        if file_path is not None:
-            document.file_path = file_path
-        if mime_type is not None:
-            document.mime_type = mime_type
-        if file_size is not None:
-            document.file_size = file_size
-        if uploaded_by_user_id is not None:
-            document.uploaded_by_user_id = uploaded_by_user_id
-        if submitted_by_user_id is not None:
-            document.submitted_by_user_id = submitted_by_user_id
-        if reviewed_by_user_id is not None:
-            document.reviewed_by_user_id = reviewed_by_user_id
-        if submitted_at is not None:
-            document.submitted_at = submitted_at
-        if reviewed_at is not None:
-            document.reviewed_at = reviewed_at
-
-        if is_current is not None:
-            document.is_current = is_current
-        if is_final is not None:
-            document.is_final = is_final
-
-        await db.flush()
-        return document
-
-    @classmethod
-    async def get_report_type(
-            cls,
-            db: AsyncSession,
-            *,
-            report_type_id: int,
-    ) -> ReportTypeModel | None:
-        stmt = select(ReportTypeModel).where(ReportTypeModel.id == report_type_id)
-        result = await db.execute(stmt)
-        return result.scalar_one_or_none()
-
-    @classmethod
-    async def get_active_report_types(
-            cls,
-            db: AsyncSession,
-    ) -> list[ReportTypeModel]:
-        stmt = (
-            select(ReportTypeModel)
-            .where(ReportTypeModel.is_active.is_(True))
-            .order_by(ReportTypeModel.sort_order.asc(), ReportTypeModel.id.asc())
-        )
-        result = await db.execute(stmt)
-        return list(result.scalars().all())
-
-    @classmethod
-    async def has_final_document_for_completion(
-            cls,
-            db: AsyncSession,
-            *,
-            month_item_id: int,
-            allowed_statuses: Iterable[TaskDocumentStatus],
-    ) -> bool:
-        stmt = (
-            select(TaskExecutionDocument.id)
-            .where(TaskExecutionDocument.month_item_id == month_item_id)
-            .where(TaskExecutionDocument.is_current.is_(True))
-            .where(TaskExecutionDocument.is_final.is_(True))
-            .where(TaskExecutionDocument.source == TaskDocumentSource.UPLOAD)
-            .where(TaskExecutionDocument.required_document_id.is_not(None))
-            .where(TaskExecutionDocument.status.in_(list(allowed_statuses)))
-            .limit(1)
-        )
-
-        result = await db.execute(stmt)
-        return result.scalar_one_or_none() is not None
-
-    @classmethod
-    async def has_final_document_for_required_document(
-            cls,
-            db: AsyncSession,
-            *,
-            month_item_id: int,
-            required_document_id: int,
-            allowed_statuses: Iterable[TaskDocumentStatus],
-    ) -> bool:
-        stmt = (
-            select(TaskExecutionDocument.id)
-            .where(TaskExecutionDocument.month_item_id == month_item_id)
-            .where(TaskExecutionDocument.required_document_id == required_document_id)
-            .where(TaskExecutionDocument.is_current.is_(True))
-            .where(TaskExecutionDocument.is_final.is_(True))
-            .where(TaskExecutionDocument.source == TaskDocumentSource.UPLOAD)
-            .where(TaskExecutionDocument.status.in_(list(allowed_statuses)))
-            .limit(1)
-        )
-
-        result = await db.execute(stmt)
-        return result.scalar_one_or_none() is not None
-
-    @classmethod
-    async def count_final_documents_for_task(
-            cls,
-            db: AsyncSession,
-            *,
-            month_item_id: int,
-            allowed_statuses: Iterable[TaskDocumentStatus] | None = None,
-    ) -> int:
-        stmt = (
-            select(func.count(TaskExecutionDocument.id))
-            .where(TaskExecutionDocument.month_item_id == month_item_id)
-            .where(TaskExecutionDocument.is_current.is_(True))
-            .where(TaskExecutionDocument.is_final.is_(True))
-            .where(TaskExecutionDocument.source == TaskDocumentSource.UPLOAD)
-        )
-
-        if allowed_statuses:
-            stmt = stmt.where(TaskExecutionDocument.status.in_(list(allowed_statuses)))
-
-        result = await db.execute(stmt)
-        return int(result.scalar_one())
-
-    @classmethod
-    async def set_month_item_status(
-            cls,
-            db: AsyncSession,
-            *,
-            month_item_id: int,
-            status: PlanItemStatus,
-    ) -> None:
-        stmt = (
-            update(SchoolMonthPlanItem)
-            .where(SchoolMonthPlanItem.id == month_item_id)
-            .values(status=status)
-        )
-        await db.execute(stmt)
-
-    # получение текущего черновика
     @classmethod
     async def get_current_draft(
             cls,
@@ -613,6 +77,15 @@ class ReportRepo:
             *,
             month_item_id: int,
     ) -> TaskExecutionDocument | None:
+        """
+        Получить текущий черновик по задаче.
+
+        Логика:
+        - только current
+        - только не final
+        - если черновиков несколько, берем самый свежий
+          по version desc, id desc
+        """
         stmt = (
             select(TaskExecutionDocument)
             .where(
@@ -636,18 +109,52 @@ class ReportRepo:
             *,
             month_item_id: int,
     ) -> TaskExecutionData | None:
+        """
+        Получить execution_data для задачи.
+
+        Что подгружаем:
+        - report_type_links
+        - report_type для каждого link
+
+        Почему нужен selectinload:
+        - чтобы service мог безопасно собрать report_types
+          без дополнительных lazy-запросов
+        """
         stmt = (
             select(TaskExecutionData)
             .where(TaskExecutionData.month_item_id == month_item_id)
             .options(
-                selectinload(TaskExecutionData.report_type_links).selectinload(
-                    TaskExecutionDataReportType.report_type
+                selectinload(TaskExecutionData.selected_reports).selectinload(
+                    TaskExecutionSelectedReport.report_type
+                ),
+            )
+        )
+        return await db.scalar(stmt)
+
+    @classmethod
+    async def get_executor_month_item_for_execution(
+            cls,
+            db: AsyncSession,
+            *,
+            month_item_id: int,
+            user_id: int,
+    ) -> SchoolMonthPlanItem | None:
+        stmt = (
+            select(SchoolMonthPlanItem)
+            .where(SchoolMonthPlanItem.id == month_item_id)
+            .where(
+                SchoolMonthPlanItem.status.in_(
+                    [PlanItemStatus.TODO, PlanItemStatus.IN_PROGRESS, PlanItemStatus.DONE]
                 )
+            )
+            .options(
+                selectinload(SchoolMonthPlanItem.assignees),
             )
         )
 
-        result = await db.execute(stmt)
-        return result.scalar_one_or_none()
+        stmt = cls._apply_executor_user_filter(stmt, user_id=user_id)
+
+        return await db.scalar(stmt)
 
     @classmethod
     async def get_or_create_execution_data(
@@ -663,79 +170,495 @@ class ReportRepo:
         if execution_data:
             return execution_data
 
-        execution_data = TaskExecutionData(month_item_id=month_item_id)
+        execution_data = TaskExecutionData(
+            month_item_id=month_item_id,
+        )
         db.add(execution_data)
         await db.flush()
         return execution_data
 
     @classmethod
-    async def update_execution_data_fields(
+    async def replace_selected_reports(
             cls,
             db: AsyncSession,
             *,
-            execution_data: TaskExecutionData,
-            control_scope: str | None = None,
-            control_form: str | None = None,
-            control_kind: str | None = None,
-            evidence_note: str | None = None,
-            planned_review_place: str | None = None,
-            reference_text: str | None = None,
-            conclusion: str | None = None,
-            recommendations: str | None = None,
-            reference_file_note: str | None = None,
-            review_result: str | None = None,
-            notes: str | None = None,
-    ) -> TaskExecutionData:
-        execution_data.control_scope = control_scope
-        execution_data.control_form = control_form
-        execution_data.control_kind = control_kind
-        execution_data.evidence_note = evidence_note
-        execution_data.planned_review_place = planned_review_place
-        execution_data.reference_text = reference_text
-        execution_data.conclusion = conclusion
-        execution_data.recommendations = recommendations
-        execution_data.reference_file_note = reference_file_note
-        execution_data.review_result = review_result
-        execution_data.notes = notes
-
-        await db.flush()
-        return execution_data
-
-    @classmethod
-    async def replace_execution_data_report_types(
-            cls,
-            db: AsyncSession,
-            *,
-            execution_data: TaskExecutionData,
-            report_type_ids: list[int],
-    ) -> TaskExecutionData:
+            execution_data_id: int,
+            selected_reports: list[dict],
+    ) -> None:
         await db.execute(
-            delete(TaskExecutionDataReportType).where(
-                TaskExecutionDataReportType.execution_data_id == execution_data.id
+            delete(TaskExecutionSelectedReport).where(
+                TaskExecutionSelectedReport.execution_data_id == execution_data_id
             )
         )
 
-        for report_type_id in report_type_ids:
-            db.add(
-                TaskExecutionDataReportType(
-                    execution_data_id=execution_data.id,
-                    report_type_id=report_type_id,
+        new_rows: list[TaskExecutionSelectedReport] = []
+
+        for item in selected_reports:
+            report_type_id = item.get("report_type_id")
+            if not report_type_id:
+                continue
+
+            targets = item.get("targets") or []
+            for target in targets:
+                target_kind = str(target.get("target_kind") or "").strip()
+                target_value = str(target.get("target_value") or "").strip()
+                target_label = str(target.get("target_label") or "").strip() or None
+
+                if not target_kind or not target_value:
+                    continue
+
+                new_rows.append(
+                    TaskExecutionSelectedReport(
+                        execution_data_id=execution_data_id,
+                        report_type_id=int(report_type_id),
+                        target_kind=target_kind,
+                        target_value=target_value,
+                        target_label=target_label,
+                    )
                 )
-            )
+
+        if new_rows:
+            db.add_all(new_rows)
 
         await db.flush()
-        return execution_data
 
     @classmethod
-    async def mark_month_item_as_not_executed(
+    async def get_required_documents_for_task(
             cls,
             db: AsyncSession,
             *,
             month_item_id: int,
-    ) -> None:
+    ) -> list[SchoolPlanRow11RequiredDocument]:
+        """
+        Получить список обязательных документов для задачи.
+
+        Что грузим:
+        - только одну month-plan задачу
+        - source_row11
+        - required_documents у source_row11
+
+        Почему так:
+        - не делаем join на все подряд
+        - selectinload хорошо масштабируется для 1 -> many
+        - не тянем ненужные связи required_document дальше
+        """
         stmt = (
-            update(SchoolMonthPlanItem)
+            select(SchoolMonthPlanItem)
             .where(SchoolMonthPlanItem.id == month_item_id)
-            .values(status=PlanItemStatus.NOT_EXECUTED)
+            .options(
+                selectinload(SchoolMonthPlanItem.source_row11).selectinload(
+                    SchoolPlanRow11.required_documents
+                )
+            )
         )
+
+        result = await db.execute(stmt)
+        task = result.scalar_one_or_none()
+        if not task or not task.source_row11:
+            return []
+
+        required_documents = getattr(task.source_row11, "required_documents", None) or []
+        return list(required_documents)
+
+    @classmethod
+    async def get_final_documents_for_task(
+            cls,
+            db: AsyncSession,
+            *,
+            month_item_id: int,
+    ) -> list[TaskExecutionDocument]:
+        """
+        Получить итоговые документы по задаче.
+
+        Что грузим:
+        - только документы этой задачи
+        - только итоговые документы
+        - пользователей uploaded_by / submitted_by / reviewed_by по selectinload
+
+        Почему так:
+        - это список документов для экрана завершения
+        - не тянем month_item и другие лишние связи
+        - selectinload на user-связях предотвращает N+1
+        """
+        stmt = (
+            select(TaskExecutionDocument)
+            .where(TaskExecutionDocument.month_item_id == month_item_id)
+            .where(TaskExecutionDocument.is_final.is_(True))
+            .order_by(TaskExecutionDocument.created_at.desc(), TaskExecutionDocument.id.desc())
+            .options(
+                selectinload(TaskExecutionDocument.uploaded_by_user),
+                selectinload(TaskExecutionDocument.submitted_by_user),
+                selectinload(TaskExecutionDocument.reviewed_by_user),
+                selectinload(TaskExecutionDocument.required_document),
+            )
+        )
+
+        result = await db.execute(stmt)
+        return list(result.scalars().all())
+
+    @classmethod
+    async def get_current_final_document_for_task(
+            cls,
+            db: AsyncSession,
+            *,
+            month_item_id: int,
+    ) -> TaskExecutionDocument | None:
+        stmt = (
+            select(TaskExecutionDocument)
+            .where(TaskExecutionDocument.month_item_id == month_item_id)
+            .where(TaskExecutionDocument.is_final.is_(True))
+            .where(TaskExecutionDocument.is_current.is_(True))
+            .order_by(TaskExecutionDocument.created_at.desc(), TaskExecutionDocument.id.desc())
+        )
+
+        result = await db.execute(stmt)
+        return result.scalars().first()
+
+    @staticmethod
+    async def lock_task_row(
+            db: AsyncSession,
+            *,
+            month_item_id: int,
+    ) -> None:
+        """
+        блокируем одну задачу, а не всю таблицу
+        не даём двум upload одновременно:
+        создать 2 записи
+        перезаписать друг друга
+        """
+        stmt = (
+            select(SchoolMonthPlanItem.id)
+            .where(SchoolMonthPlanItem.id == month_item_id)
+            .with_for_update()
+        )
+        await db.execute(stmt)
+
+    @classmethod
+    async def create_or_replace_final_document(
+            cls,
+            db: AsyncSession,
+            *,
+            month_item_id: int,
+            required_document_id: int | None,
+            document_type: DocumentType,
+            original_file_name: str | None,
+            stored_file_name: str | None,
+            file_path: str | None,
+            mime_type: str | None,
+            file_size: int | None,
+            uploaded_by_user_id: int | None,
+            source: TaskDocumentSource,
+            status: TaskDocumentStatus,
+    ) -> TaskExecutionDocument:
+
+        # Ищем существующий итоговый документ (upload)
+        existing_doc = await cls.get_uploaded_document(
+            db,
+            month_item_id=month_item_id,
+            required_document_id=required_document_id,
+            document_type=document_type,
+        )
+
+        if existing_doc:
+            # ОБНОВЛЯЕМ существующую запись (никаких новых строк)
+
+            existing_doc.required_document_id = required_document_id
+            existing_doc.document_type = document_type
+            existing_doc.status = status
+            existing_doc.source = source
+
+            existing_doc.title = original_file_name
+            existing_doc.original_file_name = original_file_name
+            existing_doc.stored_file_name = stored_file_name
+            existing_doc.file_path = file_path
+            existing_doc.mime_type = mime_type
+            existing_doc.file_size = file_size
+
+            existing_doc.uploaded_by_user_id = uploaded_by_user_id
+
+            # гарантируем флаги
+            existing_doc.is_current = True
+            existing_doc.is_final = True
+
+            # version НЕ трогаем (можно вообще всегда = 1 держать)
+            existing_doc.version = 1
+
+            await db.flush()
+            return existing_doc
+
+        # если нет — создаём ОДНУ запись
+        new_doc = TaskExecutionDocument(
+            month_item_id=month_item_id,
+            required_document_id=required_document_id,
+            document_type=document_type,
+            status=status,
+            source=source,
+            version=1,  # всегда 1
+            is_current=True,
+            is_final=True,
+            title=original_file_name,
+            original_file_name=original_file_name,
+            stored_file_name=stored_file_name,
+            file_path=file_path,
+            mime_type=mime_type,
+            file_size=file_size,
+            uploaded_by_user_id=uploaded_by_user_id,
+        )
+
+        db.add(new_doc)
+        await db.flush()
+        return new_doc
+
+    @staticmethod
+    def _apply_executor_user_filter(stmt, *, user_id: int):
+        return stmt.where(
+            SchoolMonthPlanItem.assignees.any(
+                SchoolMonthPlanItemAssignee.staff_role.has(
+                    SchoolStaffRole.staff_member.has(
+                        SchoolStaffMember.user_account.has(User.id == user_id)
+                    )
+                )
+            )
+        )
+
+    @classmethod
+    async def get_document_by_id(
+            cls,
+            db: AsyncSession,
+            *,
+            document_id: int,
+    ) -> TaskExecutionDocument | None:
+        """
+        Получить документ по id без проверки доступа.
+
+        Подгружаем только то, что реально нужно для view/download.
+        """
+        stmt = (
+            select(TaskExecutionDocument)
+            .where(TaskExecutionDocument.id == document_id)
+            .options(
+                selectinload(TaskExecutionDocument.required_document),
+                selectinload(TaskExecutionDocument.uploaded_by_user),
+                selectinload(TaskExecutionDocument.submitted_by_user),
+                selectinload(TaskExecutionDocument.reviewed_by_user),
+            )
+        )
+
+        result = await db.execute(stmt)
+        return result.scalar_one_or_none()
+
+    @classmethod
+    async def user_has_access_to_month_item(
+            cls,
+            db: AsyncSession,
+            *,
+            month_item_id: int,
+            user_id: int,
+    ) -> bool:
+        """
+        Проверить, имеет ли пользователь доступ к задаче.
+        """
+        stmt = (
+            select(SchoolMonthPlanItem.id)
+            .where(SchoolMonthPlanItem.id == month_item_id)
+        )
+        stmt = cls._apply_executor_user_filter(stmt, user_id=user_id)
+
+        result = await db.execute(stmt)
+        return result.scalar_one_or_none() is not None
+
+    @classmethod
+    async def get_uploaded_document(
+            cls,
+            db: AsyncSession,
+            *,
+            month_item_id: int,
+            required_document_id: int | None,
+            document_type: DocumentType,
+    ) -> TaskExecutionDocument | None:
+        """
+        Получить текущий загруженный итоговый документ
+        для конкретного required_document и типа.
+
+        ВАЖНО:
+        - строго фильтруем по required_document_id
+        - строго фильтруем по document_type
+        - только upload
+        """
+        stmt = (
+            select(TaskExecutionDocument)
+            .where(TaskExecutionDocument.month_item_id == month_item_id)
+            .where(TaskExecutionDocument.is_final.is_(True))
+            .where(TaskExecutionDocument.is_current.is_(True))
+            .where(TaskExecutionDocument.source == TaskDocumentSource.UPLOAD)
+            .where(TaskExecutionDocument.document_type == document_type)
+        )
+
+        if required_document_id is None:
+            stmt = stmt.where(TaskExecutionDocument.required_document_id.is_(None))
+        else:
+            stmt = stmt.where(TaskExecutionDocument.required_document_id == required_document_id)
+
+        stmt = stmt.order_by(TaskExecutionDocument.id.desc()).limit(1)
+
+        result = await db.execute(stmt)
+        return result.scalar_one_or_none()
+
+    @staticmethod
+    async def get_teacher_labels_by_ids(
+            db: AsyncSession,
+            *,
+            teacher_ids: list[str],
+    ) -> dict[str, str]:
+        """
+        возвращает ФИО учителя из SchoolStaffMember
+        "target_kind": "teacher",
+        "target_value": str(tid),
+        "target_label": "Фамилия имя отчество"
+        """
+        if not teacher_ids:
+            return {}
+
+        teacher_ids_int = []
+        for value in teacher_ids:
+            try:
+                teacher_ids_int.append(int(value))
+            except (TypeError, ValueError):
+                continue
+
+        if not teacher_ids_int:
+            return {}
+
+        stmt = (
+            select(SchoolStaffMember.id, SchoolStaffMember.full_name)
+            .where(SchoolStaffMember.id.in_(teacher_ids_int))
+        )
+
+        rows = (await db.execute(stmt)).all()
+
+        result: dict[str, str] = {}
+        for teacher_id, full_name in rows:
+            result[str(teacher_id)] = (full_name or str(teacher_id)).strip()
+
+        return result
+
+    @classmethod
+    async def get_missing_selected_reports(
+            cls,
+            db: AsyncSession,
+            *,
+            month_item_id: int,
+    ) -> list[str]:
+        """
+        Получить список выбранных отчетов, которые еще не заполнены.
+
+        Используется при варианте завершения:
+        FINAL_WITH_SYSTEM_REPORTS.
+
+        Логика:
+        - выбранные отчеты берем из TaskExecutionData.selected_reports;
+        - фактически созданные отчеты берем из TaskExecutionDocument.report_code;
+        - сравниваем по report_code;
+        - возвращаем человекочитаемые названия отсутствующих отчетов.
+        """
+
+        execution_data = await cls.get_execution_data_for_task(
+            db,
+            month_item_id=month_item_id,
+        )
+
+        if not execution_data or not execution_data.selected_reports:
+            return []
+
+        selected_codes_by_label: dict[str, str] = {}
+
+        for item in execution_data.selected_reports:
+            if not item.report_type:
+                continue
+
+            code = str(item.report_type.code or "").strip()
+            if not code:
+                continue
+
+            label = (
+                    item.report_type.name_kz
+                    or item.report_type.name_ru
+                    or code
+            )
+
+            selected_codes_by_label[code] = label
+
+        selected_codes = set(selected_codes_by_label.keys())
+
+        if not selected_codes:
+            return []
+
+        completed_stmt = (
+            select(TaskExecutionDocument.report_code)
+            .where(
+                TaskExecutionDocument.month_item_id == month_item_id,
+                TaskExecutionDocument.is_current.is_(True),
+                TaskExecutionDocument.is_final.is_(False),
+                TaskExecutionDocument.report_code.in_(selected_codes),
+                TaskExecutionDocument.status.in_([
+                    TaskDocumentStatus.DRAFT,
+                    TaskDocumentStatus.SUBMITTED,
+                    TaskDocumentStatus.ACCEPTED,
+                ]),
+            )
+        )
+
+        completed_result = await db.execute(completed_stmt)
+        completed_codes = set(completed_result.scalars().all())
+
+        missing_codes = selected_codes - completed_codes
+
+        return [
+            selected_codes_by_label[code]
+            for code in missing_codes
+        ]
+
+    @classmethod
+    async def mark_current_system_reports_submitted(
+            cls,
+            db: AsyncSession,
+            *,
+            month_item_id: int,
+            user_id: int,
+    ) -> None:
+        """
+        Отметить все текущие системные отчеты как отправленные.
+
+        Используется при завершении задачи (вариант с системными отчетами).
+
+        Что делает:
+        - находит все НЕ итоговые документы (is_final=False)
+        - только актуальные (is_current=True)
+        - только системные отчеты (report_code != None)
+        - переводит их в статус SUBMITTED
+        - фиксирует кто и когда отправил
+
+        Важно:
+        - итоговый документ НЕ трогает
+        - не создает новые записи
+        - работает одним UPDATE (без N+1)
+        """
+
+        now = datetime.now(timezone.utc)
+
+        stmt = (
+            update(TaskExecutionDocument)
+            .where(
+                TaskExecutionDocument.month_item_id == month_item_id,
+                TaskExecutionDocument.is_current.is_(True),
+                TaskExecutionDocument.is_final.is_(False),
+                TaskExecutionDocument.report_code.is_not(None),
+            )
+            .values(
+                status=TaskDocumentStatus.SUBMITTED,
+                submitted_by_user_id=user_id,
+                submitted_at=now,
+            )
+        )
+
         await db.execute(stmt)

@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <div class="card">
+    <h2>{{ report_type.name_kz if report_type else "Шаблон отчета" }}</h2>
+
+    {% if error %}
+      <div class="alert alert-danger">{{ error }}</div>
+    {% endif %}
+
+    {% if success %}
+      <div class="alert alert-success">{{ success }}</div>
+    {% endif %}
+  </div>
+
+  {% if report_type and report_type.code == "lesson_observation" %}
+    {% include "staff/reports/template_map/_lesson_observation.html" %}
+  {% else %}
+    <div class="card">
+      <div class="empty-box">Для этого типа отчета шаблон пока не настроен.</div>
+    </div>
+  {% endif %}
+{% endblock %}

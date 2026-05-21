@@ -1,0 +1,384 @@
+{% extends "base.html" %}
+
+{% block title %}Пользовательский шаблон отчета лист наблюдение урока{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', path='css/template_report.css') }}">
+{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <h2>{{ document.report_label or "Сабақты бақылау парағы" }}</h2>
+    <div class="muted">
+      Заполнение отчета по личному шаблону
+    </div>
+  </div>
+
+  <a href="{{ url_for('', month_item_id=document.month_item_id) }}"
+     class="btn btn-secondary">
+    Назад к отчетам
+  </a>
+</div>
+
+{% if error %}
+  <div class="alert alert-danger">{{ error }}</div>
+{% endif %}
+
+{% set readonly = report and report.submitted_at %}
+
+<form method="post"
+      action="{{ request.url_for(
+          'lesson_observation_save_post',
+          month_item_id=document.month_item_id,
+          document_id=document.id
+      ) }}?selected_report_id={{ selected_report_id or document.selected_report_id }}">
+
+  <input type="hidden" name="staff_member_id" value="{{ report.staff_member_id if report else '' }}">
+
+  <!-- 1. Общая информация -->
+  <div class="card report-card">
+    <div class="card-title-row">
+      <h3>1. Общая информация об уроке</h3>
+    </div>
+
+    {% if readonly %}
+      <div class="alert alert-success">
+        Отчет подписан. Редактирование запрещено.
+      </div>
+    {% endif %}
+
+    <div class="lesson-info-table-wrap">
+      <table class="lesson-info-table">
+        <tbody>
+          <tr>
+            <th>Педагогтің ТАӘ<br><span>(бар болса)</span></th>
+            <td>
+              <input type="text"
+                     name="info_teacher_full_name"
+                     value="{{ saved_info.get('teacher_full_name', report.teacher_full_name if report else '') }}"
+                     {% if readonly %}disabled{% endif %}>
+            </td>
+
+            <th>Бақылаушының ТАӘ<br><span>(бар болса)</span></th>
+            <td>
+              <input type="text"
+                     name="info_observer_full_name"
+                     value="{{ saved_info.get('observer_full_name', report.observer_full_name if report else '') }}"
+                     {% if readonly %}disabled{% endif %}>
+            </td>
+          </tr>
+
+          <tr>
+            <th>Лауазымы, біліктілік санаты</th>
+            <td>
+              <input type="text"
+                     name="info_teacher_position"
+                     value="{{ saved_info.get('teacher_position', report.teacher_position if report else '') }}"
+                     {% if readonly %}disabled{% endif %}>
+            </td>
+
+            <th>Лауазымы</th>
+            <td>
+              <input type="text"
+                     name="info_observer_position"
+                     value="{{ saved_info.get('observer_position', report.observer_position if report else '') }}"
+                     {% if readonly %}disabled{% endif %}>
+            </td>
+          </tr>
+
+          <tr>
+            <th>Пән <span>(ұйымдастырылған қызмет)</span></th>
+            <td colspan="3">
+              <input type="text"
+                     name="info_teacher_subject"
+                     value="{{ saved_info.get('teacher_subject', report.teacher_subject if report else '') }}"
+                     {% if readonly %}disabled{% endif %}>
+            </td>
+          </tr>
+
+          <tr>
+            <th>Білім беру ұйымы</th>
+            <td>
+              <input type="text"
+                     name="info_school_name"
+                     value="{{ saved_info.get('school_name', report.school_name if report else '') }}"
+                     {% if readonly %}disabled{% endif %}>
+            </td>
+
+            <th>Бақылау күні</th>
+            <td>
+              <input type="datetime-local"
+                     name="info_lesson_datetime"
+                     value="{{ saved_info.get('lesson_datetime', '') }}"
+                     required
+                     class="form-input"
+                     {% if readonly %}disabled{% endif %}>
+            </td>
+          </tr>
+
+          <tr>
+            <th>Сынып (топ)</th>
+            <td>
+              <input type="text"
+                     name="info_class_name"
+                     required
+                     value="{{ saved_info.get('class_name', report.class_name if report else '') }}"
+                     placeholder="5-a"
+                     {% if readonly %}disabled{% endif %}>
+            </td>
+
+            <th>Топ</th>
+            <td>
+              <input type="text"
+                     name="info_group_name"
+                     value="{{ saved_info.get('group_name', report.group_name if report else '') }}"
+                     placeholder="1 топ"
+                     {% if readonly %}disabled{% endif %}>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 2. Цели урока -->
+  <div class="card report-card">
+    <div class="card-title-row">
+      <h3>2. Цели урока</h3>
+    </div>
+
+    <div class="table-wrap">
+      <table class="form-table">
+        <tbody>
+          <tr>
+            <th>Оқу мақсаты:</th>
+            <td>
+              <input type="text"
+                     name="info_learning_objectives"
+                     value="{{ saved_info.get('learning_objectives', report.learning_objectives if report else '') }}"
+                     class="form-input"
+                     required
+                     {% if readonly %}disabled{% endif %}>
+            </td>
+          </tr>
+
+          <tr>
+            <th>Сабақ мақсаты 1:</th>
+            <td>
+              <input type="text"
+                     name="info_lesson_objectives_1"
+                     value="{{ saved_info.get('lesson_objectives_1', report.lesson_objectives_1 if report else '') }}"
+                     class="form-input"
+                     required
+                     {% if readonly %}disabled{% endif %}>
+            </td>
+          </tr>
+
+          <tr>
+            <th>Сабақ мақсаты 2:</th>
+            <td>
+              <input type="text"
+                     name="info_lesson_objectives_2"
+                     value="{{ saved_info.get('lesson_objectives_2', report.lesson_objectives_2 if report else '') }}"
+                     class="form-input"
+                     required
+                     {% if readonly %}disabled{% endif %}>
+            </td>
+          </tr>
+
+          <tr>
+            <th>Сабақ мақсаты 3:</th>
+            <td>
+              <input type="text"
+                     name="info_lesson_objectives_3"
+                     value="{{ saved_info.get('lesson_objectives_3', report.lesson_objectives_3 if report else '') }}"
+                     class="form-input"
+                     required
+                     {% if readonly %}disabled{% endif %}>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 3. Разделы и критерии оценки -->
+  {% for section in schema.sections %}
+    {% set section_index = loop.index0 %}
+
+    <div class="card report-card section-score-card">
+      <div class="card-title-row">
+        <h3>{{ loop.index + 2 }}. {{ section.title }}</h3>
+      </div>
+
+      <div class="table-wrap">
+        <table class="lesson-score-table">
+          <thead>
+            <tr>
+              <th class="col-number">№</th>
+              <th>Критерий</th>
+
+              {% for value in schema.score_scale %}
+                <th class="col-score">{{ value }}</th>
+              {% endfor %}
+            </tr>
+          </thead>
+
+          <tbody>
+            {% for criterion in section.criteria %}
+              {% set criterion_index = loop.index0 %}
+              {% set score_name = "score_" ~ section_index ~ "_" ~ criterion_index %}
+              {% set score_key = section_index ~ "_" ~ criterion_index %}
+              {% set saved_score = scores.get(score_name, scores.get(score_key)) %}
+
+              <tr>
+                <td class="cell-number">{{ loop.index }}</td>
+                <td class="cell-criterion">{{ criterion.text }}</td>
+
+                {% for value in schema.score_scale %}
+                  <td class="cell-score">
+                    <input type="radio"
+                           name="{{ score_name }}"
+                           value="{{ value }}"
+                           required
+                           {% if saved_score is not none and saved_score|string == value|string %}checked{% endif %}
+                           {% if readonly %}disabled{% endif %}>
+                  </td>
+                {% endfor %}
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  {% endfor %}
+
+  <!-- Итог -->
+  {% if schema.show_total_score %}
+    <div class="card report-card total-card">
+      <div class="card-title-row">
+        <h3>Итог</h3>
+      </div>
+
+      <div class="total-grid">
+        <div class="form-field">
+          <label>Общий балл</label>
+          <input type="text"
+                 id="total_score"
+                 name="total_score"
+                 value="{{ total_score or report.total or 0 if report else total_score or 0 }}"
+                 readonly>
+        </div>
+
+        <div class="form-field">
+          <label>Максимальный балл</label>
+          <input type="text"
+                 value="{{ schema.max_score or 0 }}"
+                 readonly>
+        </div>
+      </div>
+    </div>
+  {% endif %}
+
+  <!-- Рекомендации -->
+  <div class="card report-card">
+    <div class="card-title-row">
+      <h3>Рекомендации и обратная связь</h3>
+    </div>
+
+    <div class="form-field form-field--full">
+      <label>Кері байланыс / Обратная связь</label>
+      <textarea name="info_feedback"
+                rows="3"
+                {% if readonly %}disabled{% endif %}>{{ saved_info.get("feedback", report.feedback if report else '') }}</textarea>
+    </div>
+
+    <div class="form-field form-field--full">
+      <label>Ұсыныс / Рекомендации</label>
+      <textarea name="info_suggestion_control"
+                rows="3"
+                {% if readonly %}disabled{% endif %}>{{ saved_info.get("suggestion_control", report.suggestion_control if report else '') }}</textarea>
+    </div>
+  </div>
+
+  <!-- Кнопки -->
+  <div class="card action-panel report-actions">
+    {% if not readonly %}
+      <button type="submit" name="action" value="save" class="btn btn-primary">
+        Сохранить черновик
+      </button>
+
+      <button type="submit"
+              name="action"
+              value="complete"
+              class="btn btn-success"
+              onclick="return confirm('После подписания отчет нельзя будет редактировать. Подписать и сохранить?')">
+        Подписать и сохранить
+      </button>
+    {% else %}
+      <a href="{{ url_for('lesson_observation_pdf_view', report_id=report.id) }}"
+         class="btn btn-secondary"
+         target="_blank">
+        Просмотреть PDF
+      </a>
+
+      <a href="{{ url_for('lesson_observation_pdf_download', report_id=report.id) }}"
+         class="btn btn-primary">
+        Скачать PDF
+      </a>
+    {% endif %}
+  </div>
+
+</form>
+
+<script>
+(function () {
+  const radios = document.querySelectorAll('input[type="radio"][name^="score_"]');
+  const totalInput = document.getElementById("total_score");
+
+  function updateTotal() {
+    if (!totalInput) return;
+
+    let total = 0;
+
+    const checked = document.querySelectorAll('input[type="radio"][name^="score_"]:checked');
+
+    checked.forEach(function (radio) {
+      total += Number(radio.value || 0);
+    });
+
+    totalInput.value = total;
+  }
+
+  radios.forEach(function (radio) {
+    radio.addEventListener("change", updateTotal);
+  });
+
+  updateTotal();
+})();
+</script>
+
+<style>
+.lesson-score-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.lesson-score-table th,
+.lesson-score-table td {
+  border: 1px solid #e5e7eb;
+  padding: 8px;
+}
+
+.lesson-score-table th {
+  background: #f9fafb;
+}
+
+.template-section {
+  margin-bottom: 24px;
+}
+</style>
+
+{% endblock %}

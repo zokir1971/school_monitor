@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Сабақты бақылау парағы</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: "DejaVu Sans", Arial, sans-serif;
+      font-size: 12px;
+      color: #111827;
+      margin: 0;
+      padding: 0;
+    }
+
+    .page {
+      width: 100%;
+      padding: 20px;
+    }
+
+    h1 {
+      text-align: center;
+      font-size: 18px;
+      margin: 0 0 16px;
+    }
+
+    h2 {
+      font-size: 14px;
+      margin: 18px 0 8px;
+      border-bottom: 1px solid #d1d5db;
+      padding-bottom: 4px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 12px;
+    }
+
+    th,
+    td {
+      border: 1px solid #d1d5db;
+      padding: 6px;
+      vertical-align: top;
+    }
+
+    th {
+      background: #f3f4f6;
+      font-weight: 600;
+      text-align: left;
+    }
+
+    .center {
+      text-align: center;
+    }
+
+    .muted {
+      color: #6b7280;
+      font-size: 11px;
+    }
+
+    .total {
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .signature-box {
+      margin-top: 24px;
+      display: flex;
+      justify-content: space-between;
+      gap: 24px;
+      align-items: flex-start;
+    }
+
+    .qr-box {
+      width: 140px;
+      text-align: center;
+    }
+
+    .qr-box img {
+      width: 120px;
+      height: 120px;
+    }
+
+    .sign-info {
+      flex: 1;
+    }
+
+    .footer {
+      margin-top: 20px;
+      font-size: 10px;
+      color: #6b7280;
+      text-align: center;
+    }
+  </style>
+</head>
+
+<body>
+<div class="page">
+
+  <h1>Сабақты бақылау парағы</h1>
+
+  <h2>1. Жалпы мәліметтер / Общая информация</h2>
+
+  <table>
+    <tbody>
+      <tr>
+        <th>Педагогтің ТАӘ / ФИО учителя</th>
+        <td>{{ report.teacher_full_name or "—" }}</td>
+        <th>Бақылаушының ТАӘ / ФИО наблюдателя</th>
+        <td>{{ report.observer_full_name or "—" }}</td>
+      </tr>
+
+      <tr>
+        <th>Лауазымы, біліктілік санаты / Должность и категория</th>
+        <td>{{ report.teacher_position or "—" }}</td>
+        <th>Лауазымы / Должность</th>
+        <td>{{ report.observer_position or "—" }}</td>
+      </tr>
+
+      <tr>
+        <th>Пән / Предмет</th>
+        <td>{{ report.teacher_subject or "—" }}</td>
+        <th>Білім беру ұйымы / Школа</th>
+        <td>{{ report.school_name or "—" }}</td>
+      </tr>
+
+      <tr>
+        <th>Сынып / Класс</th>
+        <td>{{ report.class_name or "—" }}</td>
+        <th>Топ</th>
+        <td>{{ report.group_name or "—" }}</td>
+      </tr>
+
+      <tr>
+        <th>Бақылау күні / Дата наблюдения</th>
+        <td colspan="3">
+          {% if report.lesson_datetime %}
+            {{ report.lesson_datetime.strftime("%d.%m.%Y %H:%M") }}
+          {% else %}
+            —
+          {% endif %}
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>2. Сабақ мақсаттары Цели урока</h2>
+
+  <table>
+    <tbody>
+      <tr>
+        <th>Оқу мақсаты / Учебные цели</th>
+        <td>{{ report.learning_objectives or "—" }}</td>
+      </tr>
+
+      <tr>
+        <th>Сабақ мақсаты / Цел урока 1</th>
+        <td>{{ report.lesson_objectives_1 or "—" }}</td>
+      </tr>
+
+      <tr>
+        <th>Сабақ мақсаты / Цел урока 2</th>
+        <td>{{ report.lesson_objectives_2 or "—" }}</td>
+      </tr>
+
+      <tr>
+        <th>Сабақ мақсаты / Цел урока 3</th>
+        <td>{{ report.lesson_objectives_3 or "—" }}</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>3. Бағалау критерийлері / Критерии оценки</h2>
+
+{% set criteria_data = report.criteria_scores or {} %}
+{% set scores = scores if scores is defined else criteria_data.get("scores", {}) %}
+{% set col_sums = col_sums if col_sums is defined else criteria_data.get("col_sums", {}) %}
+{% set total_score = total_score if total_score is defined else criteria_data.get("total_score", report.total or 0) %}
+{% set sections = schema.get("sections", []) if schema else [] %}
+{% set score_scale = schema.get("score_scale", [0, 1, 2, 3]) if schema else [0, 1, 2, 3] %}
+
+{% if sections %}
+  {% for section in sections %}
+    {% set section_index = loop.index0 %}
+
+    <h3 style="font-size: 13px; margin: 10px 0 6px;">
+      {{ section.get("title", "Бөлім / Раздел") }}
+    </h3>
+
+    <table>
+      <thead>
+        <tr>
+          <th style="width: 40px;">№</th>
+          <th>Критерий</th>
+          <th class="center" style="width: 60px;">Балл</th>
+        </tr>
+      </thead>
+
+      <tbody>
+
+        {# 1) Если пользовательский шаблон: section.criteria #}
+        {% if section.get("criteria") %}
+          {% for criterion in section.get("criteria", []) %}
+            {% set criterion_index = loop.index0 %}
+            {% set criterion_key = criterion.get("key") %}
+
+            {% set key1 = criterion_key %}
+            {% set key2 = "score_" ~ criterion_key %}
+            {% set key3 = section_index ~ "_" ~ criterion_index %}
+            {% set key4 = "score_" ~ section_index ~ "_" ~ criterion_index %}
+
+            {% set value = scores.get(key1) %}
+            {% if value is none %}
+              {% set value = scores.get(key2) %}
+            {% endif %}
+            {% if value is none %}
+              {% set value = scores.get(key3) %}
+            {% endif %}
+            {% if value is none %}
+              {% set value = scores.get(key4, 0) %}
+            {% endif %}
+
+            <tr>
+              <td class="center">{{ criterion.get("number") or loop.index }}</td>
+              <td>{{ criterion.get("text") or criterion.get("title") or criterion_key or "—" }}</td>
+              <td class="center">{{ value }}</td>
+            </tr>
+          {% endfor %}
+
+        {# 2) Если системный шаблон: section.subsections[].criteria #}
+        {% else %}
+          {% for subsection in section.get("subsections", []) %}
+            {% if subsection.get("title") %}
+              <tr>
+                <td colspan="3">
+                  <strong>
+                    {{ subsection.get("code", "") }}
+                    {{ subsection.get("title", "") }}
+                  </strong>
+                </td>
+              </tr>
+            {% endif %}
+
+            {% for criterion in subsection.get("criteria", []) %}
+              {% set criterion_key = criterion.get("key") %}
+              {% set value = scores.get(criterion_key) %}
+
+              {% if value is none %}
+                {% set value = scores.get("score_" ~ criterion_key) %}
+              {% endif %}
+
+              {% if value is none %}
+                {% set value = 0 %}
+              {% endif %}
+
+              <tr>
+                <td class="center">
+                  {{ criterion.get("number") or criterion.get("code") or loop.index }}
+                </td>
+                <td>
+                  {{ criterion.get("text") or criterion.get("title") or criterion_key or "—" }}
+                </td>
+                <td class="center">{{ value }}</td>
+              </tr>
+            {% endfor %}
+          {% endfor %}
+        {% endif %}
+
+      </tbody>
+    </table>
+  {% endfor %}
+{% else %}
+  <table>
+    <thead>
+      <tr>
+        <th>Критерий</th>
+        <th class="center">Балл</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for key, value in scores.items() %}
+        <tr>
+          <td>{{ key }}</td>
+          <td class="center">{{ value }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endif %}
+
+<table>
+  <tbody>
+    <tr>
+      <td><strong>Барлығы</strong></td>
+      <td class="center">0: {{ col_sums.get("0", 0) }}</td>
+      <td class="center">1: {{ col_sums.get("1", 0) }}</td>
+      <td class="center">2: {{ col_sums.get("2", 0) }}</td>
+      <td class="center">3: {{ col_sums.get("3", 0) }}</td>
+    </tr>
+    <tr>
+      <td colspan="4"><strong>Қорытынды / Итоговый балл</strong></td>
+      <td class="center"><strong>{{ total_score }}</strong></td>
+    </tr>
+  </tbody>
+</table>
+
+
+
+<table>
+  <tbody>
+    <tr>
+      <th class="total">Қорытынды / Итоговый балл</th>
+      <td class="total center">{{ total_score }}</td>
+    </tr>
+  </tbody>
+</table>
+
+  <h2>4. Ұсыныс / Рекомендации</h2>
+
+  <table>
+    <tbody>
+      <tr>
+        <th>Кері байланыс / Обратная связь</th>
+        <td>{{ report.feedback or info.get("feedback") or "—" }}</td>
+      </tr>
+
+      <tr>
+        <th>Ұсыныс / Рекомендации</th>
+        <td>{{ report.suggestion_control or info.get("suggestion_control") or "—" }}</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="signature-box">
+    <div class="sign-info">
+      <h2>Электронды қолтаңба / Электронная подпись</h2>
+
+      <table>
+        <tbody>
+          <tr>
+            <th>Статус</th>
+            <td>Қол қойылған / Подписан</td>
+          </tr>
+
+          <tr>
+            <th>Уақыты / Дата</th>
+            <td>
+              {% if report.submitted_at %}
+                {{ report.submitted_at.strftime("%d.%m.%Y %H:%M") }}
+              {% else %}
+                —
+              {% endif %}
+            </td>
+          </tr>
+
+          <tr>
+            <th>ID есеп / отчета</th>
+            <td>{{ report.id }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    {% if qr_file %}
+      <div class="qr-box">
+        <img src="{{ qr_file }}" alt="QR">
+        <div class="muted">Нақтылығын тексеру / Проверка подлинности</div>
+      </div>
+    {% endif %}
+  </div>
+
+  <div class="footer">
+    Құжат school_monitor жүйесінда автоматты жасалған <br>
+    Документ сформирован автоматически системой school_monitor.
+  </div>
+
+</div>
+</body>
+</html>

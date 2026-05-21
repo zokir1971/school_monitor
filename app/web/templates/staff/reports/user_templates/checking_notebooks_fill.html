@@ -1,0 +1,417 @@
+{% extends "base.html" %}
+
+{% block title %}Проверка тетрадей{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', path='css/template_report.css') }}">
+{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <h2>{{ document.report_label or "Проверка тетрадей" }}</h2>
+    <div class="muted">Заполнение отчета по личному шаблону</div>
+  </div>
+
+  <a href="{{ url_for('', month_item_id=document.month_item_id) }}"
+     class="btn btn-secondary">
+    Назад к отчетам
+  </a>
+</div>
+
+{% if error %}
+  <div class="alert alert-danger">{{ error }}</div>
+{% endif %}
+
+{% if request.query_params.get("debug") == "1" %}
+<pre style="
+  background:#111827;
+  color:#e5e7eb;
+  padding:12px;
+  margin:12px 0;
+  border-radius:8px;
+  font-size:13px;
+  white-space:pre-wrap;
+">
+DEBUG
+
+scores:
+{{ scores | pprint }}
+
+saved_info:
+{{ saved_info | pprint }}
+
+total_score: {{ total_score }}
+max_score: {{ max_score }}
+percent: {{ percent }}
+level: {{ level }}
+
+report:
+{{ report | pprint }}
+
+report.rows_json:
+{{ report.rows_json | pprint if report else "NO REPORT" }}
+
+report.total_score: {{ report.total_score if report else "NO REPORT" }}
+report.max_score: {{ report.max_score if report else "NO REPORT" }}
+report.percent: {{ report.percent if report else "NO REPORT" }}
+report.level: {{ report.level if report else "NO REPORT" }}
+</pre>
+{% endif %}
+
+{% set readonly = report and report.submitted_at %}
+
+<form method="post"
+      action="{{ request.url_for(
+          'checking_notebooks_save_post',
+          month_item_id=month_item_id,
+          document_id=task_execution_document_id
+      ) }}?selected_report_id={{ selected_report_id }}">
+
+  <!-- 1. Общая информация -->
+  <div class="card report-card">
+    <div class="card-title-row">
+      <h3>1. Общая информация</h3>
+    </div>
+
+    {% if readonly %}
+      <div class="alert alert-success">
+        Отчет подписан. Редактирование запрещено.
+      </div>
+    {% endif %}
+
+    <div class="lesson-info-table-wrap">
+  <table class="lesson-info-table">
+    <tbody>
+      <tr>
+        <th>Білім беру ұйымы</th>
+        <td>
+          <input type="text"
+                 name="info_school_name"
+                 value="{{ saved_info.get('school_name', '') }}"
+                 {% if readonly %}disabled{% endif %}>
+        </td>
+
+        <th>Тексеру күні</th>
+        <td>
+          <input type="datetime-local"
+                 name="info_check_date"
+                 value="{{ saved_info.get('check_date', '') }}"
+                 required
+                 {% if readonly %}disabled{% endif %}>
+        </td>
+      </tr>
+
+      <tr>
+        <th>Тексерушінің ТАӘ</th>
+        <td>
+          <input type="text"
+                 name="info_checker_name"
+                 value="{{ saved_info.get('checker_name', user.full_name or '') }}"
+                 {% if readonly %}disabled{% endif %}>
+        </td>
+
+        <th>Тексерушінің лауазымы</th>
+        <td>
+          <input type="text"
+                 name="info_checker_post"
+                 value="{{ saved_info.get('checker_post', '') }}"
+                 {% if readonly %}disabled{% endif %}>
+        </td>
+      </tr>
+
+      <tr>
+        <th>Мұғалімнің ТАӘ</th>
+        <td>
+          <input type="text"
+                 name="info_teacher_name"
+                 value="{{ saved_info.get('teacher_name', '') }}"
+                 {% if readonly %}disabled{% endif %}>
+        </td>
+
+        <th>Сынып</th>
+        <td>
+          <input type="text"
+                 name="info_class_name"
+                 value="{{ saved_info.get('class_name', '') }}"
+                 {% if readonly %}disabled{% endif %}>
+        </td>
+      </tr>
+
+      <tr>
+        <th>Пән</th>
+        <td colspan="3">
+          <input type="text"
+                 name="info_subject_name"
+                 value="{{ saved_info.get('subject_name', '') }}"
+                 {% if readonly %}disabled{% endif %}>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+  </div>
+
+  <!-- 2. Критерии оценки -->
+<div class="card report-card section-score-card">
+  <div class="card-title-row">
+    <h3>2. Критерии оценки</h3>
+  </div>
+
+  <div class="table-wrap">
+    <table class="lesson-score-table">
+      <thead>
+        <tr>
+          <th class="col-number">№</th>
+          <th>Критерий</th>
+
+          {% for value in score_scale %}
+            <th class="col-score">{{ value }}</th>
+          {% endfor %}
+        </tr>
+      </thead>
+
+      <tbody>
+        {% for criterion in criteria %}
+          {% set criterion_index = loop.index0 %}
+
+          {% if criterion is string %}
+            {% set criterion_key = "criterion_" ~ criterion_index %}
+            {% set criterion_text = criterion %}
+            {% set criterion_scores = {} %}
+          {% else %}
+            {% set criterion_key = criterion.get("key") or "criterion_" ~ criterion_index %}
+            {% set criterion_text = criterion.get("label_kz") or criterion.get("text") or criterion.get("name") or "Критерий " ~ loop.index %}
+            {% set criterion_scores = criterion.get("scores", {}) %}
+          {% endif %}
+
+          {% set score_name = "score_" ~ criterion_key %}
+          {% set saved_score = none %}
+
+          {% if scores.get(criterion_key) is not none %}
+            {% set saved_score = scores.get(criterion_key) %}
+          {% elif scores.get(score_name) is not none %}
+            {% set saved_score = scores.get(score_name) %}
+          {% endif %}
+
+          <tr>
+            <td class="cell-number">{{ loop.index }}</td>
+
+            <td class="cell-criterion">
+              <strong>{{ criterion_text }}</strong>
+
+              {% if criterion_scores %}
+                <div class="muted" style="margin-top: 4px;">
+                  {% for score_value, score_data in criterion_scores.items() %}
+                    {{ score_value }} — {{ score_data.get("label_kz", "") }}{% if not loop.last %}; {% endif %}
+                  {% endfor %}
+                </div>
+              {% endif %}
+
+              <input type="hidden"
+                     name="criterion_{{ criterion_index }}"
+                     value="{{ criterion_text }}">
+            </td>
+
+            {% for value in score_scale %}
+              <td class="cell-score">
+                <input type="radio"
+                       name="{{ score_name }}"
+                       value="{{ value }}"
+                       required
+                       {% if saved_score is not none and saved_score|string == value|string %}checked{% endif %}
+                       {% if readonly %}disabled{% endif %}>
+              </td>
+            {% endfor %}
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+  <!-- 3. Итог -->
+<div class="card report-card total-card">
+  <div class="card-title-row">
+    <h3>3. Итог</h3>
+  </div>
+
+  <div class="total-grid">
+    <div class="form-field">
+      <label>Общий балл</label>
+      <input type="text"
+             id="total_score"
+             name="total_score"
+             value="{{ total_score }}"
+             readonly>
+    </div>
+
+    <div class="form-field">
+      <label>Максимальный балл</label>
+      <input type="text"
+             id="max_score"
+             name="max_score"
+             value="{{ max_score }}"
+             readonly>
+    </div>
+
+    <div class="form-field">
+      <label>Процент</label>
+      <input type="text"
+             id="percent"
+             name="percent"
+             value="{{ percent }}"
+             readonly>
+    </div>
+
+    <div class="form-field">
+      <label>Уровень</label>
+      <input type="text"
+             id="level"
+             name="info_level"
+             value="{{ level }}"
+             readonly>
+    </div>
+  </div>
+</div>
+
+  <!-- 4. Выводы -->
+  <div class="card report-card">
+    <div class="card-title-row">
+      <h3>4. Выводы и рекомендации</h3>
+    </div>
+
+    <div class="form-field form-field--full">
+      <label>Вывод</label>
+      <textarea name="info_conclusion"
+                rows="3"
+                {% if readonly %}disabled{% endif %}>{{ report.conclusion if report else '' }}</textarea>
+    </div>
+
+    <div class="form-field form-field--full">
+      <label>Рекомендации</label>
+      <textarea name="info_recommendations"
+                rows="3"
+                {% if readonly %}disabled{% endif %}>{{ report.recommendations if report else '' }}</textarea>
+    </div>
+  </div>
+
+  <!-- Кнопки -->
+  <div class="card action-panel report-actions">
+
+  {% if not readonly %}
+
+    <button type="submit" name="action" value="save" class="btn btn-primary">
+      Сохранить черновик
+    </button>
+
+    <button type="submit"
+            name="action"
+            value="complete"
+            class="btn btn-success"
+            onclick="return confirm('После подписания отчет нельзя будет редактировать. Подписать и сохранить?')">
+      Подписать и сохранить
+    </button>
+
+  {% else %}
+
+    <a href="{{ url_for('checking_notebooks_pdf_view', report_id=report.id) }}"
+       class="btn btn-secondary"
+       target="_blank">
+      Просмотреть PDF
+    </a>
+
+    <a href="{{ url_for('checking_notebooks_pdf_download', report_id=report.id) }}"
+       class="btn btn-primary">
+      Скачать PDF
+    </a>
+
+  {% endif %}
+
+</div>
+
+</form>
+
+<script>
+(function () {
+  const radios = document.querySelectorAll('input[type="radio"][name^="score_"]');
+  const totalInput = document.getElementById("total_score");
+  const maxInput = document.getElementById("max_score");
+  const percentInput = document.getElementById("percent");
+  const levelInput = document.getElementById("level");
+
+  if (!totalInput || !maxInput || !percentInput || !levelInput) {
+    return;
+  }
+
+  function updateTotal() {
+    let total = 0;
+
+    document.querySelectorAll('input[type="radio"][name^="score_"]:checked')
+      .forEach(function (radio) {
+        total += Number(radio.value || 0);
+      });
+
+    const maxScore = Number(maxInput.value || 0);
+    const percent = maxScore > 0 ? Math.round(total * 100 / maxScore) : 0;
+
+    totalInput.value = total;
+    percentInput.value = percent;
+
+    if (percent >= 85) {
+      levelInput.value = "Жоғары";
+    } else if (percent >= 60) {
+      levelInput.value = "Орта";
+    } else if (percent > 0) {
+      levelInput.value = "Төмен";
+    } else {
+      levelInput.value = "—";
+    }
+  }
+
+  radios.forEach(function (radio) {
+    radio.addEventListener("change", updateTotal);
+  });
+
+  const hasCheckedScores = document.querySelectorAll(
+    'input[type="radio"][name^="score_"]:checked'
+  ).length > 0;
+
+  if (hasCheckedScores) {
+    updateTotal();
+  }
+})();
+</script>
+
+<style>
+.lesson-score-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.lesson-score-table th,
+.lesson-score-table td {
+  border: 1px solid #e5e7eb;
+  padding: 8px;
+}
+
+.lesson-score-table th {
+  background: #f9fafb;
+  text-align: center;
+}
+
+.cell-score {
+  text-align: center;
+}
+
+.cell-criterion {
+  min-width: 360px;
+}
+
+.total-grid input[readonly] {
+  background: #f9fafb;
+}
+</style>
+
+{% endblock %}

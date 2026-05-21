@@ -1,4 +1,5 @@
 # app/routers/web/dashboards/school_staff.py
+from datetime import date
 
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse
@@ -20,11 +21,13 @@ async def dashboard_staff_school(
     request: Request,
     user: User = Depends(require_roles(UserRole.SCHOOL_STAFF)),
 ):
+    today = date.today()
     return templates.TemplateResponse(
         request,
         "dashboards/school_staff.html",
         {
             "request": request,
             "user": user,
+            "today": today,
         },
     )

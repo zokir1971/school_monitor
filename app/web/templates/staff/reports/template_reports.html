@@ -1,0 +1,868 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<style>
+
+.report-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+/* === Карточка === */
+.reports-card {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+
+  padding: 18px 20px;
+  border-radius: 16px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.06);
+}
+
+/* === Header карточки === */
+.reports-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+  gap: 12px;
+}
+
+.reports-card-header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.report-code {
+  font-size: 12px;
+  color: #64748b;
+  margin-top: 3px;
+}
+
+.reports-count {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #eef2ff;
+  color: #3730a3;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+/* === Таблица === */
+.reports-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.reports-table {
+  width: 100%;
+  min-width: 900px;
+  border-collapse: separate;
+  border-spacing: 0 10px;
+  table-layout: fixed;
+}
+
+/* Заголовки */
+.reports-table th {
+  text-align: left;
+  font-size: 13px;
+  color: #64748b;
+  font-weight: 700;
+  padding: 10px 12px;
+}
+
+/* Ячейки */
+.reports-table td {
+  background: #f8fafc;
+  padding: 14px 12px;
+  vertical-align: middle;
+
+  border-top: 1px solid #e5e7eb;
+  border-bottom: 1px solid #e5e7eb;
+
+  word-break: break-word;
+}
+
+/* Скругление строк */
+.reports-table td:first-child {
+  border-left: 1px solid #e5e7eb;
+  border-radius: 12px 0 0 12px;
+  width: 50px;
+  text-align: center;
+  font-weight: 700;
+  color: #64748b;
+}
+
+.reports-table td:last-child {
+  border-right: 1px solid #e5e7eb;
+  border-radius: 0 12px 12px 0;
+}
+
+/* === Ширины колонок === */
+.reports-table th:nth-child(1),
+.reports-table td:nth-child(1) {
+  width: 50px;
+}
+
+.reports-table th:nth-child(2),
+.reports-table td:nth-child(2) {
+  width: 35%;
+}
+
+.reports-table th:nth-child(3),
+.reports-table td:nth-child(3) {
+  width: 160px;
+}
+
+.reports-table th:nth-child(4),
+.reports-table td:nth-child(4),
+.reports-table th:nth-child(5),
+.reports-table td:nth-child(5) {
+  width: 180px;
+  text-align: center;
+}
+
+/* === Объект === */
+.target-kind {
+  display: block;
+  font-size: 12px;
+  color: #64748b;
+  margin-bottom: 2px;
+  font-weight: 700;
+}
+
+.target-label {
+  font-weight: 700;
+  color: #0f172a;
+}
+
+/* === Статусы === */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.status-empty {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.status-draft {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.status-done {
+  background: #dcfce7;
+  color: #166534;
+}
+
+/* === Кнопки === */
+.btn {
+  display: inline-block;
+  padding: 7px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  border: none;
+  cursor: pointer;
+}
+
+.btn-primary {
+  background: #2563eb;
+  color: white;
+}
+
+.btn-secondary {
+  background: #e2e8f0;
+  color: #0f172a;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+
+  transition: all 0.2s ease;
+}
+
+/* hover эффект */
+.btn-secondary:hover {
+  background: #cbd5e1;
+  border-color: #94a3b8;
+}
+
+/* нажатие */
+.btn-secondary:active {
+  transform: translateY(1px);
+  background: #94a3b8;
+}
+
+/* фокус (важно для UX) */
+.btn-secondary:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(148, 163, 184, 0.4);
+}
+
+/* отключенная кнопка */
+.btn-secondary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+
+.btn-outline-primary {
+  border: 1px solid #2563eb;
+  color: #2563eb;
+  background: transparent;
+}
+
+/* hover */
+.btn-primary:hover {
+  background: #1d4ed8;
+}
+
+.reports-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+
+  padding: 18px 20px;
+  border-radius: 16px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.06);
+}
+
+.reports-header-left {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.reports-header-left h2 {
+  margin: 0;
+}
+
+.reports-header-right {
+  display: flex;
+  align-items: flex-start;
+}
+
+/* адаптив */
+@media (max-width: 768px) {
+  .reports-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .reports-header-right {
+    width: 100%;
+  }
+
+  .reports-header-right .btn {
+    width: 100%;
+    text-align: center;
+  }
+}
+
+.btn-outline-primary:hover {
+  background: #2563eb;
+  color: white;
+}
+
+/* === Пустой блок === */
+.empty-box {
+  padding: 18px;
+  border-radius: 14px;
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  color: #64748b;
+}
+
+/* === Адаптив === */
+@media (max-width: 768px) {
+
+  .reports-table {
+    min-width: 700px;
+  }
+
+  .reports-card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+}
+
+</style>
+
+<div class="reports-page">
+
+  <div class="reports-header">
+    <div class="reports-header-left">
+      <h2>Подготовка системных отчетов</h2>
+
+      {% if task %}
+        <div class="report-info-grid">
+          <div>
+            Тема задачи:
+            <strong>{{ task_topic or "—" }}</strong>
+          </div>
+
+          <div>
+            Запланированный месяц:
+            <strong>{{ task_month or month or "—" }}</strong>
+          </div>
+        </div>
+      {% endif %}
+    </div>
+
+    {% if task %}
+      <div class="reports-header-right">
+        <a href="{{ url_for('staff_report_execute_page', month_item_id=task.id) }}"
+           class="btn btn-secondary">
+          ← Назад к задаче
+        </a>
+      </div>
+    {% endif %}
+  </div>
+
+  {% if error %}
+    <div class="alert alert-danger">{{ error }}</div>
+  {% endif %}
+
+  {% if success %}
+    <div class="alert alert-success">{{ success }}</div>
+  {% endif %}
+
+  {% if task %}
+    <div class="reports-card">
+
+      <div class="reports-card-header">
+        <h3>Перечень отчетов для подготовки</h3>
+
+        {% if reports %}
+          <div class="reports-count">
+            {{ reports
+              | selectattr("target_kind", "in", ["teacher", "teacher_subject_class", "class", "subject"])
+              | list
+              | length
+            }} шт.
+          </div>
+        {% endif %}
+      </div>
+
+      {% if reports %}
+
+        {% set ns = namespace(grouped={}) %}
+
+        {% for item in reports %}
+          {% set key = item.report_code %}
+          {% if key not in ns.grouped %}
+            {% set _ = ns.grouped.update({ key: [] }) %}
+          {% endif %}
+          {% set _ = ns.grouped[key].append(item) %}
+        {% endfor %}
+
+        <div class="report-groups">
+
+          {% for report_code, items in ns.grouped.items() %}
+
+            {% set filtered_items = items
+              | selectattr("target_kind", "in", ["teacher", "teacher_subject_class", "class", "subject"])
+              | list
+            %}
+
+            {% if filtered_items %}
+
+              <div class="reports-card">
+                <div class="reports-card-header">
+                  <div>
+                    <h4 style="margin:0;">
+                      {{ filtered_items[0].report_label or report_code }}
+                    </h4>
+                    <div class="report-code">{{ report_code }}</div>
+                  </div>
+
+                  <div class="reports-count">
+                    {{ filtered_items|length }} шт.
+                  </div>
+                </div>
+
+                <div class="reports-table-wrap">
+
+                  {% if is_simple_final_document %}
+  <div class="alert alert-info">
+    Задача завершена итоговым документом.
+    Заполнение системных и пользовательских отчетов не требуется.
+  </div>
+{% endif %}
+
+                  <table class="reports-table">
+                    <thead>
+                      <tr>
+                        <th>№</th>
+                        <th>Субъект/Объект</th>
+                        <th>Статус</th>
+                        <th>Системный шаблон</th>
+                        <th>Пользовательский шаблон</th>
+                      </tr>
+                    </thead>
+
+                    <tbody>
+                      {% for item in filtered_items %}
+                        <tr>
+                          <td>{{ loop.index }}</td>
+
+                          <td>
+                            <span class="target-kind">
+                              {% if item.target_kind == "teacher" %}
+                                Учитель
+                              {% elif item.target_kind == "teacher_subject_class" %}
+                                Учитель / класс / предмет
+                              {% elif item.target_kind == "class" %}
+                                Класс
+                              {% elif item.target_kind == "subject" %}
+                                Предмет
+                              {% elif item.target_kind == "documentation" %}
+                                Документация
+                              {% else %}
+                                Объект
+                              {% endif %}
+                            </span>
+
+                            <span class="target-label">
+                              {{ item.target_label or "—" }}
+                            </span>
+                          </td>
+
+                          <td>
+                            {% if item.document %}
+                              {% set status_text = item.document_status.label_kz if item.document_status else "—" %}
+
+                              <span class="status-badge
+                                {% if 'черновик' in status_text|lower or 'жоба' in status_text|lower %}
+                                  status-draft
+                                {% elif 'готов' in status_text|lower or 'аяқ' in status_text|lower or 'заверш' in status_text|lower %}
+                                  status-done
+                                {% else %}
+                                  status-draft
+                                {% endif %}
+                              ">
+                                {{ status_text }}
+                              </span>
+                            {% else %}
+                              <span class="status-badge status-empty">
+                                Не заполнен
+                              </span>
+                            {% endif %}
+                          </td>
+
+  {% set source = item.source.value if item.source and item.source.value is defined else item.source %}
+{% set is_system_used = item.is_system_used if item.is_system_used is defined else source == "generated" %}
+{% set is_user_template_used = item.is_user_template_used if item.is_user_template_used is defined else source == "template" %}
+
+{% set report_type = item.get("report_type") or item.get("report_code") or item.get("type") %}
+
+{% set report_fill_routes = {
+  "lesson_observation": "staff_system_report_fill_page",
+  "checking_notebooks_table": "staff_system_report_fill_page"
+} %}
+
+{% set system_fill_route = report_fill_routes.get(report_type) %}
+
+<td>
+  {% if is_simple_final_document or item.is_simple_final_document %}
+
+    <button class="btn btn-secondary"
+            disabled
+            title="Задача завершена итоговым документом">
+      Не требуется
+    </button>
+
+  {% elif not item.target_valid %}
+
+    <button class="btn btn-secondary"
+            disabled
+            title="{{ item.target_error }}">
+      Недоступно
+    </button>
+
+  {% elif is_user_template_used %}
+
+    <button class="btn btn-secondary" disabled>
+      Недоступно
+    </button>
+
+  {% elif item.can_view_system_report and item.system_pdf_view_route and item.system_report_id %}
+
+    <a href="{{ url_for(
+          item.system_pdf_view_route,
+          report_id=item.system_report_id
+        ) }}"
+       class="btn btn-secondary"
+       target="_blank">
+      Просмотр отчета
+    </a>
+
+  {% elif not system_fill_route %}
+
+    <button class="btn btn-secondary" disabled>
+      Маршрут не настроен
+    </button>
+
+  {% else %}
+
+    <a href="{{ url_for(
+          system_fill_route,
+          month_item_id=task.id,
+          selected_report_id=item.selected_report_id
+        ) }}?report_code={{ report_type }}"
+       class="btn {% if is_system_used or item.has_draft %}btn-secondary{% else %}btn-primary{% endif %}">
+      {% if is_system_used or item.has_draft %}
+        Продолжить черновик
+      {% else %}
+        Заполнить
+      {% endif %}
+    </a>
+
+  {% endif %}
+</td>
+
+<td>
+  {% if is_simple_final_document or item.is_simple_final_document %}
+
+    <button class="btn btn-secondary"
+            disabled
+            title="Задача завершена итоговым документом">
+      Не требуется
+    </button>
+
+  {% elif not item.target_valid %}
+
+    <span class="text-muted" title="{{ item.target_error }}">
+      {{ item.target_error or "Недоступно для выбранного объекта" }}
+    </span>
+
+  {% elif is_system_used %}
+
+    <button class="btn btn-secondary" disabled>
+      Недоступно
+    </button>
+
+  {% elif is_user_template_used %}
+
+    {% if item.can_view_user_report and item.user_pdf_view_route and item.user_report_id %}
+
+      <a href="{{ url_for(
+            item.user_pdf_view_route,
+            report_id=item.user_report_id
+          ) }}"
+         class="btn btn-secondary"
+         target="_blank">
+        Просмотр отчета
+      </a>
+
+    {% elif item.has_draft and item.user_fill_route %}
+
+      <a href="{{ url_for(
+            item.user_fill_route,
+            month_item_id=task.id,
+            selected_report_id=item.selected_report_id
+          ) }}"
+         class="btn btn-primary">
+        Продолжить черновик
+      </a>
+
+    {% elif item.user_fill_route %}
+
+      <a href="{{ url_for(
+            item.user_fill_route,
+            month_item_id=task.id,
+            selected_report_id=item.selected_report_id
+          ) }}"
+         class="btn btn-primary">
+        Заполнить мой шаблон
+      </a>
+
+    {% else %}
+
+      <span class="text-muted">
+        Маршрут не настроен
+      </span>
+
+    {% endif %}
+
+  {% else %}
+
+    <a href="{{ url_for(
+          'staff_user_template_select_page',
+          month_item_id=task.id,
+          selected_report_id=item.selected_report_id
+        ) }}"
+       class="btn btn-outline-primary">
+      Выбрать мой шаблон
+    </a>
+
+  {% endif %}
+</td>
+
+                        </tr>
+                      {% endfor %}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+            {% endif %}
+          {% endfor %}
+
+        </div>
+
+      {% else %}
+        <div class="empty-box">
+          Для этой задачи системные отчеты не выбраны.
+        </div>
+      {% endif %}
+
+    </div>
+
+    <div class="reports-card reports-completion-card">
+
+  <div class="reports-card-header">
+    <div>
+      <h3>Завершение задачи</h3>
+
+      <div class="report-code">
+        Подписано отчетов:
+        <strong>{{ signed_reports_count }}</strong>
+        из
+        <strong>{{ required_reports_count }}</strong>
+      </div>
+
+      <div class="report-code" style="margin-top:4px;">
+        Статус задачи:
+        <strong>
+          {{ task_status.label_kz if task_status else "—" }}
+        </strong>
+      </div>
+    </div>
+  </div>
+
+  {# ================= ЗАДАЧА УЖЕ ЗАВЕРШЕНА ================= #}
+
+  {% if is_done %}
+
+    <div class="alert alert-success">
+      Задача уже завершена.
+      Повторная загрузка итогового документа недоступна.
+    </div>
+
+    <div class="action-panel report-actions" style="margin-top: 14px;">
+
+      <input type="file"
+             disabled
+             class="form-control">
+
+      <button class="btn btn-secondary" disabled>
+        Задача завершена
+      </button>
+
+    </div>
+
+  {# ================= МОЖНО ЗАВЕРШАТЬ ================= #}
+
+  {% elif all_reports_signed %}
+
+    <div class="alert alert-success">
+      Все системные отчеты успешно заполнены и подписаны.
+      Можно загрузить итоговый документ и отправить задачу на рассмотрение.
+    </div>
+
+    <form method="post"
+          action="{{ url_for('staff_report_templates_complete_post', month_item_id=task.id) }}"
+          enctype="multipart/form-data">
+
+      <div class="form-grid">
+
+        <div class="form-field form-field--full">
+          <label for="final_document">
+            Итоговый документ
+          </label>
+
+          <input type="file"
+                 id="final_document"
+                 name="final_document"
+                 required
+                 accept=".pdf,.doc,.docx,.xls,.xlsx">
+        </div>
+
+      </div>
+
+      <div class="action-panel report-actions" style="margin-top: 14px;">
+
+        <button type="submit"
+                class="btn btn-success"
+                onclick="return confirm('Загрузить итоговый документ и отправить задачу на рассмотрение?')">
+
+          Загрузить итоговый документ и завершить
+
+        </button>
+
+      </div>
+
+    </form>
+
+  {# ================= НЕ ВСЕ ОТЧЕТЫ ПОДПИСАНЫ ================= #}
+
+  {% else %}
+
+    <div class="alert alert-warning">
+      Для завершения задачи необходимо заполнить и подписать все системные отчеты.
+    </div>
+
+    <div class="action-panel report-actions" style="margin-top: 14px;">
+
+      <input type="file"
+             disabled
+             class="form-control">
+
+      <button class="btn btn-secondary" disabled>
+        Завершение недоступно
+      </button>
+
+    </div>
+
+  {% endif %}
+
+</div>
+
+
+  {% endif %}
+
+  {# ================= Итоговые документы ================= #}
+
+<div class="card report-card">
+  <div class="section-header">
+    <h3 class="section-title">Итоговые документы</h3>
+  </div>
+
+  {% set final_documents = final_documents or [] %}
+
+  {% if has_final_document %}
+    <div class="alert alert-success" style="margin-bottom:12px;">
+      <strong>Итоговый документ загружен.</strong>
+    </div>
+  {% endif %}
+
+  {% if final_documents %}
+    <div class="report-documents">
+      {% for doc in final_documents %}
+        <div class="report-document-item">
+
+          <div class="report-document-top">
+            <div class="report-document-info">
+
+              <div class="report-document-title">
+                <strong>{{ doc.original_file_name or doc.title or "Без названия" }}</strong>
+              </div>
+
+              <div class="report-document-meta">
+
+                <div class="meta-row">
+                  <span class="meta-label">Статус:</span>
+                  <span class="meta-value">
+                    <strong>{{ doc.status.label_kz if doc.status else "—" }}</strong>
+                  </span>
+                </div>
+
+                {% if current_final_document %}
+                  <div class="meta-row">
+                    <span class="meta-label">Қарауға жіберілген құжаттар:</span>
+                    <span class="meta-value">
+                      <strong>{{ review_reports_text or "—" }}</strong>
+                    </span>
+                  </div>
+
+                  <div class="meta-row">
+                    <span class="meta-label">Қаралатын орны:</span>
+                    <span class="meta-value">
+                      <strong>{{ review_place_text or "—" }}</strong>
+                    </span>
+                  </div>
+                {% endif %}
+
+                <div class="meta-row">
+                  <span class="meta-label">Тип:</span>
+                  <span class="meta-value">
+                    {{ doc.document_type.label_kz if doc.document_type else "—" }}
+                  </span>
+                </div>
+
+                <div class="meta-row">
+                  <span class="meta-label">Файл:</span>
+                  <span class="meta-value">
+                    {{ doc.original_file_name or "—" }}
+                  </span>
+                </div>
+
+              </div>
+            </div>
+          </div>
+
+          {% if doc.file_path %}
+            <div class="card action-panel report-actions">
+              <a href="{{ url_for('staff_report_document_view', document_id=doc.id) }}"
+                 class="btn btn-secondary"
+                 target="_blank">
+                Просмотреть
+              </a>
+
+              <a href="{{ url_for('staff_report_document_download', document_id=doc.id) }}"
+                 class="btn btn-primary">
+                Скачать
+              </a>
+            </div>
+          {% else %}
+            <div class="empty-box">
+              Файл отсутствует
+            </div>
+          {% endif %}
+
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty-box">
+      Итоговые документы пока не загружены
+    </div>
+  {% endif %}
+</div>
+
+
+</div>
+
+{% endblock %}

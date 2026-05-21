@@ -1,0 +1,366 @@
+{% extends "base.html" %}
+
+{% block title %}Пользовательский шаблон отчета лист наблюдение урока{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', path='css/template_report.css') }}">
+{% endblock %}
+
+{% block content %}
+{% set schema = schema or {} %}
+
+{% set raw_month_item_id = month_item_id or request.query_params.get('month_item_id') %}
+{% set raw_selected_report_id = selected_report_id or request.query_params.get('selected_report_id') %}
+
+{% set month_item_id = raw_month_item_id if raw_month_item_id and raw_month_item_id != "None" else none %}
+{% set selected_report_id = raw_selected_report_id if raw_selected_report_id and raw_selected_report_id != "None" else none %}
+<div class="page-header">
+  <div>
+    <h2>{{ "Редактировать шаблон" if template else "Создать шаблон" }}</h2>
+    <div class="muted">Личный шаблон: Сабақты бақылау парағы</div>
+  </div>
+
+  <a href="{{ url_for('staff_user_templates_page') }}{% if month_item_id and selected_report_id %}?month_item_id={{ month_item_id }}&selected_report_id={{ selected_report_id }}{% endif %}"
+   class="btn btn-secondary">
+  ← Назад
+</a>
+</div>
+
+{% if error %}
+  <div class="alert alert-danger">{{ error }}</div>
+{% endif %}
+
+<form method="post" id="lesson-template-form" class="lesson-template-form">
+
+  <input type="hidden" name="context_month_item_id" value="{{ month_item_id or request.query_params.get('month_item_id', '') }}">
+  <input type="hidden" name="context_selected_report_id" value="{{ selected_report_id or request.query_params.get('selected_report_id', '') }}">
+  <input type="hidden" name="report_code" value="lesson_observation">
+  <input type="hidden" name="schema_json" id="schema_json">
+
+  <!-- 1. Основные данные -->
+  <div class="card report-card">
+    <div class="card-title-row">
+      <div>
+        <h3>1. Основные данные шаблона</h3>
+        <div class="muted">Название и тип личного шаблона</div>
+      </div>
+    </div>
+
+    <div class="form-grid">
+      <div class="form-field">
+        <label for="title">Название шаблона</label>
+        <input id="title"
+               name="title"
+               value="{{ template.title if template else '' }}"
+               placeholder="Например: Сабақты бақылау парағы"
+               required>
+      </div>
+
+      <div class="form-field">
+        <label>Тип отчета</label>
+        <div class="value">Сабақты бақылау парағы</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. Общая информация -->
+  <div class="card report-card">
+    <div class="card-title-row">
+      <div>
+        <h3>2. Общая информация об уроке</h3>
+        <div class="muted">Выберите поля, которые будут отображаться в отчете</div>
+      </div>
+    </div>
+
+    <div class="checkbox-grid">
+      <label class="checkbox-card">
+        <input type="checkbox" class="info-field" value="teacher_name" checked>
+        <span>Педагогтің ТАӘ</span>
+      </label>
+
+      <label class="checkbox-card">
+        <input type="checkbox" class="info-field" value="teacher_post" checked>
+        <span>Лауазымы, біліктілік санаты</span>
+      </label>
+
+      <label class="checkbox-card">
+        <input type="checkbox" class="info-field" value="subject" checked>
+        <span>Пән</span>
+      </label>
+
+      <label class="checkbox-card">
+        <input type="checkbox" class="info-field" value="organization" checked>
+        <span>Білім беру ұйымы</span>
+      </label>
+
+      <label class="checkbox-card">
+        <input type="checkbox" class="info-field" value="class_group" checked>
+        <span>Сынып / топ</span>
+      </label>
+
+      <label class="checkbox-card">
+        <input type="checkbox" class="info-field" value="controller_name" checked>
+        <span>Бақылаушының ТАӘ</span>
+      </label>
+
+      <label class="checkbox-card">
+        <input type="checkbox" class="info-field" value="controller_post" checked>
+        <span>Бақылаушының лауазымы</span>
+      </label>
+
+      <label class="checkbox-card">
+        <input type="checkbox" class="info-field" value="lesson_datetime" checked>
+        <span>Уақыты</span>
+      </label>
+
+      <label class="checkbox-card">
+        <input type="checkbox" class="info-field" value="theme" checked>
+        <span>Сабақтың тақырыбы</span>
+      </label>
+
+      <label class="checkbox-card">
+        <input type="checkbox" class="info-field" value="learning_objectives" checked>
+        <span>Оқу мақсаты</span>
+      </label>
+    </div>
+  </div>
+
+  <!-- 3. Разделы и критерии -->
+  <div class="card report-card">
+    <div class="card-title-row">
+      <div>
+        <h3>3. Разделы и критерии оценки</h3>
+        <div class="muted">Каждый раздел будет отдельной карточкой в отчете</div>
+      </div>
+
+      <button type="button" class="btn btn-primary" id="add-section-btn">
+        + Добавить раздел
+      </button>
+    </div>
+
+    <div id="sections-container" class="sections-container"></div>
+  </div>
+
+  <!-- 4. Итог -->
+  <div class="card report-card">
+    <div class="card-title-row">
+      <div>
+        <h3>4. Итоговая оценка</h3>
+        <div class="muted">Настройки подсчета общего балла</div>
+      </div>
+    </div>
+
+    <div class="form-grid">
+      <div class="form-field">
+        <label class="inline-checkbox">
+          <input type="checkbox" id="show_total_score" checked>
+          <span>Показывать общую сумму баллов</span>
+        </label>
+      </div>
+
+      <div class="form-field">
+        <label for="max_score">Максимальный балл</label>
+        <input type="number" id="max_score" name="max_score" value="0" readonly>
+      </div>
+    </div>
+  </div>
+
+  <!-- Кнопки -->
+  <div class="card action-panel report-actions">
+    <button type="submit" class="btn btn-primary">
+      Сохранить шаблон
+    </button>
+
+    <a href="{{ url_for('staff_user_templates_page') }}{% if month_item_id and selected_report_id %}?month_item_id={{ month_item_id }}&selected_report_id={{ selected_report_id }}{% endif %}"
+   class="btn btn-secondary">
+  Отмена
+</a>
+  </div>
+
+</form>
+
+<script>
+  window.existingSchema = {{ schema | tojson | safe }};
+</script>
+
+<script>
+(function () {
+  const sectionsContainer = document.getElementById("sections-container");
+  const addSectionBtn = document.getElementById("add-section-btn");
+  const form = document.getElementById("lesson-template-form");
+  const templateJsonInput = document.getElementById("schema_json");
+  const maxScoreInput = document.getElementById("max_score");
+
+  const existingSchema = window.existingSchema || null;
+
+  let sectionIndex = 0;
+
+  function createSection(title = "", criteriaData = []) {
+    const currentIndex = sectionIndex++;
+
+    const sectionEl = document.createElement("div");
+    sectionEl.className = "template-section";
+    sectionEl.dataset.sectionIndex = currentIndex;
+
+    sectionEl.innerHTML = `
+      <div class="template-section__head">
+        <div class="template-section__title-wrap">
+          <label>Название раздела</label>
+          <input type="text"
+                 class="section-title"
+                 placeholder="Например: Планирование урока"
+                 value="${title}"
+                 required>
+        </div>
+
+        <button type="button" class="btn btn-danger btn-sm remove-section-btn">
+          Удалить раздел
+        </button>
+      </div>
+
+      <div class="criteria-list"></div>
+
+      <div class="template-section__footer">
+        <button type="button" class="btn btn-secondary btn-sm add-criterion-btn">
+          + Добавить критерий
+        </button>
+      </div>
+    `;
+
+    const criteriaList = sectionEl.querySelector(".criteria-list");
+
+    if (criteriaData.length) {
+      criteriaData.forEach(c => createCriterion(criteriaList, c.text));
+    } else {
+      createCriterion(criteriaList);
+    }
+
+    sectionEl.querySelector(".add-criterion-btn").addEventListener("click", function () {
+      createCriterion(criteriaList);
+      updateMaxScore();
+    });
+
+    sectionEl.querySelector(".remove-section-btn").addEventListener("click", function () {
+      sectionEl.remove();
+      updateMaxScore();
+    });
+
+    sectionsContainer.appendChild(sectionEl);
+    updateMaxScore();
+  }
+
+  function createCriterion(container, text = "") {
+    const criterionEl = document.createElement("div");
+    criterionEl.className = "criterion-row";
+
+    criterionEl.innerHTML = `
+      <div class="criterion-text">
+        <label>Критерий оценки</label>
+        <input type="text"
+               class="criterion-input"
+               placeholder="Введите критерий оценки"
+               value="${text}"
+               required>
+      </div>
+
+      <div class="criterion-points">
+        <span>0</span>
+        <span>1</span>
+        <span>2</span>
+        <span>3</span>
+      </div>
+
+      <button type="button" class="btn btn-danger btn-sm remove-criterion-btn">
+        ×
+      </button>
+    `;
+
+    criterionEl.querySelector(".remove-criterion-btn").addEventListener("click", function () {
+      criterionEl.remove();
+      updateMaxScore();
+    });
+
+    container.appendChild(criterionEl);
+    updateMaxScore();
+  }
+
+  function collectTemplateData() {
+    const infoFields = Array.from(document.querySelectorAll(".info-field:checked"))
+      .map(item => item.value);
+
+    const sections = Array.from(document.querySelectorAll(".template-section"))
+      .map(sectionEl => {
+        const title = sectionEl.querySelector(".section-title").value.trim();
+
+        const criteria = Array.from(sectionEl.querySelectorAll(".criterion-input"))
+          .map(input => input.value.trim())
+          .filter(Boolean)
+          .map((text, index) => ({
+            order: index + 1,
+            text: text,
+            max_score: 3
+          }));
+
+        return {
+          title: title,
+          criteria: criteria
+        };
+      })
+      .filter(section => section.title && section.criteria.length);
+
+    return {
+      report_code: "lesson_observation",
+      info_fields: infoFields,
+      sections: sections,
+      score_scale: [0, 1, 2, 3],
+      show_total_score: document.getElementById("show_total_score").checked,
+      max_score: Number(maxScoreInput.value || 0)
+    };
+  }
+
+  function updateMaxScore() {
+    const count = document.querySelectorAll(".criterion-input").length;
+    maxScoreInput.value = count * 3;
+  }
+
+  function initFromSchema() {
+    if (!existingSchema) {
+      createSection();
+      return;
+    }
+
+    if (existingSchema.info_fields) {
+      existingSchema.info_fields.forEach(code => {
+        const checkbox = document.querySelector(`.info-field[value="${code}"]`);
+        if (checkbox) checkbox.checked = true;
+      });
+    }
+
+    if (existingSchema.sections && existingSchema.sections.length) {
+      existingSchema.sections.forEach(section => {
+        createSection(section.title, section.criteria || []);
+      });
+    } else {
+      createSection();
+    }
+
+    if (typeof existingSchema.show_total_score !== "undefined") {
+      document.getElementById("show_total_score").checked = existingSchema.show_total_score;
+    }
+
+    updateMaxScore();
+  }
+
+  form.addEventListener("submit", function () {
+    templateJsonInput.value = JSON.stringify(collectTemplateData());
+  });
+
+  addSectionBtn.addEventListener("click", function () {
+    createSection();
+  });
+
+  initFromSchema();
+})();
+</script>
+
+{% endblock %}
