@@ -48,7 +48,7 @@ logs/
 # =========================
 uploads/
 media/
-storage/
+/storage/
 
 # =========================
 # Temp files
