@@ -36,7 +36,7 @@
     <div class="muted">Жүйелік есепті толтыру</div>
   </div>
 
-  <a href="{{ url_for('', month_item_id=month_item_id) }}"
+  <a href="{{ url_for('staff_report_templates_page', month_item_id=month_item_id) }}"
      class="btn btn-secondary">
     ← Назад к отчетам
   </a>
@@ -354,7 +354,7 @@
       Сохранить и подписать
     </button>
 
-    <a href="{{ url_for('', month_item_id=month_item_id) }}"
+    <a href="{{ url_for('staff_report_templates_page', month_item_id=month_item_id) }}"
        class="btn btn-secondary">
       Отмена
     </a>
