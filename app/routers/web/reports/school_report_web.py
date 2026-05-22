@@ -115,7 +115,6 @@ async def staff_report_execute_page(
         user: User = Depends(require_roles(UserRole.SCHOOL_STAFF, UserRole.SCHOOL_ADMIN)),
 ):
     month = request.query_params.get("month")
-    page_data = None
 
     try:
         page_data = await ReportService.get_execution_page_data(
@@ -129,16 +128,20 @@ async def staff_report_execute_page(
             {
                 "request": request,
                 "user": user,
+
                 "task": None,
                 "task_topic": None,
                 "task_goal": None,
                 "review_place_text": None,
                 "execution": None,
 
-                "is_done": page_data.get("is_done", False),
-                "current_final_document": page_data.get("current_final_document"),
-                "has_final_document": page_data.get("has_final_document", False),
-                "final_document_status": page_data.get("final_document_status"),
+                "is_done": False,
+                "task_status": None,
+                "task_status_value": None,
+
+                "current_final_document": None,
+                "has_final_document": False,
+                "final_document_status": None,
 
                 "required_documents": [],
                 "final_documents": [],
@@ -154,7 +157,6 @@ async def staff_report_execute_page(
             },
             status_code=404,
         )
-
     task = page_data["task"]
 
     task_status_value = getattr(task.status, "value", task.status)
