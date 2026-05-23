@@ -11,7 +11,7 @@
 <div class="page-header">
   <div>
     <h2>{{ document.report_label or "Проверка тетрадей" }}</h2>
-    <div class="muted">Заполнение отчета по личному шаблону</div>
+    <div class="muted">Заполнение отчета системного шаблона</div>
   </div>
 
   <a href="{{ url_for('staff_report_templates_page', month_item_id=document.month_item_id) }}"
@@ -62,11 +62,12 @@ report.level: {{ report.level if report else "NO REPORT" }}
 
 <form method="post"
       action="{{ request.url_for(
-          'checking_notebooks_save_post',
+          'staff_system_report_fill_post',
           month_item_id=month_item_id,
           selected_report_id=selected_report_id
       ) }}">
 
+  <input type="hidden" name="report_code" value="{{ report_code }}">
   <!-- 1. Общая информация -->
   <div class="card report-card">
     <div class="card-title-row">
