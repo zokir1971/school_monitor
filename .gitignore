@@ -93,3 +93,6 @@ START_REDMI.txt
 # Alembic cache
 # =========================
 alembic/versions/__pycache__/
+
+/backups/
+nohup.out

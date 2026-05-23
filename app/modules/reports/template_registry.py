@@ -10,7 +10,7 @@ SYSTEM_REPORT_CONFIG = {
         "pdf_route": "lesson_observation_pdf_view",
     },
     ReportType.CHECKING_NOTEBOOKS_TABLE.value: {
-        "template": "staff/reports/user_templates/_checking_notebooks_table.html",
+        "template": "staff/reports/template_map/_checking_notebooks_table.html",
         "service": SystemCheckingNotebooksService,
         "pdf_route": "checking_notebooks_pdf_view",
     },
