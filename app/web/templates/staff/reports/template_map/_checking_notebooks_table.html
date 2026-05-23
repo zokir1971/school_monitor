@@ -62,7 +62,7 @@ report.level: {{ report.level if report else "NO REPORT" }}
 
 <form method="post"
       action="{{ request.url_for(
-          'staff_checking_notebooks_save_post',
+          'checking_notebooks_save_post',
           month_item_id=month_item_id,
           selected_report_id=selected_report_id
       ) }}">
