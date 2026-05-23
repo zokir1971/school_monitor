@@ -24,7 +24,7 @@ class CheckingNotebooksSystemRepo:
             created_by_user_id: int,
     ):
         report = CheckingNotebooksReport(
-            document_id=document_id,
+            task_execution_document_id=document_id,
             selected_report_id=selected_report_id,
             month_item_id=month_item_id,
             created_by_user_id=created_by_user_id,
