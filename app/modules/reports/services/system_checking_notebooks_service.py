@@ -489,7 +489,7 @@ class SystemCheckingNotebooksService:
         if action == "save":
             document.status = TaskDocumentStatus.DRAFT
 
-            await db.flush()
+            await db.commit()
 
             await db.refresh(report)
             await db.refresh(document)
@@ -529,7 +529,7 @@ class SystemCheckingNotebooksService:
         document.file_path = report.pdf_signed_file
         document.mime_type = "application/pdf"
 
-        await db.flush()
+        await db.commit()
 
         await db.refresh(report)
         await db.refresh(document)
