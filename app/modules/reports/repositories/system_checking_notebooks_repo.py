@@ -27,10 +27,11 @@ class CheckingNotebooksSystemRepo:
             task_execution_document_id=document_id,
             selected_report_id=selected_report_id,
             month_item_id=month_item_id,
-            created_by_user_id=created_by_user_id,
+            observer_user_id=created_by_user_id,
         )
 
         db.add(report)
+
         await db.flush()
         await db.refresh(report)
 
