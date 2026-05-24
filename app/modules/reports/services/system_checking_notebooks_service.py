@@ -26,6 +26,14 @@ from app.modules.users.models import User
 
 
 class SystemCheckingNotebooksService:
+    @staticmethod
+    def _to_int(value) -> int | None:
+        try:
+            if value in (None, ""):
+                return None
+            return int(float(value))
+        except (TypeError, ValueError):
+            return None
 
     @classmethod
     async def get_fill_page_data(
@@ -430,9 +438,37 @@ class SystemCheckingNotebooksService:
         # SAVE REPORT
         # =========================================================
 
-        report.info_json = saved_info
+        report.school_name = saved_info.get("school_name")
+        report.checker_name = saved_info.get("checker_name")
+        report.checker_post = saved_info.get("checker_post")
+
+        report.teacher_name = saved_info.get("teacher_name")
+        report.class_name = saved_info.get("class_name")
+        report.subject_name = saved_info.get("subject_name")
+
+        report.conclusion = saved_info.get("conclusion")
+        report.recommendations = saved_info.get("recommendations")
+
         report.rows_json = rows
-        report.updated_by_user_id = user.id
+
+        total_score = cls._to_int(form.get("total_score")) or 0
+        max_score = cls._to_int(form.get("max_score")) or cls.calculate_max_score(
+            criteria=(document.schema_json or CHECKING_NOTEBOOKS_SYSTEM_SCHEMA).get("criteria") or [],
+            score_scale=(document.schema_json or CHECKING_NOTEBOOKS_SYSTEM_SCHEMA).get("score_scale") or [0, 1, 2],
+        )
+        percent = cls._to_int(form.get("percent"))
+        if percent is None:
+            percent = cls.calculate_percent(
+                total_score=total_score,
+                max_score=max_score,
+            )
+
+        level = saved_info.get("level") or form.get("level") or form.get("info_level") or cls.calculate_level(percent)
+
+        report.total_score = total_score
+        report.max_score = max_score
+        report.percent = percent
+        report.level = level
 
         schema = document.schema_json or CHECKING_NOTEBOOKS_SYSTEM_SCHEMA
 
@@ -440,6 +476,10 @@ class SystemCheckingNotebooksService:
             **schema,
             "saved_info": saved_info,
             "rows": rows,
+            "total_score": total_score,
+            "max_score": max_score,
+            "percent": percent,
+            "level": level,
         }
 
         # =========================================================

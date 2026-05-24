@@ -1,3 +1,4 @@
+# app/modules/reports/repositories/system_checking_notebooks_repo.py
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
