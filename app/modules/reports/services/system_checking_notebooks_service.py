@@ -435,6 +435,17 @@ class SystemCheckingNotebooksService:
             rows.append(row)
 
         # =========================================================
+        # SCORES
+        # =========================================================
+
+        scores = {}
+
+        for key, value in form.multi_items():
+            if key.startswith("score_"):
+                score_key = key.removeprefix("score_")
+                scores[score_key] = str(value).strip()
+
+        # =========================================================
         # SAVE REPORT
         # =========================================================
 
@@ -476,6 +487,7 @@ class SystemCheckingNotebooksService:
             **schema,
             "saved_info": saved_info,
             "rows": rows,
+            "scores": scores,
             "total_score": total_score,
             "max_score": max_score,
             "percent": percent,
