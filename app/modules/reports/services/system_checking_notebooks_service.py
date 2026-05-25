@@ -442,9 +442,14 @@ class SystemCheckingNotebooksService:
 
         for key, value in form.multi_items():
             if key.startswith("score_"):
-                score_key = key.removeprefix("score_")
-                scores[score_key] = str(value).strip()
+                value_str = str(value).strip()
 
+                # score_criterion_0
+                scores[key] = value_str
+
+                # criterion_0
+                scores[key.removeprefix("score_")] = value_str
+                
         # =========================================================
         # SAVE REPORT
         # =========================================================
