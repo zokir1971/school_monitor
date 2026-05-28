@@ -85,16 +85,39 @@
   <div class="muted">Выберите поля, которые будут отображаться в отчете</div>
 
   <div class="form-grid">
-    {% for field_code in info_fields_list %}
-      <label class="checkbox-row">
-        <input type="checkbox"
-               name="info_fields"
-               value="{{ field_code }}"
-               checked>
-        {{ info_labels.get(field_code, field_code) }}
-      </label>
-    {% endfor %}
-  </div>
+
+  {% for field in info_fields_list %}
+
+    {% if field is string %}
+      {% set field_code = field %}
+      {% set field_label = info_labels.get(field_code, field_code) %}
+    {% else %}
+      {% set field_code =
+          field.get("key")
+          or field.get("code")
+          or field.get("name")
+      %}
+
+      {% set field_label =
+          field.get("label_kz")
+          or field.get("label")
+          or field.get("title")
+          or info_labels.get(field_code, field_code)
+      %}
+    {% endif %}
+
+    <label class="checkbox-row">
+      <input type="checkbox"
+             name="info_fields"
+             value="{{ field_code }}"
+             checked>
+
+      {{ field_label }}
+    </label>
+
+  {% endfor %}
+
+</div>
 </div>
 
 <div class="card report-card">
