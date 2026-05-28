@@ -180,9 +180,12 @@ class CheckingNotebooksService:
                 criterion_key = key.removeprefix("score_")
 
                 try:
-                    scores[criterion_key] = int(value or 0)
+                    score_value = int(value or 0)
                 except (TypeError, ValueError):
-                    scores[criterion_key] = 0
+                    score_value = 0
+
+                scores[criterion_key] = score_value
+                scores[key] = score_value
 
         try:
             total_score = int(form.get("total_score") or 0)
@@ -199,10 +202,18 @@ class CheckingNotebooksService:
         except (TypeError, ValueError):
             percent = 0
 
-        level = str(form.get("info_level") or "—").strip()
+        level = str(
+            form.get("level")
+            or form.get("info_level")
+            or saved_info.get("level")
+            or "—"
+        ).strip()
 
         if total_score == 0 and scores:
-            total_score = sum(scores.values())
+            total_score = sum(
+                value for key, value in scores.items()
+                if not key.startswith("score_")
+            )
 
         if percent == 0 and max_score:
             percent = round(total_score * 100 / max_score)
@@ -243,6 +254,8 @@ class CheckingNotebooksService:
             conclusion=saved_info.get("conclusion", ""),
             recommendations=saved_info.get("recommendations", ""),
         )
+        report.criteria_scores = rows_json
+        report.rows_json = rows_json
 
         await db.flush()
         await db.refresh(report)
@@ -258,7 +271,7 @@ class CheckingNotebooksService:
             )
 
             verify_url = (
-                    str(request.url_for("checking_notebooks_verify_page"))
+                    str(request.url_for("report_signature_verify"))
                     + f"?token={token}"
             )
 
@@ -522,6 +535,31 @@ class CheckingNotebooksService:
             document_id=document.id,
         )
 
+        # =========================================================
+        # Teacher subject fallback
+        # =========================================================
+
+        teacher_subject = ""
+
+        if selected_report.target_kind == "teacher":
+            try:
+                teacher_id = int(selected_report.target_value)
+            except (TypeError, ValueError):
+                teacher_id = None
+
+            if teacher_id:
+                teacher_info = await CheckingNotebooksRepo.get_teacher_info(
+                    db,
+                    teacher_id=teacher_id,
+                )
+
+                if teacher_info:
+                    teacher_subject = (
+                            getattr(teacher_info, "subject", "")
+                            or getattr(teacher_info, "subject_name", "")
+                            or ""
+                    )
+
         scores: dict[str, int] = {}
         total_score = 0
         percent = 0
@@ -534,7 +572,7 @@ class CheckingNotebooksService:
                 "checker_post": report.checker_post or checker_post,
                 "teacher_name": report.teacher_name or "",
                 "class_name": report.class_name or "",
-                "subject_name": report.subject_name or "",
+                "subject_name": report.subject_name or teacher_subject or "",
                 "check_date": (
                     report.check_date.strftime("%Y-%m-%dT%H:%M")
                     if report.check_date else ""
@@ -543,8 +581,6 @@ class CheckingNotebooksService:
                 "recommendations": report.recommendations or "",
                 "level": report.level or "",
             }
-
-            scores: dict[str, int] = {}
 
             raw_rows_data = report.rows_json
 
@@ -560,21 +596,30 @@ class CheckingNotebooksService:
 
                         try:
                             scores[clean_key] = int(value or 0)
+                            scores[f"score_{clean_key}"] = int(value or 0)
                         except (TypeError, ValueError):
                             scores[clean_key] = 0
+                            scores[f"score_{clean_key}"] = 0
 
             elif isinstance(raw_rows_data, list):
                 for i, row in enumerate(raw_rows_data):
                     if isinstance(row, dict):
                         try:
-                            scores[f"criterion_{i}"] = int(row.get("score") or 0)
+                            score_value = int(row.get("score") or 0)
                         except (TypeError, ValueError):
-                            scores[f"criterion_{i}"] = 0
+                            score_value = 0
+
+                        scores[f"criterion_{i}"] = score_value
+                        scores[f"score_criterion_{i}"] = score_value
 
             total_score = (
                 report.total_score
                 if report.total_score is not None
-                else sum(scores.values())
+                else sum(
+                    value
+                    for key, value in scores.items()
+                    if not key.startswith("score_")
+                )
             )
 
             max_score = (
@@ -598,7 +643,7 @@ class CheckingNotebooksService:
                 "checker_post": checker_post,
                 "teacher_name": getattr(selected_report, "target_label", "") or "",
                 "class_name": getattr(selected_report, "class_name", "") or "",
-                "subject_name": getattr(selected_report, "subject_name", "") or "",
+                "subject_name": teacher_subject,
                 "check_date": "",
                 "conclusion": "",
                 "recommendations": "",

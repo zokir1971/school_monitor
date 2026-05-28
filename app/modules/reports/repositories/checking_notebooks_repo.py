@@ -10,8 +10,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.modules.org.models import School
 from app.modules.reports.models_documents import TaskExecutionDocument, TaskExecutionSelectedReport
 from app.modules.reports.models_template_reports import CheckingNotebooksReport
-from app.modules.reports.schemas.checking_notebooks_dto import CheckingNotebooksDTO
-from app.modules.staff.models_staff_school import SchoolStaffRole
+from app.modules.reports.schemas.checking_notebooks_dto import CheckingNotebooksDTO, TeacherInfoDTO
+from app.modules.staff.models_staff_school import SchoolStaffRole, SchoolStaffMember
 
 
 class CheckingNotebooksRepo:
@@ -187,6 +187,31 @@ class CheckingNotebooksRepo:
                 role_context
                 or getattr(role, "label_kz", None)
                 or getattr(role, "value", "")
+        )
+
+    @staticmethod
+    async def get_teacher_info(
+            db: AsyncSession,
+            teacher_id: int,
+    ) -> TeacherInfoDTO | None:
+        result = await db.execute(
+            select(
+                SchoolStaffMember.full_name,
+                SchoolStaffMember.subject,
+            )
+            .where(SchoolStaffMember.id == teacher_id)
+            .where(SchoolStaffMember.is_active.is_(True))
+            .limit(1)
+        )
+
+        row = result.one_or_none()
+
+        if row is None:
+            return None
+
+        return TeacherInfoDTO(
+            full_name=row.full_name,
+            subject=row.subject,
         )
 
     @staticmethod

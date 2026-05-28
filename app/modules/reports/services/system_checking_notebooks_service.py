@@ -366,6 +366,7 @@ class SystemCheckingNotebooksService:
             user: User,
             templates,
     ):
+        print("FORM DATA:", dict(form))
         action = form.get("action")
 
         if action not in {"save", "complete"}:

@@ -9,11 +9,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
 from app.modules.reports.template_registry import SYSTEM_REPORT_CONFIG
+from app.modules.reports.utils.report_signature import ReportSignatureService
 from app.modules.users.deps import require_roles
 from app.modules.users.enums import UserRole
 from app.modules.users.models import User
 from app.routers.web.web_common import templates
-
 
 router = APIRouter(
     prefix="/staff/reports",
@@ -77,13 +77,13 @@ def _page_data_to_context(page_data) -> dict:
 
 
 def _redirect_url(
-    request: Request,
-    *,
-    month_item_id: int,
-    selected_report_id: int,
-    report_code: str,
-    success: str | None = None,
-    error: str | None = None,
+        request: Request,
+        *,
+        month_item_id: int,
+        selected_report_id: int,
+        report_code: str,
+        success: str | None = None,
+        error: str | None = None,
 ) -> str:
     base_url = str(
         request.url_for(
@@ -110,17 +110,17 @@ def _redirect_url(
     response_class=HTMLResponse,
 )
 async def staff_system_report_fill_page(
-    request: Request,
-    month_item_id: int,
-    selected_report_id: int,
-    report_code: str,
-    db: AsyncSession = Depends(get_db),
-    user: User = Depends(
-        require_roles(
-            UserRole.SCHOOL_STAFF,
-            UserRole.SCHOOL_ADMIN,
-        )
-    ),
+        request: Request,
+        month_item_id: int,
+        selected_report_id: int,
+        report_code: str,
+        db: AsyncSession = Depends(get_db),
+        user: User = Depends(
+            require_roles(
+                UserRole.SCHOOL_STAFF,
+                UserRole.SCHOOL_ADMIN,
+            )
+        ),
 ):
     config = SYSTEM_REPORT_CONFIG.get(report_code)
 
@@ -173,16 +173,16 @@ async def staff_system_report_fill_page(
     name="staff_system_report_fill_post",
 )
 async def staff_system_report_fill_post(
-    request: Request,
-    month_item_id: int,
-    selected_report_id: int,
-    db: AsyncSession = Depends(get_db),
-    user: User = Depends(
-        require_roles(
-            UserRole.SCHOOL_STAFF,
-            UserRole.SCHOOL_ADMIN,
-        )
-    ),
+        request: Request,
+        month_item_id: int,
+        selected_report_id: int,
+        db: AsyncSession = Depends(get_db),
+        user: User = Depends(
+            require_roles(
+                UserRole.SCHOOL_STAFF,
+                UserRole.SCHOOL_ADMIN,
+            )
+        ),
 ):
     form = await request.form()
     form_data = dict(form)
@@ -278,3 +278,29 @@ async def staff_system_report_fill_post(
             ),
             status_code=303,
         )
+
+
+@router.get(
+    "/verify/signature",
+    name="report_signature_verify",
+    response_class=HTMLResponse,
+)
+async def report_signature_verify(
+        request: Request,
+        token: str,
+):
+    try:
+        payload = ReportSignatureService.decode_token(token)
+    except Exception:
+        raise HTTPException(
+            status_code=400,
+            detail="Некорректная немесе мерзімі өткен қолтаңба.",
+        )
+
+    return templates.TemplateResponse(
+        "staff/reports/verify_signature.html",
+        {
+            "request": request,
+            "payload": payload,
+        },
+    )

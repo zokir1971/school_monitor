@@ -118,13 +118,16 @@
 
 <body>
 
-{% set data = report.criteria_scores or report.rows_json or {} %}
-{% set info = data.get("info") or {} %}
-{% set scores = data.get("scores") or {} %}
-{% set total_score = data.get("total_score") or report.total_score or 0 %}
-{% set max_score = data.get("max_score") or report.max_score or 0 %}
-{% set percent = data.get("percent") or report.percent or 0 %}
-{% set level = data.get("level") or report.level or info.get("level") or "—" %}
+{% set schema = schema or {} %}
+{% set data = report.criteria_scores or {} %}
+
+{% set info = data.get("info") or schema.get("saved_info") or {} %}
+{% set scores = data.get("scores") or schema.get("scores") or {} %}
+
+{% set total_score = data.get("total_score") or schema.get("total_score") or report.total_score or 0 %}
+{% set max_score = data.get("max_score") or schema.get("max_score") or report.max_score or 0 %}
+{% set percent = data.get("percent") or schema.get("percent") or report.percent or 0 %}
+{% set level = data.get("level") or schema.get("level") or report.level or info.get("level") or "—" %}
 
 <h1>Дәптер тексеруді бағалау парағы</h1>
 
@@ -139,7 +142,7 @@
 
     <tr>
         <th>Білім беру ұйымы / Организация образования</th>
-        <td>{{ info.get("school_name") or "—" }}</td>
+        <td>{{ info.get("school_name") or report.school_name or "—" }}</td>
     </tr>
 
     <tr>
@@ -149,27 +152,27 @@
 
     <tr>
         <th>Тексеруші / Проверяющий</th>
-        <td>{{ info.get("checker_name") or "—" }}</td>
+        <td>{{ info.get("checker_name") or report.checker_name or "—" }}</td>
     </tr>
 
     <tr>
         <th>Тексерушінің лауазымы / Должность проверяющего</th>
-        <td>{{ info.get("checker_post") or "—" }}</td>
+        <td>{{ info.get("checker_post") or report.checker_post or "—" }}</td>
     </tr>
 
     <tr>
         <th>Мұғалім / Учитель</th>
-        <td>{{ info.get("teacher_name") or "—" }}</td>
+        <td>{{ info.get("teacher_name") or report.teacher_name or "—" }}</td>
     </tr>
 
     <tr>
         <th>Сынып / Класс</th>
-        <td>{{ info.get("class_name") or "—" }}</td>
+        <td>{{ info.get("class_name") or report.class_name or "—" }}</td>
     </tr>
 
     <tr>
         <th>Пән / Предмет</th>
-        <td>{{ info.get("subject_name") or "—" }}</td>
+        <td>{{ info.get("subject_name") or report.subject_name or "—" }}</td>
     </tr>
 
     </tbody>
@@ -242,17 +245,17 @@
 
     <tr>
         <th>Макисмалды былл / Максимальный балл</th>
-        <td>{{ report.max_score or "—" }}</td>
+        <td>{{ max_score or "—" }}</td>
     </tr>
 
     <tr>
         <th>Пайыз / Процент</th>
-        <td>{{ report.percent or "—" }}%</td>
+        <td>{{ percent or "—" }}%</td>
     </tr>
 
     <tr>
         <th>Деңгейі / Уровень</th>
-        <td>{{ report.level or info.get("level") or "—" }}</td>
+        <td>{{ level or "—" }}</td>
     </tr>
 
     </tbody>

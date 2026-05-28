@@ -40,6 +40,12 @@ class CheckingNotebooksDTO:
     recommendations: str | None = None
 
 
+@dataclass(slots=True)
+class TeacherInfoDTO:
+    full_name: str | None = None
+    subject: str | None = None
+
+
 @dataclass
 class CheckingNotebooksFillDTO:
     month_item_id: int
@@ -56,8 +62,8 @@ class CheckingNotebooksFillDTO:
 
     total_score: int
     max_score: int
-    percent: int          # 👈 ДОБАВИТЬ
-    level: str            # 👈 ДОБАВИТЬ
+    percent: int
+    level: str
 
     report: CheckingNotebooksReport | None
     document: TaskExecutionDocument
