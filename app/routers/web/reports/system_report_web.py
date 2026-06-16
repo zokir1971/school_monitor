@@ -9,7 +9,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
 from app.modules.reports.template_registry import SYSTEM_REPORT_CONFIG
-from app.modules.reports.utils.report_signature import ReportSignatureService
 from app.modules.users.deps import require_roles
 from app.modules.users.enums import UserRole
 from app.modules.users.models import User
@@ -289,18 +288,5 @@ async def report_signature_verify(
         request: Request,
         token: str,
 ):
-    try:
-        payload = ReportSignatureService.decode_token(token)
-    except Exception:
-        raise HTTPException(
-            status_code=400,
-            detail="Некорректная немесе мерзімі өткен қолтаңба.",
-        )
-
-    return templates.TemplateResponse(
-        "staff/reports/verify_signature.html",
-        {
-            "request": request,
-            "payload": payload,
-        },
-    )
+    url = request.url_for("report_verify_page").include_query_params(token=token)
+    return RedirectResponse(url=str(url), status_code=302)

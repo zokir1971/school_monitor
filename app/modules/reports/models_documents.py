@@ -34,6 +34,7 @@ if TYPE_CHECKING:
     from app.modules.planning.models_month_plan import SchoolMonthPlanItem
     from app.modules.planning.models_school import SchoolPlanRow11RequiredDocument  # noqa: F401
     from app.modules.users.models import User  # noqa: F401
+    from app.modules.reports.models_report_signature_token import ReportSignatureToken
 
 
 class TaskExecutionDocument(Base):
@@ -265,6 +266,13 @@ class TaskExecutionDocument(Base):
 
     custom_template: Mapped["UserReportTemplate | None"] = relationship(
         "UserReportTemplate",
+        lazy="selectin",
+    )
+
+    signature_tokens: Mapped[list["ReportSignatureToken"]] = relationship(
+        "ReportSignatureToken",
+        back_populates="document",
+        cascade="all, delete-orphan",
         lazy="selectin",
     )
 

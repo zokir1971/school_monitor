@@ -1,6 +1,7 @@
 # routers/checking_notebooks_router.py
 
 from pathlib import Path
+from urllib.parse import urlencode
 
 import jwt
 from fastapi import APIRouter, Request, Depends, HTTPException, Query
@@ -117,14 +118,24 @@ async def staff_user_checking_notebooks_fill_submit(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
 
-    return RedirectResponse(
-        request.url_for(
+    if form.get("action") == "complete":
+        url = request.url_for(
             "checking_notebooks_fill_page",
             month_item_id=month_item_id,
             selected_report_id=selected_report_id,
-        ),
-        status_code=303,
+        )
+        url = f"{url}?{urlencode({'success': 'Отчет сохранен и подписан.'})}"
+
+        return RedirectResponse(url, status_code=303)
+
+    url = request.url_for(
+        "checking_notebooks_fill_page",
+        month_item_id=month_item_id,
+        selected_report_id=selected_report_id,
     )
+    url = f"{url}?{urlencode({'success': 'Черновик сохранен.'})}"
+
+    return RedirectResponse(url, status_code=303)
 
 
 @router.post(
@@ -142,7 +153,7 @@ async def checking_notebooks_save_post(
     form = await request.form()
 
     try:
-        report = await CheckingNotebooksService.save_or_complete(
+        await CheckingNotebooksService.save_or_complete(
             db,
             request=request,
             form=form,
@@ -156,22 +167,23 @@ async def checking_notebooks_save_post(
         raise HTTPException(status_code=400, detail=str(e)) from e
 
     if form.get("action") == "complete":
-        return RedirectResponse(
-            request.url_for(
-                "checking_notebooks_pdf_view",
-                report_id=report.id,
-            ),
-            status_code=303,
-        )
-
-    return RedirectResponse(
-        request.url_for(
+        url = request.url_for(
             "checking_notebooks_fill_page",
             month_item_id=month_item_id,
             selected_report_id=selected_report_id,
-        ),
-        status_code=303,
+        )
+        url = f"{url}?{urlencode({'success': 'Отчет сохранен и подписан.'})}"
+
+        return RedirectResponse(url, status_code=303)
+
+    url = request.url_for(
+        "checking_notebooks_fill_page",
+        month_item_id=month_item_id,
+        selected_report_id=selected_report_id,
     )
+    url = f"{url}?{urlencode({'success': 'Черновик сохранен.'})}"
+
+    return RedirectResponse(url, status_code=303)
 
 
 @router.get(

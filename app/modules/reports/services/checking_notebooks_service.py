@@ -14,6 +14,7 @@ from starlette.datastructures import FormData
 from app.modules.reports.enums import TaskDocumentStatus
 from app.modules.reports.models_template_reports import CheckingNotebooksReport
 from app.modules.reports.repositories.checking_notebooks_repo import CheckingNotebooksRepo
+from app.modules.reports.repositories.report_verify_repo import ReportVerifyRepo
 from app.modules.reports.repositories.template_repo import TemplateReportRepo
 from app.modules.reports.repositories.user_template_repo import UserReportTemplateRepo
 from app.modules.reports.schemas.checking_notebooks_dto import CheckingNotebooksDTO, CheckingNotebooksFillDTO
@@ -261,6 +262,7 @@ class CheckingNotebooksService:
         await db.refresh(report)
 
         if action == "complete":
+
             report.submitted_at = datetime.now(timezone.utc)
 
             token = ReportSignatureService.create_token(
@@ -270,9 +272,26 @@ class CheckingNotebooksService:
                 total=report.total_score,
             )
 
-            verify_url = (
-                    str(request.url_for("report_signature_verify"))
-                    + f"?token={token}"
+            await ReportVerifyRepo.deactivate_old_signatures(
+                db,
+                report_type="checking_notebooks",
+                report_id=report.id,
+                document_id=report.task_execution_document_id,
+            )
+
+            signature = await ReportVerifyRepo.create_signature_token(
+                db,
+                token=token,
+                report_type="checking_notebooks",
+                report_id=report.id,
+                document_id=report.task_execution_document_id,
+            )
+
+            verify_url = str(
+                request.url_for(
+                    "report_verify_by_code_page",
+                    code=signature.code,
+                )
             )
 
             report.qr_file = ReportSignatureService.generate_qr_file(
@@ -281,16 +300,19 @@ class CheckingNotebooksService:
                 verify_url=verify_url,
             )
 
-            report.pdf_signed_file = await CheckingNotebooksService._generate_signed_pdf(
-                request=request,
-                templates=templates,
-                report=report,
-                schema=schema,
+            report.pdf_signed_file = (
+                await CheckingNotebooksService._generate_signed_pdf(
+                    request=request,
+                    templates=templates,
+                    report=report,
+                    schema=schema,
+                )
             )
 
             document.status = TaskDocumentStatus.SUBMITTED
 
         else:
+
             if document.status != TaskDocumentStatus.SUBMITTED:
                 document.status = TaskDocumentStatus.DRAFT
 

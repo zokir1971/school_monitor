@@ -24,6 +24,7 @@ from app.modules.reports.models_documents import TaskExecutionSelectedReport
 from app.modules.reports.models_template_reports import LessonObservationReport
 from app.modules.reports.repositories.lesson_observation_report_repo import LessonObservationReportRepo, \
     LessonObservationRepo
+from app.modules.reports.repositories.report_verify_repo import ReportVerifyRepo
 from app.modules.reports.repositories.template_repo import TemplateReportRepo
 from app.modules.reports.utils.report_signature import ReportSignatureService
 from app.modules.tasks.task_repo import StaffTasksRepo
@@ -148,6 +149,12 @@ class LessonObservationReportService:
                 teacher_category = teacher.qualification_category or ""
                 subject = teacher.subject or ""
 
+                if teacher_category:
+                    teacher_post = (
+                        f"{teacher_post}, {teacher_category}"
+                        if teacher_post
+                        else teacher_category
+                    )
         # --- наблюдатель ---
         controller_post = ""
 
@@ -259,6 +266,22 @@ class LessonObservationReportService:
                 task=task,
                 selected_report=selected_report,
                 user=user,
+            )
+
+        # ✅ Добавляем категорию учителя к должности
+        teacher_category = (
+                saved_info.get("teacher_category")
+                or saved_info.get("qualification_category")
+                or ""
+        )
+
+        teacher_position = saved_info.get("teacher_position") or ""
+
+        if teacher_category and teacher_category not in teacher_position:
+            saved_info["teacher_position"] = (
+                f"{teacher_position}, {teacher_category}"
+                if teacher_position
+                else teacher_category
             )
 
         info = LessonObservationInfoDTO(
@@ -610,15 +633,23 @@ class LessonObservationService:
             user=user,
         )
 
-        report = await LessonObservationRepo.save_from_dto(db, dto=dto)
+        report = await LessonObservationRepo.save_from_dto(
+            db,
+            dto=dto,
+        )
 
         await db.flush()
         await db.refresh(report)
 
         if action == "complete":
+
             schema = document.schema_json or {}
 
             report.submitted_at = datetime.now(timezone.utc)
+
+            # -----------------------------------
+            # JWT
+            # -----------------------------------
 
             token = ReportSignatureService.create_token(
                 report_type="lesson_observation",
@@ -627,10 +658,43 @@ class LessonObservationService:
                 total=report.total,
             )
 
-            verify_url = (
-                    str(request.url_for("lesson_observation_verify_page"))
-                    + f"?token={token}"
+            # -----------------------------------
+            # deactivate old QR
+            # -----------------------------------
+
+            await ReportVerifyRepo.deactivate_old_signatures(
+                db,
+                report_type="lesson_observation",
+                report_id=report.id,
+                document_id=report.task_execution_document_id,
             )
+
+            # -----------------------------------
+            # save token in DB
+            # -----------------------------------
+
+            signature = await ReportVerifyRepo.create_signature_token(
+                db,
+                token=token,
+                report_type="lesson_observation",
+                report_id=report.id,
+                document_id=report.task_execution_document_id,
+            )
+
+            # -----------------------------------
+            # SHORT QR URL
+            # -----------------------------------
+
+            verify_url = str(
+                request.url_for(
+                    "report_verify_by_code_page",
+                    code=signature.code,
+                )
+            )
+
+            # -----------------------------------
+            # QR
+            # -----------------------------------
 
             report.qr_file = ReportSignatureService.generate_qr_file(
                 report_type="lesson_observation",
@@ -638,19 +702,26 @@ class LessonObservationService:
                 verify_url=verify_url,
             )
 
-            report.pdf_signed_file = await LessonObservationService._generate_signed_pdf(
-                request=request,
-                templates=templates,
-                report=report,
-                schema=schema,
+            # -----------------------------------
+            # PDF
+            # -----------------------------------
+
+            report.pdf_signed_file = (
+                await LessonObservationService._generate_signed_pdf(
+                    request=request,
+                    templates=templates,
+                    report=report,
+                    schema=schema,
+                )
             )
 
             document.status = TaskDocumentStatus.SUBMITTED
+
             db.add(report)
             db.add(document)
 
         else:
-            # Сохранение черновика
+
             if document.status != TaskDocumentStatus.SUBMITTED:
                 document.status = TaskDocumentStatus.DRAFT
 
@@ -716,6 +787,8 @@ class LessonObservationService:
             lesson_datetime=LessonObservationReportService.parse_optional_datetime(
                 form.get("info_lesson_datetime")
             ),
+
+            theme=text("theme"),
             learning_objectives=text("learning_objectives"),
             lesson_objectives_1=text("lesson_objectives_1"),
             lesson_objectives_2=text("lesson_objectives_2"),

@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
 from app.modules.planning.enums import PlanItemStatus
-from app.modules.reports.enums import ReportType, DocumentType, TaskCompletionMode
+from app.modules.reports.enums import ReportType, DocumentType, TaskCompletionMode, TaskDocumentStatus
 from app.modules.reports.report_service import ReportService
 from app.modules.reports.services.template_service import TemplateReportService
 from app.modules.users.deps import require_roles
@@ -116,6 +116,12 @@ async def staff_report_templates_page(
         and task.status == PlanItemStatus.DONE
     )
 
+    final_locked = bool(
+        current_final_document
+        and current_final_document.status == TaskDocumentStatus.SUBMITTED
+        and current_final_document.file_path
+    )
+
     completion_mode = page_data.get(
         "completion_mode"
     )
@@ -180,6 +186,7 @@ async def staff_report_templates_page(
             ),
 
             "is_done": is_done,
+            "final_locked": final_locked,
 
             "completion_mode": completion_mode,
 

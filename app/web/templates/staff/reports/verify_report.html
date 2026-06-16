@@ -1,0 +1,274 @@
+{% extends "base.html" %}
+
+{% block title %}
+Проверка электронного документа
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.verify-wrapper{
+    max-width:1000px;
+    margin:32px auto;
+    padding:0 16px;
+}
+
+.verify-card{
+    background:#fff;
+    border-radius:18px;
+    overflow:hidden;
+    border:1px solid #e5e7eb;
+    box-shadow:0 10px 30px rgba(0,0,0,.06);
+}
+
+.verify-header{
+    padding:28px 32px;
+    background:linear-gradient(135deg,#ecfeff,#eff6ff);
+    border-bottom:1px solid #e5e7eb;
+}
+
+.verify-badge{
+    display:inline-flex;
+    align-items:center;
+    gap:10px;
+    padding:8px 14px;
+    border-radius:999px;
+    font-weight:700;
+    font-size:14px;
+}
+
+.verify-badge.ok{
+    background:#dcfce7;
+    color:#166534;
+}
+
+.verify-badge.error{
+    background:#fee2e2;
+    color:#991b1b;
+}
+
+.verify-badge-icon{
+    width:22px;
+    height:22px;
+    border-radius:50%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:currentColor;
+    color:#fff;
+    font-size:13px;
+    font-weight:900;
+}
+
+.verify-title{
+    margin:18px 0 6px;
+    font-size:28px;
+    color:#111827;
+}
+
+.verify-subtitle{
+    color:#4b5563;
+    line-height:1.5;
+}
+
+.verify-body{
+    padding:30px 32px;
+}
+
+.verify-section{
+    margin-top:28px;
+}
+
+.verify-section:first-child{
+    margin-top:0;
+}
+
+.verify-section-title{
+    font-size:18px;
+    font-weight:700;
+    margin-bottom:16px;
+    color:#111827;
+}
+
+.verify-grid{
+    display:grid;
+    grid-template-columns:240px 1fr;
+    gap:12px 18px;
+}
+
+.verify-label{
+    color:#6b7280;
+    font-size:14px;
+}
+
+.verify-value{
+    color:#111827;
+    font-weight:600;
+    word-break:break-word;
+}
+
+.verify-note{
+    margin-top:28px;
+    padding:18px;
+    border-radius:12px;
+    background:#f9fafb;
+    color:#374151;
+    line-height:1.6;
+}
+
+.verify-footer{
+    padding:18px 32px;
+    border-top:1px solid #e5e7eb;
+    background:#fafafa;
+    font-size:13px;
+    color:#6b7280;
+}
+
+@media(max-width:768px){
+    .verify-grid{
+        grid-template-columns:1fr;
+    }
+
+    .verify-header,
+    .verify-body,
+    .verify-footer{
+        padding:22px;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="verify-wrapper">
+
+  <div class="verify-card">
+
+    <div class="verify-header">
+
+      {% if valid %}
+        <div class="verify-badge ok">
+          <span class="verify-badge-icon">✓</span>
+          Құжат расталды / Документ подтвержден
+        </div>
+
+        <h1 class="verify-title">
+          Электрондық құжатты тексеру
+        </h1>
+
+        <div class="verify-subtitle">
+          Бұл құжат жүйеде электрондық түрде қалыптастырылып,
+          цифрлық қолтаңбамен расталған.
+        </div>
+
+      {% else %}
+
+        <div class="verify-badge error">
+          <span class="verify-badge-icon">!</span>
+          Құжат расталмады
+        </div>
+
+        <h1 class="verify-title">
+          QR тексеру қатесі
+        </h1>
+
+        <div class="verify-subtitle">
+          Электрондық қолтаңбаны тексеру мүмкін болмады.
+        </div>
+
+      {% endif %}
+
+    </div>
+
+    <div class="verify-body">
+
+      {% if valid %}
+
+        <!-- Основная информация -->
+        <div class="verify-section">
+          <div class="verify-section-title">
+            Құжат туралы ақпарат
+          </div>
+
+          <div class="verify-grid">
+
+  <div class="verify-label">Есеп түрі</div>
+  <div class="verify-value">
+    {{ result.report_label or result.report_type or "—" }}
+  </div>
+
+  <div class="verify-label">Есеп ID</div>
+  <div class="verify-value">
+    {{ result.report_id or "—" }}
+  </div>
+
+  <div class="verify-label">Құжат ID</div>
+  <div class="verify-value">
+    {{ result.document_id or "—" }}
+  </div>
+
+  {% if result.signed_at %}
+    <div class="verify-label">Қол қойылған уақыты</div>
+    <div class="verify-value">
+      {{ result.signed_at.strftime("%d.%m.%Y %H:%M") }}
+    </div>
+  {% endif %}
+
+  {% if result.total is not none %}
+    <div class="verify-label">Жалпы балл</div>
+    <div class="verify-value">
+      {{ result.total }}
+    </div>
+  {% endif %}
+
+</div>
+        <!-- Универсальные дополнительные поля -->
+        {% if details %}
+        <div class="verify-section">
+
+          <div class="verify-section-title">
+            Қосымша ақпарат
+          </div>
+
+          <div class="verify-grid">
+
+            {% for item in details %}
+              <div class="verify-label">
+                {{ item.label }}
+              </div>
+
+              <div class="verify-value">
+                {{ item.value or "—" }}
+              </div>
+            {% endfor %}
+
+          </div>
+
+        </div>
+        {% endif %}
+
+        <!-- Примечание -->
+        <div class="verify-note">
+          QR-код арқылы ашылған бұл бет құжаттың түпнұсқалығын тексеруге арналған.
+          Егер көрсетілген мәліметтер PDF құжаттағы ақпаратпен сәйкес келсе,
+          құжат жүйеде ресми түрде расталған болып есептеледі.
+        </div>
+
+      {% else %}
+
+        <div class="verify-note" style="background:#fef2f2;color:#991b1b;">
+          {{ error or "QR-код немесе token жарамсыз." }}
+        </div>
+
+      {% endif %}
+
+    </div>
+
+    <div class="verify-footer">
+      School Monitoring System · Электрондық есептерді тексеру жүйесі
+    </div>
+
+  </div>
+
+</div>
+
+{% endblock %}

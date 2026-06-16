@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.reports.enums import ReportType, TaskDocumentStatus
 from app.modules.reports.models_template_reports import LessonObservationReport
+from app.modules.reports.repositories.report_verify_repo import ReportVerifyRepo
 from app.modules.reports.repositories.system_lesson_observation_repo import (
     SystemLessonObservationRepo,
 )
@@ -572,61 +573,76 @@ class SystemLessonObservationService:
 
         action = form_data.get("action")
 
-        try:
-            if action == "complete":
-                schema = document.schema_json or LESSON_OBSERVATION_SCHEMA
-
-                db.add(lesson_report)
-                await db.flush()
-
-                token = ReportSignatureService.create_token(
-                    report_type="lesson_observation",
-                    report_id=lesson_report.id,
-                    document_id=document.id,
-                    total=lesson_report.total,
-                )
-
-                verify_url = (
-                        str(request.url_for("lesson_observation_verify_page"))
-                        + f"?token={token}"
-                )
-
-                lesson_report.qr_file = ReportSignatureService.generate_qr_file(
-                    report_type="lesson_observation",
-                    report_id=lesson_report.id,
-                    verify_url=verify_url,
-                )
-
-                if not lesson_report.qr_file:
-                    raise ValueError("QR файл не создан.")
-
-                lesson_report.pdf_signed_file = await cls._generate_signed_pdf(
-                    request=request,
-                    templates=templates,
-                    report=lesson_report,
-                    schema=schema,
-                )
-
-                if not lesson_report.pdf_signed_file:
-                    raise ValueError("PDF файл не создан.")
-
-                lesson_report.submitted_at = datetime.now(timezone.utc)
-                document.status = TaskDocumentStatus.SUBMITTED
-
-            else:
-                document.status = TaskDocumentStatus.DRAFT
+        if action == "complete":
+            schema = document.schema_json or LESSON_OBSERVATION_SCHEMA
 
             db.add(lesson_report)
-            db.add(document)
-
-            await db.commit()
+            await db.flush()
             await db.refresh(lesson_report)
 
-            return lesson_report
+            lesson_report.submitted_at = datetime.now(timezone.utc)
 
-        except Exception:
-            await db.rollback()
-            raise
+            token = ReportSignatureService.create_token(
+                report_type="lesson_observation",
+                report_id=lesson_report.id,
+                document_id=document.id,
+                total=lesson_report.total,
+            )
+
+            await ReportVerifyRepo.deactivate_old_signatures(
+                db,
+                report_type="lesson_observation",
+                report_id=lesson_report.id,
+                document_id=document.id,
+            )
+
+            signature = await ReportVerifyRepo.create_signature_token(
+                db,
+                token=token,
+                report_type="lesson_observation",
+                report_id=lesson_report.id,
+                document_id=document.id,
+            )
+
+            verify_url = str(
+                request.url_for(
+                    "report_verify_by_code_page",
+                    code=signature.code,
+                )
+            )
+
+            lesson_report.qr_file = ReportSignatureService.generate_qr_file(
+                report_type="lesson_observation",
+                report_id=lesson_report.id,
+                verify_url=verify_url,
+            )
+
+            if not lesson_report.qr_file:
+                raise ValueError("QR файл не создан.")
+
+            lesson_report.pdf_signed_file = await cls._generate_signed_pdf(
+                request=request,
+                templates=templates,
+                report=lesson_report,
+                schema=schema,
+            )
+
+            if not lesson_report.pdf_signed_file:
+                raise ValueError("PDF файл не создан.")
+
+            document.status = TaskDocumentStatus.SUBMITTED
+        else:
+            document.status = TaskDocumentStatus.DRAFT
+
+        db.add(lesson_report)
+        db.add(document)
+
+        await db.commit()
+
+        await db.refresh(lesson_report)
+        await db.refresh(document)
+
+        return lesson_report
 
     @classmethod
     async def _generate_signed_pdf(

@@ -1,4 +1,4 @@
-# app/db/models_documents.py (Регистрация моделей. Необходимо для тестирования, регистрация происходить всегда)
+# app/db/models.py (Регистрация моделей. Необходимо для тестирования, регистрация происходить всегда)
 
 # Импортируем модели, чтобы они зарегистрировались в Base.metadata
 
@@ -11,3 +11,4 @@ from app.modules.planning.models_month_plan import SchoolMonthPlan, SchoolMonthP
 from app.modules.staff.models_staff_school import SchoolStaffMember, SchoolStaffRole  # noqa: F401
 from app.modules.reports.models_documents import TaskExecutionDocument, ReportTypeModel, TaskExecutionData, TaskExecutionSelectedReport  # noqa: F401
 from app.modules.reports.models_template_reports import LessonObservationReport, UserReportTemplate, CheckingNotebooksReport  # noqa: F401
+from app.modules.reports.models_report_signature_token import ReportSignatureToken  # noqa: F401

@@ -18,6 +18,7 @@ from app.modules.reports.enums import (
 )
 from app.modules.reports.models_documents import TaskExecutionDocument, TaskExecutionSelectedReport
 from app.modules.reports.repositories.checking_notebooks_repo import CheckingNotebooksRepo
+from app.modules.reports.repositories.report_verify_repo import ReportVerifyRepo
 from app.modules.reports.repositories.system_checking_notebooks_repo import CheckingNotebooksSystemRepo
 from app.modules.reports.system_report_dto.system_checking_notebooks_dto import CheckingNotebooksFillPageDTO
 from app.modules.reports.system_schemas.checking_notebooks_schemas import CHECKING_NOTEBOOKS_SYSTEM_SCHEMA
@@ -520,11 +521,30 @@ class SystemCheckingNotebooksService:
             report_type="checking_notebooks",
             report_id=report.id,
             document_id=document.id,
+            total=report.total_score,
+        )
+
+        await ReportVerifyRepo.deactivate_old_signatures(
+            db,
+            report_type="checking_notebooks",
+            report_id=report.id,
+            document_id=document.id,
+        )
+
+        signature = await ReportVerifyRepo.create_signature_token(
+            db,
+            token=token,
+            report_type="checking_notebooks",
+            report_id=report.id,
+            document_id=document.id,
         )
 
         verify_url = str(
-            request.url_for("report_signature_verify")
-        ) + f"?token={token}"
+            request.url_for(
+                "report_verify_by_code_page",
+                code=signature.code,
+            )
+        )
 
         report.qr_file = ReportSignatureService.generate_qr_file(
             report_type="checking_notebooks",

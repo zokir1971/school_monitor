@@ -26,7 +26,7 @@
   <div class="alert alert-danger">{{ error }}</div>
 {% endif %}
 
-{% set readonly = report and report.submitted_at %}
+{% set readonly = report is not none and report.submitted_at is not none %}
 
 <form method="post"
       action="{{ request.url_for(
@@ -152,6 +152,17 @@
     <div class="table-wrap">
       <table class="form-table">
         <tbody>
+          <tr>
+          <th>Сабақтың тақырыбы:</th>
+          <td>
+            <input type="text"
+                   name="info_theme"
+                   value="{{ saved_info.get('theme', report.theme if report else '') }}"
+                   class="form-input"
+                   required
+                   {% if readonly %}disabled{% endif %}>
+          </td>
+          </tr>
           <tr>
             <th>Оқу мақсаты:</th>
             <td>
@@ -311,12 +322,17 @@
       </button>
 
       <button type="submit"
-              name="action"
-              value="complete"
-              class="btn btn-success"
-              onclick="return confirm('После подписания отчет нельзя будет редактировать. Подписать и сохранить?')">
-        Подписать и сохранить
+          name="action"
+          value="complete"
+          class="btn btn-success"
+          onclick="return confirm('После подписания отчет нельзя будет редактировать. Подписать и сохранить?')">
+        Сохранить и подписать
       </button>
+
+      <a href="{{ url_for('staff_report_templates_page', month_item_id=month_item_id) }}"
+          class="btn btn-secondary">
+        Отмена
+      </a>
     {% else %}
       <a href="{{ url_for('lesson_observation_pdf_view', report_id=report.id) }}"
          class="btn btn-secondary"
@@ -327,6 +343,11 @@
       <a href="{{ url_for('lesson_observation_pdf_download', report_id=report.id) }}"
          class="btn btn-primary">
         Скачать PDF
+      </a>
+
+      <a href="{{ url_for('staff_report_templates_page', month_item_id=month_item_id) }}"
+       class="btn btn-secondary">
+      Назад к отчетам
       </a>
     {% endif %}
   </div>

@@ -59,7 +59,21 @@ class ReportSignatureService:
 
         qr_path = base_dir / f"{report_type}_{report_id}_qr.png"
 
-        img = qrcode.make(verify_url)
+        qr = qrcode.QRCode(
+            version=None,
+            error_correction=qrcode.constants.ERROR_CORRECT_M,
+            box_size=10,
+            border=4,
+        )
+
+        qr.add_data(verify_url)
+        qr.make(fit=True)
+
+        img = qr.make_image(
+            fill_color="black",
+            back_color="white",
+        )
+
         img.save(qr_path)
 
         return str(qr_path)

@@ -3,7 +3,6 @@ from dataclasses import asdict
 from pathlib import Path
 from urllib.parse import urlencode
 
-import jwt
 from fastapi import APIRouter, Depends, Request, HTTPException, Query
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -15,7 +14,6 @@ from app.modules.reports.repositories.user_template_repo import UserReportTempla
 from app.modules.reports.services.lesson_observation_report_service import LessonObservationReportService, \
     LessonObservationService
 from app.modules.reports.services.user_template_service import UserReportTemplateService
-from app.modules.reports.utils.report_signature import ReportSignatureService
 from app.modules.users.deps import require_roles
 from app.modules.users.enums import UserRole
 from app.modules.users.models import User
@@ -595,11 +593,19 @@ async def lesson_observation_save_post(
         raise HTTPException(status_code=400, detail=str(e)) from e
 
     if form.get("action") == "complete":
+        redirect_url = request.url_for(
+            "staff_user_lesson_observation_fill_page",
+            month_item_id=month_item_id,
+            selected_report_id=selected_report_id,
+        )
+
+        redirect_url = (
+            f"{redirect_url}?"
+            f"{urlencode({'success': 'Отчет сохранен и подписан.'})}"
+        )
+
         return RedirectResponse(
-            request.url_for(
-                "lesson_observation_pdf_view",
-                report_id=report.id,
-            ),
+            redirect_url,
             status_code=303,
         )
 
@@ -607,6 +613,11 @@ async def lesson_observation_save_post(
         "staff_user_lesson_observation_fill_page",
         month_item_id=month_item_id,
         selected_report_id=selected_report_id,
+    )
+
+    redirect_url = (
+        f"{redirect_url}?"
+        f"{urlencode({'success': 'Черновик сохранен.'})}"
     )
 
     return RedirectResponse(
@@ -697,47 +708,6 @@ async def lesson_observation_pdf_download(
 async def lesson_observation_verify_page(
         request: Request,
         token: str,
-        db: AsyncSession = Depends(get_db),
 ):
-    payload = None
-
-    try:
-        payload = ReportSignatureService.decode_token(token)
-    except jwt.ExpiredSignatureError:
-        valid = False
-        message = "Срок действия подписи истек"
-        report = None
-    except jwt.InvalidTokenError:
-        valid = False
-        message = "Неверная подпись документа"
-        report = None
-    else:
-        report_id = payload.get("report_id")
-
-        if not report_id:
-            valid = False
-            message = "В подписи отсутствует ID отчета"
-            report = None
-        else:
-            report = await LessonObservationRepo.get_by_id(db, int(report_id))
-
-            if not report:
-                valid = False
-                message = "Документ не найден"
-            elif report.submitted_at is None:
-                valid = False
-                message = "Документ найден, но еще не подписан"
-            else:
-                valid = True
-                message = "Документ подлинный"
-
-    return templates.TemplateResponse(
-        "staff/reports/lesson_observation_verify.html",
-        {
-            "request": request,
-            "valid": valid,
-            "message": message,
-            "report": report,
-            "payload": payload,
-        },
-    )
+    url = request.url_for("report_verify_page").include_query_params(token=token)
+    return RedirectResponse(url=str(url), status_code=302)

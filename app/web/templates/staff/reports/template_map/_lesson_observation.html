@@ -307,10 +307,20 @@
 
         <tr>
           <td colspan="{{ score_scale|length + 2 }}">
+            <textarea name="info_feedback"
+              class="form-input"
+              rows="4"
+              placeholder="Кері байланыс / Обратная связь"
+              required>{{ saved_info.get("feedback", "") }}</textarea>
+          </td>
+        </tr>
+
+        <tr>
+          <td colspan="{{ score_scale|length + 2 }}">
             <textarea name="suggestion"
                       class="form-input"
                       rows="4"
-                      placeholder="Ұсыныстар"  required>{{ suggestion_value }}</textarea>
+                      placeholder="Ұсыныстар / Рекомендации"  required>{{ suggestion_value }}</textarea>
           </td>
         </tr>
 
@@ -346,6 +356,11 @@
 
   <!-- Кнопки -->
   <section class="report-card report-actions">
+
+  {% set is_signed = lesson_report and lesson_report.submitted_at %}
+
+  {% if not is_signed %}
+
     <button type="submit" name="action" value="save" class="btn btn-primary">
       Сохранить
     </button>
@@ -354,7 +369,7 @@
             name="action"
             value="complete"
             class="btn btn-success"
-            >
+            onclick="return confirm('После подписания отчет нельзя будет редактировать. Подписать и сохранить?')">
       Сохранить и подписать
     </button>
 
@@ -362,8 +377,28 @@
        class="btn btn-secondary">
       Отмена
     </a>
-  </section>
 
+  {% else %}
+
+    <a href="{{ url_for('lesson_observation_pdf_view', report_id=lesson_report.id) }}"
+       class="btn btn-secondary"
+       target="_blank">
+      Просмотреть PDF
+    </a>
+
+    <a href="{{ url_for('lesson_observation_pdf_download', report_id=lesson_report.id) }}"
+       class="btn btn-primary">
+      Скачать PDF
+    </a>
+
+    <a href="{{ url_for('staff_report_templates_page', month_item_id=month_item_id) }}"
+       class="btn btn-secondary">
+      Назад к отчетам
+    </a>
+
+  {% endif %}
+
+</section>
 </form>
 
 <script>

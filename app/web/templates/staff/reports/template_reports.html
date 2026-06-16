@@ -673,8 +673,14 @@
   </div>
 
   {# ================= ЗАДАЧА УЖЕ ЗАВЕРШЕНА ================= #}
+  {% set final_locked =
+    current_final_document
+    and current_final_document.status
+    and current_final_document.status.value == "submitted"
+    and current_final_document.file_path
+  %}
 
-  {% if is_done %}
+  {% if is_done or final_locked %}
 
     <div class="alert alert-success">
       Задача уже завершена.
@@ -688,7 +694,7 @@
              class="form-control">
 
       <button class="btn btn-secondary" disabled>
-        Задача завершена
+        Задача отправлена на рассмотрения
       </button>
 
     </div>
@@ -759,7 +765,6 @@
   {% endif %}
 
 </div>
-
 
   {% endif %}
 

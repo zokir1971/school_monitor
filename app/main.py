@@ -20,6 +20,10 @@ from app.core.config import get_settings
 from app.core.logging_config import setup_logging
 from app.middlewares.auth import AuthRedirectMiddleware
 from app.routers import router as root_router
+from app.modules.reports.utils.report_verify_setup import (
+    setup_report_verify_registry,
+)
+
 # -------------------------------
 # Settings & Logging
 # -------------------------------
@@ -48,6 +52,8 @@ async def lifespan(_app: FastAPI):
 # -------------------------------
 
 app = FastAPI(lifespan=lifespan)
+
+setup_report_verify_registry()
 
 app.add_middleware(AuthRedirectMiddleware)
 

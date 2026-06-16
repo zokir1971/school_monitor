@@ -12,3 +12,4 @@ from app.modules.planning import models_month_plan as planning_models_month_plan
 from app.modules.staff import models_staff_school as staff_models_staff_school  # noqa: F401
 from app.modules.reports import models_documents as reports_models_documents  # noqa: F401
 from app.modules.reports import models_template_reports as reports_models_template_reports  # noqa: F401
+from app.modules.reports import models_report_signature_token as reports_models_report_signature_token  # noqa: F401
