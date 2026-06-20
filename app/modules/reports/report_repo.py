@@ -550,16 +550,10 @@ class ReportRepo:
             month_item_id: int,
     ) -> list[str]:
         """
-        Получить список выбранных отчетов, которые еще не заполнены.
+        Получить список выбранных системных отчетов, которые еще не заполнены.
 
-        Используется при варианте завершения:
-        FINAL_WITH_SYSTEM_REPORTS.
-
-        Логика:
-        - выбранные отчеты берем из TaskExecutionData.selected_reports;
-        - фактически созданные отчеты берем из TaskExecutionDocument.report_code;
-        - сравниваем по report_code;
-        - возвращаем человекочитаемые названия отсутствующих отчетов.
+        analytical_reference / Анықтама не проверяем здесь,
+        потому что это итоговый документ, а не системный отчет.
         """
 
         execution_data = await cls.get_execution_data_for_task(
@@ -572,12 +566,19 @@ class ReportRepo:
 
         selected_codes_by_label: dict[str, str] = {}
 
+        excluded_codes = {
+            "analytical_reference",
+        }
+
         for item in execution_data.selected_reports:
             if not item.report_type:
                 continue
 
             code = str(item.report_type.code or "").strip()
             if not code:
+                continue
+
+            if code in excluded_codes:
                 continue
 
             label = (
@@ -599,9 +600,9 @@ class ReportRepo:
                 TaskExecutionDocument.month_item_id == month_item_id,
                 TaskExecutionDocument.is_current.is_(True),
                 TaskExecutionDocument.is_final.is_(False),
+                TaskExecutionDocument.document_type == DocumentType.REPORT,
                 TaskExecutionDocument.report_code.in_(selected_codes),
                 TaskExecutionDocument.status.in_([
-                    TaskDocumentStatus.DRAFT,
                     TaskDocumentStatus.SUBMITTED,
                     TaskDocumentStatus.ACCEPTED,
                 ]),
@@ -609,7 +610,11 @@ class ReportRepo:
         )
 
         completed_result = await db.execute(completed_stmt)
-        completed_codes = set(completed_result.scalars().all())
+        completed_codes = {
+            str(code).strip()
+            for code in completed_result.scalars().all()
+            if code
+        }
 
         missing_codes = selected_codes - completed_codes
 
