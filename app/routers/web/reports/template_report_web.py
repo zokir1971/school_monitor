@@ -275,10 +275,21 @@ async def staff_report_templates_complete_post(
             )
 
         upload_file = form.get("final_document")
+        current_final_document = page_data.get("current_final_document")
 
-        if upload_file is None or not getattr(upload_file, "filename", ""):
+        has_uploaded_file = bool(
+            upload_file
+            and getattr(upload_file, "filename", "")
+        )
+
+        has_existing_final_document = bool(
+            current_final_document
+            and current_final_document.file_path
+        )
+
+        if not has_uploaded_file and not has_existing_final_document:
             return RedirectResponse(
-                url=f"{base_url}?error=Выберите итоговый документ.",
+                url=f"{base_url}?error=Сначала загрузите итоговый документ.",
                 status_code=303,
             )
 
@@ -290,14 +301,15 @@ async def staff_report_templates_complete_post(
                 status_code=303,
             )
 
-        await ReportService.upload_final_document(
-            db,
-            month_item_id=month_item_id,
-            user_id=user.id,
-            required_document_id=None,
-            upload_file=upload_file,
-            document_type=DocumentType.REFERENCE,
-        )
+        if has_uploaded_file:
+            await ReportService.upload_final_document(
+                db,
+                month_item_id=month_item_id,
+                user_id=user.id,
+                required_document_id=None,
+                upload_file=upload_file,
+                document_type=DocumentType.REFERENCE,
+            )
 
         await ReportService.complete_task_execution(
             db,
