@@ -29,7 +29,7 @@
 {% set saved_total_score = total_score if total_score is defined else criteria_scores.get("total_score", lesson_report.total if lesson_report else 0) %}
 {% set suggestion_value = suggestion_control if suggestion_control is defined else criteria_scores.get("suggestion", "") %}
 
-
+{% set is_signed = lesson_report and lesson_report.submitted_at %}
 <div class="page-header">
   <div>
     <h2>{{ schema.get("title") or (selected_report.title if selected_report else "Педагогтің сабағын бақылау парағы") }}</h2>
@@ -86,14 +86,16 @@
         <td>
           <input type="text"
        name="info_teacher_name"
-       value="{{ saved_info.get('teacher_name', teacher_name|default('')) }}"  required>
+       value="{{ saved_info.get('teacher_name', teacher_name|default('')) }}"  required
+          {% if is_signed %}readonly{% endif %}>
         </td>
 
         <th>Бақылаушының ТАӘ</th>
         <td>
           <input type="text"
        name="info_observer_name"
-       value="{{ saved_info.get('observer_name', observer_name|default('')) }}"  required>
+       value="{{ saved_info.get('observer_name', observer_name|default('')) }}"  required
+          {% if is_signed %}readonly{% endif %}>
         </td>
       </tr>
 
@@ -102,14 +104,16 @@
         <td>
           <input type="text"
        name="info_teacher_position"
-       value="{{ saved_info.get('teacher_position', teacher_position|default('')) }}"  required>
+       value="{{ saved_info.get('teacher_position', teacher_position|default('')) }}"  required
+          {% if is_signed %}readonly{% endif %}>
         </td>
 
         <th>Лауазымы</th>
         <td>
           <input type="text"
        name="info_observer_position"
-       value="{{ saved_info.get('observer_position', observer_position|default('')) }}"  required>
+       value="{{ saved_info.get('observer_position', observer_position|default('')) }}"  required
+          {% if is_signed %}readonly{% endif %}>
         </td>
       </tr>
 
@@ -118,14 +122,16 @@
         <td>
           <input type="text"
        name="info_subject"
-       value="{{ saved_info.get('subject', subject|default('')) }}"  required>
+       value="{{ saved_info.get('subject', subject|default('')) }}"  required
+          {% if is_signed %}readonly{% endif %}>
         </td>
 
         <th>Білім беру ұйымы</th>
         <td>
           <input type="text"
        name="info_school_name"
-       value="{{ saved_info.get('school_name', school_name|default('')) }}"  required>
+       value="{{ saved_info.get('school_name', school_name|default('')) }}"  required
+          {% if is_signed %}readonly{% endif %}>
         </td>
       </tr>
 
@@ -134,14 +140,16 @@
         <td>
           <input type="text"
                  name="info_class_name"
-                 value="{{ saved_info.get('class_name', '') }}"  required>
+                 value="{{ saved_info.get('class_name', '') }}"  required
+          {% if is_signed %}readonly{% endif %}>
         </td>
 
         <th>Топ</th>
         <td>
           <input type="text"
                  name="info_group_name"
-                 value="{{ saved_info.get('group_name', '') }}"  required>
+                 value="{{ saved_info.get('group_name', '') }}"  required
+          {% if is_signed %}readonly{% endif %}>
         </td>
       </tr>
 
@@ -185,7 +193,9 @@
             <td>
               <input type="text"
                      name="info_{{ field_code }}"
-                     value="{{ saved_info.get(field_code, '') }}">
+                     value="{{ saved_info.get(field_code, '') }}"
+                     required
+                     {% if is_signed %}readonly{% endif %}>
             </td>
           </tr>
         {% endfor %}
@@ -277,7 +287,8 @@
        name="{{ score_name }}"
        value="{{ point }}"
        class="score-radio"
-       {{ checked_attr }}>
+       {{ checked_attr }}
+       {% if is_signed %}disabled{% endif %}>
   </td>
 {% endfor %}
               </tr>
@@ -308,19 +319,21 @@
         <tr>
           <td colspan="{{ score_scale|length + 2 }}">
             <textarea name="info_feedback"
-              class="form-input"
-              rows="4"
-              placeholder="Кері байланыс / Обратная связь"
-              required>{{ saved_info.get("feedback", "") }}</textarea>
-          </td>
+          class="form-input"
+          rows="4"
+          placeholder="Кері байланыс / Обратная связь"
+          required
+          {% if is_signed %}readonly{% endif %}>{{ saved_info.get("feedback", "") }}</textarea>          </td>
         </tr>
 
         <tr>
           <td colspan="{{ score_scale|length + 2 }}">
             <textarea name="suggestion"
-                      class="form-input"
-                      rows="4"
-                      placeholder="Ұсыныстар / Рекомендации"  required>{{ suggestion_value }}</textarea>
+          class="form-input"
+          rows="4"
+          placeholder="Ұсыныстар / Рекомендации"
+          required
+          {% if is_signed %}readonly{% endif %}>{{ suggestion_value }}</textarea>
           </td>
         </tr>
 
