@@ -11,6 +11,9 @@
     <h2 class="section-title">Планирование задач на месяц</h2>
   </div>
 
+  {% if success %}
+    <div class="alert alert--success">{{ success }}</div>
+  {% endif %}
   {% if info %}
     <div class="alert alert--info">{{ info }}</div>
   {% endif %}
@@ -83,7 +86,7 @@
     </div>
 
     <div class="muted" style="margin-top:10px;">
-      Правило: если задача включена — выбери неделю (1–5). Редактирование доступно только в статусе “Черновик”.
+      Правило: если задача включена — выбери неделю (1–6). Редактирование доступно только в статусе “Черновик”.
     </div>
   </div>
 
@@ -93,22 +96,24 @@
     </div>
   {% else %}
 
-    <form id="monthly-save-form" method="post" action="/planning/school/monthly/{{ month }}/save">
+    <form
+      id="monthly-save-form"
+      method="post"
+      action="{{ request.url_for('school_monthly_save_draft', month=month) }}"
+    >
       <input type="hidden" name="month_plan_id" value="{{ month_plan.id }}">
       <input type="hidden" name="school_plan_id" value="{{ month_plan.school_plan_id }}">
 
       {% set readonly = (month_plan.status.value != 'draft') %}
 
-      {% for b in blocks %}
-        {% set dir = b["direction"] %}
-        {% set items = b["items"] %}
+      {% for block in blocks %}
+        {% set items = block.items %}
 
         <div class="card dir-card">
           <div class="dir-head">
-            <h3 class="dir-title">{{ loop.index }}. {{ dir.short_title }}</h3>
-            {% if dir.full_title %}
-              <span class="muted">{{ dir.full_title }}</span>
-            {% endif %}
+            <h3 class="dir-title">
+              {{ loop.index }}. {{ block.direction_name }}
+            </h3>
           </div>
 
           {% if items|length == 0 %}
@@ -143,7 +148,6 @@
 
                 <tbody>
                   {% for it in items %}
-                    {% set src = it.source_row11 %}
                     <tr>
                       <td class="nowrap-num">
                         <input type="hidden" name="item_ids" value="{{ it.id }}">
@@ -174,46 +178,68 @@
                         </select>
 
                         <div class="row-tags">
-                          {% if src and src.period_type == 'month' and src.period_value_int %}
-                            <span class="tag">ай: {{ src.period_value_int }}</span>
+                          {% if it.period_type == 'month' and it.period_value_int %}
+                            <span class="tag">ай: {{ it.period_value_int }}</span>
                           {% endif %}
                         </div>
                       </td>
 
                       <td>
-                        <div>{{ (src.topic if src else "") or "" }}</div>
-                        <div class="muted">{{ (src.control_object if src else "") or "" }}</div>
-                      </td>
-
-                      <td>
-                        <div>{{ (src.goal if src else "") or "" }}</div>
-                        <div class="muted">{{ (src.methods if src else "") or "" }}</div>
-                      </td>
-
-                      <td class="nowrap">{{ src | row11_period(month) }}</td>
-
-                      <td class="nowrap">
-                        {% set assignees = it.assignees if it.assignees else [] %}
-                        {% if assignees %}
-                        {% for a in assignees %}
-                        <div>
-                          {{ a.staff_role.staff_member.full_name if a.staff_role and a.staff_role.staff_member else "—" }}
-                          {% if a.assignment_kind and a.assignment_kind.value == 'primary' %}
-                            <span class="tag">негізгі</span>
-                          {% endif %}
-                        </div>
-                        {% endfor %}
-                        {% else %}
-                          <span class="muted">—</span>
+                        <div>{{ it.topic }}</div>
+                        {% if it.control_object %}
+                          <div class="muted">{{ it.control_object }}</div>
                         {% endif %}
                       </td>
 
                       <td>
-                        {% set places = it.review_places if it.review_places else [] %}
-                        {% if places %}
-                          {% for rp in places %}
+                        <div>{{ it.goal }}</div>
+                        {% if it.methods %}
+                          <div class="muted">{{ it.methods }}</div>
+                        {% endif %}
+                      </td>
+
+                      <td class="nowrap">
+                        {{ it | row11_period(month) }}
+                      </td>
+
+                      <td class="nowrap">
+
+  {% if it.primary_assignee_name %}
+
+    <div class="assignee-item">
+      <span class="tag">
+        жауапты / ответственный
+      </span>
+      <strong>{{ it.primary_assignee_name }}</strong>
+
+    </div>
+
+    {% if it.co_executor_names %}
+
+      <div class="assignee-item">
+        <span class="tag tag--secondary">
+          бірлескен орындаушылар / соисполнители
+        </span>
+
+        <ul class="assignee-list">
+          {% for co_executor_name in it.co_executor_names %}
+            <li>{{ co_executor_name }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+
+    {% endif %}
+
+  {% else %}
+    <span class="muted">—</span>
+  {% endif %}
+
+</td>
+                      <td>
+                        {% if it.review_place_labels %}
+                          {% for label in it.review_place_labels %}
                             <span class="review-badge">
-                              {{ review_place_labels.get(rp.review_place.value, rp.review_place.value) }}
+                              {{ label }}
                             </span>
                           {% endfor %}
                         {% else %}
@@ -222,8 +248,15 @@
                       </td>
 
                       <td>
-                        <a class="btn btn--sm" href="{{ request.url_for('school_month_item_assignees', month_item_id=it.id) }}">
-                          Назначить
+                        <a
+                          class="btn btn--sm{% if it.is_assigned %} btn--success{% endif %}"
+                          href="{{ request.url_for(
+                            'school_month_item_assignees',
+                            month_item_id=it.id
+                          ) }}"
+                        >
+                          {% if it.is_assigned %}✓ {% endif %}
+                          {{ it.assignment_label }}
                         </a>
                       </td>
                     </tr>
@@ -238,27 +271,74 @@
     </form>
 
     <div class="actions">
-      <button
-        type="submit"
-        form="monthly-save-form"
-        class="btn btn--primary"
-        {% if readonly %}disabled{% endif %}
+
+  <button
+      type="submit"
+      form="monthly-save-form"
+      class="btn btn--primary"
+      {% if readonly %}disabled{% endif %}
+  >
+      💾 Сохранить черновик
+  </button>
+
+  <form
+      method="post"
+      action="{{ request.url_for(
+          'school_monthly_submit',
+          month=month
+      ) }}"
+      style="display:inline;"
+  >
+      <input
+          type="hidden"
+          name="month_plan_id"
+          value="{{ month_plan.id }}"
       >
-        Сохранить черновик
+
+      <input
+          type="hidden"
+          name="school_plan_id"
+          value="{{ month_plan.school_plan_id }}"
+      >
+
+      <button
+          type="submit"
+          class="btn btn--primary"
+          {% if readonly %}disabled{% endif %}
+      >
+          🚀 Отправить на исполнение
       </button>
+  </form>
 
-      <form method="post" action="{{ request.url_for('school_monthly_submit', month=month) }}" style="display:inline;">
-        <input type="hidden" name="month_plan_id" value="{{ month_plan.id }}">
-        <input type="hidden" name="school_plan_id" value="{{ month_plan.school_plan_id }}">
-        <button type="submit" class="btn btn--primary" {% if readonly %}disabled{% endif %}>
-          Отправить на исполнение
-        </button>
-      </form>
+  <a
+      href="{{ request.url_for(
+          'school_monthly_notifications',
+          month_plan_id=month_plan.id
+      ) }}"
+      class="btn btn--secondary"
+  >
+      📲 Уведомления исполнителей
 
-      {% if readonly %}
-        <span class="muted">Редактирование отключено, потому что план не в статусе “Черновик”.</span>
+      {% if notification_progress is defined
+            and notification_progress.total_recipients > 0 %}
+
+          <span class="badge badge--info">
+              {{ notification_progress.sent_total }}
+              /
+              {{ notification_progress.total_recipients }}
+          </span>
+
       {% endif %}
-    </div>
+  </a>
+
+  {% if readonly %}
+      <span class="muted">
+          Редактирование отключено,
+          потому что план не в статусе «Черновик».
+      </span>
+  {% endif %}
+
+</div>
 
   {% endif %}
 </section>

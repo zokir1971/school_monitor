@@ -1,7 +1,8 @@
 # app/modules/reports/utils/report_signature.py
 
-from pathlib import Path
 from datetime import datetime, timezone, timedelta
+from io import BytesIO
+import base64
 
 import jwt
 import qrcode
@@ -16,21 +17,25 @@ class ReportSignatureService:
 
     @staticmethod
     def create_token(
-            *,
-            report_type: str,
-            report_id: int,
-            document_id: int,
-            total: int | None = None,
+        *,
+        report_type: str,
+        report_id: int,
+        document_id: int,
+        total: int | None = None,
     ) -> str:
         now = datetime.now(timezone.utc)
 
         payload = {
-            "type": report_type,  # 👈 универсально
+            "type": report_type,
             "report_id": report_id,
             "document_id": document_id,
             "total": total or 0,
             "iat": int(now.timestamp()),
-            "exp": int((now + timedelta(days=365 * 5)).timestamp()),
+            "exp": int(
+                (
+                    now + timedelta(days=365 * 5)
+                ).timestamp()
+            ),
         }
 
         return jwt.encode(
@@ -48,16 +53,13 @@ class ReportSignatureService:
         )
 
     @staticmethod
-    def generate_qr_file(
+    def generate_qr_bytes(
             *,
-            report_type: str,
-            report_id: int,
             verify_url: str,
-    ) -> str:
-        base_dir = Path(f"media/reports/{report_type}/qr")
-        base_dir.mkdir(parents=True, exist_ok=True)
-
-        qr_path = base_dir / f"{report_type}_{report_id}_qr.png"
+    ) -> bytes:
+        """
+        Сгенерировать QR-код в памяти в формате PNG.
+        """
 
         qr = qrcode.QRCode(
             version=None,
@@ -69,11 +71,33 @@ class ReportSignatureService:
         qr.add_data(verify_url)
         qr.make(fit=True)
 
-        img = qr.make_image(
+        image = qr.make_image(
             fill_color="black",
             back_color="white",
         )
 
-        img.save(qr_path)
+        buffer = BytesIO()
+        image.save(buffer, "PNG")
 
-        return str(qr_path)
+        return buffer.getvalue()
+
+    @classmethod
+    def generate_qr_data_uri(
+        cls,
+        *,
+        verify_url: str,
+    ) -> str:
+        """
+        Сгенерировать QR-код и вернуть его как data URI
+        для прямой вставки в HTML.
+        """
+
+        qr_bytes = cls.generate_qr_bytes(
+            verify_url=verify_url,
+        )
+
+        encoded = base64.b64encode(
+            qr_bytes
+        ).decode("ascii")
+
+        return f"data:image/png;base64,{encoded}"

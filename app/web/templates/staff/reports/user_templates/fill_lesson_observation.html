@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Пользовательский шаблон отчета лист наблюдение урока{% endblock %}
+{% block title %}Лист наблюдения урока{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', path='css/template_report.css') }}">
@@ -9,17 +9,21 @@
 {% block content %}
 
 <div class="page-header">
-  <div>
-    <h2>{{ document.report_label or "Сабақты бақылау парағы" }}</h2>
-    <div class="muted">
-      Заполнение отчета по личному шаблону
-    </div>
-  </div>
+    <div>
+        <h2>{{ document.report_label if document else "Сабақты бақылау парағы" }}</h2>
 
-  <a href="{{ url_for('staff_report_templates_page', month_item_id=document.month_item_id) }}"
-     class="btn btn-secondary">
-    Назад к отчетам
-  </a>
+        <div class="muted">
+            Заполнение отчета
+        </div>
+    </div>
+
+    <a href="{{ url_for(
+        'staff_report_templates_page',
+        month_item_id=month_item_id
+    ) }}{% if request.query_params.get('month') %}?month={{ request.query_params.get('month') }}{% endif %}"
+       class="btn btn-secondary">
+        Назад к отчетам
+    </a>
 </div>
 
 {% if error %}
@@ -28,13 +32,14 @@
 
 {% set readonly = report is not none and report.submitted_at is not none %}
 
-<form method="post"
-      action="{{ request.url_for(
-          'lesson_observation_save_post',
-          month_item_id=document.month_item_id,
-          document_id=document.id
-      ) }}?selected_report_id={{ selected_report_id or document.selected_report_id }}">
+{% set lesson_post_url = request.url_for(
+    'staff_user_lesson_observation_fill_submit',
+    month_item_id=month_item_id,
+    selected_report_id=selected_report_id
+) %}
 
+<form method="post"
+      action="{{ lesson_post_url }}{% if template_id %}?template_id={{ template_id }}{% if request.query_params.get('month') %}&month={{ request.query_params.get('month') }}{% endif %}{% elif request.query_params.get('month') %}?month={{ request.query_params.get('month') }}{% endif %}">
   <input type="hidden" name="staff_member_id" value="{{ report.staff_member_id if report else '' }}">
 
   <!-- 1. Общая информация -->
@@ -216,12 +221,18 @@
   </div>
 
   <!-- 3. Разделы и критерии оценки -->
-  {% for section in schema.sections %}
+  {% set score_scale = schema.get("score_scale", [0, 1, 2, 3]) %}
+  {% set sections = schema.get("sections", []) %}
+
+  {% for section in sections %}
     {% set section_index = loop.index0 %}
+    {% set section_title = section.get("title") or ("Раздел " ~ loop.index) %}
+    {% set subsections = section.get("subsections") or [] %}
+    {% set direct_criteria = section.get("criteria") or [] %}
 
     <div class="card report-card section-score-card">
       <div class="card-title-row">
-        <h3>{{ loop.index + 2 }}. {{ section.title }}</h3>
+        <h3>{{ loop.index + 2 }}. {{ section_title }}</h3>
       </div>
 
       <div class="table-wrap">
@@ -230,36 +241,121 @@
             <tr>
               <th class="col-number">№</th>
               <th>Критерий</th>
-
-              {% for value in schema.score_scale %}
+              {% for value in score_scale %}
                 <th class="col-score">{{ value }}</th>
               {% endfor %}
             </tr>
           </thead>
 
           <tbody>
-            {% for criterion in section.criteria %}
-              {% set criterion_index = loop.index0 %}
-              {% set score_name = "score_" ~ section_index ~ "_" ~ criterion_index %}
-              {% set score_key = section_index ~ "_" ~ criterion_index %}
-              {% set saved_score = scores.get(score_name, scores.get(score_key)) %}
+            {% if subsections %}
 
-              <tr>
-                <td class="cell-number">{{ loop.index }}</td>
-                <td class="cell-criterion">{{ criterion.text }}</td>
+              {% for subsection in subsections %}
+                {% set subsection_index = loop.index0 %}
+                {% set subsection_code = subsection.get("code") or "" %}
+                {% set subsection_title = subsection.get("title") or "" %}
+                {% set subsection_criteria = subsection.get("criteria") or [] %}
 
-                {% for value in schema.score_scale %}
-                  <td class="cell-score">
-                    <input type="radio"
-                           name="{{ score_name }}"
-                           value="{{ value }}"
-                           required
-                           {% if saved_score is not none and saved_score|string == value|string %}checked{% endif %}
-                           {% if readonly %}disabled{% endif %}>
+                <tr class="subsection-row">
+                  <td class="cell-number">{{ subsection_code }}</td>
+                  <td
+                    class="cell-criterion"
+                    colspan="{{ score_scale|length + 1 }}"
+                  >
+                    {% if subsection_title %}
+                      <strong>{{ subsection_title }}</strong>
+                    {% endif %}
                   </td>
+                </tr>
+
+                {% for criterion in subsection_criteria %}
+                  {% set criterion_index = loop.index0 %}
+                  {% set criterion_key =
+                    criterion.get("key")
+                    or (
+                      section_index|string
+                      ~ "_"
+                      ~ subsection_index|string
+                      ~ "_"
+                      ~ criterion_index|string
+                    )
+                  %}
+                  {% set criterion_text =
+                    criterion.get("text")
+                    or criterion.get("title")
+                    or criterion.get("label_kz")
+                    or criterion_key
+                  %}
+                  {% set score_name = "score_" ~ criterion_key %}
+                  {% set saved_score = scores.get(criterion_key) %}
+                  {% if saved_score is none %}
+                    {% set saved_score = scores.get(score_name) %}
+                  {% endif %}
+
+                  <tr class="criterion-row-table">
+                    <td class="cell-number"></td>
+                    <td class="cell-criterion">{{ criterion_text }}</td>
+
+                    {% for value in score_scale %}
+                      <td class="cell-score">
+                        <input
+                          type="radio"
+                          name="{{ score_name }}"
+                          value="{{ value }}"
+                          required
+                          {% if saved_score is not none and saved_score|string == value|string %}checked{% endif %}
+                          {% if readonly %}disabled{% endif %}
+                        >
+                      </td>
+                    {% endfor %}
+                  </tr>
                 {% endfor %}
-              </tr>
-            {% endfor %}
+              {% endfor %}
+
+            {% else %}
+
+              {% for criterion in direct_criteria %}
+                {% set criterion_index = loop.index0 %}
+                {% set criterion_key =
+                  criterion.get("key")
+                  or (
+                    section_index|string
+                    ~ "_"
+                    ~ criterion_index|string
+                  )
+                %}
+                {% set criterion_text =
+                  criterion.get("text")
+                  or criterion.get("title")
+                  or criterion.get("label_kz")
+                  or criterion_key
+                %}
+                {% set score_name = "score_" ~ criterion_key %}
+                {% set saved_score = scores.get(criterion_key) %}
+                {% if saved_score is none %}
+                  {% set saved_score = scores.get(score_name) %}
+                {% endif %}
+
+                <tr class="criterion-row-table">
+                  <td class="cell-number">{{ loop.index }}</td>
+                  <td class="cell-criterion">{{ criterion_text }}</td>
+
+                  {% for value in score_scale %}
+                    <td class="cell-score">
+                      <input
+                        type="radio"
+                        name="{{ score_name }}"
+                        value="{{ value }}"
+                        required
+                        {% if saved_score is not none and saved_score|string == value|string %}checked{% endif %}
+                        {% if readonly %}disabled{% endif %}
+                      >
+                    </td>
+                  {% endfor %}
+                </tr>
+              {% endfor %}
+
+            {% endif %}
           </tbody>
         </table>
       </div>
@@ -267,7 +363,7 @@
   {% endfor %}
 
   <!-- Итог -->
-  {% if schema.show_total_score %}
+  {% if schema.get('show_total_score', true) %}
     <div class="card report-card total-card">
       <div class="card-title-row">
         <h3>Итог</h3>
@@ -286,7 +382,7 @@
         <div class="form-field">
           <label>Максимальный балл</label>
           <input type="text"
-                 value="{{ schema.max_score or 0 }}"
+                 value="{{ schema.get('max_score', 0) or 0 }}"
                  readonly>
         </div>
       </div>
@@ -329,7 +425,7 @@
         Сохранить и подписать
       </button>
 
-      <a href="{{ url_for('staff_report_templates_page', month_item_id=month_item_id) }}"
+      <a href="{{ url_for('staff_report_templates_page', month_item_id=month_item_id) }}{% if request.query_params.get('month') %}?month={{ request.query_params.get('month') }}{% endif %}"
           class="btn btn-secondary">
         Отмена
       </a>
@@ -345,7 +441,7 @@
         Скачать PDF
       </a>
 
-      <a href="{{ url_for('staff_report_templates_page', month_item_id=month_item_id) }}"
+      <a href="{{ url_for('staff_report_templates_page', month_item_id=month_item_id) }}{% if request.query_params.get('month') %}?month={{ request.query_params.get('month') }}{% endif %}"
        class="btn btn-secondary">
       Назад к отчетам
       </a>

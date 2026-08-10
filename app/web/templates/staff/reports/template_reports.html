@@ -1,6 +1,8 @@
 {% extends "base.html" %}
 
-{% block content %}
+{% block title %}Заполнение отчетов{% endblock %}
+
+{% block extra_css %}
 
 <style>
 
@@ -293,6 +295,30 @@
   color: white;
 }
 
+.btn-manage-assignments {
+  background: #eef2ff;
+  color: #3730a3;
+  border: 1px solid #c7d2fe;
+}
+
+.btn-manage-assignments:hover {
+  background: #e0e7ff;
+  border-color: #a5b4fc;
+  color: #312e81;
+}
+
+.reports-header-right {
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.completion-note {
+  margin-top: 8px;
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
 /* === Пустой блок === */
 .empty-box {
   padding: 18px;
@@ -317,9 +343,246 @@
 
 }
 
+
+/* =========================================================
+   FLASH ALERTS
+   ========================================================= */
+.flash-alert-container {
+  position: fixed;
+  top: 18px;
+  right: 18px;
+  z-index: 3000;
+  width: min(440px, calc(100vw - 36px));
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  pointer-events: none;
+}
+.flash-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid transparent;
+  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.18);
+  font-size: 14px;
+  line-height: 1.45;
+  opacity: 0;
+  transform: translateY(-8px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  pointer-events: auto;
+}
+.flash-alert.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+.flash-alert--danger {
+  background: #fff1f2;
+  border-color: #fecdd3;
+  color: #9f1239;
+}
+.flash-alert--warning {
+  background: #fffbeb;
+  border-color: #fde68a;
+  color: #92400e;
+}
+.flash-alert--success {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+  color: #166534;
+}
+.flash-alert__icon {
+  flex: 0 0 auto;
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  font-weight: 900;
+  font-size: 14px;
+}
+.flash-alert--danger .flash-alert__icon { background: #ffe4e6; }
+.flash-alert--warning .flash-alert__icon { background: #fef3c7; }
+.flash-alert--success .flash-alert__icon { background: #dcfce7; }
+.flash-alert__content {
+  flex: 1;
+  min-width: 0;
+}
+.flash-alert__title {
+  display: block;
+  margin-bottom: 2px;
+  font-weight: 800;
+}
+.flash-alert__message { word-break: break-word; }
+.flash-alert__close {
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: currentColor;
+  cursor: pointer;
+  font-size: 20px;
+  line-height: 1;
+  opacity: 0.65;
+}
+.flash-alert__close:hover {
+  opacity: 1;
+  background: rgba(15, 23, 42, 0.06);
+}
+
+/* =========================================================
+   ЗАВЕРШЕНИЕ ЗАДАЧИ
+   ========================================================= */
+.reports-completion-card {
+  margin-top: 20px;
+  border-width: 2px;
+  position: relative;
+}
+.reports-completion-card--ready {
+  border-color: #86efac;
+  background: linear-gradient(180deg, #f0fdf4 0, #ffffff 115px);
+  box-shadow: 0 10px 28px rgba(22, 101, 52, 0.10);
+}
+.reports-completion-card--blocked {
+  border-color: #fde68a;
+  background: linear-gradient(180deg, #fffbeb 0, #ffffff 115px);
+}
+.reports-completion-card--done {
+  border-color: #cbd5e1;
+  background: linear-gradient(180deg, #f8fafc 0, #ffffff 115px);
+}
+.completion-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.completion-title-icon {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: #dcfce7;
+  color: #166534;
+  font-size: 18px;
+  font-weight: 900;
+}
+.reports-completion-card--blocked .completion-title-icon {
+  background: #fef3c7;
+  color: #92400e;
+}
+.reports-completion-card--done .completion-title-icon {
+  background: #e2e8f0;
+  color: #475569;
+}
+.btn-complete-task {
+  min-height: 48px;
+  padding: 11px 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  border: 1px solid #15803d;
+  border-radius: 12px;
+  background: #16a34a;
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: 800;
+  box-shadow: 0 8px 18px rgba(22, 163, 74, 0.22);
+  transition: background 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+.btn-complete-task:hover {
+  background: #15803d;
+  box-shadow: 0 10px 22px rgba(22, 163, 74, 0.30);
+  transform: translateY(-1px);
+}
+.btn-complete-task:active { transform: translateY(0); }
+.btn-complete-task:focus {
+  outline: none;
+  box-shadow:
+    0 0 0 4px rgba(34, 197, 94, 0.18),
+    0 8px 18px rgba(22, 163, 74, 0.22);
+}
+.btn-complete-disabled {
+  min-height: 44px;
+  padding: 10px 18px;
+  border-radius: 11px;
+  font-weight: 700;
+}
+.final-document-field {
+  padding: 14px;
+  border-radius: 12px;
+  border: 1px solid #bbf7d0;
+  background: rgba(240, 253, 244, 0.72);
+}
+.final-document-field label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 800;
+  color: #166534;
+}
+.final-document-field input[type="file"] { width: 100%; }
+
+@media (max-width: 768px) {
+  .flash-alert-container {
+    top: 10px;
+    right: 10px;
+    width: calc(100vw - 20px);
+  }
+  .btn-complete-task { width: 100%; }
+}
+
 </style>
+{% endblock %}
+
+{% block content %}
 
 <div class="reports-page">
+
+  {# =========================================================
+     НОВАЯ ЛОГИКА УПРАВЛЕНИЯ ОТЧЁТАМИ
+     Источник истины — TaskReportsPageDTO (page_data).
+     ========================================================= #}
+
+  {% set can_manage_assignments =
+    page_data.can_manage_report_assignments
+    if (
+      page_data is defined
+      and page_data
+      and page_data.can_manage_report_assignments is defined
+    )
+    else false
+  %}
+
+  {% set reports_ready_for_completion =
+    page_data.all_reports_resolved
+    if (
+      page_data is defined
+      and page_data
+      and page_data.all_reports_resolved is defined
+    )
+    else false
+  %}
+
+  {% set is_primary =
+    page_data.is_primary_executor
+    if (
+      page_data is defined
+      and page_data
+      and page_data.is_primary_executor is defined
+    )
+    else false
+  %}
 
   <div class="reports-header">
     <div class="reports-header-left">
@@ -342,20 +605,64 @@
 
     {% if task %}
       <div class="reports-header-right">
-        <a href="{{ url_for('staff_report_execute_page', month_item_id=task.id) }}"
-           class="btn btn-secondary">
+
+        {% if can_manage_assignments %}
+          <a
+            href="{{ url_for(
+              'staff_report_assignments_page',
+              month_item_id=page_data.month_item_id
+            ) }}?month={{ month }}"
+            class="btn btn-manage-assignments"
+          >
+            👥 Управление распределением
+          </a>
+        {% endif %}
+
+        <a
+          href="{{ url_for(
+            'staff_report_execute_page',
+            month_item_id=page_data.month_item_id
+          ) }}"
+          class="btn btn-secondary"
+        >
           ← Назад к задаче
         </a>
+
       </div>
     {% endif %}
   </div>
 
-  {% if error %}
-    <div class="alert alert-danger">{{ error }}</div>
-  {% endif %}
-
-  {% if success %}
-    <div class="alert alert-success">{{ success }}</div>
+  {% if error or warning or success %}
+    <div class="flash-alert-container" aria-live="polite" aria-atomic="true">
+      {% if error %}
+        <div class="flash-alert flash-alert--danger" role="alert" data-flash-alert>
+          <span class="flash-alert__icon">!</span>
+          <div class="flash-alert__content">
+            <span class="flash-alert__title">Действие не выполнено</span>
+            <div class="flash-alert__message">{{ error }}</div>
+          </div>
+          <button type="button" class="flash-alert__close" aria-label="Закрыть сообщение" data-flash-close>×</button>
+        </div>
+      {% elif warning %}
+        <div class="flash-alert flash-alert--warning" role="alert" data-flash-alert>
+          <span class="flash-alert__icon">!</span>
+          <div class="flash-alert__content">
+            <span class="flash-alert__title">Обратите внимание</span>
+            <div class="flash-alert__message">{{ warning }}</div>
+          </div>
+          <button type="button" class="flash-alert__close" aria-label="Закрыть сообщение" data-flash-close>×</button>
+        </div>
+      {% elif success %}
+        <div class="flash-alert flash-alert--success" role="status" data-flash-alert data-auto-hide="true">
+          <span class="flash-alert__icon">✓</span>
+          <div class="flash-alert__content">
+            <span class="flash-alert__title">Готово</span>
+            <div class="flash-alert__message">{{ success }}</div>
+          </div>
+          <button type="button" class="flash-alert__close" aria-label="Закрыть сообщение" data-flash-close>×</button>
+        </div>
+      {% endif %}
+    </div>
   {% endif %}
 
   {% if task %}
@@ -427,8 +734,8 @@
                         <th>№</th>
                         <th>Субъект/Объект</th>
                         <th>Статус</th>
-                        <th>Системный шаблон</th>
-                        <th>Пользовательский шаблон</th>
+                        <th>Встроенный шаблон</th>
+                        <th>Личный шаблон</th>
                       </tr>
                     </thead>
 
@@ -460,7 +767,7 @@
                           </td>
 
                           <td>
-                            {% if item.document %}
+                            {% if item.is_filled %}
                               {% set status_text = item.document_status.label_kz if item.document_status else "—" %}
 
                               <span class="status-badge
@@ -470,8 +777,7 @@
                                   status-done
                                 {% else %}
                                   status-draft
-                                {% endif %}
-                              ">
+                                {% endif %}">
                                 {{ status_text }}
                               </span>
                             {% else %}
@@ -485,11 +791,11 @@
 {% set is_system_used = item.is_system_used if item.is_system_used is defined else source == "generated" %}
 {% set is_user_template_used = item.is_user_template_used if item.is_user_template_used is defined else source == "template" %}
 
-{% set report_type = item.get("report_type") or item.get("report_code") or item.get("type") %}
+{% set report_type = item.report_code %}
 
 {% set report_fill_routes = {
-  "lesson_observation": "staff_system_report_fill_page",
-  "checking_notebooks_table": "staff_system_report_fill_page"
+  "lesson_observation": "staff_user_lesson_observation_fill_page",
+  "checking_notebooks_table": "checking_notebooks_fill_page"
 } %}
 
 {% set system_fill_route = report_fill_routes.get(report_type) %}
@@ -538,9 +844,9 @@
 
     <a href="{{ url_for(
           system_fill_route,
-          month_item_id=task.id,
+          month_item_id=page_data.month_item_id,
           selected_report_id=item.selected_report_id
-        ) }}?report_code={{ report_type }}"
+        ) }}"
        class="btn {% if is_system_used or item.has_draft %}btn-secondary{% else %}btn-primary{% endif %}">
       {% if is_system_used or item.has_draft %}
         Продолжить черновик
@@ -590,7 +896,7 @@
 
       <a href="{{ url_for(
             item.user_fill_route,
-            month_item_id=task.id,
+            month_item_id=page_data.month_item_id,
             selected_report_id=item.selected_report_id
           ) }}"
          class="btn btn-primary">
@@ -601,7 +907,7 @@
 
       <a href="{{ url_for(
             item.user_fill_route,
-            month_item_id=task.id,
+            month_item_id=page_data.month_item_id,
             selected_report_id=item.selected_report_id
           ) }}"
          class="btn btn-primary">
@@ -620,7 +926,7 @@
 
     <a href="{{ url_for(
           'staff_user_template_select_page',
-          month_item_id=task.id,
+          month_item_id=page_data.month_item_id,
           selected_report_id=item.selected_report_id
         ) }}"
        class="btn btn-outline-primary">
@@ -650,17 +956,47 @@
 
     </div>
 
-    <div class="reports-card reports-completion-card">
+    {% if is_primary %}
+    <div
+      id="task-completion"
+      class="reports-card reports-completion-card
+        {% if is_done or final_locked %}
+          reports-completion-card--done
+        {% elif reports_ready_for_completion %}
+          reports-completion-card--ready
+        {% else %}
+          reports-completion-card--blocked
+        {% endif %}
+      "
+    >
 
   <div class="reports-card-header">
     <div>
-      <h3>Завершение задачи</h3>
+      <div class="completion-title-row">
+        <span class="completion-title-icon">
+          {% if is_done or final_locked %}
+            ✓
+          {% elif reports_ready_for_completion %}
+            ✓
+          {% else %}
+            !
+          {% endif %}
+        </span>
+        <h3>Завершение задачи</h3>
+      </div>
 
       <div class="report-code">
-        Подписано отчетов:
-        <strong>{{ signed_reports_count }}</strong>
+        Выполнено отчётов:
+        <strong>{{ completed_reports_count }}</strong>
         из
         <strong>{{ required_reports_count }}</strong>
+      </div>
+
+      <div class="report-code" style="margin-top:4px;">
+        Ожидают выполнения:
+        <strong>{{ page_data.pending_reports_count }}</strong>
+        · Освобождено:
+        <strong>{{ page_data.waived_reports_count }}</strong>
       </div>
 
       <div class="report-code" style="margin-top:4px;">
@@ -701,20 +1037,22 @@
 
   {# ================= МОЖНО ЗАВЕРШАТЬ ================= #}
 
-  {% elif all_reports_signed %}
+  {% elif reports_ready_for_completion %}
 
     <div class="alert alert-success">
-      Все системные отчеты успешно заполнены и подписаны.
-      Можно загрузить итоговый документ и отправить задачу на рассмотрение.
+      Все обязательства по системным отчётам закрыты:
+      отчёты либо выполнены, либо официально освобождены от выполнения.
+      Можно выбрать итоговый документ и завершить задачу.
     </div>
 
     <form method="post"
-          action="{{ url_for('staff_report_templates_complete_post', month_item_id=task.id) }}"
+          action="{{ url_for('staff_report_templates_complete_post', month_item_id=page_data.month_item_id
+          ) }}?month={{ month }}"
           enctype="multipart/form-data">
 
       <div class="form-grid">
 
-        <div class="form-field form-field--full">
+        <div class="form-field form-field--full final-document-field">
           <label for="final_document">
             Итоговый документ
           </label>
@@ -730,41 +1068,58 @@
 
       <div class="action-panel report-actions" style="margin-top: 14px;">
 
-        <button type="submit"
-                class="btn btn-success"
-                onclick="return confirm('Загрузить итоговый документ и отправить задачу на рассмотрение?')">
-
-          Загрузить итоговый документ и завершить
-
+        <button
+          type="submit"
+          class="btn btn-complete-task"
+          onclick="return confirm('Завершить задачу и отправить её на рассмотрение?')"
+        >
+          <span aria-hidden="true">✓</span>
+          <span>Завершить задачу и отправить на рассмотрение</span>
         </button>
 
       </div>
 
     </form>
 
-  {# ================= НЕ ВСЕ ОТЧЕТЫ ПОДПИСАНЫ ================= #}
+  {# ================= ЕСТЬ НЕЗАКРЫТЫЕ ОТЧЁТЫ ================= #}
 
   {% else %}
 
     <div class="alert alert-warning">
-      Для завершения задачи необходимо заполнить и подписать все системные отчеты.
+      Есть системные отчёты, которые ещё ожидают выполнения.
+      Ответственный может дождаться их завершения, переназначить исполнителя
+      или официально освободить конкретный отчёт от выполнения с указанием причины.
     </div>
 
     <div class="action-panel report-actions" style="margin-top: 14px;">
 
-      <input type="file"
-             disabled
-             class="form-control">
+      {% if can_manage_assignments %}
+        <a
+          href="{{ url_for(
+            'staff_report_assignments_page',
+            month_item_id=page_data.month_item_id
+          ) }}?month={{ month }}"
+          class="btn btn-manage-assignments"
+        >
+          👥 Управление распределением
+        </a>
+      {% endif %}
 
-      <button class="btn btn-secondary" disabled>
-        Завершение недоступно
+      <button class="btn btn-secondary btn-complete-disabled" disabled>
+        Завершение пока недоступно
       </button>
 
+    </div>
+
+    <div class="completion-note">
+      Для перехода к итоговому документу не должно оставаться назначений
+      со статусом PENDING.
     </div>
 
   {% endif %}
 
 </div>
+    {% endif %}
 
   {% endif %}
 
@@ -869,5 +1224,76 @@
 
 
 </div>
+
+
+<script>
+(function () {
+  const cleanSearch = new URLSearchParams(window.location.search);
+  cleanSearch.delete("error");
+  cleanSearch.delete("success");
+  cleanSearch.delete("warning");
+
+  const scrollKey =
+    "template-reports-scroll:" +
+    window.location.pathname +
+    "?" +
+    cleanSearch.toString();
+
+  function saveScrollPosition() {
+    sessionStorage.setItem(scrollKey, String(window.scrollY));
+  }
+
+  function restoreScrollPosition() {
+    const savedScroll = sessionStorage.getItem(scrollKey);
+    if (savedScroll === null) return;
+
+    sessionStorage.removeItem(scrollKey);
+
+    requestAnimationFrame(function () {
+      window.scrollTo({
+        top: Number(savedScroll) || 0,
+        behavior: "auto"
+      });
+    });
+  }
+
+  function closeFlashAlert(alert) {
+    if (!alert) return;
+
+    alert.classList.remove("is-visible");
+
+    window.setTimeout(function () {
+      alert.remove();
+    }, 220);
+  }
+
+  document.addEventListener("DOMContentLoaded", function () {
+    restoreScrollPosition();
+
+    document.querySelectorAll("form").forEach(function (form) {
+      form.addEventListener("submit", saveScrollPosition);
+    });
+
+    document.querySelectorAll("[data-flash-alert]").forEach(function (alert) {
+      requestAnimationFrame(function () {
+        alert.classList.add("is-visible");
+      });
+
+      const closeButton = alert.querySelector("[data-flash-close]");
+      if (closeButton) {
+        closeButton.addEventListener("click", function () {
+          closeFlashAlert(alert);
+        });
+      }
+
+      if (alert.dataset.autoHide === "true") {
+        window.setTimeout(function () {
+          closeFlashAlert(alert);
+        }, 5000);
+      }
+    });
+  });
+})();
+</script>
 
 {% endblock %}

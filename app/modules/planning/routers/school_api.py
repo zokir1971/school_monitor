@@ -7,8 +7,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
 from app.modules.planning.schemas import Row11MetaUpdateIn, Row11ResponsibleUpdateIn, Row11PeriodUpdateIn
-from app.modules.planning.services.school_monthly_service import MonthCalendarService
-from app.modules.planning.services.school_service import SchoolRowsService
+from app.modules.planning.services.month_plan_service import MonthCalendarService
+from app.modules.planning.services.school_plan_service import SchoolRowsService
 from app.modules.users.deps import require_roles
 from app.modules.users.enums import UserRole
 
@@ -225,11 +225,16 @@ async def school_month_item_assign_week(
     """
     Назначить неделю задаче
     """
-    await MonthCalendarService.assign_week_to_item(
-        db,
-        item_id=item_id,
-        week_of_month=week_of_month
-    )
+    try:
+        await MonthCalendarService.assign_week_to_item(
+            db,
+            item_id=item_id,
+            week_of_month=week_of_month,
+        )
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        raise
 
     return {"ok": True}
 
@@ -241,9 +246,15 @@ async def school_month_items_bulk_assign_week(
         item_ids: list[int],
         db: AsyncSession = Depends(get_db),
 ):
-    return await MonthCalendarService.bulk_assign_week(
-        db,
-        month_plan_id=month_plan_id,
-        item_ids=item_ids,
-        week_of_month=week_of_month
-    )
+    try:
+        result = await MonthCalendarService.bulk_assign_week(
+            db,
+            month_plan_id=month_plan_id,
+            item_ids=item_ids,
+            week_of_month=week_of_month,
+        )
+        await db.commit()
+        return result
+    except Exception:
+        await db.rollback()
+        raise

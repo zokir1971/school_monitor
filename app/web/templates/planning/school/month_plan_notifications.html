@@ -1,0 +1,751 @@
+{% extends "base.html" %}
+
+{% block title %}Уведомление исполнителей{% endblock %}
+
+{% block extra_css %}
+  <link rel="stylesheet" href="{{ url_for('static', path='css/monthly_plan.css') }}">
+
+  <style>
+    .notifications-page {
+      display: grid;
+      gap: 22px;
+    }
+
+    .notifications-shell,
+    .notifications-info-card,
+    .notification-status-card,
+    .notification-card,
+    .empty-state {
+      border: 1px solid #e2e8f0;
+      border-radius: 18px;
+      background: #ffffff;
+      box-shadow:
+        0 1px 2px rgba(15, 23, 42, 0.04),
+        0 8px 24px rgba(15, 23, 42, 0.05);
+    }
+
+    .notifications-shell {
+      padding: 24px;
+      background:
+        linear-gradient(135deg, rgba(239, 246, 255, 0.95), rgba(255, 255, 255, 0.98));
+    }
+
+    .notifications-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+
+    .notifications-head__content {
+      display: grid;
+      gap: 6px;
+      min-width: 260px;
+    }
+
+    .notifications-head .section-title {
+      margin: 0;
+      font-size: clamp(24px, 3vw, 32px);
+      line-height: 1.2;
+      color: #0f172a;
+    }
+
+    .notifications-plan-meta {
+      font-size: 14px;
+      color: #64748b;
+    }
+
+    .notifications-summary {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+
+.summary-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+
+  min-height: 40px;
+  padding: 10px 15px;
+
+  border: 1px solid transparent;
+  border-radius: 999px;
+
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1;
+
+  white-space: nowrap;
+}
+
+.summary-badge--sent {
+  border-color: #bfdbfe;
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.summary-badge--accepted {
+  border-color: #bbf7d0;
+  background: #dcfce7;
+  color: #166534;
+}
+
+.summary-badge--pending {
+  border-color: #e2e8f0;
+  background: #f1f5f9;
+  color: #475569;
+}
+    .btn--back {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: 44px;
+      padding: 10px 16px;
+      border: 1px solid #cbd5e1;
+      border-radius: 12px;
+      background: #ffffff;
+      color: #334155;
+      font-weight: 800;
+      text-decoration: none;
+      box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05);
+      transition:
+        transform 0.18s ease,
+        box-shadow 0.18s ease,
+        border-color 0.18s ease,
+        background 0.18s ease;
+    }
+
+    .btn--back:hover {
+      transform: translateY(-1px);
+      border-color: #94a3b8;
+      background: #f8fafc;
+      color: #0f172a;
+      box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+    }
+
+    .notifications-info-card {
+      padding: 16px 18px;
+      border-left: 5px solid #3b82f6;
+      background: #eff6ff;
+      color: #1e3a8a;
+      line-height: 1.55;
+    }
+
+    .notification-status-card {
+      overflow: hidden;
+    }
+
+    .card-section-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 18px 20px;
+      border-bottom: 1px solid #e2e8f0;
+      background: #f8fafc;
+    }
+
+    .card-section-head h3 {
+      margin: 0;
+      font-size: 18px;
+      color: #0f172a;
+    }
+
+    .card-section-head p {
+      margin: 4px 0 0;
+      font-size: 13px;
+      color: #64748b;
+    }
+
+    .notification-status-table-wrap {
+      overflow-x: auto;
+    }
+
+    .notification-status-table {
+      width: 100%;
+      min-width: 760px;
+      border-collapse: collapse;
+    }
+
+    .notification-status-table th,
+    .notification-status-table td {
+      padding: 15px 18px;
+      border-bottom: 1px solid #e2e8f0;
+      text-align: left;
+      vertical-align: middle;
+    }
+
+    .notification-status-table th {
+      background: #ffffff;
+      font-size: 13px;
+      font-weight: 800;
+      color: #475569;
+      letter-spacing: 0.01em;
+      white-space: nowrap;
+    }
+
+    .notification-status-table tbody tr {
+      transition: background 0.16s ease;
+    }
+
+    .notification-status-table tbody tr:hover {
+      background: #f8fafc;
+    }
+
+    .notification-status-table tbody tr:last-child td {
+      border-bottom: 0;
+    }
+
+    .notification-status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      width: fit-content;
+      min-height: 36px;
+      padding: 8px 13px;
+      border: 1px solid transparent;
+      border-radius: 999px;
+      font-size: 14px;
+      font-weight: 800;
+      line-height: 1;
+      white-space: nowrap;
+    }
+
+    .notification-status-badge--pending {
+      border-color: #e2e8f0;
+      background: #f1f5f9;
+      color: #475569;
+    }
+
+    .notification-status-badge--sent {
+    border-color: #bfdbfe;
+    background: #dbeafe;
+    color: #1d4ed8;
+}
+
+.notification-status-badge--accepted {
+    border-color: #bbf7d0;
+    background: #dcfce7;
+    color: #166534;
+}
+
+    .recipients-list {
+      display: grid;
+      gap: 18px;
+    }
+
+    .notification-card {
+      display: grid;
+      grid-template-columns: minmax(280px, 1fr) minmax(320px, 430px);
+      gap: 24px;
+      align-items: stretch;
+      padding: 22px;
+      transition:
+        transform 0.18s ease,
+        box-shadow 0.18s ease,
+        border-color 0.18s ease;
+    }
+
+    .notification-card:hover {
+      transform: translateY(-2px);
+      border-color: #cbd5e1;
+      box-shadow:
+        0 2px 6px rgba(15, 23, 42, 0.06),
+        0 14px 34px rgba(15, 23, 42, 0.08);
+    }
+
+    .notification-person {
+      display: grid;
+      align-content: start;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .notification-person__header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .notification-person__name {
+      margin: 0;
+      font-size: 20px;
+      line-height: 1.35;
+      color: #0f172a;
+    }
+
+    .registration-status {
+      display: inline-flex;
+      width: fit-content;
+      align-items: center;
+      gap: 7px;
+      min-height: 34px;
+      padding: 7px 12px;
+      border: 1px solid transparent;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 800;
+      line-height: 1;
+    }
+
+    .registration-status--registered {
+      border-color: #bbf7d0;
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    .registration-status--not-registered {
+      border-color: #fde68a;
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    .recipient-meta {
+      display: inline-flex;
+      width: fit-content;
+      padding: 7px 10px;
+      border-radius: 10px;
+      background: #f8fafc;
+      color: #64748b;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .notification-tasks {
+      display: grid;
+      gap: 14px;
+      margin-top: 2px;
+    }
+
+    .notification-task-group {
+      display: grid;
+      gap: 8px;
+      padding: 14px;
+      border: 1px solid #e2e8f0;
+      border-radius: 14px;
+      background: #f8fafc;
+    }
+
+    .notification-task-group__title {
+      font-size: 14px;
+      font-weight: 800;
+      color: #334155;
+    }
+
+    .notification-task-list {
+      display: grid;
+      gap: 8px;
+      margin: 0;
+      padding-left: 20px;
+    }
+
+    .notification-task-list li {
+      line-height: 1.45;
+      color: #1e293b;
+    }
+
+    .notification-task-deadline {
+      display: block;
+      margin-top: 4px;
+      font-size: 12px;
+      font-weight: 700;
+      color: #64748b;
+    }
+
+    .whatsapp-form {
+      display: grid;
+      align-content: start;
+      gap: 13px;
+      padding: 20px;
+      border: 1px solid #bbf7d0;
+      border-radius: 16px;
+      background:
+        linear-gradient(180deg, #f0fdf4 0%, #ffffff 100%);
+    }
+
+    .whatsapp-form label {
+      font-size: 14px;
+      font-weight: 800;
+      color: #14532d;
+    }
+
+    .whatsapp-form .input {
+      width: 100%;
+      min-height: 46px;
+      box-sizing: border-box;
+      padding: 10px 13px;
+      border: 1px solid #cbd5e1;
+      border-radius: 11px;
+      background: #ffffff;
+      color: #0f172a;
+      font-size: 15px;
+      outline: none;
+      transition:
+        border-color 0.16s ease,
+        box-shadow 0.16s ease;
+    }
+
+    .whatsapp-form .input:focus {
+      border-color: #22c55e;
+      box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.14);
+    }
+
+    .whatsapp-help {
+      margin: 0;
+      font-size: 12px;
+      line-height: 1.5;
+      color: #64748b;
+    }
+
+    .btn--whatsapp {
+      display: inline-flex;
+      width: 100%;
+      min-height: 48px;
+      align-items: center;
+      justify-content: center;
+      gap: 9px;
+      padding: 11px 16px;
+      border: 1px solid #16a34a;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #22c55e, #16a34a);
+      color: #ffffff;
+      font-size: 15px;
+      font-weight: 800;
+      text-decoration: none;
+      box-shadow: 0 8px 18px rgba(22, 163, 74, 0.22);
+      cursor: pointer;
+      transition:
+        transform 0.18s ease,
+        box-shadow 0.18s ease,
+        filter 0.18s ease;
+    }
+
+    .btn--whatsapp:hover {
+      transform: translateY(-1px);
+      color: #ffffff;
+      filter: brightness(0.98);
+      box-shadow: 0 12px 24px rgba(22, 163, 74, 0.28);
+    }
+
+    .btn--whatsapp:active {
+      transform: translateY(0);
+      box-shadow: 0 5px 12px rgba(22, 163, 74, 0.2);
+    }
+
+    .empty-state {
+      padding: 38px 22px;
+      text-align: center;
+    }
+
+    @media (max-width: 900px) {
+      .notification-card {
+        grid-template-columns: 1fr;
+      }
+
+      .notifications-head > .btn--back {
+        width: 100%;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .notifications-shell,
+      .notification-card {
+        padding: 17px;
+      }
+
+      .notifications-summary {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .summary-badge {
+        justify-content: center;
+        white-space: normal;
+        text-align: center;
+      }
+
+      .notification-person__header {
+        display: grid;
+      }
+    }
+  </style>
+{% endblock %}
+
+{% block content %}
+<section class="dashboard-section notifications-page">
+
+  <section class="notifications-shell">
+  <div class="notifications-head">
+    <div class="notifications-head__content">
+      <h2 class="section-title">Уведомление исполнителей</h2>
+
+      <div class="notifications-plan-meta">
+        Месячный план №{{ month_plan.id }}
+        · {{ "%02d"|format(month_plan.month) }}.{{ month_plan.year }}
+      </div>
+
+      {% set total_tasks = namespace(value=0) %}
+
+      {% for recipient in recipients %}
+        {% set total_tasks.value = total_tasks.value + recipient.task_count %}
+      {% endfor %}
+
+      <div class="notifications-summary">
+
+  <span class="summary-badge summary-badge--sent">
+    🔵 Жіберілді:
+    {{ notification_progress.sent_count if notification_progress else 0 }}
+  </span>
+
+  <span class="summary-badge summary-badge--accepted">
+    🟢 Орындауға қабылданды:
+    {{ notification_progress.accepted_count if notification_progress else 0 }}
+  </span>
+
+  <span class="summary-badge summary-badge--pending">
+    ⚪ Жіберілмеген:
+    {{ notification_progress.pending_count if notification_progress else recipients|length }}
+  </span>
+
+</div>
+
+    </div>
+
+    <a
+      class="btn--back"
+      href="{{ request.url_for('school_monthly_page') }}?month={{ month_plan.month }}"
+    >
+      ← Вернуться к месячному плану
+    </a>
+  </div>
+</section>
+
+  <div class="notifications-info-card">
+    План отправлен на исполнение. Введите номер WhatsApp каждого
+    сотрудника и откройте подготовленное сообщение. Отправка
+    выполняется вручную в WhatsApp.
+  </div>
+
+  {% if error %}
+    <div class="alert alert--warning">
+      {{ error }}
+    </div>
+  {% endif %}
+
+  {% if recipients %}
+    <section class="notification-status-card">
+      <div class="card-section-head">
+        <div>
+          <h3>Статус уведомлений</h3>
+          <p>Текущее состояние отправки сообщений исполнителям</p>
+        </div>
+      </div>
+
+      <div class="notification-status-table-wrap">
+      <table class="notification-status-table">
+        <thead>
+          <tr>
+            <th>Исполнитель</th>
+            <th>Статус</th>
+            <th>Последнее открытие</th>
+            <th>Попыток</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {% for recipient in recipients %}
+            {% set notification = notification_status_map.get(recipient.staff_member_id) %}
+
+            {% if notification %}
+              {% set status_value = notification.status.value %}
+            {% else %}
+              {% set status_value = "pending" %}
+            {% endif %}
+
+            <tr>
+              <td>
+                <strong>{{ recipient.full_name }}</strong>
+              </td>
+
+              <td>
+
+  {% if status_value == "accepted" %}
+    <span class="notification-status-badge notification-status-badge--accepted">
+      🟢 Орындауға қабылданды
+    </span>
+
+  {% elif status_value == "sent" %}
+    <span class="notification-status-badge notification-status-badge--sent">
+      🔵 Жіберілді
+    </span>
+
+  {% else %}
+    <span class="notification-status-badge notification-status-badge--pending">
+      ⚪ Жіберілмеген
+    </span>
+
+  {% endif %}
+
+</td>
+              <td>
+                {% if notification and notification.opened_at %}
+                  {{ notification.opened_at.strftime("%d.%m.%Y %H:%M") }}
+                {% else %}
+                  —
+                {% endif %}
+              </td>
+
+              <td>
+                {{ notification.open_count if notification else 0 }}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      </div>
+    </section>
+  {% endif %}
+
+  {% if not recipients %}
+    <div class="card empty-state">
+      <h3>Получатели не найдены</h3>
+
+      <p class="muted">
+        У включённых задач нет назначенных исполнителей.
+        Вернитесь в месячный план и проверьте назначения.
+      </p>
+    </div>
+  {% else %}
+    <div class="recipients-list">
+    {% for recipient in recipients %}
+      <article class="notification-card">
+
+        <div class="notification-person">
+          <div class="notification-person__header">
+            <h3 class="notification-person__name">
+              {{ recipient.full_name }}
+            </h3>
+
+          {% if recipient.is_registered %}
+            <span class="registration-status registration-status--registered">
+              ✓ Зарегистрирован в системе
+            </span>
+          {% else %}
+            <span class="registration-status registration-status--not-registered">
+              Не зарегистрирован в системе
+            </span>
+          {% endif %}
+          </div>
+
+          <div class="recipient-meta">
+            {{ recipient.role_summary }}
+            · задач: {{ recipient.task_count }}
+          </div>
+
+          <div class="notification-tasks">
+
+            {% if recipient.primary_tasks %}
+              <div class="notification-task-group">
+                <div class="notification-task-group__title">
+                  Жауапты / Ответственный
+                </div>
+
+                <ul class="notification-task-list">
+                  {% for task in recipient.primary_tasks %}
+                    <li>
+                      {{ task.title }}
+
+                      <span class="notification-task-deadline">
+                        Срок: {{ task.deadline_text }}
+                      </span>
+                    </li>
+                  {% endfor %}
+                </ul>
+              </div>
+            {% endif %}
+
+            {% if recipient.co_executor_tasks %}
+              <div class="notification-task-group">
+                <div class="notification-task-group__title">
+                  Бірлескен орындаушы / Соисполнитель
+                </div>
+
+                <ul class="notification-task-list">
+                  {% for task in recipient.co_executor_tasks %}
+                    <li>
+                      {{ task.title }}
+
+                      <span class="notification-task-deadline">
+                        Срок: {{ task.deadline_text }}
+                      </span>
+                    </li>
+                  {% endfor %}
+                </ul>
+              </div>
+            {% endif %}
+
+          </div>
+        </div>
+
+        <form
+          class="whatsapp-form"
+          method="get"
+          action="{{ request.url_for(
+            'school_monthly_whatsapp',
+            month_plan_id=month_plan_id,
+            staff_member_id=recipient.staff_member_id
+          ) }}"
+          target="_blank"
+        >
+          <label for="phone-{{ recipient.staff_member_id }}">
+            Номер WhatsApp
+          </label>
+
+          <input
+            id="phone-{{ recipient.staff_member_id }}"
+            type="tel"
+            name="phone"
+            class="input"
+            value="{{ recipient.phone or '' }}"
+            placeholder="+7 700 123 45 67"
+            autocomplete="tel"
+            inputmode="tel"
+            pattern="^\+?7[\s\-()]?\d{3}[\s\-()]?\d{3}[\s\-()]?\d{2}[\s\-()]?\d{2}$|^8[\s\-()]?\d{3}[\s\-()]?\d{3}[\s\-()]?\d{2}[\s\-()]?\d{2}$"
+            title="Введите номер в формате +7 700 123 45 67"
+            required
+          >
+
+          <p class="muted whatsapp-help">
+            Формат: +7 700 123 45 67 или 8 700 123 45 67.
+            Номер сохраняется в состоянии уведомления.
+          </p>
+
+          {% if not recipient.is_registered %}
+            <div class="alert alert--warning">
+              В сообщении будет указано, что сотруднику необходимо
+              обратиться к администратору для регистрации.
+            </div>
+          {% endif %}
+
+          <button
+            type="submit"
+            class="btn btn--whatsapp"
+          >
+            <span aria-hidden="true">💬</span>
+            Открыть WhatsApp
+          </button>
+        </form>
+
+      </article>
+    {% endfor %}
+    </div>
+  {% endif %}
+
+</section>
+{% endblock %}

@@ -16,9 +16,9 @@ from app.modules.org.models import School
 from app.modules.planning.enums import PlanStatus, ResponsibleRole, ReviewPlace
 from app.modules.reports.enums import DocumentType
 from app.modules.planning.models_school import SchoolPlan, SchoolPlanRow11, SchoolPlanRow4
-from app.modules.planning.repo_school import SchoolPlanningRepo
+from app.modules.planning.repositories.school_plan_repository import SchoolPlanningRepo
 from app.modules.planning.services.plan_export_service import SchoolPlanExportService
-from app.modules.planning.services.school_service import (
+from app.modules.planning.services.school_plan_service import (
     SchoolPlanEditService,
     SchoolPlanningService,
     SchoolRowsService,

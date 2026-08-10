@@ -1,0 +1,606 @@
+{% extends "base.html" %}
+
+{% block title %}
+Настройка методических объединений
+{% endblock %}
+
+
+{% block extra_css %}
+<style>
+  .method-associations-page {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 24px 16px 40px;
+  }
+
+  .page-header {
+    margin-bottom: 24px;
+  }
+
+  .page-title {
+    margin: 0 0 8px;
+    font-size: 28px;
+    font-weight: 700;
+    color: #1f2937;
+  }
+
+  .page-description {
+    margin: 0;
+    max-width: 760px;
+    color: #6b7280;
+    font-size: 15px;
+    line-height: 1.6;
+  }
+
+  .alert {
+    margin-bottom: 20px;
+    padding: 14px 16px;
+    border: 1px solid transparent;
+    border-radius: 10px;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  .alert-success {
+    color: #166534;
+    background: #f0fdf4;
+    border-color: #bbf7d0;
+  }
+
+  .alert-error {
+    color: #991b1b;
+    background: #fef2f2;
+    border-color: #fecaca;
+  }
+
+  .settings-card {
+    overflow: hidden;
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 14px;
+    box-shadow:
+      0 1px 2px rgba(0, 0, 0, 0.04),
+      0 6px 20px rgba(0, 0, 0, 0.04);
+  }
+
+  .settings-card__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 20px 22px;
+    border-bottom: 1px solid #e5e7eb;
+  }
+
+  .settings-card__title {
+    margin: 0 0 5px;
+    font-size: 19px;
+    font-weight: 700;
+    color: #1f2937;
+  }
+
+  .settings-card__subtitle {
+    margin: 0;
+    color: #6b7280;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  .selection-counter {
+    flex-shrink: 0;
+    padding: 7px 11px;
+    color: #374151;
+    background: #f3f4f6;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .settings-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 22px;
+    background: #f9fafb;
+    border-bottom: 1px solid #e5e7eb;
+  }
+
+  .toolbar-button {
+    appearance: none;
+    padding: 8px 13px;
+    color: #374151;
+    background: #ffffff;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition:
+      background-color 0.15s ease,
+      border-color 0.15s ease;
+  }
+
+  .toolbar-button:hover {
+    background: #f3f4f6;
+    border-color: #9ca3af;
+  }
+
+  .association-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    padding: 18px;
+  }
+
+  .association-item {
+    position: relative;
+  }
+
+  .association-checkbox {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .association-label {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 40px;
+    padding: 10px 14px;
+    background: #ffffff;
+    border: 1px solid #dbe1e8;
+    border-radius: 10px;
+    cursor: pointer;
+    transition:
+      background-color 0.15s ease,
+      border-color 0.15s ease,
+      box-shadow 0.15s ease;
+  }
+
+  .association-label:hover {
+    background: #f9fafb;
+    border-color: #9ca3af;
+  }
+
+  .association-checkbox:focus-visible + .association-label {
+    outline: 3px solid rgba(37, 99, 235, 0.2);
+    outline-offset: 2px;
+  }
+
+  .association-checkbox:checked + .association-label {
+    background: #eff6ff;
+    border-color: #60a5fa;
+    box-shadow: inset 0 0 0 1px #60a5fa;
+  }
+
+  .association-checkmark {
+    display: inline-flex;
+    flex: 0 0 22px;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    color: transparent;
+    background: #ffffff;
+    border: 2px solid #9ca3af;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 800;
+    transition:
+      background-color 0.15s ease,
+      border-color 0.15s ease,
+      color 0.15s ease;
+  }
+
+  .association-checkbox:checked
+  + .association-label
+  .association-checkmark {
+    color: #ffffff;
+    background: #2563eb;
+    border-color: #2563eb;
+  }
+
+  .association-content {
+    min-width: 0;
+  }
+
+  .association-name {
+    display: block;
+    color: #1f2937;
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1.4;
+  }
+
+  .association-code {
+    display: block;
+    margin-top: 2px;
+    color: #9ca3af;
+    font-size: 11px;
+    line-height: 1.2;
+    word-break: break-word;
+  }
+
+  .empty-state {
+    padding: 45px 24px;
+    color: #6b7280;
+    text-align: center;
+  }
+
+  .settings-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 12px;
+    padding: 18px 22px;
+    background: #f9fafb;
+    border-top: 1px solid #e5e7eb;
+  }
+
+  .settings-actions .btn {
+    min-width: 190px;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    box-sizing: border-box;
+    height: 44px;
+    min-height: 44px;
+    padding: 0 18px;
+
+    border: 1px solid transparent;
+    border-radius: 9px;
+
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1;
+
+    text-decoration: none;
+    cursor: pointer;
+
+    appearance: none;
+    -webkit-appearance: none;
+
+    transition:
+      background-color 0.15s ease,
+      border-color 0.15s ease,
+      opacity 0.15s ease;
+  }
+
+  .btn-secondary {
+    color: #374151;
+    background: #ffffff;
+    border-color: #d1d5db;
+  }
+
+  .btn-secondary:hover {
+    background: #f3f4f6;
+  }
+
+  .btn-primary {
+    color: #ffffff;
+    background: #2563eb;
+    border-color: #2563eb;
+  }
+
+  .btn-primary:hover {
+    background: #1d4ed8;
+    border-color: #1d4ed8;
+  }
+
+  .btn:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+  }
+
+  @media (max-width: 760px) {
+    .method-associations-page {
+      padding: 18px 12px 30px;
+    }
+
+    .page-title {
+      font-size: 23px;
+    }
+
+    .settings-card__header {
+      flex-direction: column;
+      padding: 18px;
+    }
+
+    .association-list {
+      grid-template-columns: 1fr;
+      padding: 16px;
+    }
+
+    .settings-toolbar {
+      padding: 13px 16px;
+    }
+
+    .settings-actions {
+      flex-direction: column-reverse;
+      align-items: stretch;
+      padding: 16px;
+    }
+
+    .settings-actions .btn {
+      width: 100%;
+      height: 44px;
+    }
+  }
+</style>
+{% endblock %}
+
+
+{% block content %}
+
+<div class="method-associations-page">
+
+  <header class="page-header">
+    <h1 class="page-title">
+      Методикалық бірлестіктер
+    </h1>
+
+    <p class="page-description">
+      Мектепте жұмыс істейтін әдістемелік бірлестіктерді таңдаңыз.
+      Белгіленген бірлестіктер тапсырмаларды қарау кезінде қолжетімді болады.
+    </p>
+  </header>
+
+
+  {% if success %}
+    <div
+      class="alert alert-success"
+      role="status">
+      Методикалық бірлестіктер тізімі сәтті сақталды.
+    </div>
+  {% endif %}
+
+
+  {% if error %}
+    <div
+      class="alert alert-error"
+      role="alert">
+      {{ error }}
+    </div>
+  {% endif %}
+
+
+  <form
+    id="method-associations-form"
+    method="post"
+    action="{{ url_for(
+      'school_method_association_settings_save'
+    ) }}">
+
+    <section class="settings-card">
+
+      <div class="settings-card__header">
+
+        <div>
+          <h2 class="settings-card__title">
+            Мектептің әдістемелік бірлестіктері
+          </h2>
+
+          <p class="settings-card__subtitle">
+            Қажетті бірлестіктерді белгілеп,
+            өзгерістерді сақтаңыз.
+          </p>
+        </div>
+
+        <div
+          id="selection-counter"
+          class="selection-counter"
+          aria-live="polite">
+          Таңдалды: 0
+        </div>
+
+      </div>
+
+
+      {% if options %}
+
+        <div class="settings-toolbar">
+
+          <button
+            type="button"
+            id="select-all-button"
+            class="toolbar-button">
+            Барлығын таңдау
+          </button>
+
+          <button
+            type="button"
+            id="clear-all-button"
+            class="toolbar-button">
+            Таңдауды алып тастау
+          </button>
+
+        </div>
+
+
+        <div class="association-list">
+
+          {% for option in options %}
+
+            <div class="association-item">
+
+              <input
+                type="checkbox"
+                id="method-association-{{ option.code }}"
+                name="selected_codes"
+                value="{{ option.code }}"
+                class="association-checkbox"
+                {% if option.selected %}checked{% endif %}>
+
+              <label
+                for="method-association-{{ option.code }}"
+                class="association-label">
+
+                <span
+                  class="association-checkmark"
+                  aria-hidden="true">
+                  ✓
+                </span>
+
+                <span class="association-content">
+
+                  <span class="association-name">
+                    {{ option.name }}
+                  </span>
+
+                  <span class="association-code">
+                    {{ option.code }}
+                  </span>
+
+                </span>
+
+              </label>
+
+            </div>
+
+          {% endfor %}
+
+        </div>
+
+      {% else %}
+
+        <div class="empty-state">
+          Методикалық бірлестіктер тізімі табылмады.
+        </div>
+
+      {% endif %}
+
+
+      <div class="settings-actions">
+
+        <a
+          href="{{ request.url_for('school_admin_dashboard') }}"
+          class="btn btn-secondary">
+          Артқа
+        </a>
+
+        <button
+          type="submit"
+          id="save-button"
+          class="btn btn-primary"
+          {% if not options %}disabled{% endif %}>
+          Өзгерістерді сақтау
+        </button>
+
+      </div>
+
+    </section>
+
+  </form>
+
+</div>
+
+{% endblock %}
+
+
+{% block extra_js %}
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const form =
+      document.getElementById("method-associations-form");
+
+    if (!form) {
+      return;
+    }
+
+    const checkboxes = Array.from(
+      form.querySelectorAll(
+        'input[name="selected_codes"]'
+      )
+    );
+
+    const selectAllButton =
+      document.getElementById("select-all-button");
+
+    const clearAllButton =
+      document.getElementById("clear-all-button");
+
+    const selectionCounter =
+      document.getElementById("selection-counter");
+
+    const saveButton =
+      document.getElementById("save-button");
+
+
+    function updateSelectionCounter() {
+      if (!selectionCounter) {
+        return;
+      }
+
+      const selectedCount = checkboxes.filter(
+        function (checkbox) {
+          return checkbox.checked;
+        }
+      ).length;
+
+      selectionCounter.textContent =
+        "Таңдалды: " + selectedCount;
+    }
+
+
+    checkboxes.forEach(function (checkbox) {
+      checkbox.addEventListener(
+        "change",
+        updateSelectionCounter
+      );
+    });
+
+
+    if (selectAllButton) {
+      selectAllButton.addEventListener(
+        "click",
+        function () {
+          checkboxes.forEach(function (checkbox) {
+            checkbox.checked = true;
+          });
+
+          updateSelectionCounter();
+        }
+      );
+    }
+
+
+    if (clearAllButton) {
+      clearAllButton.addEventListener(
+        "click",
+        function () {
+          checkboxes.forEach(function (checkbox) {
+            checkbox.checked = false;
+          });
+
+          updateSelectionCounter();
+        }
+      );
+    }
+
+
+    form.addEventListener("submit", function () {
+      if (!saveButton) {
+        return;
+      }
+
+      saveButton.disabled = true;
+      saveButton.textContent = "Сақталуда...";
+    });
+
+
+    updateSelectionCounter();
+  });
+</script>
+{% endblock %}

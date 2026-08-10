@@ -494,8 +494,11 @@
   function initTaskExecuteForm(root) {
     if (!root) return;
 
-    const formRoot = root.querySelector(".execute-form") || root;
-    if (!formRoot) return;
+    const formRoot = root.querySelector("#system-reports-execute-form");
+
+    if (!formRoot) {
+      return;
+    }
 
     const dataEl = formRoot.querySelector("#task-execution-json-data");
 

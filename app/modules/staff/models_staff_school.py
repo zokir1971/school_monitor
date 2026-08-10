@@ -16,6 +16,7 @@ if TYPE_CHECKING:
     from app.modules.org.models import School
     from app.modules.planning.models_school import SchoolPlanRow11Assignee
     from app.modules.planning.models_month_plan import SchoolMonthPlanItemAssignee
+    from app.modules.reports.models_report_assignments import TaskSelectedReportAssignment
 
 
 class SchoolStaffMember(Base):
@@ -103,6 +104,17 @@ class SchoolStaffMember(Base):
         lazy="selectin",
     )
 
+    selected_report_assignments: Mapped[
+        list["TaskSelectedReportAssignment"]
+    ] = relationship(
+        "TaskSelectedReportAssignment",
+        back_populates="staff_member",
+        foreign_keys=(
+            "TaskSelectedReportAssignment.staff_member_id"
+        ),
+        lazy="selectin",
+    )
+    
 
 # =========================================================
 # SchoolStaffRole (персонал школы: кто в какой должности)

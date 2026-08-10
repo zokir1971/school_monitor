@@ -1,0 +1,382 @@
+{# app/web/templates/staff/reports/staff_my_reports.html #}
+
+{% extends "base.html" %}
+
+{% block title %}
+Мои отчеты
+{% endblock %}
+
+{% block content %}
+
+<div class="page-container">
+
+    <div class="page-header">
+        <div>
+            <h2>Мои отчеты</h2>
+            <div class="muted">
+                Выберите месяц и задачу для перехода к заполнению назначенных отчетов
+            </div>
+        </div>
+    </div>
+
+    {% if error %}
+        <div class="alert alert-danger">
+            {{ error }}
+        </div>
+    {% endif %}
+
+    {# ========================================================= #}
+    {# MONTH FILTER                                              #}
+    {# ========================================================= #}
+
+    <section class="report-card">
+        <div class="card-title-row">
+            <h3>Выбор месяца</h3>
+        </div>
+
+        <form method="get"
+              action="{{ request.url_for('staff_my_reports_page') }}"
+              class="month-filter">
+
+            <label for="month">
+                Месяц
+            </label>
+
+            <select id="month"
+                    name="month"
+                    onchange="this.form.submit()">
+
+                {% for month_number, month_name in MONTH_NAMES.items() %}
+                    <option value="{{ month_number }}"
+                            {% if month_number == month %}selected{% endif %}>
+                        {{ month_name }}
+                    </option>
+                {% endfor %}
+
+            </select>
+
+            <noscript>
+                <button type="submit"
+                        class="btn btn-primary">
+                    Показать
+                </button>
+            </noscript>
+
+        </form>
+    </section>
+
+
+    {# ========================================================= #}
+    {# TASK LIST                                                 #}
+    {# ========================================================= #}
+
+    <section class="report-card">
+
+        <div class="card-title-row">
+            <div>
+                <h3>
+                    Задачи на {{ MONTH_NAMES.get(month, month) }}
+                </h3>
+
+                <div class="muted">
+                    Показаны только задачи, в которых вам назначено заполнение отчетов
+                </div>
+            </div>
+        </div>
+
+        {% if tasks %}
+
+            <div class="table-responsive">
+
+                <table class="reports-table">
+
+                    <thead>
+                    <tr>
+                        <th style="width: 55px;">
+                            №
+                        </th>
+
+                        <th>
+                            Задача
+                        </th>
+
+                        <th style="width: 180px;">
+                            Срок выполнения
+                        </th>
+
+                        <th style="width: 150px;">
+                            Статус задачи
+                        </th>
+
+                        <th style="width: 160px;">
+                            Назначено отчетов
+                        </th>
+
+                        <th style="width: 170px;">
+                            Действие
+                        </th>
+                    </tr>
+                    </thead>
+
+                    <tbody>
+
+                    {% for task in tasks %}
+
+                        <tr>
+
+                            <td class="text-center">
+                                {{ loop.index }}
+                            </td>
+
+                            <td>
+                                <div class="task-title">
+                                    {{ task.topic or "—" }}
+                                </div>
+
+                                <div class="muted task-id">
+                                    ID задачи: {{ task.month_item_id }}
+                                </div>
+                            </td>
+
+                            <td>
+                                {{ task.period_text or "—" }}
+                            </td>
+
+                            <td>
+                                {% if task.task_status_label %}
+                                    <span class="status-badge
+                                        status-{{ task.task_status or 'default' }}">
+                                        {{ task.task_status_label }}
+                                    </span>
+                                {% else %}
+                                    —
+                                {% endif %}
+                            </td>
+
+                            <td class="text-center">
+                                <span class="report-count">
+                                    {{ task.assigned_reports_count }}
+                                </span>
+                            </td>
+
+                            <td>
+                                <a class="btn btn-primary"
+                                   href="{{ request.url_for('staff_my_reports_page') }}?month={{ month }}&task_id={{ task.month_item_id }}">
+                                    Открыть отчеты
+                                </a>
+                            </td>
+
+                        </tr>
+
+                    {% endfor %}
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        {% else %}
+
+            <div class="empty-state">
+
+                <div class="empty-state__icon">
+                    📋
+                </div>
+
+                <h3>
+                    Назначенных отчетов нет
+                </h3>
+
+                <p class="muted">
+                    На выбранный месяц вам пока не назначено
+                    заполнение отчетов по задачам.
+                </p>
+
+            </div>
+
+        {% endif %}
+
+    </section>
+
+</div>
+
+
+<style>
+
+.page-container {
+    width: 100%;
+}
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+.page-header h2 {
+    margin: 0 0 6px;
+}
+
+.muted {
+    color: #6b7280;
+    font-size: 14px;
+}
+
+.report-card {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.card-title-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    margin-bottom: 18px;
+}
+
+.card-title-row h3 {
+    margin: 0 0 4px;
+}
+
+.month-filter {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.month-filter label {
+    font-weight: 600;
+}
+
+.month-filter select {
+    min-width: 220px;
+    padding: 9px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    background: #fff;
+}
+
+.table-responsive {
+    width: 100%;
+    overflow-x: auto;
+}
+
+.reports-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.reports-table th,
+.reports-table td {
+    padding: 12px 14px;
+    border-bottom: 1px solid #e5e7eb;
+    vertical-align: middle;
+}
+
+.reports-table th {
+    text-align: left;
+    font-size: 13px;
+    font-weight: 600;
+    background: #f9fafb;
+}
+
+.reports-table tbody tr:hover {
+    background: #fafafa;
+}
+
+.text-center {
+    text-align: center;
+}
+
+.task-title {
+    font-weight: 600;
+    line-height: 1.4;
+}
+
+.task-id {
+    margin-top: 4px;
+}
+
+.report-count {
+    display: inline-flex;
+    min-width: 34px;
+    height: 30px;
+    align-items: center;
+    justify-content: center;
+    padding: 0 10px;
+    border-radius: 999px;
+    background: #eef2ff;
+    font-weight: 600;
+}
+
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 5px 10px;
+    border-radius: 999px;
+    font-size: 13px;
+    white-space: nowrap;
+    background: #f3f4f6;
+}
+
+.status-in_progress {
+    background: #fff7ed;
+}
+
+.status-done {
+    background: #ecfdf5;
+}
+
+.status-reviewed {
+    background: #eff6ff;
+}
+
+.status-not_executed {
+    background: #fef2f2;
+}
+
+.empty-state {
+    padding: 36px 20px;
+    text-align: center;
+}
+
+.empty-state__icon {
+    font-size: 36px;
+    margin-bottom: 12px;
+}
+
+.empty-state h3 {
+    margin: 0 0 8px;
+}
+
+.alert {
+    padding: 12px 14px;
+    border-radius: 8px;
+    margin-bottom: 16px;
+}
+
+.alert-danger {
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    color: #991b1b;
+}
+
+@media (max-width: 900px) {
+
+    .reports-table {
+        min-width: 850px;
+    }
+
+}
+
+</style>
+
+{% endblock %}

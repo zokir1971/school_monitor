@@ -30,6 +30,7 @@ if TYPE_CHECKING:
     from app.modules.staff.models_staff_school import SchoolStaffRole
     from app.modules.users.models import User
     from app.modules.reports.models_documents import TaskExecutionDocument
+    from app.modules.reviews.models_task_review import SchoolMonthPlanItemReviewResult
 
 
 class SchoolMonthPlan(Base):
@@ -49,7 +50,7 @@ class SchoolMonthPlan(Base):
             "status"
         ),
         CheckConstraint(
-            "(month BETWEEN 9 AND 12) OR (month BETWEEN 1 AND 5)",
+            "(month BETWEEN 8 AND 12) OR (month BETWEEN 1 AND 6)",
             name="ck_school_month_plans_month_range",
         ),
     )
@@ -244,6 +245,13 @@ class SchoolMonthPlanItem(Base):
         "TaskExecutionData",
         back_populates="month_item",
         uselist=False,
+        cascade="all, delete-orphan",
+        lazy="selectin",
+    )
+
+    review_results: Mapped[list["SchoolMonthPlanItemReviewResult"]] = relationship(
+        "SchoolMonthPlanItemReviewResult",
+        back_populates="month_item",
         cascade="all, delete-orphan",
         lazy="selectin",
     )

@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
-from app.modules.planning.services.school_statistics_service import SchoolPlanStatisticsService
+from app.modules.statistics.school_statistics_service import SchoolPlanStatisticsService
 
 router = APIRouter(prefix="/statistics", tags=["statistics"])
 

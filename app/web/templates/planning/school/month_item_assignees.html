@@ -1,228 +1,624 @@
 {% extends "base.html" %}
 
-{% block title %}Назначение ответственного лица за выполнения{% endblock %}
+{% block title %}Назначение исполнителей{% endblock %}
 
 {% block extra_css %}
-  <link rel="stylesheet" href="{{ url_for('static', path='css/plan_assignees.css') }}">
+<link rel="stylesheet"
+      href="{{ url_for('static', path='css/plan_assignees.css') }}">
 {% endblock %}
 
 {% block content %}
-<div class="page">
+<div class="page assignee-page">
   <div class="page-inner">
 
-    <div class="card card--large assignee-page">
-
-      <div class="toolbar assignee-toolbar">
-        <div class="left">
-          <h2>Назначение ответственных</h2>
-          <div class="sub">
-            Пункт месячного плана
-          </div>
-        </div>
-
-        <div class="right">
-          <a href="javascript:history.back()" class="btn">Назад</a>
-        </div>
+    <header class="assignee-hero">
+      <div>
+        <div class="assignee-hero__eyebrow">Месячный план</div>
+        <h2 class="assignee-hero__title">Назначение исполнителей</h2>
+        <p class="assignee-hero__subtitle">
+          Выберите одного основного исполнителя и при необходимости
+          добавьте соисполнителей.
+        </p>
       </div>
 
-      <div class="info-grid">
-        <div class="info-card">
-          <div class="info-label">Направление</div>
-          <div class="info-value">
-            {{ direction_name or "—" }}
-          </div>
-        </div>
+      <a href="javascript:history.back()" class="btn">
+        Назад
+      </a>
+    </header>
 
-        <div class="info-card">
+    {% if success %}
+      <div class="alert alert-success">{{ success }}</div>
+    {% endif %}
+
+    {% if error %}
+      <div class="alert alert-danger">{{ error }}</div>
+    {% endif %}
+
+    <section class="task-overview">
+      <div class="task-overview__grid">
+        <article class="info-card">
+          <div class="info-label">Направление</div>
+          <div class="info-value">{{ direction_name or "—" }}</div>
+        </article>
+
+        <article class="info-card">
           <div class="info-label">Статус включения</div>
           <div class="info-value">
-            {% if month_item.is_included %}
-              <span class="text-success">Включена в месячный план</span>
+            {% if is_included %}
+              <span class="status-pill status-pill--success">
+                Включена в месячный план
+              </span>
             {% else %}
-              <span class="text-danger">Не включена в месячный план</span>
+              <span class="status-pill status-pill--danger">
+                Не включена
+              </span>
             {% endif %}
           </div>
-        </div>
+        </article>
 
-        <div class="info-card">
+        <article class="info-card info-card--wide">
           <div class="info-label">Тема</div>
-          <div class="info-value">
-            {{ topic or "—" }}
-          </div>
-        </div>
+          <div class="info-value">{{ topic or "—" }}</div>
+        </article>
 
-        <div class="info-card">
+        <article class="info-card info-card--wide">
           <div class="info-label">Цель</div>
-          <div class="info-value">
-            {{ goal or "—" }}
-          </div>
-        </div>
+          <div class="info-value">{{ goal or "—" }}</div>
+        </article>
 
-        <div class="info-card">
-          <div class="info-label">Дата начала</div>
+        <article class="info-card">
+          <div class="info-label">Неделя</div>
           <div class="info-value">
-            {{ planned_start.strftime("%d.%m.%Y") if planned_start else "—" }}
+            {{ week_of_month if week_of_month is not none else "—" }}
           </div>
-        </div>
+        </article>
 
-        <div class="info-card">
-          <div class="info-label">Дата окончания</div>
+        <article class="info-card">
+          <div class="info-label">Срок выполнения</div>
           <div class="info-value">
-            {{ planned_end.strftime("%d.%m.%Y") if planned_end else "—" }}
+            {% if planned_start and planned_end %}
+              {{ planned_start.strftime("%d.%m.%Y") }}
+              —
+              {{ planned_end.strftime("%d.%m.%Y") }}
+            {% elif planned_start %}
+              с {{ planned_start.strftime("%d.%m.%Y") }}
+            {% elif planned_end %}
+              до {{ planned_end.strftime("%d.%m.%Y") }}
+            {% else %}
+              —
+            {% endif %}
           </div>
+        </article>
+      </div>
+    </section>
+
+    {% set no_primary_candidates = not primary_groups %}
+    {% set no_deadline = (
+      week_of_month is none
+      or planned_start is none
+      or planned_end is none
+    ) %}
+
+    {% if not can_assign %}
+      <section class="alert alert-danger">
+        <div class="alert-title">
+          Назначение исполнителей сейчас недоступно
         </div>
+        <ul>
+          {% if not is_included %}
+            <li>Задача не включена в месячный план.</li>
+          {% endif %}
+          {% if no_deadline %}
+            <li>
+              Сначала укажите неделю и полный срок выполнения задачи.
+            </li>
+          {% endif %}
+          {% if no_primary_candidates %}
+            <li>
+              Для ответственных ролей годового плана не найдено
+              активных сотрудников школы.
+            </li>
+          {% endif %}
+        </ul>
+      </section>
+    {% endif %}
+
+    <section class="assignment-summary">
+      <div class="section-heading">
+        <div>
+          <h3>Текущие назначения</h3>
+          <p>Сохранённые участники этой задачи.</p>
+        </div>
+        <span class="count-badge">
+          {{ assigned_participants | length }}
+        </span>
       </div>
 
-      {% set no_roles = not responsible_blocks %}
-      {% set no_deadline = (not planned_start and not planned_end) %}
-      {% set not_included = not month_item.is_included %}
-
-      {% if not can_assign or no_roles %}
-        <div class="alert alert-danger">
-          <div class="alert-title">Назначение ответственных сейчас недоступно</div>
-
-          <ul>
-            {% if not_included %}
-              <li>Задача не включена в месячный план.</li>
-            {% endif %}
-
-            {% if no_deadline %}
-              <li>Не определён срок выполнения: укажите дату начала или дату окончания.</li>
-            {% endif %}
-
-            {% if no_roles %}
-              <li>Для задачи не назначены ответственные роли.</li>
-            {% endif %}
-          </ul>
-        </div>
-      {% endif %}
-
-      <div class="section">
-        <div class="section-title">
-          Текущие назначенные сотрудники
-        </div>
-
-        {% if selected_staff_role_ids %}
-          <div class="selected-list">
-            {% for block in responsible_blocks %}
-              {% for opt in block.options %}
-                {% if opt.staff_role_id in selected_staff_role_ids %}
-                  <span class="selected-chip">
-                    {{ opt.full_name }}
-                    <span class="selected-meta">
-                      — {{ opt.role_label }}{% if opt.role_context %} ({{ opt.role_context }}){% endif %}
-                    </span>
-                    {% if opt.is_primary or block.is_primary %}
-                      <span class="badge badge-danger">главный</span>
-                    {% endif %}
-                  </span>
-                {% endif %}
-              {% endfor %}
-            {% endfor %}
-          </div>
-        {% else %}
-          <div class="empty-text">Сотрудники пока не назначены.</div>
-        {% endif %}
-      </div>
-
-      {% if can_assign and not no_roles %}
-        <form
-          method="post"
-          action="{{ request.url_for('school_month_item_assignees_save', month_item_id=month_item.id) }}"
-        >
-          <div class="blocks-grid">
-            {% for block in responsible_blocks %}
-              <div class="role-block">
-                <div class="role-block__head">
-                  <div class="role-block__title">
-                    {{ block.role_label }}
-                    {% if block.role_context %}
-                      <span class="role-block__context">— {{ block.role_context }}</span>
-                    {% endif %}
-                  </div>
-
-                  <div>
-                    {% if block.is_primary %}
-                      <span class="badge badge-danger">
-                        Главный ответственный
-                      </span>
-                    {% else %}
-                      <span class="badge badge-soft">
-                        Соисполнитель
-                      </span>
-                    {% endif %}
-                  </div>
+      {% if assigned_participants %}
+        <div class="participant-list">
+          {% for participant in assigned_participants %}
+            <article class="participant-card"
+                     data-assigned-staff-role-id="{{ participant.staff_role_id }}">
+              <div class="participant-card__main">
+                <div class="participant-card__name">
+                  {{ participant.full_name }}
                 </div>
-
-                <div class="role-block__body">
-                  {% if block.options %}
-                    <div class="options-list">
-                      {% for opt in block.options %}
-                        <label class="option-card">
-                          <input
-                            type="checkbox"
-                            name="staff_role_ids"
-                            value="{{ opt.staff_role_id }}"
-                            {% if opt.checked %}checked{% endif %}
-                            class="option-card__checkbox"
-                          >
-
-                          <span class="option-card__content">
-                            <span class="option-card__name">
-                              {{ opt.full_name }}
-                            </span>
-
-                            <span class="option-card__meta">
-                              {{ opt.role_label }}
-                              {% if opt.role_context %}
-                                — {{ opt.role_context }}
-                              {% endif %}
-                            </span>
-
-                            <span class="option-card__meta">
-                              <label>
-                                <input
-                                  type="radio"
-                                  name="primary_staff_role_id"
-                                  value="{{ opt.staff_role_id }}"
-                                  {% if opt.is_primary %}checked{% endif %}
-                                >
-                                Главный ответственный
-                              </label>
-                            </span>
-                          </span>
-                        </label>
-                      {% endfor %}
-                    </div>
-                  {% else %}
-                    <div class="empty-box">
-                      Для роли <strong>{{ block.role_label }}</strong> не найдено активных сотрудников.
-                    </div>
+                <div class="participant-card__meta">
+                  {{ participant.role_label }}
+                  {% if participant.role_context %}
+                    — {{ participant.role_context }}
                   {% endif %}
                 </div>
+                {% if participant.position_text %}
+                  <div class="participant-card__position">
+                    {{ participant.position_text }}
+                  </div>
+                {% endif %}
               </div>
-            {% endfor %}
-          </div>
 
-          <div class="actions">
-            <button type="submit" class="btn btn--primary">
-              Сохранить назначения
-            </button>
-
-            <a href="javascript:history.back()" class="btn">
-              Назад
-            </a>
-          </div>
-        </form>
+              {% if participant.assignment_kind == "primary" %}
+                <span class="assignment-badge assignment-badge--primary">
+                  Основной исполнитель
+                </span>
+              {% else %}
+                <div class="participant-card__actions">
+                  <span class="assignment-badge assignment-badge--coexecutor">
+                    Соисполнитель
+                  </span>
+                  {% if can_assign %}
+                    <button
+                      type="button"
+                      class="btn js-remove-coexecutor"
+                      data-staff-role-id="{{ participant.staff_role_id }}"
+                      aria-pressed="false"
+                    >
+                      Убрать
+                    </button>
+                  {% endif %}
+                </div>
+              {% endif %}
+            </article>
+          {% endfor %}
+        </div>
       {% else %}
-        <div class="actions">
-          <a href="javascript:history.back()" class="btn">
-            Назад
-          </a>
+        <div class="empty-box">
+          Исполнители пока не назначены.
         </div>
       {% endif %}
+    </section>
 
+    {% if can_assign %}
+      <form
+        method="post"
+        class="assignment-form"
+        action="{{ request.url_for(
+          'school_month_item_assignees_save',
+          month_item_id=month_item_id
+        ) }}"
+        id="assignee-form"
+      >
+
+        <section class="assignment-panel">
+          <div class="section-heading">
+            <div>
+              <div class="step-label">Шаг 1</div>
+              <h3>Основной исполнитель</h3>
+              <p>
+                Выберите одного сотрудника из ролей,
+                определённых годовым планом.
+              </p>
+            </div>
+            <span class="required-mark">Обязательно</span>
+          </div>
+
+          <div class="group-stack">
+            {% for group in primary_groups %}
+              <section class="role-group">
+                <header class="role-group__header">
+                  <div>
+                    <h4>{{ group.label }}</h4>
+                    {% if group.role_context %}
+                      <p>{{ group.role_context }}</p>
+                    {% endif %}
+                  </div>
+                  <span class="count-badge">
+                    {{ group.options | length }}
+                  </span>
+                </header>
+
+                {% if group.options %}
+                  <div class="candidate-grid">
+                    {% for option in group.options %}
+                      <label class="candidate-card candidate-card--primary">
+                        <input
+                          type="radio"
+                          name="primary_staff_role_id"
+                          value="{{ option.staff_role_id }}"
+                          data-staff-member-id="{{ option.staff_member_id }}"
+                          {% if option.selected_as_primary %}checked{% endif %}
+                          required
+                        >
+
+                        <span class="candidate-card__body">
+                          <span class="candidate-card__name">
+                            {{ option.full_name }}
+                          </span>
+                          <span class="candidate-card__meta">
+                            {{ option.role_label }}
+                            {% if option.role_context %}
+                              — {{ option.role_context }}
+                            {% endif %}
+                          </span>
+                          {% if option.position_text %}
+                            <span class="candidate-card__detail">
+                              {{ option.position_text }}
+                            </span>
+                          {% endif %}
+                          {% if option.subject %}
+                            <span class="candidate-card__detail">
+                              Предмет: {{ option.subject }}
+                            </span>
+                          {% endif %}
+                        </span>
+
+                        <span class="candidate-card__selection">
+                          Основной
+                        </span>
+                      </label>
+                    {% endfor %}
+                  </div>
+                {% else %}
+                  <div class="empty-box">
+                    Для этой роли нет активных сотрудников.
+                  </div>
+                {% endif %}
+              </section>
+            {% endfor %}
+          </div>
+        </section>
+
+        <section class="assignment-panel">
+          <div class="section-heading">
+            <div>
+              <div class="step-label">Шаг 2</div>
+              <h3>Соисполнители по плановым ролям</h3>
+              <p>
+                Выберите коллег из тех же ответственных ролей,
+                если объём задачи требует совместной работы.
+              </p>
+            </div>
+            <span class="optional-mark">Необязательно</span>
+          </div>
+
+          {% if planned_co_executor_groups %}
+            <div class="group-stack">
+              {% for group in planned_co_executor_groups %}
+                <section class="role-group">
+                  <header class="role-group__header">
+                    <div>
+                      <h4>{{ group.label }}</h4>
+                      {% if group.role_context %}
+                        <p>{{ group.role_context }}</p>
+                      {% endif %}
+                    </div>
+                  </header>
+
+                  <div class="candidate-grid">
+                    {% for option in group.options %}
+                      <label class="candidate-card candidate-card--coexecutor">
+                        <input
+                          type="checkbox"
+                          name="co_executor_staff_role_ids"
+                          value="{{ option.staff_role_id }}"
+                          data-staff-member-id="{{ option.staff_member_id }}"
+                          {% if option.selected_as_co_executor %}checked{% endif %}
+                        >
+
+                        <span class="candidate-card__body">
+                          <span class="candidate-card__name">
+                            {{ option.full_name }}
+                          </span>
+                          <span class="candidate-card__meta">
+                            {{ option.role_label }}
+                            {% if option.role_context %}
+                              — {{ option.role_context }}
+                            {% endif %}
+                          </span>
+                          {% if option.subject %}
+                            <span class="candidate-card__detail">
+                              Предмет: {{ option.subject }}
+                            </span>
+                          {% endif %}
+                        </span>
+                      </label>
+                    {% endfor %}
+                  </div>
+                </section>
+              {% endfor %}
+            </div>
+          {% else %}
+            <div class="empty-box">
+              Дополнительных сотрудников по плановым ролям нет.
+            </div>
+          {% endif %}
+        </section>
+
+        <section class="assignment-panel">
+          <details class="additional-assignees"
+                   {% if selected_co_executor_staff_role_ids %}open{% endif %}>
+            <summary>
+              <span>
+                <span class="step-label">Шаг 3</span>
+                <strong>Добавить других соисполнителей</strong>
+                <small>
+                  Руководители МО, классные руководители,
+                  учителя и другие сотрудники школы
+                </small>
+              </span>
+              <span class="summary-action">Открыть список</span>
+            </summary>
+
+            <div class="additional-assignees__body">
+              <div class="staff-search">
+                <label for="staff-search-input">
+                  Поиск сотрудника
+                </label>
+                <input
+                  id="staff-search-input"
+                  type="search"
+                  placeholder="Введите ФИО, должность или предмет"
+                  autocomplete="off"
+                >
+              </div>
+
+              {% if additional_co_executor_groups %}
+                <div class="group-stack" id="additional-groups">
+                  {% for group in additional_co_executor_groups %}
+                    <section class="role-group additional-role-group">
+                      <header class="role-group__header">
+                        <div>
+                          <h4>{{ group.label }}</h4>
+                          {% if group.role_context %}
+                            <p>{{ group.role_context }}</p>
+                          {% endif %}
+                        </div>
+                        <span class="count-badge">
+                          {{ group.options | length }}
+                        </span>
+                      </header>
+
+                      <div class="candidate-grid">
+                        {% for option in group.options %}
+                          <label
+                            class="candidate-card candidate-card--coexecutor additional-candidate"
+                            data-search-text="{{
+                              (
+                                option.full_name ~ ' ' ~
+                                option.role_label ~ ' ' ~
+                                option.role_context ~ ' ' ~
+                                option.position_text ~ ' ' ~
+                                option.subject
+                              ) | lower
+                            }}"
+                          >
+                            <input
+                              type="checkbox"
+                              name="co_executor_staff_role_ids"
+                              value="{{ option.staff_role_id }}"
+                              data-staff-member-id="{{ option.staff_member_id }}"
+                              {% if option.selected_as_co_executor %}checked{% endif %}
+                            >
+
+                            <span class="candidate-card__body">
+                              <span class="candidate-card__name">
+                                {{ option.full_name }}
+                              </span>
+                              <span class="candidate-card__meta">
+                                {{ option.role_label }}
+                                {% if option.role_context %}
+                                  — {{ option.role_context }}
+                                {% endif %}
+                              </span>
+                              {% if option.position_text %}
+                                <span class="candidate-card__detail">
+                                  {{ option.position_text }}
+                                </span>
+                              {% endif %}
+                              {% if option.subject %}
+                                <span class="candidate-card__detail">
+                                  Предмет: {{ option.subject }}
+                                </span>
+                              {% endif %}
+                            </span>
+                          </label>
+                        {% endfor %}
+                      </div>
+                    </section>
+                  {% endfor %}
+                </div>
+
+                <div class="empty-box search-empty" id="search-empty" hidden>
+                  По вашему запросу сотрудники не найдены.
+                </div>
+              {% else %}
+                <div class="empty-box">
+                  Других активных сотрудников для выбора нет.
+                </div>
+              {% endif %}
+            </div>
+          </details>
+        </section>
+
+        <div class="form-actions">
+          <a href="javascript:history.back()" class="btn btn-cancel">
+            ← Отмена
+          </a>
+          <button type="submit" class="btn btn-save">
+              💾 Сохранить назначения
+          </button>
+        </div>
+      </form>
+
+      {% else %}
+        <div class="form-actions">
+          <a href="javascript:history.back()" class="btn btn-cancel">
+            ← Назад
+          </a>
+        </div>
+
+      {% endif %}
+
+      </div>
     </div>
-  </div>
-</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const form = document.getElementById("assignee-form");
+  if (!form) return;
+
+  const primaryInputs = Array.from(
+    form.querySelectorAll(
+      'input[name="primary_staff_role_id"]'
+    )
+  );
+
+  const coExecutorInputs = Array.from(
+    form.querySelectorAll(
+      'input[name="co_executor_staff_role_ids"]'
+    )
+  );
+
+  function syncPrimaryAndCoExecutors() {
+    const primary = primaryInputs.find((input) => input.checked);
+    const primaryMemberId = primary?.dataset.staffMemberId || "";
+
+    coExecutorInputs.forEach((input) => {
+      const samePerson = Boolean(primaryMemberId)
+        && input.dataset.staffMemberId === primaryMemberId;
+
+      if (samePerson) {
+        input.checked = false;
+        input.disabled = true;
+        input.closest(".candidate-card")
+          ?.classList.add("candidate-card--disabled");
+      } else {
+        input.disabled = false;
+        input.closest(".candidate-card")
+          ?.classList.remove("candidate-card--disabled");
+      }
+    });
+  }
+
+  primaryInputs.forEach((input) => {
+    input.addEventListener("change", syncPrimaryAndCoExecutors);
+  });
+
+  syncPrimaryAndCoExecutors();
+
+  const removeCoexecutorButtons = Array.from(
+    document.querySelectorAll(".js-remove-coexecutor")
+  );
+
+  function getCoExecutorInputsByRoleId(staffRoleId) {
+    return coExecutorInputs.filter(
+      (input) => input.value === String(staffRoleId)
+    );
+  }
+
+  function setParticipantPendingRemoval(staffRoleId, pending) {
+    const card = document.querySelector(
+      `[data-assigned-staff-role-id="${staffRoleId}"]`
+    );
+    const button = card?.querySelector(".js-remove-coexecutor");
+
+    if (!card || !button) return;
+
+    card.classList.toggle("participant-card--pending-removal", pending);
+    button.textContent = pending ? "Вернуть" : "Убрать";
+    button.setAttribute("aria-pressed", pending ? "true" : "false");
+  }
+
+  removeCoexecutorButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      const staffRoleId = button.dataset.staffRoleId;
+      if (!staffRoleId) return;
+
+      const inputs = getCoExecutorInputsByRoleId(staffRoleId);
+      if (!inputs.length) return;
+
+      const currentlySelected = inputs.some((input) => input.checked);
+      const nextChecked = !currentlySelected;
+
+      inputs.forEach((input) => {
+        if (!input.disabled) {
+          input.checked = nextChecked;
+        }
+      });
+
+      setParticipantPendingRemoval(
+        staffRoleId,
+        !nextChecked
+      );
+    });
+  });
+
+  coExecutorInputs.forEach((input) => {
+    input.addEventListener("change", () => {
+      const staffRoleId = input.value;
+      const inputs = getCoExecutorInputsByRoleId(staffRoleId);
+      const selected = inputs.some((item) => item.checked);
+
+      // Один staff_role может визуально встречаться только в одной группе,
+      // но синхронизация оставлена безопасной на случай изменения шаблона.
+      inputs.forEach((item) => {
+        if (item !== input && !item.disabled) {
+          item.checked = input.checked;
+        }
+      });
+
+      setParticipantPendingRemoval(
+        staffRoleId,
+        !selected
+      );
+    });
+  });
+
+  const searchInput = document.getElementById("staff-search-input");
+  const candidates = Array.from(
+    document.querySelectorAll(".additional-candidate")
+  );
+  const groups = Array.from(
+    document.querySelectorAll(".additional-role-group")
+  );
+  const emptyState = document.getElementById("search-empty");
+
+  if (searchInput && candidates.length) {
+    searchInput.addEventListener("input", () => {
+      const query = searchInput.value.trim().toLowerCase();
+      let visibleCount = 0;
+
+      candidates.forEach((candidate) => {
+        const text = candidate.dataset.searchText || "";
+        const visible = !query || text.includes(query);
+
+        candidate.hidden = !visible;
+        if (visible) visibleCount += 1;
+      });
+
+      groups.forEach((group) => {
+        const hasVisibleCandidate = Array.from(
+          group.querySelectorAll(".additional-candidate")
+        ).some((candidate) => !candidate.hidden);
+
+        group.hidden = !hasVisibleCandidate;
+      });
+
+      if (emptyState) {
+        emptyState.hidden = visibleCount !== 0;
+      }
+    });
+  }
+});
+</script>
+
 {% endblock %}

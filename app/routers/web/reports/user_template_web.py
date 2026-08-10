@@ -1,23 +1,17 @@
 # app/routers/web/reports/user_template_web.py
-from dataclasses import asdict
-from pathlib import Path
 from urllib.parse import urlencode
 
-from fastapi import APIRouter, Depends, Request, HTTPException, Query
-from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
+from fastapi import APIRouter, Depends, Request
+from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
-from app.modules.reports.repositories.lesson_observation_report_repo import LessonObservationRepo
-from app.modules.reports.repositories.template_repo import TemplateReportRepo
-from app.modules.reports.repositories.user_template_repo import UserReportTemplateRepo
-from app.modules.reports.services.lesson_observation_report_service import LessonObservationReportService, \
-    LessonObservationService
 from app.modules.reports.services.user_template_service import UserReportTemplateService
 from app.modules.users.deps import require_roles
 from app.modules.users.enums import UserRole
 from app.modules.users.models import User
 from app.routers.web.web_common import templates
+from app.routers.web.helpers.render import render, render_error
 
 router = APIRouter(
     prefix="/staff/reports/templates/my",
@@ -25,9 +19,6 @@ router = APIRouter(
 )
 
 
-# =========================
-# LIST
-# =========================
 @router.get("", name="staff_user_templates_page", response_class=HTMLResponse)
 async def list_templates(
         request: Request,
@@ -48,19 +39,17 @@ async def list_templates(
         owner_user_id=user.id,
     )
 
-    return templates.TemplateResponse(
+    return render(
+        templates,
+        request,
         "staff/reports/user_templates/template_list.html",
         {
-            "request": request,
             "user": user,
             "templates_list": templates_list,
         },
     )
 
 
-# =========================
-# CREATE PAGE
-# =========================
 @router.get("/new", name="staff_user_template_create_page", response_class=HTMLResponse)
 async def create_template_page(request: Request):
     """
@@ -81,19 +70,17 @@ async def create_template_page(request: Request):
         selected_report_id=request.query_params.get("selected_report_id"),
     )
 
-    return templates.TemplateResponse(
+    return render(
+        templates,
+        request,
         page_context["template_name"],
         {
-            "request": request,
             "template": None,
             **page_context,
         },
     )
 
 
-# =========================
-# CREATE
-# =========================
 @router.post("/new", name="staff_user_template_create")
 async def create_template(
         request: Request,
@@ -147,9 +134,6 @@ async def create_template(
     )
 
 
-# =========================
-# EDIT PAGE
-# =========================
 @router.get(
     "/{template_id}/edit",
     name="staff_user_template_edit_page",
@@ -167,10 +151,11 @@ async def edit_template_page(
         owner_user_id=user.id,
     )
 
-    return templates.TemplateResponse(
+    return render(
+        templates,
+        request,
         page_data["template_path"],
         {
-            "request": request,
             "user": user,
             **page_data,
 
@@ -182,9 +167,6 @@ async def edit_template_page(
     )
 
 
-# =========================
-# UPDATE
-# =========================
 @router.post(
     "/{template_id}/edit",
     name="staff_user_template_update",
@@ -229,9 +211,6 @@ async def update_template(
     )
 
 
-# =========================
-# SELECT
-# =========================
 @router.get(
     "/{month_item_id}/templates/{selected_report_id}/my",
     name="staff_user_template_select_page",
@@ -253,57 +232,34 @@ async def staff_user_template_select_page(
     """
 
     try:
-        # 1. Получаем выбранный отчет
-        selected_report = await TemplateReportRepo.get_selected_report(
-            db,
-            selected_report_id=selected_report_id,
+        page_data = (
+            await UserReportTemplateService
+            .get_template_selection_page_data(
+                db,
+                selected_report_id=selected_report_id,
+                owner_user_id=user.id,
+            )
         )
 
-        if not selected_report:
-            raise ValueError("Выбранный отчет не найден.")
-
-        if not selected_report.report_type:
-            raise ValueError("У выбранного отчета не указан тип.")
-
-        report_type = selected_report.report_type
-        report_code = report_type.code
-        report_label = report_type.name_kz or report_type.name_ru or report_type.code
-
-        # 2. Получаем список личных шаблонов пользователя по типу отчета
-        templates_list = await UserReportTemplateService.list_my_templates(
-            db,
-            owner_user_id=user.id,
-            report_code=report_code,
-        )
-
-        return templates.TemplateResponse(
+        return render(
+            templates,
+            request,
             "staff/reports/user_templates/template_select.html",
             {
-                "request": request,
                 "user": user,
-
                 "month_item_id": month_item_id,
-                "selected_report_id": selected_report_id,
-
-                "report_code": report_code,
-                "report_label": report_label,
-
-                "target_kind": selected_report.target_kind,
-                "target_value": selected_report.target_value,
-                "target_label": selected_report.target_label,
-
-                "templates_list": templates_list,
-
+                **page_data,
                 "error": request.query_params.get("error"),
                 "success": request.query_params.get("success"),
             },
         )
 
     except ValueError as e:
-        return templates.TemplateResponse(
+        return render_error(
+            templates,
+            request,
             "staff/reports/user_templates/template_select.html",
             {
-                "request": request,
                 "user": user,
 
                 "month_item_id": month_item_id,
@@ -317,15 +273,13 @@ async def staff_user_template_select_page(
                 "target_label": None,
 
                 "templates_list": [],
-
-                "error": str(e),
                 "success": None,
             },
+            error=str(e),
             status_code=404,
         )
 
 
-# Применения выбранного личного шаблона отчета к задаче
 @router.post(
     "/{month_item_id}/templates/{selected_report_id}/my/apply",
     name="staff_report_apply_my_template",
@@ -335,84 +289,123 @@ async def staff_report_apply_my_template(
         month_item_id: int,
         selected_report_id: int,
         db: AsyncSession = Depends(get_db),
-        user: User = Depends(require_roles(UserRole.SCHOOL_STAFF, UserRole.SCHOOL_ADMIN)),
+        user: User = Depends(
+            require_roles(
+                UserRole.SCHOOL_STAFF,
+                UserRole.SCHOOL_ADMIN,
+            )
+        ),
 ):
     """
-    Применение личного шаблона к отчету задачи.
+    Выбрать пользовательский шаблон для preview отчета.
 
-    Делает:
-    - находит TaskExecutionDocument;
-    - копирует schema_json из UserReportTemplate;
-    - сохраняет snapshot в document.schema_json;
-    - устанавливает template_mode = CUSTOM.
+    Новая архитектура:
+    - НЕ создает TaskExecutionDocument;
+    - НЕ копирует schema_json в документ;
+    - НЕ делает apply/commit;
+    - только проверяет доступ к шаблону и переводит пользователя
+      в единый fill-route с template_id.
 
-    Важно:
-    - это НЕ ссылка, а копия структуры;
-    - изменения шаблона в будущем не влияют на документ.
-
-    После применения:
-    → редирект на страницу заполнения отчета.
+    Snapshot шаблона будет создан только при Save/Complete.
     """
+
     form = await request.form()
-    template_id = int(form.get("template_id"))
 
-    template = await UserReportTemplateRepo.get_user_template(
-        db,
-        template_id=template_id,
-        owner_user_id=user.id,
-    )
+    try:
+        template_id = int(
+            form.get("template_id")
+        )
+    except (TypeError, ValueError):
+        template_id = 0
 
-    if not template:
+    if template_id <= 0:
+        redirect_url = str(
+            request.url_for(
+                "staff_user_template_select_page",
+                month_item_id=month_item_id,
+                selected_report_id=selected_report_id,
+            )
+        )
+
         return RedirectResponse(
-            url=str(
-                request.url_for(
-                    "staff_user_template_select_page",
-                    month_item_id=month_item_id,
-                    selected_report_id=selected_report_id,
-                )
-            ) + "?error=Шаблон не найден",
+            url=f"{redirect_url}?error=Не выбран шаблон",
             status_code=303,
         )
 
-    await UserReportTemplateService.apply_my_template(
-        db,
-        month_item_id=month_item_id,
-        selected_report_id=selected_report_id,
-        user_id=user.id,
-        template_id=template_id,
-    )
+    try:
+        template = await UserReportTemplateService.get_my_template(
+            db,
+            template_id=template_id,
+            owner_user_id=user.id,
+        )
 
-    if template.report_code == "lesson_observation":
-        route_name = "staff_user_lesson_observation_fill_page"
+    except ValueError:
+        redirect_url = str(
+            request.url_for(
+                "staff_user_template_select_page",
+                month_item_id=month_item_id,
+                selected_report_id=selected_report_id,
+            )
+        )
 
-    elif template.report_code == "checking_notebooks_table":
-        route_name = "checking_notebooks_fill_page"
-
-    else:
         return RedirectResponse(
-            url=str(
-                request.url_for(
-                    "staff_user_template_select_page",
-                    month_item_id=month_item_id,
-                    selected_report_id=selected_report_id,
-                )
-            ) + f"?error=Тип отчета не поддерживается: {template.report_code}",
+            url=f"{redirect_url}?error=Шаблон не найден",
             status_code=303,
         )
 
-    return RedirectResponse(
-        url=request.url_for(
+    route_map = {
+        "lesson_observation":
+            "staff_user_lesson_observation_fill_page",
+
+        "checking_notebooks_table":
+            "checking_notebooks_fill_page",
+    }
+
+    route_name = route_map.get(
+        template.report_code
+    )
+
+    if route_name is None:
+        redirect_url = str(
+            request.url_for(
+                "staff_user_template_select_page",
+                month_item_id=month_item_id,
+                selected_report_id=selected_report_id,
+            )
+        )
+
+        return RedirectResponse(
+            url=(
+                f"{redirect_url}"
+                f"?error=Тип отчета не поддерживается: "
+                f"{template.report_code}"
+            ),
+            status_code=303,
+        )
+
+    fill_url = str(
+        request.url_for(
             route_name,
             month_item_id=month_item_id,
             selected_report_id=selected_report_id,
-        ),
+        )
+    )
+
+    query: dict[str, str | int] = {
+        "template_id": template_id,
+    }
+
+    month = request.query_params.get("month")
+
+    if month:
+        query["month"] = month
+
+    return RedirectResponse(
+        url=f"{fill_url}?{urlencode(query)}",
         status_code=303,
     )
 
 
-# =========================
-# DELETE
-# =========================
 @router.post("/{template_id}/delete", name="staff_user_template_delete")
 async def delete_template(
         template_id: int,
@@ -429,285 +422,3 @@ async def delete_template(
         url="/staff/reports/templates/my",
         status_code=303,
     )
-
-
-@router.get(
-    "/{month_item_id}/templates/{selected_report_id}/lesson-observation/fill",
-    name="staff_user_lesson_observation_fill_page",
-    response_class=HTMLResponse,
-)
-async def staff_user_lesson_observation_fill_page(
-        request: Request,
-        month_item_id: int,
-        selected_report_id: int,
-        db: AsyncSession = Depends(get_db),
-        user: User = Depends(require_roles(UserRole.SCHOOL_STAFF, UserRole.SCHOOL_ADMIN)),
-):
-    """
-       Страница заполнения листа наблюдения по личному шаблону.
-
-       Использует:
-       - TaskExecutionDocument.schema_json как snapshot структуры формы;
-       - LessonObservationReport.criteria_scores как сохраненные ответы.
-       """
-    try:
-        page_data = await LessonObservationReportService.get_lesson_observation_fill_page_data(
-            db,
-            month_item_id=month_item_id,
-            selected_report_id=selected_report_id,
-            user=user,
-        )
-
-        return templates.TemplateResponse(
-            "staff/reports/user_templates/fill_lesson_observation.html",
-            {
-                "request": request,
-                "user": user,
-
-                "month_item_id": month_item_id,
-                "selected_report_id": selected_report_id,
-
-                "document": page_data.document,
-                "report": page_data.report,
-                "schema": page_data.schema,
-                "scores": page_data.scores,
-                "total_score": page_data.total_score,
-
-                # важно: шаблон ожидает saved_info
-                "saved_info": asdict(page_data.info),
-
-                "info_labels": {
-                    "teacher_name": "Педагогтің ТАӘ",
-                    "teacher_post": "Лауазымы, біліктілік санаты",
-                    "subject": "Пән",
-                    "organization": "Білім беру ұйымы",
-                    "class_group": "Сынып / топ",
-                    "controller_name": "Бақылаушының ТАӘ",
-                    "controller_post": "Бақылаушының лауазымы",
-                    "lesson_datetime": "Уақыты",
-                    "theme": "Сабақтың тақырыбы",
-                    "learning_objectives": "Оқу мақсаты",
-                },
-
-                "error": request.query_params.get("error"),
-            },
-        )
-
-    except ValueError as e:
-        return templates.TemplateResponse(
-            "staff/reports/user_templates/fill_lesson_observation.html",
-            {
-                "request": request,
-                "user": user,
-
-                "month_item_id": month_item_id,
-                "selected_report_id": selected_report_id,
-
-                "document": None,
-                "report": None,
-                "schema": {},
-                "scores": {},
-                "saved_info": {},
-                "total_score": 0,
-                "info_labels": {},
-                "error": str(e),
-            },
-            status_code=404,
-        )
-
-
-# POST-роут для сохранения введенных данных личного выбранного шаблона отчета
-@router.post(
-    "/{month_item_id}/templates/{selected_report_id}/lesson-observation/fill",
-    name="staff_user_lesson_observation_fill_submit",
-)
-async def staff_user_lesson_observation_fill_submit(
-        request: Request,
-        month_item_id: int,
-        selected_report_id: int,
-        db: AsyncSession = Depends(get_db),
-        user: User = Depends(require_roles(UserRole.SCHOOL_STAFF, UserRole.SCHOOL_ADMIN)),
-):
-    form = await request.form()
-
-    action = form.get("action")
-
-    await LessonObservationReportService.save_lesson_observation_draft(
-        db,
-        month_item_id=month_item_id,
-        selected_report_id=selected_report_id,
-        user=user,
-        form=form,
-    )
-
-    # 🔥 разное поведение
-    if action == "complete":
-        await LessonObservationReportService.complete_report(
-            db,
-            selected_report_id=selected_report_id,
-            user=user,
-        )
-
-        return RedirectResponse(
-            url=request.url_for("staff_report_done_page"),
-            status_code=303,
-        )
-
-    # default = save
-    return RedirectResponse(
-        url=request.url_for(
-            "staff_user_lesson_observation_fill_page",
-            month_item_id=month_item_id,
-            selected_report_id=selected_report_id,
-        ),
-        status_code=303,
-    )
-
-
-@router.post(
-    "/{month_item_id}/documents/{document_id}/lesson-observation/save",
-    name="lesson_observation_save_post",
-)
-async def lesson_observation_save_post(
-        request: Request,
-        month_item_id: int,
-        document_id: int,
-        selected_report_id: int = Query(...),
-        db: AsyncSession = Depends(get_db),
-        user: User = Depends(require_roles(UserRole.SCHOOL_STAFF, UserRole.SCHOOL_ADMIN)),
-):
-    form = await request.form()
-
-    try:
-        report = await LessonObservationService.save_or_complete(
-            db,
-            request=request,
-            form=form,
-            month_item_id=month_item_id,
-            selected_report_id=selected_report_id,
-            task_execution_document_id=document_id,
-            user=user,
-            templates=templates,
-        )
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e)) from e
-
-    if form.get("action") == "complete":
-        redirect_url = request.url_for(
-            "staff_user_lesson_observation_fill_page",
-            month_item_id=month_item_id,
-            selected_report_id=selected_report_id,
-        )
-
-        redirect_url = (
-            f"{redirect_url}?"
-            f"{urlencode({'success': 'Отчет сохранен и подписан.'})}"
-        )
-
-        return RedirectResponse(
-            redirect_url,
-            status_code=303,
-        )
-
-    redirect_url = request.url_for(
-        "staff_user_lesson_observation_fill_page",
-        month_item_id=month_item_id,
-        selected_report_id=selected_report_id,
-    )
-
-    redirect_url = (
-        f"{redirect_url}?"
-        f"{urlencode({'success': 'Черновик сохранен.'})}"
-    )
-
-    return RedirectResponse(
-        redirect_url,
-        status_code=303,
-    )
-
-
-@router.get(
-    "/lesson-observation/{report_id}/pdf/view",
-    name="lesson_observation_pdf_view",
-)
-async def lesson_observation_pdf_view(
-        report_id: int,
-        db: AsyncSession = Depends(get_db),
-        user: User = Depends(require_roles(UserRole.SCHOOL_STAFF, UserRole.SCHOOL_ADMIN)),
-):
-    report = await LessonObservationRepo.get_by_id(db, report_id)
-
-    if not report:
-        raise HTTPException(status_code=404, detail="Отчет не найден")
-
-    if report.observer_user_id != user.id:
-        raise HTTPException(status_code=403, detail="Нет доступа к отчету")
-
-    pdf_file = report.pdf_signed_file
-
-    if not pdf_file:
-        raise HTTPException(status_code=404, detail="PDF не найден")
-
-    pdf_path = Path(str(pdf_file))
-
-    if not pdf_path.exists():
-        raise HTTPException(status_code=404, detail="PDF-файл отсутствует на сервере")
-
-    return FileResponse(
-        path=str(pdf_path),
-        media_type="application/pdf",
-        filename=f"lesson_observation_{report.id}.pdf",
-        headers={
-            "Content-Disposition": f'inline; filename="lesson_observation_{report.id}.pdf"'
-        },
-    )
-
-
-@router.get(
-    "/lesson-observation/{report_id}/pdf/download",
-    name="lesson_observation_pdf_download",
-)
-async def lesson_observation_pdf_download(
-        report_id: int,
-        db: AsyncSession = Depends(get_db),
-        user: User = Depends(require_roles(UserRole.SCHOOL_STAFF, UserRole.SCHOOL_ADMIN)),
-):
-    report = await LessonObservationRepo.get_by_id(db, report_id)
-
-    if not report:
-        raise HTTPException(status_code=404, detail="Отчет не найден")
-
-    if report.observer_user_id != user.id:
-        raise HTTPException(status_code=403, detail="Нет доступа к отчету")
-
-    pdf_file = report.pdf_signed_file
-
-    if not pdf_file:
-        raise HTTPException(status_code=404, detail="PDF не найден")
-
-    pdf_path = Path(str(pdf_file))
-
-    if not pdf_path.exists():
-        raise HTTPException(status_code=404, detail="PDF-файл отсутствует на сервере")
-
-    return FileResponse(
-        path=str(pdf_path),
-        media_type="application/pdf",
-        filename=f"lesson_observation_{report.id}.pdf",
-        headers={
-            "Content-Disposition": f'attachment; filename="lesson_observation_{report.id}.pdf"'
-        },
-    )
-
-
-@router.get(
-    "/lesson-observation/verify",
-    name="lesson_observation_verify_page",
-    response_class=HTMLResponse,
-)
-async def lesson_observation_verify_page(
-        request: Request,
-        token: str,
-):
-    url = request.url_for("report_verify_page").include_query_params(token=token)
-    return RedirectResponse(url=str(url), status_code=302)

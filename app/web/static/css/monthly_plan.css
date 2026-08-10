@@ -404,6 +404,19 @@ table.plan input[type="text"]{
   line-height:1.2;
 }
 
+.assignee-item {
+    margin-bottom: 8px;
+}
+
+.assignee-list {
+    margin: 4px 0 0 18px;
+    padding: 0;
+}
+
+.assignee-list li {
+    margin: 2px 0;
+}
+
 /* =========================
    Actions
    ========================= */

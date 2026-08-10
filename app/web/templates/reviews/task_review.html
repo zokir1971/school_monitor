@@ -1,0 +1,1614 @@
+{% extends "base.html" %}
+
+{% block title %}
+Рассмотрение задач
+{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet"
+      href="{{ url_for('static', path='css/admin.css') }}">
+
+<style>
+  .task-review-page {
+    max-width: 1200px;
+    margin: 24px auto;
+    padding: 0 16px 40px;
+  }
+
+  .review-card {
+    margin-bottom: 18px;
+    padding: 22px;
+    background: #ffffff;
+    border: 1px solid #dfe5ec;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+  }
+
+  .review-card__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    margin-bottom: 18px;
+  }
+
+  .review-card__title {
+    margin: 0 0 6px;
+    color: #172033;
+    font-size: 20px;
+  }
+
+  .review-card__description {
+    margin: 0;
+    color: #667085;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  .review-count {
+    display: inline-flex;
+    min-width: 40px;
+    height: 32px;
+    padding: 0 12px;
+    align-items: center;
+    justify-content: center;
+    color: #334155;
+    background: #f1f5f9;
+    border-radius: 999px;
+    font-weight: 700;
+  }
+
+  .selection-form {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(220px, 1fr)) auto;
+    gap: 14px;
+    align-items: end;
+  }
+
+  .method-association-group[hidden] {
+    display: none;
+  }
+
+  .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+  }
+
+  .form-group label {
+    color: #344054;
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  .form-control {
+    width: 100%;
+    min-height: 42px;
+    box-sizing: border-box;
+    padding: 9px 11px;
+    color: #101828;
+    background: #ffffff;
+    border: 1px solid #cfd8e3;
+    border-radius: 8px;
+  }
+
+  .form-control:focus {
+    outline: none;
+    border-color: #4f7cff;
+    box-shadow: 0 0 0 3px rgba(79, 124, 255, 0.12);
+  }
+
+  .form-control[readonly] {
+    background: #f8fafc;
+  }
+
+  .btn {
+    display: inline-flex;
+    min-height: 42px;
+    padding: 9px 17px;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    color: inherit;
+    border: 0;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    text-decoration: none;
+  }
+
+  .btn-primary {
+    color: #ffffff;
+    background: #2563eb;
+  }
+
+  .btn-primary:hover {
+    background: #1d4ed8;
+  }
+
+  .btn-success {
+    color: #ffffff;
+    background: #16803c;
+  }
+
+  .btn-success:hover {
+    background: #116630;
+  }
+
+  .btn-warning {
+    color: #ffffff;
+    background: #d97706;
+  }
+
+  .btn-warning:hover {
+    background: #b45309;
+  }
+
+  .btn-secondary {
+    color: #344054;
+    background: #eef2f6;
+  }
+
+  .btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+
+  .alert {
+    margin-bottom: 16px;
+    padding: 13px 15px;
+    border-radius: 8px;
+    line-height: 1.45;
+  }
+
+  .alert-error {
+    color: #991b1b;
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+  }
+
+  .alert-success {
+    color: #166534;
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+  }
+
+  .table-wrap {
+    overflow-x: auto;
+  }
+
+  .review-table {
+    width: 100%;
+    min-width: 980px;
+    border-collapse: collapse;
+  }
+
+  .review-table th,
+  .review-table td {
+    padding: 13px 10px;
+    text-align: left;
+    vertical-align: middle;
+    border-bottom: 1px solid #e4e7ec;
+  }
+
+  .review-table th {
+    color: #475467;
+    background: #f8fafc;
+    font-size: 13px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  .review-table td {
+    color: #101828;
+    font-size: 14px;
+  }
+
+  .review-table tbody tr:hover {
+    background: #fafcff;
+  }
+
+  .review-table tbody tr.is-selected {
+    background: #eff6ff;
+  }
+
+  .review-table tbody tr.is-disabled {
+    background: #fafafa;
+  }
+
+  .review-table tbody tr.is-disabled td {
+    color: #98a2b3;
+  }
+
+  .table-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 20px;
+    align-items: center;
+
+    margin-top: 12px;
+    margin-bottom: 24px;
+  }
+
+  .checkbox-cell {
+    width: 46px;
+    text-align: center !important;
+  }
+
+  .task-checkbox,
+  #select-all-tasks {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+  }
+
+  .task-name {
+    min-width: 270px;
+    font-weight: 600;
+    line-height: 1.4;
+  }
+
+  .responsible-name {
+    min-width: 150px;
+  }
+
+  .period-text {
+    white-space: nowrap;
+  }
+
+  .status-badge {
+    display: inline-flex;
+    min-height: 28px;
+    padding: 4px 10px;
+    align-items: center;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  .status-done {
+    color: #166534;
+    background: #dcfce7;
+  }
+
+  .status-not-executed {
+    color: #991b1b;
+    background: #fee2e2;
+  }
+
+  .status-in-progress {
+    color: #92400e;
+    background: #fef3c7;
+  }
+
+  .status-default {
+    color: #475467;
+    background: #f2f4f7;
+  }
+
+  .review-place-summary {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 18px;
+    padding: 12px 14px;
+    color: #475467;
+    background: #f8fafc;
+    border-radius: 8px;
+  }
+
+  .review-place-summary strong {
+    color: #101828;
+  }
+
+  .review-form-section {
+    margin-top: 22px;
+    padding-top: 20px;
+    border-top: 1px solid #e4e7ec;
+  }
+
+  .review-form-title {
+    margin: 0 0 15px;
+    color: #172033;
+    font-size: 17px;
+  }
+
+  .review-fields {
+    display: grid;
+    grid-template-columns: minmax(220px, 1fr)
+                           minmax(220px, 1fr);
+    gap: 16px;
+  }
+
+  .review-fields .full-width {
+    grid-column: 1 / -1;
+  }
+
+  .selected-summary {
+    display: flex;
+    min-height: 42px;
+    margin-bottom: 16px;
+    padding: 10px 13px;
+    align-items: center;
+    gap: 10px;
+    color: #475467;
+    background: #f8fafc;
+    border-radius: 8px;
+  }
+
+  .selected-summary strong {
+    color: #101828;
+  }
+
+  .review-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 20px;
+  }
+
+  .empty-state {
+    padding: 35px 20px;
+    color: #667085;
+    background: #f8fafc;
+    border-radius: 8px;
+    text-align: center;
+  }
+
+  .field-help {
+    color: #667085;
+    font-size: 12px;
+    line-height: 1.4;
+  }
+
+  .review-card--warning {
+    border-color: #f5c76b;
+    background: #fffbeb;
+  }
+
+  .card-title-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+
+  .card-title-row h3,
+  .card-title-row p {
+    margin-top: 0;
+  }
+
+  .count-badge {
+    display: inline-flex;
+    min-width: 34px;
+    height: 30px;
+    padding: 0 10px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    background: #fef3c7;
+    font-weight: 700;
+  }
+
+  .form-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 16px;
+  }
+
+  .protocol-status {
+    margin-top: 12px;
+    padding: 12px 14px;
+    border-radius: 8px;
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+  }
+
+  @media (max-width: 800px) {
+    .selection-form,
+    .review-fields {
+      grid-template-columns: 1fr;
+    }
+
+    .review-fields .full-width {
+      grid-column: auto;
+    }
+
+    .review-actions {
+      flex-direction: column;
+    }
+
+    .review-actions .btn {
+      width: 100%;
+    }
+  }
+</style>
+{% endblock %}
+
+
+{% block content %}
+
+{% set selected_place_value =
+     selected_review_place.value
+     if selected_review_place is not none
+        and selected_review_place.value is defined
+     else selected_review_place
+%}
+
+{% set place_ns = namespace(label=selected_place_value) %}
+
+{% for place in review_places | default([]) %}
+  {% set place_value =
+       place.value
+       if place.value is defined
+       else place
+  %}
+
+  {% if place_value == selected_place_value %}
+    {% set place_ns.label =
+         place.label
+         if place.label is defined
+         else place.label_kz
+         if place.label_kz is defined
+         else place.name
+         if place.name is defined
+         else place_value
+    %}
+  {% endif %}
+{% endfor %}
+
+{% set selected_place_label = place_ns.label %}
+
+{% set selected_method_association_id =
+     form_data.get("method_association_id")
+     if form_data is defined and form_data
+     else request.query_params.get("method_association_id")
+%}
+
+{% set method_ns = namespace(label="") %}
+
+{% for association in method_associations | default([]) %}
+  {% set association_id = association.id %}
+  {% if selected_method_association_id|string == association_id|string %}
+    {% set method_ns.label = association.name %}
+  {% endif %}
+{% endfor %}
+
+{% set selected_method_association_label = method_ns.label %}
+
+<div class="task-review-page">
+
+  {% set page_error = error or request.query_params.get("error") %}
+  {% if page_error %}
+    <div class="alert alert-error">
+      {{ page_error }}
+    </div>
+  {% endif %}
+
+  {% if request.query_params.get("success") == "reviewed" %}
+    <div class="alert alert-success">
+      Рассмотрение успешно сохранено.
+
+      {% if request.query_params.get("reviewed_count") %}
+        Количество рассмотренных задач:
+        <strong>{{ request.query_params.get("reviewed_count") }}</strong>.
+      {% endif %}
+    </div>
+  {% elif request.query_params.get("success") == "marked_not_executed" %}
+    <div class="alert alert-success">
+      Просроченные задачи переведены в статус «Не исполнено».
+      {% if request.query_params.get("updated_count") %}
+        Количество обновлённых задач:
+        <strong>{{ request.query_params.get("updated_count") }}</strong>.
+      {% endif %}
+    </div>
+  {% endif %}
+
+
+  {# =========================================================
+     Выбор места рассмотрения
+     ========================================================= #}
+  <section class="review-card">
+
+    <div class="review-card__header">
+      <div>
+        <h2 class="review-card__title">
+          Выбор места рассмотрения
+        </h2>
+
+        <p class="review-card__description">
+          Выберите орган или заседание. Для методического объединения
+          дополнительно укажите конкретное объединение. После этого будут
+          показаны задачи активного плана ВШК, связанные с выбранным местом.
+        </p>
+      </div>
+    </div>
+
+    <form method="get"
+          action="{{ url_for('task_review_selection_page') }}"
+          class="selection-form">
+
+      <div class="form-group">
+        <label for="academic-year">
+          Учебный год
+        </label>
+
+        <input id="academic-year"
+               type="text"
+               class="form-control"
+               value="{{ academic_year_label or 'Активный учебный год не найден' }}"
+               readonly>
+      </div>
+
+      <div class="form-group">
+        <label for="review-place-filter">
+          Место рассмотрения
+        </label>
+
+        <select id="review-place-filter"
+                name="review_place"
+                class="form-control"
+                required>
+
+          <option value="">
+            Выберите место рассмотрения
+          </option>
+
+          {% for place in review_places | default([]) %}
+
+            {% set place_value =
+                 place.value
+                 if place.value is defined
+                 else place
+            %}
+
+            {% set place_label =
+                 place.label
+                 if place.label is defined
+                 else place.label_kz
+                 if place.label_kz is defined
+                 else place.name
+                 if place.name is defined
+                 else place_value
+            %}
+
+            <option value="{{ place_value }}"
+                    {% if selected_place_value == place_value %}
+                      selected
+                    {% endif %}>
+              {{ place_label }}
+            </option>
+
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="form-group method-association-group"
+           id="method-association-filter-group"
+           {% if selected_place_value != "method_assoc" %}hidden{% endif %}>
+        <label for="method-association-filter">
+          Методическое объединение
+        </label>
+
+        <div class="field-help">
+          Поле обязательно только для места «Методическое объединение».
+        </div>
+
+        <select id="method-association-filter"
+          name="method_association_id"
+          class="form-control">
+
+          <option value="">
+            Выберите методическое объединение
+          </option>
+
+          {% for association in method_associations | default([]) %}
+            <option value="{{ association.id }}"
+              {% if selected_method_association_id|string == association.id|string %}
+                selected
+              {% endif %}>
+              {{ association.name }}
+            </option>
+          {% endfor %}
+
+        </select>
+
+      </div>
+
+      <button type="submit"
+              class="btn btn-primary">
+        Показать задачи
+      </button>
+
+    </form>
+  </section>
+
+{% if overdue_tasks is defined and overdue_tasks|length > 0 %}
+<section class="review-card review-card--warning">
+
+    <div class="card-title-row">
+        <div>
+            <h3>Просроченные задачи</h3>
+            <p>
+                Эти задачи ещё имеют статус «Запланировано» или
+                «Выполняется», хотя срок исполнения уже истёк.
+            </p>
+        </div>
+
+        <span class="count-badge">
+            {{ overdue_tasks|length }}
+        </span>
+    </div>
+
+    <form method="post"
+          action="{{ url_for('staff_task_review_mark_overdue') }}">
+
+        <input type="hidden"
+               name="school_plan_id"
+               value="{{ school_plan_id }}">
+
+        <input type="hidden"
+               name="review_place"
+               value="{{ selected_place_value }}">
+
+        <table class="review-table">
+            <thead>
+            <tr>
+                <th>
+                    <input type="checkbox"
+                           id="select-all-overdue"
+                           title="Выбрать все просроченные задачи">
+                </th>
+                <th>№</th>
+                <th>Задача</th>
+                <th>Ответственный</th>
+                <th>Срок исполнения</th>
+                <th>Текущий статус</th>
+            </tr>
+            </thead>
+
+            <tbody>
+            {% for task in overdue_tasks %}
+            <tr>
+                <td>
+                    <input type="checkbox"
+                           class="overdue-task-checkbox"
+                           name="month_item_ids"
+                           value="{{ task.month_item_id }}">
+                </td>
+
+                <td>{{ loop.index }}</td>
+
+                <td>{{ task.task_name }}</td>
+
+                <td>{{ task.responsible_name }}</td>
+
+                <td>{{ task.planned_period_text }}</td>
+
+                <td>{{ task.status_label }}</td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+
+        <div class="form-actions">
+            <button type="submit"
+                    class="btn btn-warning"
+                    id="mark-overdue-button"
+                    disabled>
+                Отметить выбранные как неисполненные
+            </button>
+        </div>
+    </form>
+</section>
+{% else %}
+<div class="review-card">
+    Просроченные задачи не найдены.
+</div>
+{% endif %}
+
+  {# =========================================================
+     Список задач
+     ========================================================= #}
+  {% if selected_review_place is not none %}
+
+    <section class="review-card">
+
+      <div class="review-card__header">
+        <div>
+          <h2 class="review-card__title">
+            Задачи для рассмотрения
+          </h2>
+
+          <p class="review-card__description">
+            Отметьте одну или несколько доступных задач.
+            Доступны выполненные и окончательно неисполненные задачи.
+            Для методического объединения задача может рассматриваться
+            разными объединениями, но не повторно одним и тем же МО.
+          </p>
+        </div>
+
+        <span class="review-count">
+          {{ tasks | default([]) | length }}
+        </span>
+      </div>
+
+      <div class="review-place-summary">
+        Место рассмотрения:
+        <strong>{{ selected_place_label or selected_place_value }}</strong>
+
+        {% if selected_place_value == "method_assoc"
+              and selected_method_association_label %}
+          <span>·</span>
+          <span>
+            Методическое объединение:
+            <strong>{{ selected_method_association_label }}</strong>
+          </span>
+        {% endif %}
+
+        {% if academic_year_label %}
+          <span>·</span>
+          <span>{{ academic_year_label }}</span>
+        {% endif %}
+      </div>
+
+      {% if tasks %}
+
+        <form method="post"
+              enctype="multipart/form-data"
+              action="{{ url_for('staff_task_review_batch') }}"
+              id="batch-review-form">
+          <input type="hidden"
+                 name="school_plan_id"
+                 value="{{ school_plan_id }}">
+          <input type="hidden"
+                 name="review_place"
+                 value="{{ selected_place_value }}">
+          <input type="hidden"
+                 name="method_association_id"
+                 value="{{ selected_method_association_id or '' }}">
+        </form>
+
+        <div class="table-wrap">
+            <table class="review-table">
+
+              <thead>
+              <tr>
+                <th class="checkbox-cell">
+                  <input type="checkbox"
+                         id="select-all-tasks"
+                         title="Выбрать все доступные задачи">
+                </th>
+                <th>№</th>
+                <th>Задача</th>
+                <th>Ответственный</th>
+                <th>Срок выполнения</th>
+                <th>Статус</th>
+                <th>Результат</th>
+              </tr>
+              </thead>
+
+              <tbody>
+
+              {% set selected_ids =
+                   form_data.get("month_item_ids", [])
+                   if form_data is defined and form_data
+                   else []
+              %}
+
+              {% for task in tasks %}
+
+                {% set status_value =
+                     task.status.value
+                     if task.status is not string and task.status
+                     else task.status
+                %}
+
+                <tr class="{% if not task.can_select %}is-disabled{% endif %}"
+                    data-task-row>
+
+                  <td class="checkbox-cell">
+
+                    {% if task.can_select %}
+                      <input type="checkbox"
+                             class="task-checkbox"
+                             form="batch-review-form"
+                             name="month_item_ids"
+                             value="{{ task.month_item_id }}"
+                             {% if task.month_item_id in selected_ids %}
+                               checked
+                             {% endif %}>
+                    {% else %}
+                      <input type="checkbox"
+                             disabled
+                             title="Задача недоступна для рассмотрения">
+                    {% endif %}
+
+                  </td>
+
+                  <td>{{ loop.index }}</td>
+
+                  <td class="task-name">
+                    {{ task.task_name }}
+                  </td>
+
+                  <td class="responsible-name">
+                    {{ task.responsible_name or "Не назначен" }}
+                  </td>
+
+                  <td class="period-text">
+                    {{ task.planned_period_text or "—" }}
+                  </td>
+
+                  <td>
+                    {% if status_value == "done" %}
+                      <span class="status-badge status-done">
+                        {{ task.status_label }}
+                      </span>
+                    {% elif status_value == "not_executed" %}
+                      <span class="status-badge status-not-executed">
+                        {{ task.status_label }}
+                      </span>
+                    {% elif status_value == "in_progress" %}
+                      <span class="status-badge status-in-progress">
+                        {{ task.status_label }}
+                      </span>
+                    {% else %}
+                      <span class="status-badge status-default">
+                        {{ task.status_label or "—" }}
+                      </span>
+                    {% endif %}
+                  </td>
+
+                  <td>
+                    {{ task.expected_result_label or "—" }}
+                  </td>
+
+                </tr>
+
+              {% endfor %}
+
+              </tbody>
+            </table>
+            <div class="table-actions">
+              <div class="selected-counter">
+                Выбрано задач:
+              <strong id="selected-review-count">0</strong>
+              </div>
+
+              <button
+                type="button"
+                id="clear-selection-button"
+                class="btn btn-secondary">
+                Снять выделение
+              </button>
+
+            </div>
+          </div>
+
+
+        {# =================================================
+           Протокол заседания
+           ================================================= #}
+        <div class="review-form-section" id="protocol-upload-section">
+
+          <h3 class="review-form-title">
+            Протокол заседания
+          </h3>
+
+          <div class="selected-summary">
+            Для протокола выбрано задач:
+            <strong id="protocol-selected-task-count">0</strong>
+          </div>
+
+          <div class="review-fields">
+
+            <div class="form-group">
+              <label for="protocol-number">
+                Номер протокола
+              </label>
+
+              <input id="protocol-number"
+                     type="text"
+                     form="batch-review-form"
+                     name="protocol_number"
+                     class="form-control"
+                     value="{{ form_data.get('protocol_number', '') if form_data else '' }}"
+                     maxlength="100"
+                     placeholder="Например: 12"
+                     required>
+
+              <div class="field-help">
+                Укажите номер без символа №.
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="protocol-date">
+                Дата протокола
+              </label>
+
+              <input id="protocol-date"
+                     type="date"
+                     form="batch-review-form"
+                     name="protocol_date"
+                     class="form-control"
+                     value="{{ form_data.get('protocol_date', '') if form_data else '' }}"
+                     required>
+            </div>
+
+            <div class="form-group full-width">
+              <label for="protocol-file">
+                Файл протокола
+              </label>
+
+              <input id="protocol-file"
+                     type="file"
+                     form="batch-review-form"
+                     name="protocol_file"
+                     class="form-control"
+                     accept=".pdf,.doc,.docx"
+                     required>
+
+              <div class="field-help" id="protocol-file-help">
+                Допустимые форматы: PDF, DOC, DOCX.
+                Максимальный размер — 20 МБ. Файл будет загружен
+                вместе с результатом рассмотрения после нажатия
+                «Сохранить рассмотрение».
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+
+          {# =================================================
+             Параметры общего рассмотрения
+             ================================================= #}
+          <div class="review-form-section">
+
+            <h3 class="review-form-title">
+              Результат рассмотрения
+            </h3>
+
+            <div class="selected-summary">
+              Выбрано задач:
+              <strong id="selected-task-count">0</strong>
+            </div>
+
+            <div class="review-fields">
+
+              <div class="form-group">
+                <label for="selected-review-place">
+                  Место рассмотрения
+                </label>
+
+                <input id="selected-review-place"
+                       type="text"
+                       class="form-control"
+                       value="{{ selected_place_label or selected_place_value }}"
+                       readonly>
+
+                <div class="field-help">
+                  Место определяется выбранным списком задач
+                  и не изменяется при сохранении.
+                </div>
+              </div>
+
+              {% if selected_place_value == "method_assoc" %}
+                <div class="form-group">
+                  <label for="selected-method-association">
+                    Методическое объединение
+                  </label>
+
+                  <input id="selected-method-association"
+                         type="text"
+                         class="form-control"
+                         value="{{ selected_method_association_label or 'Не выбрано' }}"
+                         readonly>
+
+                  <div class="field-help">
+                    Объединение закрепляется за общим протоколом рассмотрения.
+                  </div>
+                </div>
+              {% endif %}
+
+              <div class="form-group full-width">
+                <label for="review-comment">
+                  Комментарий
+                </label>
+
+                <textarea id="review-comment"
+                          form="batch-review-form"
+                          name="comment"
+                          class="form-control"
+                          rows="4"
+                          placeholder="Дополнительная информация о рассмотрении">{{
+                    form_data.get("comment", "")
+                    if form_data is defined and form_data
+                    else ""
+                }}</textarea>
+              </div>
+
+            </div>
+
+            <div class="review-actions">
+
+              <button type="submit"
+                      form="batch-review-form"
+                      class="btn btn-success"
+                      id="submit-review-button"
+                      disabled>
+                Сохранить рассмотрение
+              </button>
+
+            </div>
+
+          </div>
+
+
+      {% else %}
+
+        <div class="empty-state">
+          Для выбранного места рассмотрения нерассмотренные задачи не найдены.
+        </div>
+
+      {% endif %}
+
+    </section>
+
+  {% endif %}
+
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+
+  /*
+   * ============================================================
+   * 0. ВЫБОР МЕТОДИЧЕСКОГО ОБЪЕДИНЕНИЯ
+   * ============================================================
+   */
+  const reviewPlaceFilter =
+    document.getElementById("review-place-filter");
+
+  const methodAssociationFilterGroup =
+    document.getElementById("method-association-filter-group");
+
+  const methodAssociationFilter =
+    document.getElementById("method-association-filter");
+
+  function updateMethodAssociationFilter() {
+    if (!reviewPlaceFilter ||
+        !methodAssociationFilterGroup ||
+        !methodAssociationFilter) {
+      return;
+    }
+
+    const isMethodAssociation =
+      reviewPlaceFilter.value === "method_assoc";
+
+    methodAssociationFilterGroup.hidden =
+      !isMethodAssociation;
+
+    methodAssociationFilter.required =
+      isMethodAssociation;
+
+    methodAssociationFilter.disabled =
+      !isMethodAssociation;
+
+    if (!isMethodAssociation) {
+      methodAssociationFilter.value = "";
+    }
+  }
+
+  if (reviewPlaceFilter) {
+    reviewPlaceFilter.addEventListener(
+      "change",
+      updateMethodAssociationFilter
+    );
+  }
+
+  updateMethodAssociationFilter();
+
+  /*
+   * ============================================================
+   * 1. ПРОСРОЧЕННЫЕ ЗАДАЧИ
+   * ============================================================
+   */
+
+  const firstOverdueCheckbox =
+    document.querySelector(".overdue-task-checkbox");
+
+  const overdueForm = firstOverdueCheckbox
+    ? firstOverdueCheckbox.closest("form")
+    : null;
+
+  if (overdueForm) {
+    const selectAllOverdue =
+      document.getElementById("select-all-overdue");
+
+    const overdueCheckboxes = Array.from(
+      overdueForm.querySelectorAll(
+        ".overdue-task-checkbox:not(:disabled)"
+      )
+    );
+
+    const markOverdueButton =
+      document.getElementById("mark-overdue-button");
+
+
+    function updateOverdueState() {
+      const selectedCheckboxes =
+        overdueCheckboxes.filter(
+          checkbox => checkbox.checked
+        );
+
+      const selectedCount =
+        selectedCheckboxes.length;
+
+      if (markOverdueButton) {
+        markOverdueButton.disabled =
+          selectedCount === 0;
+      }
+
+      overdueCheckboxes.forEach(function (checkbox) {
+        const row = checkbox.closest("tr");
+
+        if (row) {
+          row.classList.toggle(
+            "is-selected",
+            checkbox.checked
+          );
+        }
+      });
+
+      if (!selectAllOverdue) {
+        return;
+      }
+
+      if (overdueCheckboxes.length === 0) {
+        selectAllOverdue.checked = false;
+        selectAllOverdue.indeterminate = false;
+        selectAllOverdue.disabled = true;
+        return;
+      }
+
+      selectAllOverdue.disabled = false;
+
+      selectAllOverdue.checked =
+        selectedCount === overdueCheckboxes.length;
+
+      selectAllOverdue.indeterminate =
+        selectedCount > 0 &&
+        selectedCount < overdueCheckboxes.length;
+    }
+
+
+    if (selectAllOverdue) {
+      selectAllOverdue.addEventListener(
+        "change",
+        function () {
+          overdueCheckboxes.forEach(
+            function (checkbox) {
+              checkbox.checked =
+                selectAllOverdue.checked;
+            }
+          );
+
+          updateOverdueState();
+        }
+      );
+    }
+
+
+    overdueCheckboxes.forEach(
+      function (checkbox) {
+        checkbox.addEventListener(
+          "change",
+          updateOverdueState
+        );
+      }
+    );
+
+
+    overdueForm.addEventListener(
+      "submit",
+      function (event) {
+        const selectedCount =
+          overdueCheckboxes.filter(
+            checkbox => checkbox.checked
+          ).length;
+
+        if (selectedCount === 0) {
+          event.preventDefault();
+
+          alert(
+            "Выберите хотя бы одну просроченную задачу."
+          );
+
+          return;
+        }
+
+        const confirmed = window.confirm(
+          "Перевести выбранные задачи в статус " +
+          "«Не исполнено»: " +
+          selectedCount +
+          "?"
+        );
+
+        if (!confirmed) {
+          event.preventDefault();
+        }
+      }
+    );
+
+    updateOverdueState();
+  }
+
+
+  /*
+   * ============================================================
+   * 2. ЗАДАЧИ ДЛЯ РАССМОТРЕНИЯ
+   * ============================================================
+   */
+
+  const form =
+    document.getElementById("batch-review-form");
+
+  if (form) {
+    const selectAllCheckbox =
+      document.getElementById("select-all-tasks");
+
+    const taskCheckboxes = Array.from(
+      document.querySelectorAll(
+        '.task-checkbox[form="batch-review-form"]:not(:disabled), ' +
+        '#batch-review-form .task-checkbox:not(:disabled)'
+      )
+    );
+
+    /*
+     * Убираем возможные дубликаты.
+     */
+    const uniqueTaskCheckboxes =
+      Array.from(new Set(taskCheckboxes));
+
+    /*
+     * Счётчик под таблицей.
+     */
+    const selectedReviewCount =
+      document.getElementById(
+        "selected-review-count"
+      );
+
+    /*
+     * Счётчик в блоке загрузки протокола.
+     */
+    const protocolSelectedTaskCount =
+      document.getElementById(
+        "protocol-selected-task-count"
+      );
+
+    /*
+     * Счётчик в блоке результата рассмотрения.
+     */
+    const selectedTaskCount =
+      document.getElementById(
+        "selected-task-count"
+      );
+
+    const submitButton =
+      document.getElementById(
+        "submit-review-button"
+      );
+
+
+    const clearSelectionButton =
+      document.getElementById(
+        "clear-selection-button"
+      );
+
+    const protocolNumber =
+      document.getElementById("protocol-number");
+
+    const protocolDate =
+      document.getElementById("protocol-date");
+
+    const protocolFile =
+      document.getElementById("protocol-file");
+
+    const MAX_PROTOCOL_FILE_SIZE =
+      20 * 1024 * 1024;
+
+
+
+    function getSelectedTaskCheckboxes() {
+      return uniqueTaskCheckboxes.filter(
+        checkbox => checkbox.checked
+      );
+    }
+
+
+    function updateTaskRowState(checkbox) {
+      const row =
+        checkbox.closest("[data-task-row]");
+
+      if (!row) {
+        return;
+      }
+
+      row.classList.toggle(
+        "is-selected",
+        checkbox.checked
+      );
+    }
+
+
+    function updateSelectionState() {
+      const selectedCheckboxes =
+        getSelectedTaskCheckboxes();
+
+      const selectedCount =
+        selectedCheckboxes.length;
+
+      /*
+       * Обновляем все три счётчика.
+       */
+      if (selectedReviewCount) {
+        selectedReviewCount.textContent =
+          String(selectedCount);
+      }
+
+      if (protocolSelectedTaskCount) {
+        protocolSelectedTaskCount.textContent =
+          String(selectedCount);
+      }
+
+      if (selectedTaskCount) {
+        selectedTaskCount.textContent =
+          String(selectedCount);
+      }
+
+      /*
+       * Сохранение доступно только когда заполнена вся
+       * единая операция: задачи + данные протокола + файл.
+       */
+      if (submitButton) {
+        const reviewPlaceValue =
+          form.querySelector(
+            'input[name="review_place"]'
+          )?.value || "";
+
+        const methodAssociationId =
+          form.querySelector(
+            'input[name="method_association_id"]'
+          )?.value || "";
+
+        const methodAssociationMissing =
+          reviewPlaceValue === "method_assoc" &&
+          !methodAssociationId;
+
+        const protocolNumberMissing =
+          !protocolNumber ||
+          !protocolNumber.value.trim();
+
+        const protocolDateMissing =
+          !protocolDate ||
+          !protocolDate.value;
+
+        const protocolFileMissing =
+          !protocolFile ||
+          !protocolFile.files ||
+          protocolFile.files.length === 0;
+
+        submitButton.disabled =
+          selectedCount === 0 ||
+          methodAssociationMissing ||
+          protocolNumberMissing ||
+          protocolDateMissing ||
+          protocolFileMissing;
+      }
+
+      /*
+       * Подсвечиваем выбранные строки.
+       */
+      uniqueTaskCheckboxes.forEach(
+        updateTaskRowState
+      );
+
+      /*
+       * Обновляем состояние общего чекбокса.
+       */
+      if (!selectAllCheckbox) {
+        return;
+      }
+
+      if (uniqueTaskCheckboxes.length === 0) {
+        selectAllCheckbox.checked = false;
+        selectAllCheckbox.indeterminate = false;
+        selectAllCheckbox.disabled = true;
+        return;
+      }
+
+      selectAllCheckbox.disabled = false;
+
+      selectAllCheckbox.checked =
+        selectedCount ===
+        uniqueTaskCheckboxes.length;
+
+      selectAllCheckbox.indeterminate =
+        selectedCount > 0 &&
+        selectedCount <
+        uniqueTaskCheckboxes.length;
+    }
+
+
+    /*
+     * Выбрать или снять все доступные задачи.
+     */
+    if (selectAllCheckbox) {
+      selectAllCheckbox.addEventListener(
+        "change",
+        function () {
+          uniqueTaskCheckboxes.forEach(
+            function (checkbox) {
+              checkbox.checked =
+                selectAllCheckbox.checked;
+            }
+          );
+
+          updateSelectionState();
+        }
+      );
+    }
+
+
+    /*
+     * Обработка отдельного чекбокса задачи.
+     */
+    uniqueTaskCheckboxes.forEach(
+      function (checkbox) {
+        checkbox.addEventListener(
+          "change",
+          updateSelectionState
+        );
+      }
+    );
+
+
+    /*
+     * Снять всё выделение.
+     */
+    if (clearSelectionButton) {
+      clearSelectionButton.addEventListener(
+        "click",
+        function () {
+          uniqueTaskCheckboxes.forEach(
+            function (checkbox) {
+              checkbox.checked = false;
+            }
+          );
+
+          updateSelectionState();
+        }
+      );
+    }
+
+
+
+    /*
+     * Поля протокола участвуют в доступности итоговой кнопки.
+     */
+    [protocolNumber, protocolDate, protocolFile].forEach(
+      function (field) {
+        if (!field) {
+          return;
+        }
+
+        field.addEventListener(
+          field.type === "file" ? "change" : "input",
+          updateSelectionState
+        );
+      }
+    );
+
+
+    /*
+     * Проверка перед сохранением рассмотрения.
+     */
+    form.addEventListener(
+      "submit",
+      function (event) {
+        const selectedCheckboxes =
+          getSelectedTaskCheckboxes();
+
+        const selectedCount =
+          selectedCheckboxes.length;
+
+        if (selectedCount === 0) {
+          event.preventDefault();
+
+          alert(
+            "Выберите хотя бы одну задачу " +
+            "для рассмотрения."
+          );
+
+          return;
+        }
+
+        if (!protocolNumber || !protocolNumber.value.trim()) {
+          event.preventDefault();
+          alert("Укажите номер протокола.");
+          protocolNumber?.focus();
+          return;
+        }
+
+        if (!protocolDate || !protocolDate.value) {
+          event.preventDefault();
+          alert("Укажите дату протокола.");
+          protocolDate?.focus();
+          return;
+        }
+
+        if (
+          !protocolFile ||
+          !protocolFile.files ||
+          protocolFile.files.length === 0
+        ) {
+          event.preventDefault();
+          alert("Выберите файл протокола.");
+          protocolFile?.focus();
+          return;
+        }
+
+        const selectedFile = protocolFile.files[0];
+
+        if (selectedFile.size > MAX_PROTOCOL_FILE_SIZE) {
+          event.preventDefault();
+          alert(
+            "Размер файла протокола не должен превышать 20 МБ."
+          );
+          protocolFile.focus();
+          return;
+        }
+
+        const allowedExtensions = [".pdf", ".doc", ".docx"];
+        const lowerFileName = selectedFile.name.toLowerCase();
+        const validExtension = allowedExtensions.some(
+          extension => lowerFileName.endsWith(extension)
+        );
+
+        if (!validExtension) {
+          event.preventDefault();
+          alert("Разрешены только файлы PDF, DOC и DOCX.");
+          protocolFile.focus();
+          return;
+        }
+
+        const confirmed = window.confirm(
+          "Сохранить рассмотрение для выбранных задач: " +
+          selectedCount +
+          "?\nПротокол: " +
+          selectedFile.name
+        );
+
+        if (!confirmed) {
+          event.preventDefault();
+        }
+      }
+    );
+
+
+    /*
+     * Первичная инициализация после загрузки страницы.
+     */
+    updateSelectionState();
+  }
+
+});
+</script>
+
+{% endblock %}

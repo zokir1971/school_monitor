@@ -39,3 +39,4 @@ pyjwt~=2.12.1
 qrcode~=8.2
 weasyprint~=68.1
 playwright~=1.59.0
+botocore~=1.42.93

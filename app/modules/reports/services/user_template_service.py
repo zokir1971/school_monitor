@@ -8,7 +8,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.modules.reports.enums import ReportType, TaskDocumentSource, DocumentType
 from app.modules.reports.models_documents import TaskExecutionDocument
 from app.modules.reports.models_template_reports import UserReportTemplate
-from app.modules.reports.repositories.template_repo import TemplateReportRepo
+from app.modules.reports.repositories.execution_document_repo import ExecutionDocumentRepo
+from app.modules.reports.repositories.task_reports_repo import TaskReportsRepo
 from app.modules.reports.repositories.user_template_repo import UserReportTemplateRepo
 from app.modules.reports.utils.checking_notebooks_defaults import CHECKING_NOTEBOOKS_INFO_FIELDS, \
     CHECKING_NOTEBOOKS_DEFAULT_CRITERIA, CHECKING_NOTEBOOKS_RATING
@@ -385,98 +386,58 @@ class UserReportTemplateService:
         }
 
     @classmethod
-    async def apply_my_template(
+    async def get_template_selection_page_data(
             cls,
             db: AsyncSession,
             *,
-            month_item_id: int,
             selected_report_id: int,
-            user_id: int,
-            template_id: int,
-    ) -> TaskExecutionDocument:
-
-        # 1. Получаем только шаблон текущего пользователя
-        template = await UserReportTemplateRepo.get_user_template(
-            db,
-            template_id=template_id,
-            owner_user_id=user_id,
-        )
-
-        if not template:
-            raise ValueError("Шаблон не найден или недоступен.")
-
-        # 2. Ищем документ отчета
-        document = await TemplateReportRepo.get_template_document(
+            owner_user_id: int,
+    ) -> dict:
+        """
+        Данные страницы выбора личного шаблона для выбранного отчета.
+        """
+        selected_report = await TaskReportsRepo.get_selected_report(
             db,
             selected_report_id=selected_report_id,
-            user_id=user_id,
         )
 
-        # 3. Если документа нет — создаем
-        if not document:
-            document = TaskExecutionDocument(
-                month_item_id=month_item_id,
-                selected_report_id=selected_report_id,
-                report_type_id=template.report_type_id,
-                report_code=template.report_code,
-                report_label=template.report_label,
-                document_type=DocumentType.REPORT,
-                source=TaskDocumentSource.TEMPLATE,
-                schema_json=template.schema_json or {},
-            )
+        if not selected_report:
+            raise ValueError("Выбранный отчет не найден.")
 
-            db.add(document)
-            await db.flush()
+        report_type = selected_report.report_type
 
-        # 4. Проверяем, что документ относится к выбранной задаче
-        if document.month_item_id != month_item_id:
-            raise ValueError("Документ не относится к выбранной задаче.")
+        if not report_type:
+            raise ValueError("У выбранного отчета не указан тип.")
 
-        # 5. Главная проверка типа отчета
-        if document.report_type_id and template.report_type_id:
-            if document.report_type_id != template.report_type_id:
-                raise ValueError(
-                    "Шаблон не соответствует типу отчета. "
-                    f"document.report_type_id={document.report_type_id}, "
-                    f"template.report_type_id={template.report_type_id}"
-                )
+        report_code = getattr(
+            report_type.code,
+            "value",
+            report_type.code,
+        )
 
-        # 6. Дополнительная проверка по report_code, если оба заполнены
-        document_report_code = (document.report_code or "").strip()
-        template_report_code = (template.report_code or "").strip()
+        report_code = str(report_code)
 
-        if document_report_code and template_report_code:
-            if document_report_code != template_report_code:
-                raise ValueError(
-                    "Шаблон не соответствует типу отчета. "
-                    f"document.report_code={document_report_code}, "
-                    f"template.report_code={template_report_code}"
-                )
+        report_label = (
+                report_type.name_kz
+                or report_type.name_ru
+                or report_code
+        )
 
-        # 7. Если у документа пустые служебные поля — заполняем из шаблона
-        if not document.report_type_id:
-            document.report_type_id = template.report_type_id
-
-        if not document.report_code:
-            document.report_code = template.report_code
-
-        if not document.report_label:
-            document.report_label = template.report_label
-
-        document.source = TaskDocumentSource.TEMPLATE
-        document.document_type = DocumentType.REPORT
-
-        # 8. Применяем шаблон к документу
-        document = await TemplateReportRepo.apply_custom_template_to_document(
+        templates_list = await cls.list_my_templates(
             db,
-            document=document,
-            user_template=template,
+            owner_user_id=owner_user_id,
+            report_code=report_code,
         )
 
-        await db.commit()
-        await db.refresh(document)
-
-        return document
+        return {
+            "selected_report_id": selected_report.id,
+            "report_code": report_code,
+            "report_label": report_label,
+            "target_kind": selected_report.target_kind,
+            "target_value": selected_report.target_value,
+            "target_label": selected_report.target_label,
+            "templates_list": templates_list,
+        }
 
     @staticmethod
     def _clean(value) -> str | None:

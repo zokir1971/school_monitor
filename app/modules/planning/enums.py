@@ -43,6 +43,35 @@ class AssignmentKind(str, enum.Enum):
         return obj
 
 
+class MonthPlanNotificationStatus(str, enum.Enum):
+    """
+    Состояние уведомления исполнителя.
+
+    Жизненный цикл:
+
+        PENDING
+            ↓
+        SENT
+            ↓
+        ACCEPTED
+    """
+
+    # Уведомление ещё не отправлено.
+    PENDING = ("pending", "Жіберілмен")
+
+    # Администратор отправил уведомление исполнителю.
+    SENT = ("sent", "Жіберілді")
+
+    # Исполнитель принял задачу к исполнению.
+    ACCEPTED = ("accepted", "Орындауға қабылданды")
+
+    def __new__(cls, value: str, label_kz: str):
+        obj = str.__new__(cls, value)
+        obj._value_ = value
+        obj.label_kz = label_kz
+        return obj
+
+
 class PlanPeriodType(str, enum.Enum):
     MONTH = ("month", "Бір ай")
     MONTHS = ("months", "Бірнеше ай")

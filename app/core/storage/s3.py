@@ -1,40 +1,195 @@
-# app/core/storage/s3.py (S3 / MinIO (один код для обоих))
+# app/core/storage/s3.py (S3Storage для MinIO и AWS S3 (один код для обоих))
+
+from __future__ import annotations
+
+import asyncio
+from typing import Any
 
 import boto3
-from uuid import uuid4
-from pathlib import Path
+from botocore.client import BaseClient
+from botocore.config import Config
+from botocore.exceptions import ClientError
 
 from app.core.storage.base import BaseStorage
 
 
 class S3Storage(BaseStorage):
+    def __init__(
+        self,
+        *,
+        endpoint_url: str | None,
+        access_key: str,
+        secret_key: str,
+        region: str,
+        bucket: str,
+        verify_ssl: bool,
+    ) -> None:
+        client_kwargs: dict[str, Any] = {
+            "service_name": "s3",
+            "aws_access_key_id": access_key,
+            "aws_secret_access_key": secret_key,
+            "region_name": region,
+            "verify": verify_ssl,
+            "config": Config(
+                signature_version="s3v4",
+                retries={
+                    "max_attempts": 3,
+                    "mode": "standard",
+                },
+                s3={
+                    "addressing_style": "path",
+                },
+            ),
+        }
 
-    def __init__(self):
-        self.client = boto3.client(
-            "s3",
-            endpoint_url="http://localhost:9000",  # MinIO
-            aws_access_key_id="minio",
-            aws_secret_access_key="minio123",
+        if endpoint_url:
+            client_kwargs["endpoint_url"] = (
+                endpoint_url
+            )
+
+        self._client: BaseClient = boto3.client(
+            **client_kwargs
         )
-        self.bucket = "school-monitor"
 
-    def save(self, content: bytes, filename: str):
-        ext = Path(filename).suffix
-        key = f"task_documents/{uuid4().hex}{ext}"
+        self._bucket = bucket
 
-        self.client.put_object(
-            Bucket=self.bucket,
-            Key=key,
+    async def save(
+        self,
+        *,
+        content: bytes,
+        object_key: str,
+        content_type: str,
+        metadata: dict[str, str] | None = None,
+    ) -> str | None:
+        normalized_key = self._normalize_key(
+            object_key
+        )
+
+        response = await asyncio.to_thread(
+            self._client.put_object,
+            Bucket=self._bucket,
+            Key=normalized_key,
             Body=content,
+            ContentType=content_type,
+            Metadata=metadata or {},
         )
 
-        return key, key
+        return response.get("ETag")
 
-    def delete(self, path: str):
-        if not path:
+    async def delete(
+        self,
+        *,
+        object_key: str,
+    ) -> None:
+        normalized_key = self._normalize_key(
+            object_key
+        )
+
+        await asyncio.to_thread(
+            self._client.delete_object,
+            Bucket=self._bucket,
+            Key=normalized_key,
+        )
+
+    async def exists(
+        self,
+        *,
+        object_key: str,
+    ) -> bool:
+        normalized_key = self._normalize_key(
+            object_key
+        )
+
+        try:
+            await asyncio.to_thread(
+                self._client.head_object,
+                Bucket=self._bucket,
+                Key=normalized_key,
+            )
+
+            return True
+
+        except ClientError as exc:
+            error_code = str(
+                exc.response
+                .get("Error", {})
+                .get("Code", "")
+            )
+
+            if error_code in {
+                "404",
+                "NoSuchKey",
+                "NotFound",
+            }:
+                return False
+
+            raise
+
+    async def get_download_url(
+        self,
+        *,
+        object_key: str,
+        expires_in: int = 300,
+    ) -> str:
+        normalized_key = self._normalize_key(
+            object_key
+        )
+
+        return await asyncio.to_thread(
+            self._client.generate_presigned_url,
+            "get_object",
+            Params={
+                "Bucket": self._bucket,
+                "Key": normalized_key,
+            },
+            ExpiresIn=expires_in,
+        )
+
+    async def ensure_bucket_exists(
+        self,
+    ) -> None:
+        try:
+            await asyncio.to_thread(
+                self._client.head_bucket,
+                Bucket=self._bucket,
+            )
             return
 
-        self.client.delete_object(
-            Bucket=self.bucket,
-            Key=path,
+        except ClientError as exc:
+            error_code = str(
+                exc.response
+                .get("Error", {})
+                .get("Code", "")
+            )
+
+            if error_code not in {
+                "404",
+                "NoSuchBucket",
+                "NotFound",
+            }:
+                raise
+
+        await asyncio.to_thread(
+            self._client.create_bucket,
+            Bucket=self._bucket,
         )
+
+    @staticmethod
+    def _normalize_key(
+        object_key: str,
+    ) -> str:
+        normalized_key = (
+            object_key or ""
+        ).strip().replace("\\", "/").lstrip("/")
+
+        if not normalized_key:
+            raise ValueError(
+                "Ключ объекта не указан."
+            )
+
+        if ".." in normalized_key.split("/"):
+            raise ValueError(
+                "Недопустимый ключ объекта."
+            )
+
+        return normalized_key

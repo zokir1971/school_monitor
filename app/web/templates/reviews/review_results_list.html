@@ -1,0 +1,861 @@
+{% extends "base.html" %}
+
+{% block title %}
+Результаты рассмотрения задач
+{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet"
+      href="{{ url_for('static', path='css/admin.css') }}">
+
+<style>
+  .review-results-page {
+  max-width: 1450px;
+  margin: 24px auto;
+  padding: 0 16px 40px;
+}
+
+.review-card {
+  margin-bottom: 18px;
+  padding: 22px;
+  background: #ffffff;
+  border: 1px solid #dfe5ec;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+  overflow: hidden;
+}
+
+
+  .review-card__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    margin-bottom: 18px;
+  }
+
+  .review-card__title {
+    margin: 0 0 6px;
+    color: #172033;
+    font-size: 22px;
+  }
+
+  .review-card__description {
+    margin: 0;
+    color: #667085;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  .review-count {
+    display: inline-flex;
+    min-width: 40px;
+    height: 32px;
+    padding: 0 12px;
+    align-items: center;
+    justify-content: center;
+    color: #334155;
+    background: #f1f5f9;
+    border-radius: 999px;
+    font-weight: 700;
+  }
+
+  .alert {
+    margin-bottom: 16px;
+    padding: 13px 15px;
+    border-radius: 8px;
+    line-height: 1.45;
+  }
+
+  .alert-error {
+    color: #991b1b;
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+  }
+
+  .filters-form {
+    display: grid;
+    grid-template-columns:
+      minmax(140px, 0.65fr)
+      minmax(150px, 0.65fr)
+      minmax(210px, 1fr)
+      minmax(170px, 0.8fr)
+      minmax(230px, 1.1fr)
+      auto;
+    gap: 14px;
+    align-items: end;
+  }
+
+  .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+  }
+
+  .form-group label {
+    color: #344054;
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  .form-control {
+    width: 100%;
+    min-height: 42px;
+    box-sizing: border-box;
+    padding: 9px 11px;
+    color: #101828;
+    background: #ffffff;
+    border: 1px solid #cfd8e3;
+    border-radius: 8px;
+  }
+
+  .form-control:focus {
+    outline: none;
+    border-color: #4f7cff;
+    box-shadow: 0 0 0 3px rgba(79, 124, 255, 0.12);
+  }
+
+  .filter-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .btn {
+    display: inline-flex;
+    min-height: 42px;
+    box-sizing: border-box;
+    padding: 9px 17px;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    color: inherit;
+    border: 0;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .btn-primary {
+    color: #ffffff;
+    background: #2563eb;
+  }
+
+  .btn-primary:hover {
+    background: #1d4ed8;
+  }
+
+  .btn-secondary {
+    color: #344054;
+    background: #eef2f6;
+  }
+
+  .btn-secondary:hover {
+    background: #e2e8f0;
+  }
+
+  .btn-outline {
+    color: #1d4ed8;
+    background: #ffffff;
+    border: 1px solid #bfdbfe;
+  }
+
+  .btn-outline:hover {
+    background: #eff6ff;
+  }
+
+  .statistics-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(170px, 1fr));
+    gap: 14px;
+  }
+
+  .statistics-item {
+    padding: 17px;
+    border: 1px solid #e4e7ec;
+    border-radius: 10px;
+    background: #f8fafc;
+  }
+
+  .statistics-item__label {
+    margin-bottom: 7px;
+    color: #667085;
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  .statistics-item__value {
+    color: #172033;
+    font-size: 25px;
+    font-weight: 700;
+  }
+
+  .statistics-item--reviewed {
+    background: #f0fdf4;
+    border-color: #bbf7d0;
+  }
+
+  .statistics-item--not-reviewed {
+    background: #fffbeb;
+    border-color: #fde68a;
+  }
+
+  .table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.review-table {
+  width: 100%;
+  min-width: 1180px;
+  border-collapse: collapse;
+  table-layout: auto;
+}
+
+  .review-table th,
+  .review-table td {
+    padding: 13px 10px;
+    text-align: left;
+    vertical-align: middle;
+    border-bottom: 1px solid #e4e7ec;
+  }
+
+  .review-table th {
+    color: #475467;
+    background: #f8fafc;
+    font-size: 13px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  .review-table td {
+    color: #101828;
+    font-size: 14px;
+  }
+
+  .review-table tbody tr:hover {
+    background: #fafcff;
+  }
+
+  .task-number {
+    width: 48px;
+    color: #667085;
+    text-align: center !important;
+  }
+
+  .task-name {
+    min-width: 270px;
+    font-weight: 600;
+    line-height: 1.45;
+  }
+
+  .task-goal {
+    display: block;
+    margin-top: 5px;
+    color: #667085;
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 1.4;
+  }
+
+  .responsible-name {
+    min-width: 155px;
+    line-height: 1.4;
+  }
+
+  .period-text {
+    white-space: nowrap;
+  }
+
+  .status-badge {
+    display: inline-flex;
+    min-height: 28px;
+    padding: 4px 10px;
+    align-items: center;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  .status-done,
+  .status-completed,
+  .status-executed {
+    color: #166534;
+    background: #dcfce7;
+  }
+
+  .status-not-executed,
+  .status-overdue {
+    color: #991b1b;
+    background: #fee2e2;
+  }
+
+  .status-in-progress {
+    color: #92400e;
+    background: #fef3c7;
+  }
+
+  .status-default {
+    color: #475467;
+    background: #f2f4f7;
+  }
+
+  .review-badge {
+    display: inline-flex;
+    min-height: 28px;
+    padding: 4px 10px;
+    align-items: center;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  .review-badge--yes {
+    color: #166534;
+    background: #dcfce7;
+  }
+
+  .review-badge--no {
+    color: #92400e;
+    background: #fef3c7;
+  }
+
+  .latest-review {
+    min-width: 170px;
+    color: #475467;
+    line-height: 1.45;
+  }
+
+  .latest-review strong {
+    display: block;
+    color: #101828;
+  }
+
+  .latest-protocol {
+    margin-top: 3px;
+    margin-bottom: 3px;
+    color: #475467;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.3;
+  }
+
+  .row-actions {
+    width: 120px;
+    min-width: 120px;
+    white-space: nowrap;
+    text-align: center !important;
+  }
+
+  .review-table th.row-actions,
+  .review-table td.row-actions {
+    width: 120px;
+    min-width: 120px;
+    white-space: nowrap;
+    text-align: center !important;
+  }
+
+  .row-actions .btn {
+    min-width: 92px;
+    padding-left: 14px;
+    padding-right: 14px;
+    white-space: nowrap;
+  }
+
+  .empty-state {
+    padding: 38px 20px;
+    color: #667085;
+    background: #f8fafc;
+    border-radius: 8px;
+    text-align: center;
+  }
+
+  .empty-state__title {
+    margin: 0 0 7px;
+    color: #344054;
+    font-size: 17px;
+  }
+
+  .empty-state__text {
+    margin: 0;
+    line-height: 1.5;
+  }
+
+  @media (max-width: 1050px) {
+    .filters-form {
+      grid-template-columns: repeat(2, minmax(220px, 1fr));
+    }
+
+    .filter-actions {
+      grid-column: 1 / -1;
+    }
+  }
+
+  @media (max-width: 700px) {
+    .review-card__header {
+      flex-direction: column;
+    }
+
+    .filters-form,
+    .statistics-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .filter-actions {
+      grid-column: auto;
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .filter-actions .btn {
+      width: 100%;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+{% set current_place = (
+    selected_review_place.value
+    if selected_review_place is not none
+       and selected_review_place.value is defined
+    else selected_review_place
+) %}
+
+<div class="review-results-page">
+
+  <section class="review-card">
+    <div class="review-card__header">
+      <div>
+        <h1 class="review-card__title">
+          Результаты рассмотрения задач
+        </h1>
+
+        <p class="review-card__description">
+          Просмотр задач, результатов и истории рассмотрения
+          за выбранный учебный период.
+        </p>
+      </div>
+
+      <span class="review-count">
+        {{ total_count | default(0, true) }}
+      </span>
+    </div>
+
+    {% if error %}
+      <div class="alert alert-error">
+        {{ error }}
+      </div>
+    {% endif %}
+
+    <form method="get"
+          action="{{ url_for('review_result_list_page') }}"
+          class="filters-form">
+
+      {% if school_id %}
+        <input type="hidden"
+               name="school_id"
+               value="{{ school_id }}">
+      {% endif %}
+
+      <div class="form-group">
+        <label for="year">
+          Учебный год
+        </label>
+
+        <select id="year"
+        name="year"
+        class="form-control">
+
+  {% if not available_years %}
+    <option value="">
+      Нет данных
+    </option>
+  {% endif %}
+
+  {% for available_year in available_years %}
+    <option value="{{ available_year }}"
+            {% if selected_year == available_year %}
+              selected
+            {% endif %}>
+      {{ academic_year_label }}
+    </option>
+  {% endfor %}
+</select>
+      </div>
+
+      <div class="form-group">
+        <label for="month">
+          Месяц
+        </label>
+
+        <select id="month"
+        name="month"
+        class="form-control">
+
+  <option value="">
+    Все месяцы
+  </option>
+
+  {% for available_month in available_months %}
+    <option value="{{ available_month.num }}"
+            {% if selected_month == available_month.num %}
+              selected
+            {% endif %}>
+      {{ available_month.label }}
+    </option>
+  {% endfor %}
+
+</select>
+      </div>
+
+      <div class="form-group">
+        <label for="review_place">
+          Место рассмотрения
+        </label>
+
+        <select id="review_place"
+                name="review_place"
+                class="form-control">
+
+          <option value="">
+            Все места рассмотрения
+          </option>
+
+        {% set selected_place_value = selected_review_place.value
+          if selected_review_place
+            and selected_review_place.value is defined
+          else selected_review_place %}
+
+        {% for place in review_places %}
+          {% if selected_place_value == place["value"] %}
+            <option value="{{ place['value'] }}" selected>
+              {{ place["label"] }}
+            </option>
+          {% else %}
+            <option value="{{ place['value'] }}">
+              {{ place["label"] }}
+            </option>
+          {% endif %}
+        {% endfor %}
+
+      </select>
+      </div>
+
+      <div class="form-group">
+        <label for="reviewed">
+          Состояние рассмотрения
+        </label>
+
+        <select id="reviewed"
+                name="reviewed"
+                class="form-control">
+
+          <option value=""
+                  {% if selected_reviewed is none %}
+                    selected
+                  {% endif %}>
+            Все задачи
+          </option>
+
+          <option value="true"
+                  {% if selected_reviewed is sameas true %}
+                    selected
+                  {% endif %}>
+            Рассмотренные
+          </option>
+
+          <option value="false"
+                  {% if selected_reviewed is sameas false %}
+                    selected
+                  {% endif %}>
+            Не рассмотренные
+          </option>
+
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="task_review_id">
+          Протокол рассмотрения
+        </label>
+
+        <select id="task_review_id"
+                name="task_review_id"
+                class="form-control">
+
+          <option value="">
+            Все протоколы
+          </option>
+
+          {% for protocol in available_protocols | default([], true) %}
+            {% if selected_task_review_id == protocol["id"] %}
+              <option value="{{ protocol['id'] }}" selected>
+                {{ protocol["label"] }}
+              </option>
+            {% else %}
+              <option value="{{ protocol['id'] }}">
+                {{ protocol["label"] }}
+              </option>
+            {% endif %}
+          {% endfor %}
+
+        </select>
+      </div>
+
+      <div class="filter-actions">
+        <button type="submit"
+                class="btn btn-primary">
+          Применить
+        </button>
+
+        <a href="{{ url_for('review_result_list_page') }}{% if school_id %}?school_id={{ school_id }}{% endif %}"
+           class="btn btn-secondary">
+          Сбросить
+        </a>
+      </div>
+    </form>
+  </section>
+
+  <section class="review-card">
+    <div class="statistics-grid">
+
+      <div class="statistics-item">
+        <div class="statistics-item__label">
+          Всего задач
+        </div>
+
+        <div class="statistics-item__value">
+          {{ total_count | default(0, true) }}
+        </div>
+      </div>
+
+      <div class="statistics-item statistics-item--reviewed">
+        <div class="statistics-item__label">
+          Рассмотрено
+        </div>
+
+        <div class="statistics-item__value">
+          {{ reviewed_count | default(0, true) }}
+        </div>
+      </div>
+
+      <div class="statistics-item statistics-item--not-reviewed">
+        <div class="statistics-item__label">
+          Не рассмотрено
+        </div>
+
+        <div class="statistics-item__value">
+          {{ not_reviewed_count | default(0, true) }}
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <section class="review-card">
+    <div class="review-card__header">
+      <div>
+        <h2 class="review-card__title">
+          Задачи
+        </h2>
+
+        <p class="review-card__description">
+          Для просмотра подробной информации и истории
+          рассмотрения откройте нужную задачу.
+        </p>
+      </div>
+    </div>
+
+    {% if items %}
+      <div class="table-wrap">
+        <table class="review-table">
+          <thead>
+          <tr>
+            <th class="task-number">№</th>
+            <th>Задача</th>
+            <th>Ответственный</th>
+            <th>Плановый период</th>
+            <th>Статус задачи</th>
+            <th>Рассмотрение</th>
+            <th>Последний результат</th>
+            <th class="row-actions">Действие</th>
+          </tr>
+          </thead>
+
+          <tbody>
+          {% for item in items %}
+
+  {% set status_value = item.task_status %}
+
+  {% set status_class = (
+      'status-' ~
+      (
+        status_value
+        | default('default', true)
+        | replace('_', '-')
+      )
+  ) %}
+
+  <tr>
+    <td class="task-number">
+      {{ loop.index }}
+    </td>
+
+    <td class="task-name">
+      {{ item.task_name | default('Без названия', true) }}
+
+      {% if item.task_goal %}
+        <span class="task-goal">
+          {{ item.task_goal }}
+        </span>
+      {% endif %}
+    </td>
+
+    <td class="responsible-name">
+      {{ item.responsible_name | default('Не указан', true) }}
+
+      {% if item.participation_label %}
+        <span class="task-goal">
+          {{ item.participation_label }}
+        </span>
+      {% endif %}
+    </td>
+
+    <td class="period-text">
+      {{ item.planned_period_text | default('Не указан', true) }}
+    </td>
+
+    <td>
+      <span class="status-badge {{ status_class }}">
+        {{
+          item.task_status_label
+          | default('Не определён', true)
+        }}
+      </span>
+    </td>
+
+    <td>
+      {% if item.is_reviewed %}
+        <span class="review-badge review-badge--yes">
+          Рассмотрено
+        </span>
+
+        {% if item.review_count > 1 %}
+          <span class="task-goal">
+            Рассмотрений: {{ item.review_count }}
+          </span>
+        {% endif %}
+      {% else %}
+        <span class="review-badge review-badge--no">
+          Не рассмотрено
+        </span>
+      {% endif %}
+    </td>
+
+    <td class="latest-review">
+
+  {% if item.is_reviewed %}
+
+    <strong>
+      {{
+        item.latest_review_status_label
+        | default('Результат сохранён', true)
+      }}
+    </strong>
+
+    {% if item.latest_reviewed_at %}
+      <div>
+        {{ item.latest_reviewed_at.strftime('%d.%m.%Y %H:%M') }}
+      </div>
+    {% endif %}
+
+    {% if item.latest_protocol_number or item.latest_protocol_date %}
+      <div class="latest-protocol">
+
+        Протокол
+
+        {% if item.latest_protocol_number %}
+          №{{ item.latest_protocol_number }}
+        {% endif %}
+
+        {% if item.latest_protocol_date %}
+          от {{ item.latest_protocol_date.strftime('%d.%m.%Y') }}
+        {% endif %}
+
+      </div>
+    {% endif %}
+
+    {% if item.latest_review_comment %}
+      <span class="task-goal">
+        {{ item.latest_review_comment }}
+      </span>
+    {% endif %}
+
+  {% else %}
+    —
+  {% endif %}
+
+</td>
+
+    <td class="row-actions">
+      <a class="btn btn-outline"
+         href="{{ url_for(
+             'review_result_task_detail_page',
+             month_item_id=item.month_item_id
+         ) }}?review_place={{ item.review_place }}{% if school_id %}&school_id={{ school_id }}{% endif %}">
+        Открыть
+      </a>
+    </td>
+  </tr>
+
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+    {% else %}
+      <div class="empty-state">
+        <h3 class="empty-state__title">
+          Задачи не найдены
+        </h3>
+
+        <p class="empty-state__text">
+          Для выбранных фильтров нет доступных задач.
+          Измените учебный год, месяц, протокол или состояние рассмотрения.
+        </p>
+      </div>
+    {% endif %}
+  </section>
+
+</div>
+
+<script>
+  document.querySelector("form").addEventListener("submit", function (e) {
+
+    const reviewPlace =
+        document.querySelector(
+            'select[name="review_place"]'
+        );
+
+    if (!reviewPlace.value) {
+
+        e.preventDefault();
+
+        alert(
+            "Для просмотра результатов необходимо выбрать место рассмотрения."
+        );
+
+        reviewPlace.focus();
+    }
+
+});
+</script>
+
+{% endblock %}

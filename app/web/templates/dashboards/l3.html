@@ -46,6 +46,20 @@
       </div>
     </a>
 
+    <a class="card" href="{{ request.url_for('school_method_association_settings_page') }}">
+      <div class="card__inner">
+        <div class="card__top">
+          <div class="card__icon">🧠</div>
+        </div>
+        <h3 class="card__title">Управление метод объединениями</h3>
+        <p class="card__desc">Утверждение, назначение, руководители</p>
+        <div class="card__footer">
+          <span>Открыть</span><span class="card__arrow">→</span>
+        </div>
+      </div>
+    </a>
+
+
     <a class="card" href="{{ request.url_for('school_dashboard') }}">
       <div class="card__inner">
         <div class="card__top">
@@ -67,6 +81,14 @@
       </div>
     </a>
 
+  </div>
+</section>
+
+<section class="dashboard-section">
+  <h3 class="section-title">Школьный контроль</h3>
+
+  <div class="card-grid">
+
     <a class="card" href="{{ request.url_for('school_monthly_page') }}">
       <div class="card__inner">
         <div class="card__top">
@@ -80,47 +102,26 @@
       </div>
     </a>
 
-
-  </div>
-</section>
-
-<section class="dashboard-section">
-  <h3 class="section-title">Школьный контроль</h3>
-
-  <div class="card-grid">
-    <a class="card" href="/lessons/observations">
+    <a class="card" href="{{ request.url_for('task_review_selection_page') }}">
       <div class="card__inner">
         <div class="card__top">
           <div class="card__icon">📋</div>
         </div>
-        <h3 class="card__title">Наблюдение уроков</h3>
-        <p class="card__desc">Планирование и проведение наблюдений</p>
+        <h3 class="card__title">Рассмотрение задач</h3>
+        <p class="card__desc">Циклограмма и рассмотрение выполненных задач ВШК</p>
         <div class="card__footer">
           <span>Открыть</span><span class="card__arrow">→</span>
         </div>
       </div>
     </a>
 
-    <a class="card" href="/assessments">
-      <div class="card__inner">
-        <div class="card__top">
-          <div class="card__icon">🧠</div>
-        </div>
-        <h3 class="card__title">Оценка качества урока</h3>
-        <p class="card__desc">Критерии, шкалы, результаты</p>
-        <div class="card__footer">
-          <span>Открыть</span><span class="card__arrow">→</span>
-        </div>
-      </div>
-    </a>
-
-    <a class="card" href="/staff_school">
+    <a class="card" href="{{ url_for('review_result_list_page') }}">
       <div class="card__inner">
         <div class="card__top">
           <div class="card__icon">🎓</div>
         </div>
-        <h3 class="card__title">Развитие педагогов</h3>
-        <p class="card__desc">Анализ, рекомендации, рост</p>
+        <h3 class="card__title">Просмотр рассмотрения задач</h3>
+        <p class="card__desc">Пртоколы, итоговые документы, отчеты</p>
         <div class="card__footer">
           <span>Открыть</span><span class="card__arrow">→</span>
         </div>
@@ -140,33 +141,33 @@
             <div class="card__icon">📊</div>
           </div>
           <h3 class="card__title"> Статистика планирование ВШК </h3>
-          <p class="card__desc">Периоды запланированных задач </p>
+          <p class="card__desc">Периоды и инстанция рассмотрения запланированных задач </p>
           <div class="card__footer">
             <span>Открыть</span><span class="card__arrow">→</span>
           </div>
         </div>
       </a>
 
-      <a class="card" href="/reports/schools" >
+      <a class="card" href="{{ request.url_for('school_execution_statistics_page') }}" >
         <div class="card__inner">
           <div class="card__top">
             <div class="card__icon">📊</div>
           </div>
-          <h3 class="card__title"> Отчёты по предметам </h3>
-          <p class="card__desc">Справки и протоколы</p>
+          <h3 class="card__title"> Статистика выполнение задач ВШК </h3>
+          <p class="card__desc">Выполнение годового и месячного плана по направлениям</p>
           <div class="card__footer">
             <span>Открыть</span><span class="card__arrow">→</span>
           </div>
         </div>
       </a>
 
-      <a class="card" href="/reports/schools" >
+      <a class="card"  href="{{ url_for('staff_monitoring_rating_page') }}" >
         <div class="card__inner">
           <div class="card__top">
-            <div class="card__icon">📊</div>
+            <div class="card__icon">🏆</div>
           </div>
-          <h3 class="card__title"> Отчёты по учителям </h3>
-          <p class="card__desc">Справки и протоколы</p>
+          <h3 class="card__title"> Рейтинг компетентности исполнителей </h3>
+          <p class="card__desc">Баллы за выполнение задач и подготовленные итоговые документы и отчёты</p>
           <div class="card__footer">
             <span>Открыть</span><span class="card__arrow">→</span>
           </div>

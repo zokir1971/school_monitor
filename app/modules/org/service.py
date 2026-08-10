@@ -1,4 +1,4 @@
-# app/modules/org/service.py (сценарий и логика)
+# app/modules/org/statistic_service.py (сценарий и логика)
 
 from __future__ import annotations
 

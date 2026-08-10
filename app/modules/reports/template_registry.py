@@ -1,17 +1,23 @@
 # app/modules/reports/template_registry.py
-from app.modules.reports.enums import ReportType
-from app.modules.reports.services.system_lesson_observation_service import SystemLessonObservationService
-from app.modules.reports.services.system_checking_notebooks_service import SystemCheckingNotebooksService
 
+from __future__ import annotations
+
+from app.modules.reports.enums import ReportType
+
+
+# Registry теперь хранит только метаданные маршрутизации.
+#
+# Он больше НЕ импортирует System*Service и не определяет,
+# каким сервисом сохраняется отчет. System/User одного типа отчета
+# используют один канонический fill-route и один сервис.
 SYSTEM_REPORT_CONFIG = {
     ReportType.LESSON_OBSERVATION.value: {
-        "template": "staff/reports/template_map/_lesson_observation.html",
-        "service": SystemLessonObservationService,
+        "fill_route": "staff_user_lesson_observation_fill_page",
         "pdf_route": "lesson_observation_pdf_view",
     },
+
     ReportType.CHECKING_NOTEBOOKS_TABLE.value: {
-        "template": "staff/reports/template_map/_checking_notebooks_table.html",
-        "service": SystemCheckingNotebooksService,
+        "fill_route": "checking_notebooks_fill_page",
         "pdf_route": "checking_notebooks_pdf_view",
     },
 }

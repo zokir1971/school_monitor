@@ -101,3 +101,33 @@ class ReportTemplateMode(str, enum.Enum):
         obj._value_ = value
         obj.label_kz = label_kz
         return obj
+
+
+class ReportAssignmentStatus(str, enum.Enum):
+    """
+    Состояние назначения отчёта исполнителю.
+    Жизненный цикл:
+        PENDING
+            ↓
+        COMPLETED
+    Или:
+        PENDING
+            ↓
+        WAIVED
+    При переназначении сотрудника статус
+    остаётся PENDING.
+    """
+
+    # Отчёт назначен и ожидает выполнения.
+    PENDING = ("pending", "Орындалуы күтілуде")
+    # Отчёт выполнен.
+    COMPLETED = ("completed", "Орындалды")
+    # Ответственный разрешил завершить задачу
+    # без этого отчёта.
+    WAIVED = ("waived", "Орындаудан босатылды")
+
+    def __new__(cls, value: str, label_kz: str):
+        obj = str.__new__(cls, value)
+        obj._value_ = value
+        obj.label_kz = label_kz
+        return obj

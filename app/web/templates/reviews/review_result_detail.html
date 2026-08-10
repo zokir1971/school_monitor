@@ -1,0 +1,944 @@
+{% extends "base.html" %}
+
+{% block title %}
+Результат рассмотрения задачи
+{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet"
+      href="{{ url_for('static', path='css/admin.css') }}">
+
+<style>
+  .review-detail-page {
+    max-width: 1100px;
+    margin: 24px auto;
+    padding: 0 16px 40px;
+  }
+
+  .review-card {
+    margin-bottom: 18px;
+    padding: 22px;
+    background: #ffffff;
+    border: 1px solid #dfe5ec;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+  }
+
+  .page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 18px;
+  }
+
+  .page-header__content {
+    min-width: 0;
+  }
+
+  .page-title {
+    margin: 0 0 7px;
+    color: #172033;
+    font-size: 23px;
+    line-height: 1.35;
+  }
+
+  .page-description {
+    margin: 0;
+    color: #667085;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  .page-actions {
+    display: flex;
+    flex-shrink: 0;
+    gap: 8px;
+  }
+
+  .btn {
+    display: inline-flex;
+    min-height: 42px;
+    box-sizing: border-box;
+    padding: 9px 17px;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    color: inherit;
+    border: 0;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .btn-primary {
+    color: #ffffff;
+    background: #2563eb;
+  }
+
+  .btn-primary:hover {
+    background: #1d4ed8;
+  }
+
+  .btn-secondary {
+    color: #344054;
+    background: #eef2f6;
+  }
+
+  .btn-secondary:hover {
+    background: #e2e8f0;
+  }
+
+  .btn-outline {
+    color: #1d4ed8;
+    background: #ffffff;
+    border: 1px solid #bfdbfe;
+  }
+
+  .btn-outline:hover {
+    background: #eff6ff;
+  }
+
+  .alert {
+    margin-bottom: 16px;
+    padding: 13px 15px;
+    border-radius: 8px;
+    line-height: 1.45;
+  }
+
+  .alert-error {
+    color: #991b1b;
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+  }
+
+  .card-title {
+    margin: 0 0 17px;
+    color: #172033;
+    font-size: 19px;
+  }
+
+  .task-info-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(220px, 1fr));
+    gap: 1px;
+    overflow: hidden;
+    background: #e4e7ec;
+    border: 1px solid #e4e7ec;
+    border-radius: 9px;
+  }
+
+  .task-info-item {
+    min-height: 78px;
+    padding: 14px 15px;
+    background: #ffffff;
+  }
+
+  .task-info-item--full {
+    grid-column: 1 / -1;
+  }
+
+  .task-info-label {
+    margin-bottom: 6px;
+    color: #667085;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+  }
+
+  .task-info-value {
+    color: #101828;
+    font-size: 14px;
+    line-height: 1.5;
+    white-space: pre-line;
+  }
+
+  .status-badge {
+    display: inline-flex;
+    min-height: 28px;
+    padding: 4px 10px;
+    align-items: center;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  .status-done,
+  .status-completed,
+  .status-executed {
+    color: #166534;
+    background: #dcfce7;
+  }
+
+  .status-not-executed,
+  .status-overdue {
+    color: #991b1b;
+    background: #fee2e2;
+  }
+
+  .status-in-progress {
+    color: #92400e;
+    background: #fef3c7;
+  }
+
+  .status-default {
+    color: #475467;
+    background: #f2f4f7;
+  }
+
+  .review-place-summary {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 18px;
+    padding: 12px 14px;
+    color: #475467;
+    background: #f8fafc;
+    border-radius: 8px;
+  }
+
+  .review-place-summary strong {
+    color: #101828;
+  }
+
+  .document-block {
+    margin-top: 18px;
+  }
+
+  .document-block:first-of-type {
+    margin-top: 0;
+  }
+
+  .document-block__title {
+    margin-bottom: 12px;
+    color: #344054;
+    font-size: 15px;
+    font-weight: 700;
+  }
+
+  .document-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .document-row,
+.protocol-document-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  background: #ffffff;
+  border: 1px solid #e4e7ec;
+  border-radius: 8px;
+}
+
+.document-info {
+  min-width: 0;
+  flex: 1;
+}
+
+.document-name {
+  color: #101828;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.document-file {
+  margin-top: 2px;
+  color: #667085;
+  font-size: 11px;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.document-actions {
+  display: flex;
+  flex-shrink: 0;
+  gap: 6px;
+}
+
+.document-actions .btn {
+  min-height: 32px;
+  padding: 5px 11px;
+  font-size: 12px;
+}
+  .empty-block,
+  .document-note {
+    padding: 14px 15px;
+    color: #667085;
+    background: #f8fafc;
+    border: 1px dashed #d0d5dd;
+    border-radius: 9px;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+.protocol-header {
+  margin-bottom: 8px;
+}
+
+.protocol-header strong {
+  color: #172033;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+  @media (max-width: 750px) {
+    .document-row,
+    .protocol-document-row {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .document-actions {
+      width: 100%;
+    }
+
+    .document-actions .btn {
+      flex: 1;
+    }
+  }
+
+  .history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.history-item {
+  padding: 13px 14px;
+  border: 1px solid #e4e7ec;
+  border-radius: 10px;
+  background: #ffffff;
+}
+
+.history-item--latest {
+  border-color: #93c5fd;
+  background: #f8fbff;
+}
+
+.history-item__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 9px;
+}
+
+.history-item__title {
+  margin: 0 0 3px;
+  color: #172033;
+  font-size: 14px;
+  line-height: 1.3;
+}
+
+.history-item__meta {
+  color: #667085;
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.history-number {
+  display: inline-flex;
+  min-width: 30px;
+  height: 26px;
+  padding: 0 8px;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: #334155;
+  background: #e2e8f0;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.history-item--latest .history-number {
+  color: #1d4ed8;
+  background: #dbeafe;
+}
+
+.history-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(220px, 1fr));
+  gap: 8px;
+}
+
+.history-field {
+  padding: 9px 10px;
+  background: #f8fafc;
+  border-radius: 8px;
+}
+
+.history-field--full {
+  grid-column: 1 / -1;
+}
+
+.history-field__label {
+  margin-bottom: 3px;
+  color: #667085;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.history-field__value {
+  color: #101828;
+  font-size: 12px;
+  line-height: 1.35;
+  white-space: normal;
+}
+
+.history-item__actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 9px;
+}
+  .latest-badge {
+    display: inline-flex;
+    margin-left: 7px;
+    padding: 3px 8px;
+    color: #1d4ed8;
+    background: #dbeafe;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    vertical-align: middle;
+  }
+
+  .empty-state {
+    padding: 38px 20px;
+    color: #667085;
+    background: #f8fafc;
+    border-radius: 8px;
+    text-align: center;
+  }
+
+  .empty-state__title {
+    margin: 0 0 7px;
+    color: #344054;
+    font-size: 17px;
+  }
+
+  .empty-state__text {
+    margin: 0;
+    line-height: 1.5;
+  }
+
+  @media (max-width: 750px) {
+    .page-header,
+    .history-item__header {
+      flex-direction: column;
+    }
+
+    .page-actions {
+      width: 100%;
+    }
+
+    .page-actions .btn {
+      width: 100%;
+    }
+
+    .task-info-grid,
+    .history-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .task-info-item--full,
+    .history-field--full {
+      grid-column: auto;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+{% set detail = detail | default(None) %}
+{% set selected_place = selected_review_place | default(None) %}
+
+{% set current_place = (
+    selected_place.value
+    if selected_place
+       and selected_place.value is defined
+    else selected_place
+) %}
+
+{% set back_url = request.url_for('review_result_list_page') %}
+
+{% if school_id %}
+  {% set back_url = back_url.include_query_params(
+      school_id=school_id
+  ) %}
+{% endif %}
+
+{% if current_place %}
+  {% set back_url = back_url.include_query_params(
+      review_place=current_place
+  ) %}
+{% endif %}
+
+{% if detail and detail.year %}
+  {% set back_url = back_url.include_query_params(
+      year=detail.year
+  ) %}
+{% endif %}
+
+{% if detail and detail.month %}
+  {% set back_url = back_url.include_query_params(
+      month=detail.month
+  ) %}
+{% endif %}
+
+<div class="review-detail-page">
+
+  {% if error %}
+    <div class="alert alert-error">
+      {{ error }}
+    </div>
+  {% endif %}
+
+  {% if detail %}
+
+    {% set status_value = detail.task_status %}
+
+    {% set status_class = (
+        'status-' ~
+        (status_value | default('default', true) | replace('_', '-'))
+    ) %}
+
+    <section class="review-card">
+      <div class="page-header">
+
+        <div class="page-header__content">
+          <h1 class="page-title">
+            {{ detail.task_name | default('Результат рассмотрения', true) }}
+          </h1>
+
+          <p class="page-description">
+            Информация о задаче и история её рассмотрения.
+          </p>
+        </div>
+
+        <div class="page-actions">
+          <a class="btn btn-secondary review-back-btn"
+             href="{{ back_url }}">
+            ← Назад к списку
+          </a>
+        </div>
+
+      </div>
+    </section>
+
+    <section class="review-card">
+      <h2 class="card-title">
+        Сведения о задаче
+      </h2>
+
+      <div class="task-info-grid">
+
+        <div class="task-info-item task-info-item--full">
+          <div class="task-info-label">
+            Наименование задачи
+          </div>
+
+          <div class="task-info-value">
+            {{ detail.task_name | default('Не указано', true) }}
+          </div>
+        </div>
+
+        {% if detail.task_goal %}
+          <div class="task-info-item task-info-item--full">
+            <div class="task-info-label">
+              Цель
+            </div>
+
+            <div class="task-info-value">
+              {{ detail.task_goal }}
+            </div>
+          </div>
+        {% endif %}
+
+        <div class="task-info-item">
+          <div class="task-info-label">
+            Ответственный
+          </div>
+
+          <div class="task-info-value">
+            {{ detail.responsible_name | default('Не указан', true) }}
+          </div>
+        </div>
+
+        <div class="task-info-item">
+          <div class="task-info-label">
+            Плановый период
+          </div>
+
+          <div class="task-info-value">
+            {{ detail.planned_period_text | default('Не указан', true) }}
+          </div>
+        </div>
+
+        <div class="task-info-item">
+          <div class="task-info-label">
+            Статус выполнения
+          </div>
+
+          <div class="task-info-value">
+            <span class="status-badge {{ status_class }}">
+              {{ detail.task_status_label | default('Не определён', true) }}
+            </span>
+          </div>
+        </div>
+
+        <div class="task-info-item">
+          <div class="task-info-label">
+            Участие пользователя
+          </div>
+
+          <div class="task-info-value">
+            {{ detail.participation_label | default('Просмотр', true) }}
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Документы выполнения -->
+    <!-- Документы выполнения -->
+<section class="review-card">
+
+  <h2 class="card-title">
+    Документы выполнения
+  </h2>
+
+  <!-- Итоговый документ -->
+  <div class="document-block">
+
+    <div class="document-block__title">
+      Итоговый документ
+    </div>
+
+    {% if detail.final_document %}
+
+      <div class="document-row">
+
+        <div class="document-info">
+          <div class="document-name">
+            {{ detail.final_document.title }}
+          </div>
+
+          {% if detail.final_document.file_name %}
+            <div class="document-file">
+              {{ detail.final_document.file_name }}
+            </div>
+          {% endif %}
+        </div>
+
+        <div class="document-actions">
+          <a href="{{ detail.final_document.view_url }}"
+             class="btn btn-outline"
+             target="_blank"
+             rel="noopener noreferrer">
+            Просмотреть
+          </a>
+
+          <a href="{{ detail.final_document.download_url }}"
+             class="btn btn-primary">
+            Скачать
+          </a>
+        </div>
+
+      </div>
+
+    {% else %}
+
+      <div class="empty-block">
+        Итоговый документ отсутствует.
+      </div>
+
+    {% endif %}
+
+  </div>
+
+  <!-- Отчеты исполнителей -->
+  {% if detail.execution_reports %}
+
+    <div class="document-block">
+
+      <div class="document-block__title">
+        Материалы, на основании которых подготовлен итоговый документ
+      </div>
+
+      <div class="document-list">
+
+        {% for report in detail.execution_reports %}
+
+          <div class="document-row">
+
+            <div class="document-info">
+              <div class="document-name">
+                {{ report.title }}
+              </div>
+
+              {% if report.file_name %}
+                <div class="document-file">
+                  {{ report.file_name }}
+                </div>
+              {% endif %}
+            </div>
+
+            <div class="document-actions">
+              <a href="{{ report.view_url }}"
+                 class="btn btn-outline"
+                 target="_blank"
+                 rel="noopener noreferrer">
+                Просмотреть
+              </a>
+
+              <a href="{{ report.download_url }}"
+                 class="btn btn-primary">
+                Скачать
+              </a>
+            </div>
+
+          </div>
+
+        {% endfor %}
+
+      </div>
+
+    </div>
+
+  {% else %}
+
+    <div class="document-note">
+      Задача завершена только итоговым документом.
+      Отдельные отчёты исполнителей отсутствуют.
+    </div>
+
+  {% endif %}
+
+</section>
+    <section class="review-card">
+
+      <h2 class="card-title">
+        История рассмотрения
+      </h2>
+
+      {% if current_place %}
+        <div class="review-place-summary">
+          <span>
+            Место рассмотрения:
+          </span>
+
+          <strong>
+            {{
+              detail.review_place_label
+              | default(current_place, true)
+            }}
+          </strong>
+        </div>
+      {% endif %}
+
+      {% if detail.history %}
+        <div class="history-list">
+
+          {% for result in detail.history %}
+            <article class="history-item {% if loop.first %}history-item--latest{% endif %}">
+
+              <div class="history-item__header">
+
+                <div>
+                  <h3 class="history-item__title">
+                    Рассмотрение № {{ loop.revindex }}
+
+                    {% if loop.first %}
+                      <span class="latest-badge">
+                        Последнее
+                      </span>
+                    {% endif %}
+                  </h3>
+
+                  <div class="history-item__meta">
+                    {% if result.reviewed_at %}
+                      {{ result.reviewed_at.strftime('%d.%m.%Y %H:%M') }}
+                    {% else %}
+                      Дата не указана
+                    {% endif %}
+
+                    {% if result.reviewed_by_name %}
+                      · {{ result.reviewed_by_name }}
+                    {% endif %}
+                  </div>
+                </div>
+
+                <span class="history-number">
+                  {{ loop.revindex }}
+                </span>
+
+              </div>
+
+              <div class="history-grid">
+
+                <div class="history-field">
+                  <div class="history-field__label">
+                    Место рассмотрения
+                  </div>
+
+                  <div class="history-field__value">
+                    {{
+                      result.review_place_label
+                      | default('Не указано', true)
+                    }}
+                  </div>
+                </div>
+
+                <div class="history-field">
+                  <div class="history-field__label">
+                    Результат
+                  </div>
+
+                  <div class="history-field__value">
+                    {{
+                      result.status_label
+                      | default('Не указан', true)
+                    }}
+                  </div>
+                </div>
+
+                <div class="history-field history-field--full">
+
+  <div class="history-field__label">
+    Протокол рассмотрения
+  </div>
+
+  <div class="history-field__value">
+
+    {% if result.protocol_number or result.protocol_date %}
+
+      <div class="protocol-header">
+
+        <strong>
+          Протокол
+
+          {% if result.protocol_number %}
+            №{{ result.protocol_number }}
+          {% endif %}
+
+          {% if result.protocol_date %}
+            от {{ result.protocol_date.strftime("%d.%m.%Y") }}
+          {% endif %}
+
+        </strong>
+
+      </div>
+
+    {% endif %}
+
+    {% if result.protocol_document %}
+
+      <div class="protocol-document-row">
+
+        <div class="document-info">
+
+          <div class="document-name">
+            {{ result.protocol_document.title }}
+          </div>
+
+          {% if result.protocol_document.file_name %}
+            <div class="document-file">
+              {{ result.protocol_document.file_name }}
+            </div>
+          {% endif %}
+
+        </div>
+
+        <div class="document-actions">
+
+          <a href="{{ result.protocol_document.view_url }}"
+             class="btn btn-outline"
+             target="_blank"
+             rel="noopener noreferrer">
+            Просмотреть
+          </a>
+
+          <a href="{{ result.protocol_document.download_url }}"
+             class="btn btn-primary">
+            Скачать
+          </a>
+
+        </div>
+
+      </div>
+
+    {% else %}
+
+      <div class="document-note">
+        Протокол не прикреплён.
+      </div>
+
+    {% endif %}
+
+  </div>
+
+</div>
+                {% if result.comment %}
+                  <div class="history-field history-field--full">
+                    <div class="history-field__label">
+                      Комментарий
+                    </div>
+
+                    <div class="history-field__value">
+                      {{ result.comment }}
+                    </div>
+                  </div>
+                {% endif %}
+              </div>
+
+            </article>
+          {% endfor %}
+
+        </div>
+
+      {% else %}
+        <div class="empty-state">
+          <h3 class="empty-state__title">
+            Результаты рассмотрения отсутствуют
+          </h3>
+
+          <p class="empty-state__text">
+            Для этой задачи пока не сохранено ни одного
+            результата рассмотрения.
+          </p>
+        </div>
+      {% endif %}
+
+    </section>
+
+  {% else %}
+
+    <section class="review-card">
+      <div class="empty-state">
+        <h2 class="empty-state__title">
+          Задача не найдена
+        </h2>
+
+        <p class="empty-state__text">
+          Не удалось получить сведения о выбранной задаче.
+        </p>
+      </div>
+    </section>
+
+  {% endif %}
+
+</div>
+
+{% endblock %}

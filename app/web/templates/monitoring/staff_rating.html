@@ -1,0 +1,1082 @@
+{% extends "base.html" %}
+
+{% block title %}Рейтинг исполнителей{% endblock %}
+
+{% block extra_css %}
+<style>
+  /* =========================================================
+     СТРАНИЦА
+     ========================================================= */
+
+  .monitoring-page {
+    width: 100%;
+    max-width: 100%;
+    margin: 0 auto;
+    padding: 18px 20px 28px;
+    box-sizing: border-box;
+  }
+
+  .page-header {
+    margin-bottom: 18px;
+  }
+
+  .page-header h1 {
+    margin: 0 0 5px;
+    font-size: 24px;
+    line-height: 1.2;
+    color: #1f2937;
+  }
+
+  .page-subtitle {
+    margin: 0;
+    color: #6b7280;
+    font-size: 13px;
+  }
+
+
+  /* =========================================================
+     ВЕРХНИЕ КАРТОЧКИ
+     ========================================================= */
+
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+    margin-bottom: 18px;
+  }
+
+  .summary-card {
+    min-width: 0;
+    padding: 14px 16px;
+    box-sizing: border-box;
+
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+
+    background: #ffffff;
+
+    box-shadow:
+      0 2px 7px rgba(15, 23, 42, 0.04);
+  }
+
+  .summary-card--reports {
+    border-color: #bfdbfe;
+    background: #eff6ff;
+  }
+
+  .summary-card--completed {
+    border-color: #bbf7d0;
+    background: #f0fdf4;
+  }
+
+  .summary-card--pending {
+    border-color: #fde68a;
+    background: #fffbeb;
+  }
+
+  .summary-card--waived {
+    border-color: #ddd6fe;
+    background: #f5f3ff;
+  }
+
+  .summary-card__label {
+    margin-bottom: 6px;
+
+    color: #64748b;
+
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.25;
+  }
+
+  .summary-card__value {
+    color: #111827;
+
+    font-size: 25px;
+    font-weight: 800;
+    line-height: 1.1;
+  }
+
+  .summary-card__note {
+    margin-top: 6px;
+
+    color: #64748b;
+
+    font-size: 11px;
+    line-height: 1.35;
+  }
+
+
+  /* =========================================================
+     ОСНОВНАЯ КАРТОЧКА
+     ========================================================= */
+
+  .monitoring-section {
+    width: 100%;
+    min-width: 0;
+
+    padding: 16px 18px 18px;
+    box-sizing: border-box;
+
+    border: 1px solid #e5e7eb;
+    border-radius: 14px;
+
+    background: #ffffff;
+  }
+
+  .section-header {
+    margin-bottom: 14px;
+  }
+
+  .section-title {
+    margin: 0 0 5px;
+
+    color: #1f2937;
+
+    font-size: 20px;
+    line-height: 1.25;
+  }
+
+  .section-description {
+    margin: 0;
+
+    color: #64748b;
+
+    font-size: 12px;
+    line-height: 1.45;
+  }
+
+
+  /* =========================================================
+     ЛЕГЕНДА
+     ========================================================= */
+
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+
+    gap: 6px;
+
+    margin-top: 10px;
+  }
+
+  .legend-item {
+    display: inline-flex;
+    align-items: center;
+
+    gap: 5px;
+
+    padding: 4px 8px;
+
+    border: 1px solid #e5e7eb;
+    border-radius: 999px;
+
+    background: #f8fafc;
+
+    color: #475569;
+
+    font-size: 10px;
+    font-weight: 700;
+
+    white-space: nowrap;
+  }
+
+  .legend-dot {
+    flex: 0 0 auto;
+
+    width: 7px;
+    height: 7px;
+
+    border-radius: 50%;
+
+    background: #64748b;
+  }
+
+  .legend-dot--done {
+    background: #16a34a;
+  }
+
+  .legend-dot--pending {
+    background: #d97706;
+  }
+
+  .legend-dot--waived {
+    background: #7c3aed;
+  }
+
+
+  /* =========================================================
+     ОБЁРТКА ТАБЛИЦЫ
+
+     ВАЖНО:
+     горизонтальная прокрутка убрана.
+     Таблица должна занимать ширину карточки.
+     ========================================================= */
+
+  .table-wrap {
+  width: 100%;
+  max-width: 100%;
+
+  max-height: calc(100vh - 300px);
+  min-height: 350px;
+
+  overflow-y: auto;
+  overflow-x: hidden;
+
+  box-sizing: border-box;
+
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+
+  position: relative;
+}
+
+
+  /* =========================================================
+     ТАБЛИЦА
+     ========================================================= */
+
+  .monitoring-table {
+    width: 100%;
+    max-width: 100%;
+
+    table-layout: fixed;
+    border-collapse: collapse;
+
+    background: #ffffff;
+  }
+
+  .monitoring-table th,
+  .monitoring-table td {
+    padding: 8px 5px;
+
+    box-sizing: border-box;
+
+    border-right: 1px solid #e5e7eb;
+    border-bottom: 1px solid #e5e7eb;
+
+    text-align: center;
+    vertical-align: middle;
+
+    overflow-wrap: break-word;
+    word-break: normal;
+  }
+
+  .monitoring-table th:last-child,
+  .monitoring-table td:last-child {
+    border-right: 0;
+  }
+
+  .monitoring-table tbody tr:last-child td {
+    border-bottom: 0;
+  }
+
+  .monitoring-table th {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+
+  background: #f8fafc;
+
+  color: #374151;
+
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1.2;
+
+  box-shadow: 0 1px 0 #d1d5db;
+}
+
+  .monitoring-table td {
+    color: #1f2937;
+
+    font-size: 11px;
+    line-height: 1.25;
+  }
+
+  .monitoring-table tbody tr:hover {
+    background: #f8fafc;
+  }
+
+
+  /* =========================================================
+     ШИРИНА СТОЛБЦОВ
+
+     Суммарно рассчитано так, чтобы вся таблица
+     помещалась внутри карточки.
+     ========================================================= */
+
+  /* Место */
+  .monitoring-table th:nth-child(1),
+  .monitoring-table td:nth-child(1) {
+    width: 4.5%;
+  }
+
+  /* Исполнитель */
+  .monitoring-table th:nth-child(2),
+  .monitoring-table td:nth-child(2) {
+    width: 27%;
+    text-align: left;
+  }
+
+  /* Участий в задачах */
+  .monitoring-table th:nth-child(3),
+  .monitoring-table td:nth-child(3) {
+    width: 6%;
+  }
+
+  /* Завершено задач */
+  .monitoring-table th:nth-child(4),
+  .monitoring-table td:nth-child(4) {
+    width: 7%;
+  }
+
+  /* Итоговых документов */
+  .monitoring-table th:nth-child(5),
+  .monitoring-table td:nth-child(5) {
+    width: 7%;
+  }
+
+  /* Назначено отчётов */
+  .monitoring-table th:nth-child(6),
+  .monitoring-table td:nth-child(6) {
+    width: 6.5%;
+  }
+
+  /* Выполнено отчётов */
+  .monitoring-table th:nth-child(7),
+  .monitoring-table td:nth-child(7) {
+    width: 6.5%;
+  }
+
+  /* Ожидают */
+  .monitoring-table th:nth-child(8),
+  .monitoring-table td:nth-child(8) {
+    width: 6%;
+  }
+
+  /* Освобождено */
+  .monitoring-table th:nth-child(9),
+  .monitoring-table td:nth-child(9) {
+    width: 7%;
+  }
+
+  /* Личное выполнение */
+  .monitoring-table th:nth-child(10),
+  .monitoring-table td:nth-child(10) {
+    width: 10%;
+  }
+
+  /* Средний балл */
+  .monitoring-table th:nth-child(11),
+  .monitoring-table td:nth-child(11) {
+    width: 6.5%;
+  }
+
+  /* Общий балл */
+  .monitoring-table th:nth-child(12),
+  .monitoring-table td:nth-child(12) {
+    width: 6%;
+  }
+
+
+  /* =========================================================
+     МЕСТО
+     ========================================================= */
+
+  .rank-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    width: 30px;
+    height: 30px;
+
+    border-radius: 50%;
+
+    background: #eef2ff;
+    color: #3730a3;
+
+    font-size: 11px;
+    font-weight: 800;
+  }
+
+  .rank-badge--top {
+    background: #fef3c7;
+    color: #92400e;
+  }
+
+
+  /* =========================================================
+     СОТРУДНИК
+     ========================================================= */
+
+  .staff-name {
+    color: #111827;
+
+    font-size: 11px;
+    font-weight: 800;
+    line-height: 1.25;
+  }
+
+  .staff-position {
+    margin-top: 2px;
+
+    color: #64748b;
+
+    font-size: 9px;
+    line-height: 1.2;
+  }
+
+  .role-summary {
+    display: flex;
+    flex-wrap: wrap;
+
+    gap: 4px;
+
+    margin-top: 5px;
+  }
+
+  .role-chip {
+    display: inline-flex;
+    align-items: center;
+
+    padding: 2px 6px;
+
+    border-radius: 999px;
+
+    font-size: 9px;
+    font-weight: 800;
+    line-height: 1.2;
+
+    white-space: nowrap;
+  }
+
+  .role-chip--primary {
+    background: #dbeafe;
+    color: #1d4ed8;
+  }
+
+  .role-chip--co {
+    background: #f3e8ff;
+    color: #7e22ce;
+  }
+
+
+  /* =========================================================
+     ЧИСЛОВЫЕ BADGE
+     ========================================================= */
+
+  .metric-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    min-width: 34px;
+
+    padding: 4px 6px;
+
+    box-sizing: border-box;
+
+    border-radius: 999px;
+
+    font-size: 10px;
+    font-weight: 800;
+    line-height: 1;
+  }
+
+  .metric-badge--done {
+    background: #dcfce7;
+    color: #166534;
+  }
+
+  .metric-badge--pending {
+    background: #fef3c7;
+    color: #92400e;
+  }
+
+  .metric-badge--waived {
+    background: #ede9fe;
+    color: #6d28d9;
+  }
+
+  .metric-badge--neutral {
+    background: #f1f5f9;
+    color: #475569;
+  }
+
+
+  /* =========================================================
+     ЛИЧНОЕ ВЫПОЛНЕНИЕ
+     ========================================================= */
+
+  .progress-cell {
+    min-width: 0;
+  }
+
+  .progress-value {
+    margin-bottom: 4px;
+
+    color: #0f172a;
+
+    font-size: 9px;
+    font-weight: 800;
+
+    white-space: nowrap;
+  }
+
+  .progress-track {
+    width: 100%;
+    height: 5px;
+
+    overflow: hidden;
+
+    border-radius: 999px;
+
+    background: #e5e7eb;
+  }
+
+  .progress-bar {
+    height: 100%;
+
+    border-radius: 999px;
+
+    background: #2563eb;
+  }
+
+
+  /* =========================================================
+     ОБЩИЙ БАЛЛ
+     ========================================================= */
+
+  .score-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    min-width: 40px;
+
+    padding: 5px 7px;
+
+    border-radius: 999px;
+
+    background: #dcfce7;
+    color: #166534;
+
+    font-size: 11px;
+    font-weight: 900;
+    line-height: 1;
+  }
+
+
+  /* =========================================================
+     ИТОГОВАЯ СТРОКА
+     ========================================================= */
+
+  .monitoring-table tfoot td {
+    padding-top: 9px;
+    padding-bottom: 9px;
+
+    border-top: 2px solid #d1d5db;
+
+    background: #f3f4f6;
+
+    font-size: 10px;
+    font-weight: 800;
+  }
+
+
+  /* =========================================================
+     ПУСТОЕ СОСТОЯНИЕ
+     ========================================================= */
+
+  .empty-state {
+    padding: 36px 18px;
+
+    border: 1px dashed #d1d5db;
+    border-radius: 10px;
+
+    color: #6b7280;
+
+    text-align: center;
+  }
+
+
+  /* =========================================================
+     АДАПТАЦИЯ
+     ========================================================= */
+
+  @media (max-width: 1200px) {
+    .monitoring-page {
+      padding-left: 12px;
+      padding-right: 12px;
+    }
+
+    .monitoring-section {
+      padding-left: 10px;
+      padding-right: 10px;
+    }
+
+    .monitoring-table th {
+      font-size: 9px;
+    }
+
+    .monitoring-table td {
+      font-size: 10px;
+    }
+
+    .staff-name {
+      font-size: 10px;
+    }
+
+    .metric-badge {
+      min-width: 28px;
+      padding-left: 4px;
+      padding-right: 4px;
+    }
+  }
+
+  @media (max-width: 900px) {
+    .summary-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    /*
+      На небольшом экране 12 колонок уже физически
+      невозможно показать удобно без прокрутки.
+    */
+    .table-wrap {
+      overflow-x: auto;
+    }
+
+    .monitoring-table {
+      min-width: 1050px;
+    }
+  }
+
+  @media (max-width: 600px) {
+    .summary-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+
+{% endblock %}
+
+
+{% block content %}
+<div class="monitoring-page">
+
+  <header class="page-header">
+    <h1>Рейтинг исполнителей задач ВШК</h1>
+
+    <p class="page-subtitle">
+      {{ school_name }}
+      {% if academic_year %}
+        · {{ academic_year }} учебный год
+      {% endif %}
+    </p>
+  </header>
+
+
+  {# =========================================================
+     ОБЩИЕ ПОКАЗАТЕЛИ
+     ========================================================= #}
+
+  <section class="summary-grid">
+
+    <article class="summary-card">
+      <div class="summary-card__label">
+        Исполнителей
+      </div>
+
+      <div class="summary-card__value">
+        {{ totals.staff_count }}
+      </div>
+
+      <div class="summary-card__note">
+        Сотрудники, участвующие в рейтинге
+      </div>
+    </article>
+
+
+    <article class="summary-card">
+      <div class="summary-card__label">
+        Уникальных задач
+      </div>
+
+      <div class="summary-card__value">
+        {{ totals.unique_task_count }}
+      </div>
+
+      <div class="summary-card__note">
+        Только задачи, включённые в месячные планы
+      </div>
+    </article>
+
+
+    <article class="summary-card">
+      <div class="summary-card__label">
+        Участий в задачах
+      </div>
+
+      <div class="summary-card__value">
+        {{ totals.assignment_count }}
+      </div>
+
+      <div class="summary-card__note">
+        PRIMARY: {{ totals.primary_assignment_count }}
+        · Соисполнители: {{ totals.co_executor_assignment_count }}
+      </div>
+    </article>
+
+
+    <article class="summary-card">
+      <div class="summary-card__label">
+        Задач с соисполнителями
+      </div>
+
+      <div class="summary-card__value">
+        {{ totals.tasks_with_coexecutors_count }}
+      </div>
+
+      <div class="summary-card__note">
+        Завершено:
+        {{ totals.completed_tasks_with_coexecutors_count }}
+      </div>
+    </article>
+
+
+    <article class="summary-card summary-card--reports">
+      <div class="summary-card__label">
+        Назначено отчётов
+      </div>
+
+      <div class="summary-card__value">
+        {{ totals.assigned_report_count }}
+      </div>
+
+      <div class="summary-card__note">
+        Персональные назначения сотрудников
+      </div>
+    </article>
+
+
+    <article class="summary-card summary-card--completed">
+      <div class="summary-card__label">
+        Выполнено отчётов
+      </div>
+
+      <div class="summary-card__value">
+        {{ totals.completed_report_count }}
+      </div>
+
+      <div class="summary-card__note">
+        Личное выполнение:
+        {{ totals.report_completion_percent }}%
+      </div>
+    </article>
+
+
+    <article class="summary-card summary-card--pending">
+      <div class="summary-card__label">
+        Ожидают выполнения
+      </div>
+
+      <div class="summary-card__value">
+        {{ totals.pending_report_count }}
+      </div>
+
+      <div class="summary-card__note">
+        Назначения со статусом PENDING
+      </div>
+    </article>
+
+
+    <article class="summary-card summary-card--waived">
+      <div class="summary-card__label">
+        Освобождено
+      </div>
+
+      <div class="summary-card__value">
+        {{ totals.waived_report_count }}
+      </div>
+
+      <div class="summary-card__note">
+        Не считаются выполненными сотрудником
+      </div>
+    </article>
+
+  </section>
+
+
+  {# =========================================================
+     РЕЙТИНГ
+     ========================================================= #}
+
+  <section class="monitoring-section">
+
+    <div class="section-header">
+      <h2 class="section-title">
+        Результативность исполнителей
+      </h2>
+
+      <p class="section-description">
+        Персональный результат сотрудника считается независимо
+        от завершения всей задачи. Каждый выполненный назначенный
+        отчёт даёт 1 балл. Итоговый документ учитывается только
+        у ответственного исполнителя PRIMARY.
+      </p>
+
+      <div class="legend">
+        <span class="legend-item">
+          <span class="legend-dot legend-dot--done"></span>
+          COMPLETED — выполнено
+        </span>
+
+        <span class="legend-item">
+          <span class="legend-dot legend-dot--pending"></span>
+          PENDING — ожидает
+        </span>
+
+        <span class="legend-item">
+          <span class="legend-dot legend-dot--waived"></span>
+          WAIVED — освобождено, 0 баллов
+        </span>
+      </div>
+    </div>
+
+
+    {% if rating_rows %}
+
+      <div class="table-wrap">
+        <table class="monitoring-table">
+
+          <thead>
+          <tr>
+            <th>Место</th>
+            <th>Исполнитель</th>
+
+            <th class="col-participation">
+                Участий<br>в задачах
+            </th>
+            <th>Завершено<br>задач</th>
+
+            <th>Итоговых<br>документов</th>
+
+            <th>Назначено<br>отчётов</th>
+            <th>Выполнено<br>отчётов</th>
+            <th>Ожидают</th>
+            <th>Освобождено</th>
+
+            <th>Личное выполнение<br>отчётов</th>
+
+            <th>Средний балл<br>за участие</th>
+            <th>Общий балл</th>
+          </tr>
+          </thead>
+
+          <tbody>
+          {% for row in rating_rows %}
+            <tr>
+
+              <td>
+                <span class="rank-badge {% if row.rank <= 3 %}rank-badge--top{% endif %}">
+                  {{ row.rank }}
+                </span>
+              </td>
+
+
+              <td>
+                <div class="staff-name">
+                  {{ row.full_name }}
+                </div>
+
+                {% if row.position_text %}
+                  <div class="staff-position">
+                    {{ row.position_text }}
+                  </div>
+                {% endif %}
+
+                <div class="role-summary">
+                  {% if row.primary_assignment_count %}
+                    <span class="role-chip role-chip--primary">
+                      PRIMARY: {{ row.primary_assignment_count }}
+                    </span>
+                  {% endif %}
+
+                  {% if row.co_executor_assignment_count %}
+                    <span class="role-chip role-chip--co">
+                      Соисп.: {{ row.co_executor_assignment_count }}
+                    </span>
+                  {% endif %}
+                </div>
+              </td>
+
+
+              <td>
+                <span class="metric-badge metric-badge--neutral">
+                  {{ row.assigned_count }}
+                </span>
+              </td>
+
+
+              <td>
+                <span class="metric-badge
+                  {% if row.completed_count == row.assigned_count and row.assigned_count > 0 %}
+                    metric-badge--done
+                  {% else %}
+                    metric-badge--neutral
+                  {% endif %}
+                ">
+                  {{ row.completed_count }}
+                </span>
+              </td>
+
+
+              <td>
+                {{ row.final_document_count }}
+              </td>
+
+
+              <td>
+                <span class="metric-badge metric-badge--neutral">
+                  {{ row.assigned_report_count }}
+                </span>
+              </td>
+
+
+              <td>
+                <span class="metric-badge metric-badge--done">
+                  {{ row.completed_report_count }}
+                </span>
+              </td>
+
+
+              <td>
+                <span class="metric-badge
+                  {% if row.pending_report_count > 0 %}
+                    metric-badge--pending
+                  {% else %}
+                    metric-badge--neutral
+                  {% endif %}
+                ">
+                  {{ row.pending_report_count }}
+                </span>
+              </td>
+
+
+              <td>
+                <span class="metric-badge
+                  {% if row.waived_report_count > 0 %}
+                    metric-badge--waived
+                  {% else %}
+                    metric-badge--neutral
+                  {% endif %}
+                ">
+                  {{ row.waived_report_count }}
+                </span>
+              </td>
+
+
+              <td class="progress-cell">
+                <div class="progress-value">
+                  {{ row.completed_report_count }}
+                  /
+                  {{ row.assigned_report_count }}
+                  ·
+                  {{ row.report_completion_percent }}%
+                </div>
+
+                <div class="progress-track">
+                  <div
+                    class="progress-bar"
+                    style="width: {{ row.report_completion_percent if row.report_completion_percent <= 100 else 100 }}%;"
+                  ></div>
+                </div>
+              </td>
+
+
+              <td>
+                {{ row.average_score_per_task }}
+              </td>
+
+
+              <td>
+                <span class="score-badge">
+                  {{ row.total_score }}
+                </span>
+              </td>
+
+            </tr>
+          {% endfor %}
+          </tbody>
+
+
+          <tfoot>
+          <tr>
+            <td colspan="2">
+              Итого
+            </td>
+
+            <td>
+              {{ totals.assignment_count }}
+            </td>
+
+            <td>
+              {{ totals.completed_count }}
+            </td>
+
+            <td>
+              {{ totals.final_document_count }}
+            </td>
+
+            <td>
+              {{ totals.assigned_report_count }}
+            </td>
+
+            <td>
+              {{ totals.completed_report_count }}
+            </td>
+
+            <td>
+              {{ totals.pending_report_count }}
+            </td>
+
+            <td>
+              {{ totals.waived_report_count }}
+            </td>
+
+            <td>
+              {{ totals.completed_report_count }}
+              /
+              {{ totals.assigned_report_count }}
+              ·
+              {{ totals.report_completion_percent }}%
+            </td>
+
+            <td>
+              {{ totals.average_score_per_staff }}
+            </td>
+
+            <td>
+              {{ totals.total_score }}
+            </td>
+          </tr>
+          </tfoot>
+
+        </table>
+      </div>
+
+    {% else %}
+
+      <div class="empty-state">
+        Для выбранного периода данные исполнителей отсутствуют.
+      </div>
+
+    {% endif %}
+
+  </section>
+
+</div>
+{% endblock %}

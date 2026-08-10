@@ -30,27 +30,31 @@
         </div>
       </a>
 
-      <a class="card" href="{{ request.url_for('staff_tasks_execute_page') }}?month={{ today.month }}">
-  <div class="card__inner">
-    <div class="card__top">
-      <div class="card__icon">📋</div>
-    </div>
-    <h3 class="card__title">
-      Перейти на выполнение поставленных задач
-    </h3>
-    <p class="card__desc">Построения алгоритма выполнение задач на {{ MONTH_NAMES[today.month] }} месяц</p>
-    <div class="card__footer">
-      <span>Открыть</span><span class="card__arrow">→</span>
-    </div>
-  </div>
-</a>
-      <a class="card" href="">
+      <a class="card" href="{{ request.url_for('staff_my_reports_page') }}?month={{ today.month }}">
+        <div class="card__inner">
+          <div class="card__top">
+            <div class="card__icon">📋</div>
+          </div>
+          <h3 class="card__title">
+            Перейти к заполнению отчетов
+          </h3>
+          <p class="card__desc">
+            Заполнение отчетов, сохранение и подписание за {{ MONTH_NAMES[today.month] }} месяц
+          </p>
+          <div class="card__footer">
+            <span>Открыть</span>
+            <span class="card__arrow">→</span>
+          </div>
+        </div>
+      </a>
+
+      <a class="card" href="{{ url_for('review_result_list_page') }}">
         <div class="card__inner">
           <div class="card__top">
             <div class="card__icon">✅</div>
           </div>
-          <h3 class="card__title">Статус о выполнении</h3>
-          <p class="card__desc">6 направлений, загрузка подтверждающих документов</p>
+          <h3 class="card__title">Просмотр рассмотрения задач</h3>
+          <p class="card__desc">Статус, протокол, итоговый документ и отчеты</p>
           <div class="card__footer">
             <span>Открыть</span><span class="card__arrow">→</span>
           </div>
@@ -106,16 +110,16 @@
   </section>
 
   <section class="dashboard-section">
-    <h3>Отчёты и аналитика</h3>
+    <h3>Статистика ВШК</h3>
 
     <div class="card-grid">
-      <a class="card" href="/reports/schools">
+      <a class="card" href="{{ url_for('staff_statistics_page') }}">
         <div class="card__inner">
           <div class="card__top">
             <div class="card__icon">📊</div>
           </div>
-          <h3 class="card__title">Отчёты по школам</h3>
-          <p class="card__desc">Справки и протоколы</p>
+          <h3 class="card__title">Моя статистика ВШК</h3>
+          <p class="card__desc">Статистика исполнение задач и рассмотрение</p>
           <div class="card__footer">
             <span>Открыть</span><span class="card__arrow">→</span>
           </div>

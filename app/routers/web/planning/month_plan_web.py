@@ -1,0 +1,847 @@
+# app/routers/web/planning/month_plan_web.py
+
+from __future__ import annotations
+
+from typing import Any
+from urllib.parse import urlencode
+
+from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request
+from sqlalchemy.ext.asyncio import AsyncSession
+from starlette import status
+from starlette.responses import HTMLResponse, RedirectResponse
+
+from app.db.session import get_db
+from app.modules.planning.constants import ACADEMIC_MONTHS, MONTH_LABELS
+from app.modules.planning.enums import PlanStatus
+from app.modules.planning.repositories.month_plan_repository import (
+    SchoolMonthlyPlanRepo,
+)
+from app.modules.planning.schemas.month_plan_inputs import MonthItemUpdate
+from app.modules.planning.services.month_plan_notification_service import MonthPlanNotificationService
+from app.modules.planning.services.month_plan_service import (
+    SchoolMonthlyPlanningService,
+)
+from app.modules.staff.utils.staff_require_school import require_school_id
+from app.modules.users.deps import require_roles
+from app.modules.users.enums import UserRole
+from app.modules.users.models import User
+from app.routers.web.helpers.render import render
+from app.routers.web.web_common import templates
+from app.utils.calendar_weeks import (
+    calc_year_from_academic,
+    month_weeks_grid,
+)
+
+router = APIRouter(
+    prefix="/planning/school",
+    tags=["planning-school-month-plan"],
+)
+
+
+def _months_list() -> list[dict[str, Any]]:
+    return [
+        {
+            "num": month,
+            "label": MONTH_LABELS.get(month, str(month)),
+        }
+        for month in ACADEMIC_MONTHS
+    ]
+
+
+'''
+def _group_items_by_direction(items) -> list[dict[str, Any]]:
+    """
+    Сгруппировать строки месячного плана по направлению.
+
+    Репозиторий должен заранее загрузить:
+    - item.source_row11;
+    - item.source_row11.direction.
+    """
+
+    grouped: dict[int, dict[str, Any]] = {}
+
+    for item in items:
+        source_row = getattr(item, "source_row11", None)
+        direction = (
+            getattr(source_row, "direction", None)
+            if source_row is not None
+            else None
+        )
+        direction_id = (
+                           getattr(source_row, "direction_id", None)
+                           if source_row is not None
+                           else None
+                       ) or 0
+
+        group = grouped.setdefault(
+            direction_id,
+            {
+                "direction_id": direction_id,
+                "direction": direction,
+                "items": [],
+            },
+        )
+        group["items"].append(item)
+
+    def sort_key(
+            direction_group: dict[str, Any],
+    ) -> tuple[int, int]:
+
+        group_direction = direction_group.get(
+            "direction"
+        )
+
+        if group_direction is None:
+            return (
+                9999,
+                direction_group.get(
+                    "direction_id",
+                    0,
+                ),
+            )
+
+        sort_order = getattr(
+            group_direction,
+            "sort_order",
+            None,
+        )
+
+        group_direction_id = getattr(
+            group_direction,
+            "id",
+            0,
+        )
+
+        return (
+            sort_order
+            if sort_order is not None
+            else 9999,
+            group_direction_id,
+        )
+
+    return sorted(grouped.values(), key=sort_key)
+'''
+
+
+def _month_page_redirect(
+        request: Request,
+        *,
+        month: int,
+        success: str | None = None,
+        warning: str | None = None,
+        info: str | None = None,
+) -> RedirectResponse:
+    query: dict[str, str | int] = {"month": month}
+
+    if success:
+        query["success"] = success
+    if warning:
+        query["warning"] = warning
+    if info:
+        query["info"] = info
+
+    base_url = request.url_for("school_monthly_page")
+
+    return RedirectResponse(
+        url=f"{base_url}?{urlencode(query)}",
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
+def _validate_academic_month(month: int) -> None:
+    if month not in ACADEMIC_MONTHS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Недопустимый месяц учебного года.",
+        )
+
+
+@router.get(
+    "/monthly",
+    name="school_monthly_page",
+    response_class=HTMLResponse,
+)
+async def school_monthly_page(
+        request: Request,
+        month: int | None = Query(default=None),
+        success: str | None = Query(default=None),
+        warning: str | None = Query(default=None),
+        info: str | None = Query(default=None),
+        db: AsyncSession = Depends(get_db),
+        user: User = Depends(
+            require_roles(UserRole.SCHOOL_ADMIN)
+        ),
+):
+    school_id = getattr(user, "school_id", None)
+
+    if school_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="У пользователя не задана школа.",
+        )
+
+    months = _months_list()
+
+    active_plan = (
+        await SchoolMonthlyPlanRepo
+        .get_active_school_plan(
+            db,
+            school_id=school_id,
+        )
+    )
+
+    base_context = {
+        "user": user,
+        "months": months,
+        "month": month,
+        "active_plan": active_plan,
+        "month_plan": None,
+        "school_plan_id": (
+            active_plan.id
+            if active_plan is not None
+            else None
+        ),
+        "blocks": [],
+        "weeks": [],
+        "can_build": False,
+        "open_month_plan_id": None,
+        "success": success,
+        "warning": warning,
+        "info": info,
+        "PlanStatus": PlanStatus,
+    }
+
+    if active_plan is None:
+        base_context["error"] = (
+            "Нет активного годового плана. "
+            "Сначала активируйте годовой план."
+        )
+
+        return render(
+            templates,
+            request,
+            "planning/school/monthly_tasks.html",
+            base_context,
+        )
+
+    if month is None:
+        base_context["info"] = (
+                info
+                or "Выберите месяц и нажмите «Открыть план»."
+        )
+
+        return render(
+            templates,
+            request,
+            "planning/school/monthly_tasks.html",
+            base_context,
+        )
+
+    _validate_academic_month(month)
+
+    year = calc_year_from_academic(
+        active_plan.academic_year,
+        month,
+    )
+
+    month_plan = (
+        await SchoolMonthlyPlanRepo
+        .get_month_plan(
+            db,
+            school_plan_id=active_plan.id,
+            year=year,
+            month=month,
+        )
+    )
+
+    blocks = []
+
+    if month_plan is not None:
+        blocks = (
+            await SchoolMonthlyPlanningService
+            .build_month_plan_direction_blocks(
+                db,
+                month_plan_id=month_plan.id,
+            )
+        )
+
+    base_context.update(
+        {
+            "month_plan": month_plan,
+            "blocks": blocks,
+            "weeks": month_weeks_grid(
+                year,
+                month,
+            ),
+            "can_build": month_plan is None,
+            "open_month_plan_id": (
+                month_plan.id
+                if month_plan is not None
+                else None
+            ),
+        }
+    )
+
+    return render(
+        templates,
+        request,
+        "planning/school/monthly_tasks.html",
+        base_context,
+    )
+
+
+@router.post(
+    "/monthly/{month}/draft",
+    name="school_monthly_build_draft",
+)
+async def school_monthly_build_draft(
+        request: Request,
+        month: int,
+        db: AsyncSession = Depends(get_db),
+        user: User = Depends(
+            require_roles(UserRole.SCHOOL_ADMIN)
+        ),
+):
+    school_id = getattr(user, "school_id", None)
+
+    if school_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="У пользователя не задана школа.",
+        )
+
+    _validate_academic_month(month)
+
+    try:
+        active_plan = (
+            await SchoolMonthlyPlanRepo.get_active_school_plan(
+                db,
+                school_id=school_id,
+            )
+        )
+
+        if active_plan is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Нет активного годового плана.",
+            )
+
+        year = calc_year_from_academic(
+            active_plan.academic_year,
+            month,
+        )
+
+        await SchoolMonthlyPlanningService.get_or_create_draft(
+            db,
+            school_id=school_id,
+            school_plan_id=active_plan.id,
+            year=year,
+            month=month,
+        )
+
+        await db.commit()
+
+    except HTTPException as exc:
+        await db.rollback()
+        return _month_page_redirect(
+            request,
+            month=month,
+            warning=str(exc.detail),
+        )
+    except Exception:
+        await db.rollback()
+        raise
+
+    return _month_page_redirect(
+        request,
+        month=month,
+        success="Черновик месячного плана сформирован.",
+    )
+
+
+@router.post(
+    "/monthly/{month}/save",
+    name="school_monthly_save_draft",
+)
+async def school_monthly_save_draft(
+        request: Request,
+        month: int,
+        month_plan_id: int = Form(...),
+        school_plan_id: int = Form(...),
+        item_ids: list[int] = Form(default=[]),
+        db: AsyncSession = Depends(get_db),
+        user: User = Depends(
+            require_roles(UserRole.SCHOOL_ADMIN)
+        ),
+):
+    school_id = getattr(user, "school_id", None)
+
+    if school_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="У пользователя не задана школа.",
+        )
+
+    _validate_academic_month(month)
+
+    try:
+        school_plan = (
+            await SchoolMonthlyPlanRepo.get_school_plan_for_school(
+                db,
+                school_plan_id=school_plan_id,
+                school_id=school_id,
+            )
+        )
+
+        if school_plan is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=(
+                    "Годовой план не найден "
+                    "или не принадлежит школе."
+                ),
+            )
+
+        month_plan = (
+            await SchoolMonthlyPlanRepo
+            .get_month_plan_for_school_by_id(
+                db,
+                month_plan_id=month_plan_id,
+                school_id=school_id,
+            )
+        )
+
+        if month_plan is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Месячный план не найден.",
+            )
+
+        if (
+                month_plan.school_plan_id != school_plan_id
+                or month_plan.month != month
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=(
+                    "Месячный план не соответствует "
+                    "годовому плану или выбранному месяцу."
+                ),
+            )
+
+        if month_plan.status != PlanStatus.DRAFT:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=(
+                    "Редактирование доступно только "
+                    "для черновика месячного плана."
+                ),
+            )
+
+        existing_items = await SchoolMonthlyPlanRepo.list_items(
+            db,
+            month_plan_id=month_plan_id,
+            with_source=False,
+        )
+        allowed_item_ids = {
+            item.id
+            for item in existing_items
+        }
+
+        normalized_item_ids = list(dict.fromkeys(item_ids))
+
+        invalid_item_ids = (
+                set(normalized_item_ids)
+                - allowed_item_ids
+        )
+
+        if invalid_item_ids:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=(
+                    "Форма содержит строки, которые не относятся "
+                    "к выбранному месячному плану."
+                ),
+            )
+
+        form = await request.form()
+        weeks = month_weeks_grid(
+            month_plan.year,
+            month_plan.month,
+        )
+        week_map = {
+            week.week: week
+            for week in weeks
+        }
+
+        updates: list[MonthItemUpdate] = []
+
+        for item_id in normalized_item_ids:
+            is_included = (
+                    form.get(f"item_{item_id}_included")
+                    == "1"
+            )
+
+            week_raw = str(
+                form.get(f"item_{item_id}_week")
+                or ""
+            ).strip()
+
+            week_of_month = (
+                int(week_raw)
+                if week_raw.isdigit()
+                else None
+            )
+
+            planned_start = None
+            planned_end = None
+
+            if week_of_month is not None:
+                week = week_map.get(week_of_month)
+
+                if week is None:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=(
+                            f"Неделя {week_of_month} отсутствует "
+                            f"в календаре месяца. item_id={item_id}"
+                        ),
+                    )
+
+                planned_start = week.start
+                planned_end = week.end
+
+            notes = str(
+                form.get(f"item_{item_id}_notes")
+                or ""
+            ).strip() or None
+
+            updates.append(
+                MonthItemUpdate(
+                    item_id=item_id,
+                    is_included=is_included,
+                    week_of_month=week_of_month,
+                    planned_start=planned_start,
+                    planned_end=planned_end,
+                    notes=notes,
+                )
+            )
+
+        await SchoolMonthlyPlanRepo.upsert_item_flags_bulk(
+            db,
+            updates=updates,
+        )
+        await db.commit()
+
+    except HTTPException as exc:
+        await db.rollback()
+        return _month_page_redirect(
+            request,
+            month=month,
+            warning=str(exc.detail),
+        )
+    except Exception:
+        await db.rollback()
+        raise
+
+    return _month_page_redirect(
+        request,
+        month=month,
+        success="Черновик месячного плана сохранён.",
+    )
+
+
+@router.post(
+    "/monthly/{month}/submit",
+    name="school_monthly_submit",
+)
+async def school_monthly_submit(
+        request: Request,
+        month: int,
+        month_plan_id: int = Form(...),
+        school_plan_id: int = Form(...),
+        db: AsyncSession = Depends(get_db),
+        user: User = Depends(
+            require_roles(UserRole.SCHOOL_ADMIN)
+        ),
+):
+    school_id = getattr(user, "school_id", None)
+
+    if school_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="У пользователя не задана школа.",
+        )
+
+    _validate_academic_month(month)
+
+    try:
+        month_plan = (
+            await SchoolMonthlyPlanRepo
+            .get_month_plan_for_school_by_id(
+                db,
+                month_plan_id=month_plan_id,
+                school_id=school_id,
+            )
+        )
+
+        if month_plan is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Месячный план не найден.",
+            )
+
+        if (
+                month_plan.school_plan_id != school_plan_id
+                or month_plan.month != month
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=(
+                    "Месячный план не соответствует "
+                    "переданным параметрам."
+                ),
+            )
+
+        await SchoolMonthlyPlanningService.submit_month_plan(
+            db,
+            month_plan_id=month_plan_id,
+        )
+
+        await db.commit()
+
+    except HTTPException as exc:
+        await db.rollback()
+
+        return _month_page_redirect(
+            request,
+            month=month,
+            warning=str(exc.detail),
+        )
+
+    except Exception:
+        await db.rollback()
+        raise
+
+    # После успешной отправки открываем страницу уведомлений
+    return RedirectResponse(
+        url=request.url_for(
+            "school_monthly_notifications",
+            month_plan_id=month_plan_id,
+        ),
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
+@router.post(
+    "/monthly/delete",
+    name="school_monthly_delete_draft",
+)
+async def school_monthly_delete_draft(
+        request: Request,
+        month_plan_id: int = Form(...),
+        month: int = Form(...),
+        db: AsyncSession = Depends(get_db),
+        user: User = Depends(
+            require_roles(UserRole.SCHOOL_ADMIN)
+        ),
+):
+    school_id = getattr(user, "school_id", None)
+
+    if school_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="У пользователя не задана школа.",
+        )
+
+    _validate_academic_month(month)
+
+    try:
+        await (
+            SchoolMonthlyPlanningService
+            .delete_draft_month_plan(
+                db,
+                month_plan_id=month_plan_id,
+                school_id=school_id,
+            )
+        )
+        await db.commit()
+
+    except HTTPException as exc:
+        await db.rollback()
+        return _month_page_redirect(
+            request,
+            month=month,
+            warning=str(exc.detail),
+        )
+    except Exception:
+        await db.rollback()
+        raise
+
+    return _month_page_redirect(
+        request,
+        month=month,
+        info="Черновик месячного плана удалён.",
+    )
+
+
+@router.get(
+    "/monthly/{month_plan_id}/notifications",
+    name="school_monthly_notifications",
+    response_class=HTMLResponse,
+)
+async def school_monthly_notifications(
+    request: Request,
+    month_plan_id: int,
+    error: str | None = Query(default=None),
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(
+        require_roles(UserRole.SCHOOL_ADMIN)
+    ),
+):
+    """
+    Показать получателей и текущее состояние
+    уведомлений месячного плана.
+    """
+
+    school_id = require_school_id(user)
+
+    month_plan = await (
+        SchoolMonthlyPlanRepo.get_month_plan_for_school_by_id(
+            db,
+            month_plan_id=month_plan_id,
+            school_id=school_id,
+        )
+    )
+
+    if month_plan is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Месячный план не найден.",
+        )
+
+    recipients = await (
+        MonthPlanNotificationService.list_recipients(
+            db,
+            month_plan_id=month_plan_id,
+            school_id=school_id,
+        )
+    )
+
+    notification_statuses = await (
+        MonthPlanNotificationService.list_notification_statuses(
+            db,
+            month_plan_id=month_plan_id,
+            school_id=school_id,
+        )
+    )
+
+    notification_status_map = {
+        item.staff_member_id: item
+        for item in notification_statuses
+    }
+
+    notification_progress = await (
+        MonthPlanNotificationService.get_notification_progress(
+            db,
+            month_plan_id=month_plan_id,
+            school_id=school_id,
+        )
+    )
+
+    return render(
+        templates,
+        request,
+        "planning/school/month_plan_notifications.html",
+        {
+            "user": user,
+            "month_plan": month_plan,
+            "month_plan_id": month_plan_id,
+            "recipients": recipients,
+            "notification_statuses": notification_statuses,
+            "notification_status_map": notification_status_map,
+            "notification_progress": notification_progress,
+            "error": error,
+        },
+    )
+
+
+@router.get(
+    (
+            "/monthly/{month_plan_id}/notifications/"
+            "{staff_member_id}/whatsapp"
+    ),
+    name="school_monthly_whatsapp",
+)
+async def school_monthly_whatsapp(
+        request: Request,
+        month_plan_id: int,
+        staff_member_id: int,
+        phone: str = Query(..., min_length=1),
+        db: AsyncSession = Depends(get_db),
+        user: User = Depends(
+            require_roles(UserRole.SCHOOL_ADMIN)
+        ),
+):
+    """
+    Сформировать персональное WhatsApp-сообщение,
+    зафиксировать открытие и перенаправить администратора
+    на ссылку wa.me.
+    """
+
+    school_id = require_school_id(user)
+
+    month_plan = await (
+        SchoolMonthlyPlanRepo.get_month_plan_for_school_by_id(
+            db,
+            month_plan_id=month_plan_id,
+            school_id=school_id,
+        )
+    )
+
+    if month_plan is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Месячный план не найден.",
+        )
+
+    platform_url = str(request.base_url).rstrip("/")
+
+    school_name: str | None = None
+
+    user_school = getattr(user, "school", None)
+
+    if user_school is not None:
+        school_name = (
+                getattr(user_school, "name", None)
+                or getattr(user_school, "title", None)
+        )
+
+    try:
+        whatsapp_url = await (
+            MonthPlanNotificationService.open_recipient_whatsapp(
+                db,
+                month_plan_id=month_plan_id,
+                school_id=school_id,
+                staff_member_id=staff_member_id,
+                phone=phone,
+                platform_url=platform_url,
+                opened_by_user_id=user.id,
+                school_name=school_name,
+            )
+        )
+
+        await db.commit()
+
+    except HTTPException:
+        await db.rollback()
+        raise
+
+    except Exception:
+        await db.rollback()
+        raise
+
+    return RedirectResponse(
+        url=whatsapp_url,
+        status_code=status.HTTP_303_SEE_OTHER,
+    )

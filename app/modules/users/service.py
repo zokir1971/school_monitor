@@ -1,4 +1,4 @@
-# app/modules/users/service.py (собираем классы авторизации в одно место)
+# app/modules/users/statistic_service.py (собираем классы авторизации в одно место)
 
 from .services.auth_service import UserAuthService
 from .services.user_service import UserCrudService

@@ -1,0 +1,621 @@
+{% extends "base.html" %}
+
+{% block title %}Моя статистика{% endblock %}
+
+{% block extra_css %}
+<style>
+  /* Плавный переход к детализации выбранного месяца. */
+  html {
+    scroll-behavior: smooth;
+  }
+
+  /* Основной контейнер страницы. */
+  .statistics-page {
+    width: 100%;
+    max-width: 1500px;
+    margin: 0 auto;
+    padding: 24px;
+    box-sizing: border-box;
+  }
+
+  /* Заголовок страницы. */
+  .page-header {
+    margin-bottom: 24px;
+  }
+
+  .page-header__title {
+    margin: 0 0 8px;
+    color: #1f2937;
+    font-size: 28px;
+    line-height: 1.25;
+  }
+
+  .page-header__subtitle {
+    margin: 0;
+    color: #6b7280;
+    font-size: 15px;
+  }
+
+  .page-header__employee {
+    margin: 12px 0;
+  }
+
+  .employee-name {
+    font-size: 20px;
+    font-weight: 700;
+    color: #1f2937;
+  }
+
+  .employee-position {
+    margin-top: 4px;
+    font-size: 15px;
+    color: #6b7280;
+  }
+
+  /* Итоговые карточки за весь учебный год. */
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(180px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .summary-card {
+    padding: 18px;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    background: #ffffff;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05);
+  }
+
+  .summary-card__label {
+    margin-bottom: 8px;
+    color: #6b7280;
+    font-size: 14px;
+  }
+
+  .summary-card__value {
+    color: #111827;
+    font-size: 28px;
+    font-weight: 700;
+  }
+
+  .summary-card__note {
+    margin-top: 6px;
+    color: #6b7280;
+    font-size: 13px;
+  }
+
+  /* Общий блок таблицы. */
+  .statistics-section {
+    width: 100%;
+    margin-top: 24px;
+    padding: 20px;
+    border: 1px solid #e5e7eb;
+    border-radius: 14px;
+    background: #ffffff;
+    box-sizing: border-box;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+  }
+
+  .statistics-section:first-of-type {
+    margin-top: 0;
+  }
+
+  .section-header {
+    margin-bottom: 18px;
+  }
+
+  .section-title {
+    margin: 0 0 6px;
+    color: #1f2937;
+    font-size: 21px;
+    line-height: 1.3;
+  }
+
+  .section-description {
+    margin: 0;
+    color: #6b7280;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  /* Горизонтальная прокрутка таблицы на узких экранах. */
+  .table-wrap {
+    width: 100%;
+    overflow-x: auto;
+  }
+
+  .statistics-table {
+    width: 100%;
+    min-width: 1050px;
+    border-collapse: collapse;
+  }
+
+  .statistics-table th,
+  .statistics-table td {
+    padding: 12px 10px;
+    border: 1px solid #e5e7eb;
+    text-align: center;
+    vertical-align: middle;
+  }
+
+  .statistics-table th {
+    background: #f8fafc;
+    color: #374151;
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  .statistics-table td {
+    color: #1f2937;
+    font-size: 14px;
+  }
+
+  .statistics-table th:first-child,
+  .statistics-table td:first-child {
+    text-align: left;
+  }
+
+  .statistics-table tbody tr:hover {
+    background: #f9fafb;
+  }
+
+  .statistics-table tfoot td {
+    background: #f3f4f6;
+    font-weight: 700;
+  }
+
+  /* Ссылка выбора месяца. */
+  .month-link {
+    color: #2563eb;
+    text-decoration: none;
+    font-weight: 700;
+  }
+
+  .month-link:hover {
+    text-decoration: underline;
+  }
+
+  .month-year {
+    margin-top: 3px;
+    color: #6b7280;
+    font-size: 12px;
+  }
+
+  /* Статус месячного плана. */
+  .status-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 92px;
+    padding: 5px 9px;
+    border-radius: 999px;
+    background: #eef2ff;
+    color: #3730a3;
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  /* Цветовая индикация числовых показателей. */
+  .number-success {
+    color: #047857;
+    font-weight: 700;
+  }
+
+  .number-warning {
+    color: #b45309;
+    font-weight: 700;
+  }
+
+  .number-info {
+    color: #1d4ed8;
+    font-weight: 700;
+  }
+
+  .percent-value {
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  /* Сообщение при отсутствии данных. */
+  .empty-state {
+    padding: 40px 20px;
+    border: 1px dashed #d1d5db;
+    border-radius: 12px;
+    color: #6b7280;
+    text-align: center;
+  }
+
+  /* Адаптивность. */
+  @media (max-width: 900px) {
+    .statistics-page {
+      padding: 16px;
+    }
+
+    .summary-grid {
+      grid-template-columns: repeat(2, minmax(150px, 1fr));
+    }
+  }
+
+  @media (max-width: 560px) {
+    .summary-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .page-header__title {
+      font-size: 24px;
+    }
+  }
+</style>
+{% endblock %}
+
+
+{% block content %}
+<div class="statistics-page">
+
+  {# ---------------------------------------------------------------------- #}
+  {# Заголовок страницы                                                     #}
+  {# ---------------------------------------------------------------------- #}
+  <header class="page-header">
+
+    <h1 class="page-header__title">
+        Моя статистика ВШК
+    </h1>
+
+    <div class="page-header__employee">
+
+        <div class="employee-name">
+            {{ staff_name }}
+        </div>
+
+        {% if staff_position %}
+        <div class="employee-position">
+            {{ staff_position }}
+        </div>
+        {% endif %}
+
+    </div>
+
+    <div class="page-header__subtitle">
+        {{ school_name }}
+
+        {% if academic_year %}
+            · {{ academic_year }} учебный год
+        {% endif %}
+    </div>
+
+</header>
+
+  {# ---------------------------------------------------------------------- #}
+  {# Общие показатели сотрудника за учебный год                            #}
+  {# ---------------------------------------------------------------------- #}
+  <section class="summary-grid">
+
+    <article class="summary-card">
+      <div class="summary-card__label">
+        Назначено задач
+      </div>
+
+      <div class="summary-card__value">
+        {{ monthly_totals.assigned_count }}
+      </div>
+
+      <div class="summary-card__note">
+        За весь учебный год
+      </div>
+    </article>
+
+    <article class="summary-card">
+      <div class="summary-card__label">
+        Выполнено
+      </div>
+
+      <div class="summary-card__value">
+        {{ monthly_totals.completed_count }}
+      </div>
+
+      <div class="summary-card__note">
+        {{ monthly_totals.completion_percent }}%
+        от назначенных задач
+      </div>
+    </article>
+
+    <article class="summary-card">
+      <div class="summary-card__label">
+        Не выполнено
+      </div>
+
+      <div class="summary-card__value">
+        {{ monthly_totals.not_completed_count }}
+      </div>
+
+      <div class="summary-card__note">
+        Из назначенных задач
+      </div>
+    </article>
+
+    <article class="summary-card">
+      <div class="summary-card__label">
+        Рассмотрено
+      </div>
+
+      <div class="summary-card__value">
+        {{ monthly_totals.reviewed_count }}
+      </div>
+
+      <div class="summary-card__note">
+        {{ monthly_totals.review_percent }}%
+        от выполненных задач
+      </div>
+    </article>
+
+  </section>
+
+
+  {# ---------------------------------------------------------------------- #}
+  {# Личная статистика сотрудника по месяцам                               #}
+  {# ---------------------------------------------------------------------- #}
+  <section class="statistics-section">
+
+    <div class="section-header">
+      <h2 class="section-title">
+        Моя статистика по месяцам
+      </h2>
+
+      <p class="section-description">
+        Учитываются задачи, где вы указаны основным ответственным,
+        исполнителем или соисполнителем.
+      </p>
+    </div>
+
+    {% if monthly_stats %}
+
+      <div class="table-wrap">
+        <table class="statistics-table">
+
+          <thead>
+          <tr>
+            <th>Месяц</th>
+            <th>Статус плана</th>
+            <th>Назначено</th>
+            <th>Выполнено</th>
+            <th>Не выполнено</th>
+            <th>Рассмотрено</th>
+            <th>Выполнение</th>
+            <th>Рассмотрено из выполненных</th>
+          </tr>
+          </thead>
+
+          <tbody>
+          {% for row in monthly_stats %}
+            <tr>
+              <td>
+                {#
+                  Ссылка активна только для месяца,
+                  в котором сотруднику назначены задачи.
+                #}
+                {% if row.assigned_count > 0 %}
+                  <a
+                    class="month-link"
+                    href="{{ url_for('staff_statistics_page') }}?month_plan_id={{ row.month_plan_id }}#month-direction-statistics"
+                  >
+                    {{ row.month_name }}
+                  </a>
+                {% else %}
+                  {{ row.month_name }}
+                {% endif %}
+
+                <div class="month-year">
+                  {{ row.year }}
+                </div>
+              </td>
+
+              <td>
+                <span class="status-badge">
+                  {{ row.plan_status_label }}
+                </span>
+              </td>
+
+              <td>
+                {{ row.assigned_count }}
+              </td>
+
+              <td class="number-success">
+                {{ row.completed_count }}
+              </td>
+
+              <td class="number-warning">
+                {{ row.not_completed_count }}
+              </td>
+
+              <td class="number-info">
+                {{ row.reviewed_count }}
+              </td>
+
+              <td>
+                <span class="percent-value">
+                  {{ row.completion_percent }}%
+                </span>
+              </td>
+
+              <td>
+                <span class="percent-value">
+                  {{ row.review_percent }}%
+                </span>
+              </td>
+            </tr>
+          {% endfor %}
+          </tbody>
+
+          <tfoot>
+          <tr>
+            <td colspan="2">
+              Итого за учебный год
+            </td>
+
+            <td>
+              {{ monthly_totals.assigned_count }}
+            </td>
+
+            <td>
+              {{ monthly_totals.completed_count }}
+            </td>
+
+            <td>
+              {{ monthly_totals.not_completed_count }}
+            </td>
+
+            <td>
+              {{ monthly_totals.reviewed_count }}
+            </td>
+
+            <td>
+              {{ monthly_totals.completion_percent }}%
+            </td>
+
+            <td>
+              {{ monthly_totals.review_percent }}%
+            </td>
+          </tr>
+          </tfoot>
+
+        </table>
+      </div>
+
+    {% else %}
+
+      <div class="empty-state">
+        Для текущего учебного года месячные планы пока не сформированы.
+      </div>
+
+    {% endif %}
+
+  </section>
+
+
+  {# ---------------------------------------------------------------------- #}
+  {# Детализация выбранного месяца по направлениям ВШК                     #}
+  {# ---------------------------------------------------------------------- #}
+  {% if selected_month %}
+  <section
+    id="month-direction-statistics"
+    class="statistics-section"
+  >
+
+    <div class="section-header">
+      <h2 class="section-title">
+        {{ selected_month.month_name }}
+        {{ selected_month.year }}:
+        моя статистика по направлениям
+      </h2>
+
+      <p class="section-description">
+        Показатели рассчитаны относительно ваших задач
+        в выбранном месячном плане.
+      </p>
+    </div>
+
+    {% if month_direction_stats %}
+
+      <div class="table-wrap">
+        <table class="statistics-table">
+
+          <thead>
+          <tr>
+            <th>Направление ВШК</th>
+            <th>Назначено</th>
+            <th>Выполнено</th>
+            <th>Не выполнено</th>
+            <th>Рассмотрено</th>
+            <th>Выполнение</th>
+            <th>Рассмотрено из выполненных</th>
+          </tr>
+          </thead>
+
+          <tbody>
+          {% for row in month_direction_stats %}
+            <tr>
+              <td>
+                {{ row.direction_name }}
+              </td>
+
+              <td>
+                {{ row.assigned_count }}
+              </td>
+
+              <td class="number-success">
+                {{ row.completed_count }}
+              </td>
+
+              <td class="number-warning">
+                {{ row.not_completed_count }}
+              </td>
+
+              <td class="number-info">
+                {{ row.reviewed_count }}
+              </td>
+
+              <td>
+                <span class="percent-value">
+                  {{ row.completion_percent }}%
+                </span>
+              </td>
+
+              <td>
+                <span class="percent-value">
+                  {{ row.review_percent }}%
+                </span>
+              </td>
+            </tr>
+          {% endfor %}
+          </tbody>
+
+          <tfoot>
+          <tr>
+            <td>
+              Итого за выбранный месяц
+            </td>
+
+            <td>
+              {{ month_direction_totals.assigned_count }}
+            </td>
+
+            <td>
+              {{ month_direction_totals.completed_count }}
+            </td>
+
+            <td>
+              {{ month_direction_totals.not_completed_count }}
+            </td>
+
+            <td>
+              {{ month_direction_totals.reviewed_count }}
+            </td>
+
+            <td>
+              {{ month_direction_totals.completion_percent }}%
+            </td>
+
+            <td>
+              {{ month_direction_totals.review_percent }}%
+            </td>
+          </tr>
+          </tfoot>
+
+        </table>
+      </div>
+
+    {% else %}
+
+      <div class="empty-state">
+        В выбранном месяце назначенные задачи отсутствуют.
+      </div>
+
+    {% endif %}
+
+  </section>
+  {% endif %}
+
+</div>
+{% endblock %}

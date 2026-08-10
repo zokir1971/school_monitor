@@ -1,0 +1,1663 @@
+{% extends "base.html" %}
+
+{% block title %}
+Распределение отчётов
+{% endblock %}
+
+
+{% block extra_css %}
+<style>
+  :root {
+    --assignment-primary: #4f46e5;
+    --assignment-primary-dark: #3730a3;
+    --assignment-primary-soft: #eef2ff;
+
+    --assignment-success: #15803d;
+    --assignment-success-soft: #dcfce7;
+
+    --assignment-warning: #b45309;
+    --assignment-warning-soft: #fef3c7;
+
+    --assignment-danger: #b91c1c;
+    --assignment-danger-soft: #fee2e2;
+
+    --assignment-info: #0369a1;
+    --assignment-info-soft: #e0f2fe;
+
+    --assignment-text: #172033;
+    --assignment-muted: #64748b;
+    --assignment-border: #dbe3ef;
+    --assignment-surface: #ffffff;
+    --assignment-background: #f5f7fb;
+
+    --assignment-shadow:
+      0 10px 30px rgba(15, 23, 42, 0.08);
+
+    --assignment-radius: 18px;
+  }
+
+  .assignment-page {
+    max-width: 1380px;
+    margin: 0 auto;
+    padding: 22px 18px 40px;
+    color: var(--assignment-text);
+  }
+
+  .assignment-page * {
+    box-sizing: border-box;
+  }
+
+  /* =========================
+     PAGE HEADER
+     ========================= */
+
+  .assignment-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 24px;
+
+    margin-bottom: 22px;
+    padding: 24px 26px;
+
+    border: 1px solid var(--assignment-border);
+    border-radius: var(--assignment-radius);
+    background:
+      linear-gradient(
+        135deg,
+        rgba(79, 70, 229, 0.08),
+        rgba(14, 165, 233, 0.04)
+      ),
+      var(--assignment-surface);
+
+    box-shadow: var(--assignment-shadow);
+  }
+
+  .assignment-header__content {
+    min-width: 0;
+  }
+
+  .assignment-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+
+    margin-bottom: 10px;
+    padding: 7px 11px;
+
+    border: 1px solid #c7d2fe;
+    border-radius: 999px;
+
+    background: var(--assignment-primary-soft);
+    color: var(--assignment-primary-dark);
+
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+  }
+
+  .assignment-title {
+    margin: 0;
+
+    color: #111827;
+    font-size: clamp(24px, 3vw, 34px);
+    font-weight: 900;
+    line-height: 1.2;
+  }
+
+  .assignment-subtitle {
+    max-width: 850px;
+    margin: 10px 0 0;
+
+    color: var(--assignment-muted);
+    font-size: 15px;
+    line-height: 1.65;
+  }
+
+  .assignment-header__icon {
+    display: grid;
+    flex: 0 0 auto;
+    place-items: center;
+
+    width: 64px;
+    height: 64px;
+
+    border-radius: 18px;
+    background: linear-gradient(
+      135deg,
+      var(--assignment-primary),
+      #7c3aed
+    );
+
+    color: #ffffff;
+    font-size: 30px;
+
+    box-shadow:
+      0 12px 24px rgba(79, 70, 229, 0.25);
+  }
+
+  /* =========================
+     ALERTS
+     ========================= */
+
+  .assignment-alert {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+
+    margin-bottom: 18px;
+    padding: 15px 17px;
+
+    border: 1px solid transparent;
+    border-radius: 14px;
+
+    font-size: 14px;
+    font-weight: 650;
+    line-height: 1.55;
+  }
+
+  .assignment-alert--success {
+    border-color: #bbf7d0;
+    background: var(--assignment-success-soft);
+    color: #166534;
+  }
+
+  .assignment-alert--error {
+    border-color: #fecaca;
+    background: var(--assignment-danger-soft);
+    color: #991b1b;
+  }
+
+  .assignment-alert__icon {
+    flex: 0 0 auto;
+    font-size: 20px;
+    line-height: 1.2;
+  }
+
+  /* =========================
+     TASK CARD
+     ========================= */
+
+  .assignment-task-card {
+    margin-bottom: 20px;
+    padding: 22px 24px;
+
+    border: 1px solid var(--assignment-border);
+    border-radius: var(--assignment-radius);
+    background: var(--assignment-surface);
+
+    box-shadow: var(--assignment-shadow);
+  }
+
+  .assignment-task-card__title {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+
+    margin: 0 0 16px;
+
+    color: #1e293b;
+    font-size: 18px;
+    font-weight: 900;
+  }
+
+  .assignment-task-grid {
+    display: grid;
+    grid-template-columns:
+      minmax(220px, 1.4fr)
+      minmax(220px, 1fr)
+      minmax(180px, 0.65fr);
+    gap: 14px;
+  }
+
+  .assignment-info-item {
+    min-width: 0;
+    padding: 14px 16px;
+
+    border: 1px solid #e5eaf2;
+    border-radius: 13px;
+    background: #f8fafc;
+  }
+
+  .assignment-info-item__label {
+    display: block;
+    margin-bottom: 6px;
+
+    color: var(--assignment-muted);
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.035em;
+    text-transform: uppercase;
+  }
+
+  .assignment-info-item__value {
+    color: #1e293b;
+    font-size: 14px;
+    font-weight: 750;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+  }
+
+  /* =========================
+     SUMMARY
+     ========================= */
+
+  .assignment-summary {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+
+    margin-bottom: 20px;
+    padding: 16px 18px;
+
+    border: 1px solid var(--assignment-border);
+    border-radius: 16px;
+    background: var(--assignment-surface);
+
+    box-shadow:
+      0 5px 18px rgba(15, 23, 42, 0.05);
+  }
+
+  .assignment-summary__label {
+    margin-right: 3px;
+
+    color: #334155;
+    font-size: 14px;
+    font-weight: 850;
+  }
+
+  .assignment-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+
+    min-height: 37px;
+    padding: 8px 13px;
+
+    border: 1px solid transparent;
+    border-radius: 999px;
+
+    font-size: 13px;
+    font-weight: 850;
+    white-space: nowrap;
+  }
+
+  .assignment-badge--total {
+    border-color: #cbd5e1;
+    background: #f1f5f9;
+    color: #334155;
+  }
+
+  .assignment-badge--assigned {
+    border-color: #bbf7d0;
+    background: var(--assignment-success-soft);
+    color: #166534;
+  }
+
+  .assignment-badge--unassigned {
+    border-color: #fde68a;
+    background: var(--assignment-warning-soft);
+    color: #92400e;
+  }
+
+  .assignment-badge--complete {
+    border-color: #a7f3d0;
+    background: #ecfdf5;
+    color: #047857;
+  }
+
+  /* =========================
+     MAIN CARD
+     ========================= */
+
+  .assignment-card {
+    overflow: hidden;
+
+    border: 1px solid var(--assignment-border);
+    border-radius: var(--assignment-radius);
+    background: var(--assignment-surface);
+
+    box-shadow: var(--assignment-shadow);
+  }
+
+  .assignment-card__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+
+    padding: 20px 22px;
+
+    border-bottom: 1px solid var(--assignment-border);
+    background: linear-gradient(
+      180deg,
+      #ffffff,
+      #f8fafc
+    );
+  }
+
+  .assignment-card__heading {
+    min-width: 0;
+  }
+
+  .assignment-card__title {
+    margin: 0;
+
+    color: #172033;
+    font-size: 19px;
+    font-weight: 900;
+  }
+
+  .assignment-card__description {
+    margin: 6px 0 0;
+
+    color: var(--assignment-muted);
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  .assignment-card__status {
+    flex: 0 0 auto;
+  }
+
+  /* =========================
+     TABLE
+     ========================= */
+
+  .assignment-table-wrap {
+    width: 100%;
+    overflow-x: auto;
+  }
+
+  .assignment-table {
+    width: 100%;
+    min-width: 1040px;
+
+    border-collapse: separate;
+    border-spacing: 0;
+  }
+
+  .assignment-table th {
+    padding: 14px 15px;
+
+    border-bottom: 1px solid var(--assignment-border);
+    background: #f8fafc;
+
+    color: #475569;
+    font-size: 12px;
+    font-weight: 900;
+    letter-spacing: 0.035em;
+    text-align: left;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .assignment-table td {
+    padding: 16px 15px;
+
+    border-bottom: 1px solid #e9edf4;
+
+    color: #334155;
+    font-size: 14px;
+    line-height: 1.5;
+    vertical-align: middle;
+  }
+
+  .assignment-table tbody tr {
+    transition:
+      background-color 0.16s ease,
+      box-shadow 0.16s ease;
+  }
+
+  .assignment-table tbody tr:hover {
+    background: #fafbff;
+  }
+
+  .assignment-table tbody tr:last-child td {
+    border-bottom: 0;
+  }
+
+  .assignment-index {
+    display: grid;
+    place-items: center;
+
+    width: 34px;
+    height: 34px;
+
+    border: 1px solid #c7d2fe;
+    border-radius: 10px;
+    background: var(--assignment-primary-soft);
+
+    color: var(--assignment-primary-dark);
+    font-size: 13px;
+    font-weight: 900;
+  }
+
+  .assignment-report-name {
+    color: #172033;
+    font-size: 14px;
+    font-weight: 850;
+    line-height: 1.45;
+  }
+
+  .assignment-report-code {
+    display: inline-flex;
+
+    margin-top: 6px;
+    padding: 4px 8px;
+
+    border: 1px solid #e2e8f0;
+    border-radius: 7px;
+    background: #f8fafc;
+
+    color: #64748b;
+    font-family:
+      ui-monospace,
+      SFMono-Regular,
+      Menlo,
+      Monaco,
+      Consolas,
+      monospace;
+    font-size: 11px;
+    font-weight: 700;
+  }
+
+  .assignment-target {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .assignment-target__label {
+    color: #1e293b;
+    font-weight: 750;
+  }
+
+  .assignment-target__kind {
+    color: #64748b;
+    font-size: 12px;
+  }
+
+  /* =========================
+     SELECT
+     ========================= */
+
+  .assignment-select-wrap {
+    min-width: 290px;
+  }
+
+  .assignment-select {
+    width: 100%;
+    min-height: 46px;
+    padding: 10px 42px 10px 13px;
+
+    border: 1px solid #cbd5e1;
+    border-radius: 11px;
+    outline: none;
+
+    background-color: #ffffff;
+    color: #1e293b;
+
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 650;
+
+    cursor: pointer;
+
+    transition:
+      border-color 0.16s ease,
+      box-shadow 0.16s ease,
+      background-color 0.16s ease;
+  }
+
+  .assignment-select:hover {
+    border-color: #a5b4fc;
+  }
+
+  .assignment-select:focus {
+    border-color: var(--assignment-primary);
+    box-shadow:
+      0 0 0 4px rgba(79, 70, 229, 0.12);
+  }
+
+  .assignment-select:invalid {
+    color: #64748b;
+  }
+
+  .assignment-select.is-assigned {
+    border-color: #86efac;
+    background: #f0fdf4;
+  }
+
+  .assignment-current-executor {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    margin-top: 8px;
+
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 650;
+  }
+
+  .assignment-current-executor__dot {
+    width: 7px;
+    height: 7px;
+
+    border-radius: 50%;
+    background: var(--assignment-success);
+  }
+
+  /* =========================
+     ROLE BADGES
+     ========================= */
+
+  .assignment-role-legend {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+
+    padding: 15px 22px;
+
+    border-top: 1px solid var(--assignment-border);
+    background: #f8fafc;
+  }
+
+  .assignment-role-legend__title {
+    margin-right: 3px;
+
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 800;
+  }
+
+  .assignment-role-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+
+    padding: 6px 10px;
+
+    border: 1px solid transparent;
+    border-radius: 999px;
+
+    font-size: 12px;
+    font-weight: 800;
+  }
+
+  .assignment-role-badge--primary {
+    border-color: #c7d2fe;
+    background: var(--assignment-primary-soft);
+    color: var(--assignment-primary-dark);
+  }
+
+  .assignment-role-badge--coexecutor {
+    border-color: #bae6fd;
+    background: var(--assignment-info-soft);
+    color: #075985;
+  }
+
+  /* =========================
+     EMPTY STATE
+     ========================= */
+
+  .assignment-empty {
+    padding: 52px 24px;
+    text-align: center;
+  }
+
+  .assignment-empty__icon {
+    display: grid;
+    place-items: center;
+
+    width: 70px;
+    height: 70px;
+    margin: 0 auto 16px;
+
+    border-radius: 22px;
+    background: #f1f5f9;
+
+    font-size: 34px;
+  }
+
+  .assignment-empty__title {
+    margin: 0 0 8px;
+
+    color: #1e293b;
+    font-size: 18px;
+    font-weight: 900;
+  }
+
+  .assignment-empty__text {
+    max-width: 560px;
+    margin: 0 auto;
+
+    color: var(--assignment-muted);
+    font-size: 14px;
+    line-height: 1.65;
+  }
+
+  /* =========================
+     ACTIONS
+     ========================= */
+
+  .assignment-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    flex-wrap: wrap;
+
+    margin-top: 22px;
+    padding: 18px 20px;
+
+    border: 1px solid var(--assignment-border);
+    border-radius: 16px;
+    background: var(--assignment-surface);
+
+    box-shadow:
+      0 5px 18px rgba(15, 23, 42, 0.05);
+  }
+
+  .assignment-actions__group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .assignment-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+
+    min-height: 44px;
+    padding: 10px 16px;
+
+    border: 1px solid transparent;
+    border-radius: 11px;
+
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 850;
+    line-height: 1;
+
+    text-decoration: none;
+    cursor: pointer;
+
+    transition:
+      transform 0.14s ease,
+      box-shadow 0.14s ease,
+      background-color 0.14s ease,
+      border-color 0.14s ease;
+  }
+
+  .assignment-btn:hover {
+    transform: translateY(-1px);
+  }
+
+  .assignment-btn--primary {
+    border-color: var(--assignment-primary);
+    background: var(--assignment-primary);
+    color: #ffffff;
+
+    box-shadow:
+      0 8px 18px rgba(79, 70, 229, 0.22);
+  }
+
+  .assignment-btn--primary:hover {
+    background: var(--assignment-primary-dark);
+  }
+
+  .assignment-btn--secondary {
+    border-color: #cbd5e1;
+    background: #ffffff;
+    color: #334155;
+  }
+
+  .assignment-btn--secondary:hover {
+    border-color: #94a3b8;
+    background: #f8fafc;
+  }
+
+  .assignment-btn--success {
+    border-color: var(--assignment-success);
+    background: var(--assignment-success);
+    color: #ffffff;
+
+    box-shadow:
+      0 8px 18px rgba(21, 128, 61, 0.18);
+  }
+
+  .assignment-btn--success:hover {
+    background: #166534;
+  }
+
+  .assignment-help {
+    color: var(--assignment-muted);
+    font-size: 12px;
+    line-height: 1.45;
+  }
+
+  .assignment-help strong {
+    color: #334155;
+  }
+
+
+  /* =========================
+     REPORT STATUS
+     ========================= */
+
+  .assignment-status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+
+    min-height: 34px;
+    padding: 7px 11px;
+
+    border: 1px solid transparent;
+    border-radius: 999px;
+
+    font-size: 12px;
+    font-weight: 850;
+    white-space: nowrap;
+  }
+
+  .assignment-status-badge--pending {
+    border-color: #fde68a;
+    background: #fffbeb;
+    color: #92400e;
+  }
+
+  .assignment-status-badge--completed {
+    border-color: #bbf7d0;
+    background: #f0fdf4;
+    color: #166534;
+  }
+
+  .assignment-status-badge--waived {
+    border-color: #cbd5e1;
+    background: #f8fafc;
+    color: #475569;
+  }
+
+  .assignment-status-badge--unassigned {
+    border-color: #e2e8f0;
+    background: #f8fafc;
+    color: #64748b;
+  }
+
+  .assignment-waived-reason {
+    max-width: 280px;
+    margin-top: 8px;
+    padding: 9px 10px;
+
+    border-left: 3px solid #94a3b8;
+    border-radius: 0 8px 8px 0;
+    background: #f8fafc;
+
+    color: #475569;
+    font-size: 12px;
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+  }
+
+  .assignment-row-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .assignment-row-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+
+    min-height: 36px;
+    padding: 7px 11px;
+
+    border: 1px solid transparent;
+    border-radius: 9px;
+
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 800;
+    line-height: 1;
+
+    cursor: pointer;
+
+    transition:
+      transform 0.14s ease,
+      background-color 0.14s ease,
+      border-color 0.14s ease,
+      box-shadow 0.14s ease;
+  }
+
+  .assignment-row-btn:hover {
+    transform: translateY(-1px);
+  }
+
+  .assignment-row-btn--reassign {
+    border-color: #bfdbfe;
+    background: #eff6ff;
+    color: #1d4ed8;
+  }
+
+  .assignment-row-btn--reassign:hover {
+    border-color: #93c5fd;
+    background: #dbeafe;
+    box-shadow: 0 4px 10px rgba(37, 99, 235, 0.12);
+  }
+
+  .assignment-row-btn--waive {
+    border-color: #fed7aa;
+    background: #fff7ed;
+    color: #c2410c;
+  }
+
+  .assignment-row-btn--waive:hover {
+    border-color: #fdba74;
+    background: #ffedd5;
+    box-shadow: 0 4px 10px rgba(234, 88, 12, 0.12);
+  }
+
+  .assignment-row-note {
+    color: var(--assignment-muted);
+    font-size: 12px;
+    line-height: 1.4;
+  }
+
+  /* =========================
+     RESPONSIVE
+     ========================= */
+
+  @media (max-width: 900px) {
+    .assignment-header {
+      padding: 20px;
+    }
+
+    .assignment-header__icon {
+      display: none;
+    }
+
+    .assignment-task-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .assignment-card__header {
+      align-items: flex-start;
+      flex-direction: column;
+    }
+
+    .assignment-actions {
+      align-items: stretch;
+      flex-direction: column;
+    }
+
+    .assignment-actions__group {
+      width: 100%;
+    }
+
+    .assignment-btn {
+      flex: 1;
+    }
+  }
+
+  @media (max-width: 580px) {
+    .assignment-page {
+      padding-right: 10px;
+      padding-left: 10px;
+    }
+
+    .assignment-header,
+    .assignment-task-card {
+      padding: 17px;
+      border-radius: 14px;
+    }
+
+    .assignment-summary {
+      align-items: stretch;
+      flex-direction: column;
+    }
+
+    .assignment-badge {
+      justify-content: space-between;
+      width: 100%;
+    }
+
+    .assignment-actions__group {
+      flex-direction: column;
+    }
+
+    .assignment-btn {
+      width: 100%;
+    }
+  }
+</style>
+{% endblock %}
+
+
+{% block content %}
+
+<div class="assignment-page">
+
+  <!-- HEADER -->
+  <header class="assignment-header">
+    <div class="assignment-header__content">
+
+      <div class="assignment-eyebrow">
+        📋 Распределение системных отчётов
+      </div>
+
+      <h1 class="assignment-title">
+        Назначение исполнителей отчётов
+      </h1>
+
+      <p class="assignment-subtitle">
+        Назначьте каждому выбранному отчёту конкретного исполнителя.
+        В список доступны только ответственный исполнитель и
+        соисполнители этой задачи.
+      </p>
+
+    </div>
+
+    <div class="assignment-header__icon"
+         aria-hidden="true">
+      👥
+    </div>
+  </header>
+
+
+  <!-- ALERTS -->
+  {% if success %}
+    <div class="assignment-alert assignment-alert--success">
+      <span class="assignment-alert__icon">✅</span>
+      <div>{{ success }}</div>
+    </div>
+  {% endif %}
+
+  {% if error %}
+    <div class="assignment-alert assignment-alert--error">
+      <span class="assignment-alert__icon">⚠️</span>
+      <div>{{ error }}</div>
+    </div>
+  {% endif %}
+
+
+  <!-- TASK INFO -->
+  <section class="assignment-task-card">
+
+    <h2 class="assignment-task-card__title">
+      🗂️ Информация о задаче
+    </h2>
+
+    <div class="assignment-task-grid">
+
+      <div class="assignment-info-item">
+        <span class="assignment-info-item__label">
+          Тема
+        </span>
+
+        <div class="assignment-info-item__value">
+          {{ page_data.task_topic or "—" }}
+        </div>
+      </div>
+
+      <div class="assignment-info-item">
+        <span class="assignment-info-item__label">
+          Цель
+        </span>
+
+        <div class="assignment-info-item__value">
+          {{ page_data.task_goal or "—" }}
+        </div>
+      </div>
+
+      <div class="assignment-info-item">
+        <span class="assignment-info-item__label">
+          Срок выполнения
+        </span>
+
+        <div class="assignment-info-item__value">
+          {{ page_data.period_text or "—" }}
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+
+  <!-- SUMMARY -->
+  <section class="assignment-summary">
+
+    <span class="assignment-summary__label">
+      Состояние распределения:
+    </span>
+
+    <span class="assignment-badge assignment-badge--total">
+      📄 Всего отчётов:
+      {{ page_data.report_count }}
+    </span>
+
+    <span class="assignment-badge assignment-badge--assigned">
+      ✅ Назначено:
+      {{ page_data.assigned_count }}
+    </span>
+
+    <span class="assignment-badge assignment-badge--unassigned">
+      ⏳ Без исполнителя:
+      {{ page_data.unassigned_count }}
+    </span>
+
+    <span class="assignment-badge assignment-badge--unassigned">
+      🟡 Ожидают:
+      {{ page_data.pending_count }}
+    </span>
+
+    <span class="assignment-badge assignment-badge--assigned">
+      🟢 Выполнено:
+      {{ page_data.completed_count }}
+    </span>
+
+    <span class="assignment-badge assignment-badge--total">
+      ⚪ Освобождено:
+      {{ page_data.waived_count }}
+    </span>
+
+    {% if page_data.all_assigned %}
+      <span class="assignment-badge assignment-badge--complete">
+        ✓ Распределение завершено
+      </span>
+    {% endif %}
+
+  </section>
+
+
+  <form
+    method="post"
+    action="{{ request.url_for(
+        'staff_report_assignments_save',
+        month_item_id=page_data.month_item_id
+    ) }}"
+    id="report-assignment-form"
+  >
+
+    <input
+      type="hidden"
+      name="month"
+      value="{{ page_data.month }}"
+    >
+
+
+    <!-- REPORT TABLE -->
+    <section class="assignment-card">
+
+      <div class="assignment-card__header">
+
+        <div class="assignment-card__heading">
+          <h2 class="assignment-card__title">
+            Выбранные системные отчёты
+          </h2>
+
+          <p class="assignment-card__description">
+            Для каждого отчёта выберите одного сотрудника,
+            который будет отвечать за его заполнение.
+          </p>
+        </div>
+
+        <div class="assignment-card__status">
+          <span class="assignment-badge assignment-badge--total">
+            Исполнителей:
+            {{ page_data.executors|length }}
+          </span>
+        </div>
+
+      </div>
+
+
+      {% if page_data.reports %}
+
+        <div class="assignment-table-wrap">
+
+          <table class="assignment-table">
+
+            <thead>
+            <tr>
+              <th style="width: 64px;">№</th>
+              <th>Отчёт</th>
+              <th>Объект заполнения</th>
+              <th style="width: 340px;">
+                Исполнитель
+              </th>
+              <th style="width: 190px;">Статус</th>
+              <th style="width: 260px;">Действия</th>
+            </tr>
+            </thead>
+
+            <tbody>
+
+            {% for report in page_data.reports %}
+
+              <tr>
+
+                <td>
+                  <div class="assignment-index">
+                    {{ loop.index }}
+                  </div>
+                </td>
+
+                <td>
+                  <div class="assignment-report-name">
+                    {{ report.report_name or "—" }}
+                  </div>
+
+                  {% if report.report_code %}
+                    <div class="assignment-report-code">
+                      {{ report.report_code }}
+                    </div>
+                  {% endif %}
+                </td>
+
+                <td>
+                  <div class="assignment-target">
+
+                    <span class="assignment-target__label">
+                      {{
+                        report.target_label
+                        or report.target_value
+                        or "—"
+                      }}
+                    </span>
+
+                    {% if report.target_kind %}
+                      <span class="assignment-target__kind">
+                        Тип объекта:
+                        {{ report.target_kind }}
+                      </span>
+                    {% endif %}
+
+                  </div>
+                </td>
+
+                <td>
+                  <div class="assignment-select-wrap">
+
+                    <select
+                      name="assignment_{{ report.selected_report_id }}"
+                      class="
+                        assignment-select
+                        {% if report.is_assigned %}
+                          is-assigned
+                        {% endif %}
+                      "
+                      required
+                      {% if report.is_completed %}
+                        disabled
+                      {% endif %}
+                    >
+
+                      <option value="">
+                        — Выберите исполнителя —
+                      </option>
+
+                      {% for executor in page_data.executors %}
+
+                        <option
+                          value="{{ executor.staff_member_id }}"
+                          {% if
+                            report.assigned_staff_member_id
+                            == executor.staff_member_id
+                          %}
+                            selected
+                          {% endif %}
+                        >
+                          {{ executor.full_name }}
+                          —
+                          {{ executor.assignment_kind_label }}
+
+                          {% if executor.position_text %}
+                            ({{ executor.position_text }})
+                          {% endif %}
+                        </option>
+
+                      {% endfor %}
+
+                    </select>
+
+                    {% if report.is_completed and report.assigned_staff_member_id %}
+                      <input
+                        type="hidden"
+                        name="assignment_{{ report.selected_report_id }}"
+                        value="{{ report.assigned_staff_member_id }}"
+                      >
+                    {% endif %}
+
+                    {% if report.assigned_staff_full_name %}
+                      <div class="assignment-current-executor">
+                        <span
+                          class="assignment-current-executor__dot"
+                        ></span>
+
+                        Сейчас назначен:
+                        {{ report.assigned_staff_full_name }}
+                      </div>
+                    {% endif %}
+
+                  </div>
+                </td>
+
+                <td>
+                  {% if report.is_completed %}
+                    <span class="
+                      assignment-status-badge
+                      assignment-status-badge--completed
+                    ">
+                      ✅ Выполнен
+                    </span>
+
+                  {% elif report.is_waived %}
+                    <span class="
+                      assignment-status-badge
+                      assignment-status-badge--waived
+                    ">
+                      ⚪ Освобождён
+                    </span>
+
+                    {% if report.waived_reason %}
+                      <div class="assignment-waived-reason">
+                        <strong>Причина:</strong>
+                        {{ report.waived_reason }}
+                      </div>
+                    {% endif %}
+
+                  {% elif report.is_pending %}
+                    <span class="
+                      assignment-status-badge
+                      assignment-status-badge--pending
+                    ">
+                      ⏳ Ожидается
+                    </span>
+
+                  {% else %}
+                    <span class="
+                      assignment-status-badge
+                      assignment-status-badge--unassigned
+                    ">
+                      — Не назначен
+                    </span>
+                  {% endif %}
+                </td>
+
+                <td>
+                  <div class="assignment-row-actions">
+
+                    {% if report.is_completed %}
+                      <span class="assignment-row-note">
+                        Отчёт уже выполнен.
+                      </span>
+
+                    {% else %}
+                      <button
+                        type="button"
+                        class="
+                          assignment-row-btn
+                          assignment-row-btn--reassign
+                        "
+                        data-action="reassign"
+                        data-report-id="{{ report.selected_report_id }}"
+                        data-month-item-id="{{ page_data.month_item_id }}"
+                        data-month="{{ page_data.month }}"
+                      >
+                        🔄 Переназначить
+                      </button>
+
+                      {% if not report.is_waived %}
+                        <button
+                          type="button"
+                          class="
+                            assignment-row-btn
+                            assignment-row-btn--waive
+                          "
+                          data-action="waive"
+                          data-report-id="{{ report.selected_report_id }}"
+                          data-month-item-id="{{ page_data.month_item_id }}"
+                          data-month="{{ page_data.month }}"
+                        >
+                          ⏭ Завершить без отчёта
+                        </button>
+                      {% else %}
+                        <span class="assignment-row-note">
+                          Можно переназначить и вернуть в работу.
+                        </span>
+                      {% endif %}
+                    {% endif %}
+
+                  </div>
+                </td>
+
+              </tr>
+
+            {% endfor %}
+
+            </tbody>
+          </table>
+
+        </div>
+
+
+        <!-- ROLE LEGEND -->
+        <div class="assignment-role-legend">
+
+          <span class="assignment-role-legend__title">
+            Доступные роли:
+          </span>
+
+          <span class="
+            assignment-role-badge
+            assignment-role-badge--primary
+          ">
+            ⭐ Ответственный
+          </span>
+
+          <span class="
+            assignment-role-badge
+            assignment-role-badge--coexecutor
+          ">
+            👥 Соисполнитель
+          </span>
+
+        </div>
+
+      {% else %}
+
+        <div class="assignment-empty">
+
+          <div class="assignment-empty__icon">
+            📭
+          </div>
+
+          <h3 class="assignment-empty__title">
+            Отчёты пока не выбраны
+          </h3>
+
+          <p class="assignment-empty__text">
+            Вернитесь к алгоритму выполнения задачи и выберите
+            системные отчёты. После этого они появятся на странице
+            распределения.
+          </p>
+
+        </div>
+
+      {% endif %}
+
+    </section>
+
+
+    <!-- ACTIONS -->
+    <div class="assignment-actions">
+
+      <div class="assignment-actions__group">
+
+        <a
+          href="/staff/tasks/execute
+                ?month={{ page_data.month }}
+                &selected_task_id={{ page_data.month_item_id }}"
+          class="assignment-btn assignment-btn--secondary"
+        >
+          ← Вернуться к алгоритму
+        </a>
+
+      </div>
+
+
+      <div class="assignment-actions__group">
+
+        {% if page_data.reports %}
+
+          <button
+            type="submit"
+            class="assignment-btn assignment-btn--primary"
+          >
+            💾 Сохранить распределение
+          </button>
+
+          {% if page_data.all_assigned %}
+            <a href="{{ url_for('staff_report_templates_page', month_item_id=page_data.month_item_id) }}?month={{ page_data.month }}"
+               class="assignment-btn assignment-btn--success">
+              Перейти к заполнению отчётов →
+            </a>
+          {% endif %}
+
+        {% endif %}
+
+      </div>
+
+    </div>
+
+
+    {% if page_data.reports %}
+      <div
+        class="assignment-help"
+        style="margin-top: 12px;"
+      >
+        <strong>Важно:</strong>
+        соисполнитель получит доступ только к тем отчётам,
+        которые назначены именно ему. Ответственный исполнитель
+        сохраняет контроль над общей задачей и её завершением.
+      </div>
+    {% endif %}
+
+  </form>
+
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const scrollKey = "report-page-scroll:" + window.location.pathname;
+
+  // Восстанавливаем положение после redirect/reload.
+  const savedScroll = sessionStorage.getItem(scrollKey);
+
+  if (savedScroll !== null) {
+    sessionStorage.removeItem(scrollKey);
+
+    requestAnimationFrame(function () {
+      window.scrollTo({
+        top: Number(savedScroll),
+        behavior: "instant"
+      });
+    });
+  }
+
+  // Перед отправкой любой формы запоминаем положение.
+  document.querySelectorAll("form").forEach(function (form) {
+    form.addEventListener("submit", function () {
+      sessionStorage.setItem(
+        scrollKey,
+        String(window.scrollY)
+      );
+    });
+  });
+});
+</script>
+
+
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const selects = document.querySelectorAll(
+      ".assignment-select"
+    );
+
+    selects.forEach(function (select) {
+      const updateState = function () {
+        if (select.value) {
+          select.classList.add("is-assigned");
+        } else {
+          select.classList.remove("is-assigned");
+        }
+      };
+
+      select.addEventListener(
+        "change",
+        updateState
+      );
+
+      updateState();
+    });
+
+    const form = document.getElementById(
+      "report-assignment-form"
+    );
+
+    if (!form) {
+      return;
+    }
+
+    form.addEventListener(
+      "submit",
+      function (event) {
+        const unassignedSelect = Array.from(
+          selects
+        ).find(function (select) {
+          return !select.disabled && !select.value;
+        });
+
+        if (!unassignedSelect) {
+          return;
+        }
+
+        event.preventDefault();
+
+        unassignedSelect.focus();
+        unassignedSelect.scrollIntoView({
+          behavior: "smooth",
+          block: "center"
+        });
+
+        alert(
+          "Назначьте исполнителя каждому выбранному отчёту."
+        );
+      }
+    );
+
+    const submitActionForm = function (url, fields) {
+      const actionForm = document.createElement("form");
+
+      actionForm.method = "post";
+      actionForm.action = url;
+      actionForm.style.display = "none";
+
+      Object.entries(fields).forEach(function ([name, value]) {
+        const input = document.createElement("input");
+
+        input.type = "hidden";
+        input.name = name;
+        input.value = value;
+
+        actionForm.appendChild(input);
+      });
+
+      document.body.appendChild(actionForm);
+      actionForm.submit();
+    };
+
+    document.querySelectorAll(
+      '[data-action="reassign"]'
+    ).forEach(function (button) {
+      button.addEventListener("click", function () {
+        const reportId = button.dataset.reportId;
+        const monthItemId = button.dataset.monthItemId;
+        const month = button.dataset.month;
+
+        const executorSelect = document.querySelector(
+          'select[name="assignment_' + reportId + '"]'
+        );
+
+        if (!executorSelect || !executorSelect.value) {
+          alert(
+            "Сначала выберите нового исполнителя отчёта."
+          );
+
+          if (executorSelect) {
+            executorSelect.focus();
+          }
+
+          return;
+        }
+
+        if (!confirm(
+          "Переназначить этот отчёт выбранному сотруднику?"
+        )) {
+          return;
+        }
+
+        submitActionForm(
+          "/staff/tasks/" + monthItemId
+          + "/report-assignments/" + reportId
+          + "/reassign",
+          {
+            month: month,
+            staff_member_id: executorSelect.value
+          }
+        );
+      });
+    });
+
+    document.querySelectorAll(
+      '[data-action="waive"]'
+    ).forEach(function (button) {
+      button.addEventListener("click", function () {
+        const reportId = button.dataset.reportId;
+        const monthItemId = button.dataset.monthItemId;
+        const month = button.dataset.month;
+
+        const reason = prompt(
+          "Укажите причину завершения задачи без этого отчёта:"
+        );
+
+        if (reason === null) {
+          return;
+        }
+
+        const normalizedReason = reason.trim();
+
+        if (!normalizedReason) {
+          alert("Причина обязательна.");
+          return;
+        }
+
+        if (normalizedReason.length > 2000) {
+          alert(
+            "Причина слишком длинная. Максимум 2000 символов."
+          );
+          return;
+        }
+
+        if (!confirm(
+          "Освободить этот отчёт от обязательного выполнения?"
+        )) {
+          return;
+        }
+
+        submitActionForm(
+          "/staff/tasks/" + monthItemId
+          + "/report-assignments/" + reportId
+          + "/waive",
+          {
+            month: month,
+            reason: normalizedReason
+          }
+        );
+      });
+    });
+  });
+</script>
+
+{% endblock %}

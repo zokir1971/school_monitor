@@ -1,30 +1,141 @@
 # app/core/storage/local.py (Локальное хранилище для файлов загрузки)
 
+from __future__ import annotations
+
+import asyncio
 from pathlib import Path
-from uuid import uuid4
 
 from app.core.storage.base import BaseStorage
 
 
 class LocalStorage(BaseStorage):
-    ROOT = Path("storage")
+    def __init__(
+        self,
+        *,
+        root: Path,
+        public_base_url: str = "/storage",
+    ) -> None:
+        self._root = root.resolve()
+        self._public_base_url = (
+            public_base_url.rstrip("/")
+        )
 
-    def save(self, content: bytes, filename: str):
-        ext = Path(filename).suffix
-        stored_name = f"{uuid4().hex}{ext}"
+    async def save(
+        self,
+        *,
+        content: bytes,
+        object_key: str,
+        content_type: str,
+        metadata: dict[str, str] | None = None,
+    ) -> str | None:
+        file_path = self._resolve_object_path(
+            object_key
+        )
 
-        relative_path = Path("uploads/task_documents") / stored_name
-        abs_path = self.ROOT / relative_path
+        await asyncio.to_thread(
+            self._write_file,
+            file_path,
+            content,
+        )
 
-        abs_path.parent.mkdir(parents=True, exist_ok=True)
-        abs_path.write_bytes(content)
+        return None
 
-        return str(relative_path), stored_name
+    async def delete(
+        self,
+        *,
+        object_key: str,
+    ) -> None:
+        file_path = self._resolve_object_path(
+            object_key
+        )
 
-    def delete(self, path: str):
-        if not path:
-            return
+        await asyncio.to_thread(
+            self._delete_file,
+            file_path,
+        )
 
-        abs_path = self.ROOT / path
-        if abs_path.exists():
-            abs_path.unlink(missing_ok=True)
+    async def exists(
+        self,
+        *,
+        object_key: str,
+    ) -> bool:
+        file_path = self._resolve_object_path(
+            object_key
+        )
+
+        return await asyncio.to_thread(
+            file_path.is_file
+        )
+
+    async def get_download_url(
+        self,
+        *,
+        object_key: str,
+        expires_in: int = 300,
+    ) -> str:
+        normalized_key = self._normalize_key(
+            object_key
+        )
+
+        return (
+            f"{self._public_base_url}/"
+            f"{normalized_key}"
+        )
+
+    def _resolve_object_path(
+        self,
+        object_key: str,
+    ) -> Path:
+        normalized_key = self._normalize_key(
+            object_key
+        )
+
+        file_path = (
+            self._root /
+            Path(normalized_key)
+        ).resolve()
+
+        try:
+            file_path.relative_to(
+                self._root
+            )
+        except ValueError as exc:
+            raise ValueError(
+                "Недопустимый путь объекта."
+            ) from exc
+
+        return file_path
+
+    @staticmethod
+    def _normalize_key(
+        object_key: str,
+    ) -> str:
+        normalized_key = (
+            object_key or ""
+        ).strip().replace("\\", "/").lstrip("/")
+
+        if not normalized_key:
+            raise ValueError(
+                "Ключ объекта не указан."
+            )
+
+        return normalized_key
+
+    @staticmethod
+    def _write_file(
+        file_path: Path,
+        content: bytes,
+    ) -> None:
+        file_path.parent.mkdir(
+            parents=True,
+            exist_ok=True,
+        )
+
+        file_path.write_bytes(content)
+
+    @staticmethod
+    def _delete_file(
+        file_path: Path,
+    ) -> None:
+        if file_path.is_file():
+            file_path.unlink()

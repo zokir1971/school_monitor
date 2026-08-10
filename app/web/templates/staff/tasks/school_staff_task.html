@@ -4,28 +4,565 @@
 
 {% block extra_css %}
   <link rel="stylesheet" href="{{ url_for('static', path='css/staff_task.css') }}">
+
+  <style>
+  .staff-task-page,
+  .staff-task-page * {
+    box-sizing: border-box;
+  }
+
+  .staff-task-page {
+    width: 100%;
+    min-width: 0;
+    overflow-x: hidden;
+  }
+
+  /*
+   * Единый контейнер для всех блоков страницы:
+   * заголовка, сводных карточек и таблиц.
+   */
+  .staff-task-page .page-inner {
+    display: block !important;
+    width: min(100%, 1500px) !important;
+    max-width: 1500px !important;
+    margin: 0 auto !important;
+    padding-left: 20px !important;
+    padding-right: 20px !important;
+
+    grid-template-columns: none !important;
+    grid-auto-flow: initial !important;
+    align-items: initial !important;
+    justify-content: initial !important;
+
+    float: none !important;
+    position: relative !important;
+  }
+
+  .staff-task-page .page-inner > * {
+    float: none !important;
+    position: static !important;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  /* =========================
+     ВЕРХНИЙ БЛОК
+     ========================= */
+
+  .staff-task-page .sticky-head {
+    width: 100%;
+    margin: 0 0 20px;
+    background: transparent;
+  }
+
+  .staff-task-page .sticky-head .page-inner {
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+  }
+
+  .staff-task-page .head-row {
+    display: flex !important;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+
+    width: 100%;
+    min-width: 0;
+    padding: 18px 22px;
+
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05);
+  }
+
+  .staff-task-page .head-title {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .staff-task-page .head-title h2 {
+    margin: 0;
+    color: #0f172a;
+    font-size: 24px;
+    font-weight: 800;
+    line-height: 1.25;
+  }
+
+  .staff-task-page .head-title .sub {
+    margin-top: 6px;
+    color: #64748b;
+    font-size: 13px;
+    line-height: 1.45;
+  }
+
+  /* =========================
+     ФИЛЬТР МЕСЯЦА
+     ========================= */
+
+  .staff-task-page .month-filter {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0;
+  }
+
+  .staff-task-page .month-filter__label {
+    margin: 0;
+    color: #475569;
+    font-size: 13px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  .staff-task-page .month-filter__select {
+    min-width: 150px;
+    height: 40px;
+    padding: 0 38px 0 12px;
+
+    color: #0f172a;
+    font-size: 14px;
+    font-weight: 600;
+
+    background-color: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    outline: none;
+    cursor: pointer;
+
+    transition:
+      border-color 0.2s ease,
+      box-shadow 0.2s ease,
+      background-color 0.2s ease;
+  }
+
+  .staff-task-page .month-filter__select:hover {
+    border-color: #94a3b8;
+    background-color: #f8fafc;
+  }
+
+  .staff-task-page .month-filter__select:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.14);
+  }
+
+  .staff-task-page .month-filter__btn {
+    min-height: 40px;
+    padding: 0 18px;
+
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1;
+
+    background: #2563eb;
+    border: 1px solid #2563eb;
+    border-radius: 10px;
+    cursor: pointer;
+
+    box-shadow: 0 3px 8px rgba(37, 99, 235, 0.2);
+
+    transition:
+      background-color 0.2s ease,
+      border-color 0.2s ease,
+      box-shadow 0.2s ease,
+      transform 0.1s ease;
+  }
+
+  .staff-task-page .month-filter__btn:hover {
+    background: #1d4ed8;
+    border-color: #1d4ed8;
+    box-shadow: 0 5px 12px rgba(37, 99, 235, 0.26);
+  }
+
+  .staff-task-page .month-filter__btn:active {
+    transform: translateY(1px);
+  }
+
+  .staff-task-page .month-filter__btn:focus-visible {
+    outline: none;
+    box-shadow:
+      0 0 0 3px rgba(59, 130, 246, 0.18),
+      0 5px 12px rgba(37, 99, 235, 0.22);
+  }
+
+  /* =========================
+     СВОДНЫЕ КАРТОЧКИ
+     ========================= */
+
+  .staff-task-page .task-summary {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 16px;
+    width: 100%;
+    margin: 0 0 20px;
+    clear: both;
+  }
+
+  .staff-task-page .task-summary-card {
+    display: flex !important;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    padding: 18px 20px;
+
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 14px;
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05);
+
+    float: none !important;
+    position: static !important;
+  }
+
+  .task-summary-card__label {
+    color: #475569;
+    font-size: 14px;
+    font-weight: 700;
+  }
+
+  .task-summary-card__note {
+    margin-top: 4px;
+    color: #64748b;
+    font-size: 12px;
+    line-height: 1.4;
+  }
+
+  .task-summary-card__value {
+    flex: 0 0 auto;
+    min-width: 44px;
+    color: #0f172a;
+    font-size: 28px;
+    font-weight: 800;
+    line-height: 1;
+    text-align: right;
+  }
+
+  /* =========================
+     СЕКЦИИ ЗАДАЧ
+     ========================= */
+
+  .staff-task-page .task-section {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+
+    clear: both !important;
+    float: none !important;
+    position: static !important;
+  }
+
+  .staff-task-page .task-section + .task-section {
+    margin-top: 28px !important;
+  }
+
+  .staff-task-page .task-section__header {
+    display: flex !important;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    margin-bottom: 14px;
+
+    float: none !important;
+    position: static !important;
+  }
+
+  .task-section__title {
+    margin: 0;
+    color: #0f172a;
+    font-size: 20px;
+    font-weight: 800;
+  }
+
+  .task-section__description {
+    margin: 5px 0 0;
+    color: #64748b;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  .task-section__count {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    min-width: 34px;
+    height: 34px;
+    padding: 0 10px;
+
+    color: #334155;
+    font-size: 14px;
+    font-weight: 800;
+
+    background: #f1f5f9;
+    border-radius: 999px;
+  }
+
+  /* =========================
+     КАРТОЧКИ И ТАБЛИЦЫ
+     ========================= */
+
+  .staff-task-page .card,
+  .staff-task-page .card--large {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    overflow: hidden;
+
+    float: none !important;
+    position: static !important;
+  }
+
+  .staff-task-page .table-scroll {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .staff-task-page table.plan {
+    width: 100%;
+    min-width: 1180px;
+    border-collapse: collapse;
+  }
+
+  .staff-task-page table.plan--coexecutor {
+    width: 100%;
+    min-width: 1320px;
+  }
+
+  .staff-task-page table.plan th,
+  .staff-task-page table.plan td {
+    vertical-align: middle;
+  }
+
+  /* =========================
+     РОЛИ И СОСТОЯНИЯ
+     ========================= */
+
+  .task-role-badge,
+  .work-state {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    max-width: 210px;
+    padding: 6px 10px;
+
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 800;
+    line-height: 1.25;
+    text-align: center;
+    white-space: normal;
+  }
+
+  .task-role-badge--primary {
+    background: #dcfce7;
+    color: #166534;
+  }
+
+  .task-role-badge--coexecutor {
+    background: #ffedd5;
+    color: #9a3412;
+  }
+
+  .work-state--waiting {
+    background: #f1f5f9;
+    color: #475569;
+  }
+
+  .work-state--warning {
+    background: #fef3c7;
+    color: #92400e;
+  }
+
+  .work-state--ready {
+    background: #dbeafe;
+    color: #1d4ed8;
+  }
+
+  .work-state--done {
+    background: #dcfce7;
+    color: #166534;
+  }
+
+  .responsible-person {
+    min-width: 160px;
+  }
+
+  .responsible-person__name {
+    color: #0f172a;
+    font-weight: 700;
+    line-height: 1.35;
+  }
+
+  .responsible-person__position {
+    margin-top: 3px;
+    color: #64748b;
+    font-size: 12px;
+    line-height: 1.35;
+  }
+
+  .action-placeholder {
+    display: inline-block;
+    max-width: 190px;
+    color: #64748b;
+    font-size: 12px;
+    line-height: 1.4;
+    text-align: center;
+  }
+
+  /* =========================
+     АДАПТИВ
+     ========================= */
+
+  @media (max-width: 800px) {
+    .staff-task-page .page-inner {
+      padding-left: 12px !important;
+      padding-right: 12px !important;
+    }
+
+    .staff-task-page .head-row {
+      align-items: stretch;
+      flex-direction: column;
+      padding: 16px;
+    }
+
+    .staff-task-page .month-filter {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      width: 100%;
+    }
+
+    .staff-task-page .month-filter__label {
+      grid-column: 1 / -1;
+    }
+
+    .staff-task-page .month-filter__select {
+      width: 100%;
+      min-width: 0;
+    }
+
+    .staff-task-page .task-summary {
+      grid-template-columns: 1fr !important;
+    }
+
+    .staff-task-page .task-section__header {
+      align-items: center;
+    }
+  }
+
+  @media (max-width: 520px) {
+    .staff-task-page .month-filter {
+      grid-template-columns: 1fr;
+    }
+
+    .staff-task-page .month-filter__btn {
+      width: 100%;
+    }
+
+    .staff-task-page .head-title h2 {
+      font-size: 20px;
+    }
+  }
+</style>
 {% endblock %}
+
+{% macro render_status(task_status, status_label) %}
+  <div class="traffic-status">
+    {% if task_status == "todo" %}
+      <span class="traffic traffic--yellow"></span>
+      <span class="traffic-status__text">{{ status_label or "Жоспарланған" }}</span>
+
+    {% elif task_status == "in_progress" %}
+      <span class="traffic traffic--green"></span>
+      <span class="traffic-status__text">{{ status_label or "Орындалу үстінде" }}</span>
+
+    {% elif task_status == "done" %}
+      <span class="traffic traffic--blue"></span>
+      <span class="traffic-status__text">{{ status_label or "Орындалды" }}</span>
+
+    {% elif task_status == "reviewed" %}
+      <span class="traffic traffic--blue"></span>
+      <span class="traffic-status__text">{{ status_label or "Қаралды" }}</span>
+
+    {% elif task_status == "not_executed" %}
+      <span class="traffic traffic--red"></span>
+      <span class="traffic-status__text">{{ status_label or "Орындалмады" }}</span>
+
+    {% else %}
+      <span class="traffic-status__text">{{ status_label or "—" }}</span>
+    {% endif %}
+  </div>
+{% endmacro %}
+
+
+{% macro render_period(t) %}
+  {% if t.planned_start and t.planned_end %}
+    {{ t.planned_start.strftime("%d.%m") }} – {{ t.planned_end.strftime("%d.%m") }}
+  {% elif t.planned_start %}
+    {{ t.planned_start.strftime("%d.%m") }}
+  {% else %}
+    —
+  {% endif %}
+{% endmacro %}
+
 
 {% block content %}
 
 {% set accepted_task_id = request.query_params.get("accepted_task_id") %}
 
-<div class="page">
+{#
+  Основной контракт новой архитектуры:
+  - primary_tasks
+  - co_executor_tasks
+
+  Переходный fallback на tasks оставлен, чтобы страница не была пустой,
+  пока маршрут и service ещё переводятся на раздельные коллекции.
+#}
+{% if primary_tasks is defined %}
+  {% set primary_task_list = primary_tasks | default([], true) %}
+{% else %}
+  {% set primary_task_list = tasks | default([], true) %}
+{% endif %}
+
+{% set co_executor_task_list = co_executor_tasks | default([], true) %}
+
+<div class="page staff-task-page">
 
   <div class="sticky-head">
     <div class="page-inner">
       <div class="head-row">
+
         <div class="head-title">
           <h2>
             Мои задачи на — {{ MONTH_NAMES.get(month, month) }} месяц
           </h2>
+
           <div class="sub">
-            Назначенные задачи на выбранный месяц
+            Ответственные задачи и задачи, где вы назначены соисполнителем
           </div>
         </div>
 
         <form method="get" class="month-filter">
           <label for="month" class="month-filter__label">Выберите месяц</label>
+
           <select name="month" id="month" class="month-filter__select">
             {% for m_num, m_name in MONTH_NAMES.items() %}
               <option value="{{ m_num }}" {% if m_num == month %}selected{% endif %}>
@@ -34,140 +571,295 @@
             {% endfor %}
           </select>
 
-          <button type="submit" class="month-filter__btn">
-            Показать
-          </button>
+          <button type="submit" class="month-filter__btn">Показать</button>
         </form>
+
       </div>
     </div>
   </div>
 
+
   <div class="page-inner">
-    <div class="card card--large">
 
-      {% if request.query_params.get("success") == "accepted" %}
-        <div class="hint-box" style="margin-bottom:16px;">
-          <div class="hint-box__title">Задача принята</div>
-          <div class="hint-box__text">
-            Задача успешно принята в исполнение. Теперь можно нажать «Продолжить».
+    {% if request.query_params.get("success") == "accepted" %}
+      <div class="hint-box" style="margin-bottom: 16px;">
+        <div class="hint-box__title">Задача принята</div>
+        <div class="hint-box__text">
+          Задача успешно принята в исполнение. Теперь можно сформировать
+          или продолжить алгоритм выполнения.
+        </div>
+      </div>
+    {% endif %}
+
+    {% if request.query_params.get("error") %}
+      <div class="hint-box" style="margin-bottom: 16px;">
+        <div class="hint-box__title">Ошибка</div>
+        <div class="hint-box__text">{{ request.query_params.get("error") }}</div>
+      </div>
+    {% endif %}
+
+
+    <section class="task-summary">
+
+      <article class="task-summary-card">
+        <div>
+          <div class="task-summary-card__label">Ответственные задачи</div>
+          <div class="task-summary-card__note">
+            Вы принимаете задачу, формируете алгоритм и завершаете выполнение
           </div>
         </div>
-      {% endif %}
+        <div class="task-summary-card__value">{{ primary_task_list | length }}</div>
+      </article>
 
-      {% if request.query_params.get("error") %}
-        <div class="hint-box" style="margin-bottom:16px;">
-          <div class="hint-box__title">Ошибка</div>
-          <div class="hint-box__text">
-            {{ request.query_params.get("error") }}
+      <article class="task-summary-card">
+        <div>
+          <div class="task-summary-card__label">Задачи соисполнителя</div>
+          <div class="task-summary-card__note">
+            Вы заполняете назначенные вам отчёты
           </div>
         </div>
-      {% endif %}
+        <div class="task-summary-card__value">{{ co_executor_task_list | length }}</div>
+      </article>
 
-      <table class="plan">
-        <thead>
-          <tr>
-            <th class="nowrap">Неделя</th>
-            <th class="nowrap">Срок</th>
-            <th>Тақырып / Тема</th>
-            <th>Мақсаты / Цель</th>
-            <th>Объект контроля</th>
-            <th>Тип контроля</th>
-            <th>Место рассмотрения</th>
-            <th class="nowrap">Действие</th>
-            <th class="nowrap">Статус</th>
-          </tr>
-        </thead>
+    </section>
 
-        <tbody>
-          {% for t in tasks %}
-            {% set task_status = t.status %}
-            <tr class="{% if accepted_task_id and accepted_task_id|int == t.month_item_id %}row-current{% elif current_week is not none and t.week_of_month == current_week %}row-current{% endif %}">
-              <td class="nowrap">
-                {{ t.week_of_month or "—" }}
-              </td>
 
-              <td class="nowrap">
-                {% if t.planned_start and t.planned_end %}
-                  {{ t.planned_start.strftime("%d.%m") }} – {{ t.planned_end.strftime("%d.%m") }}
-                {% elif t.planned_start %}
-                  {{ t.planned_start.strftime("%d.%m") }}
-                {% else %}
-                  —
-                {% endif %}
-              </td>
+    <section class="task-section">
 
-              <td>{{ t.topic or "—" }}</td>
-              <td>{{ t.goal or "—" }}</td>
-              <td>{{ t.control_object or "—" }}</td>
-              <td>{{ t.control_type or "—" }}</td>
-              <td>{{ t.review_place or "—" }}</td>
+      <div class="task-section__header">
+        <div>
+          <h3 class="task-section__title">Ответственный исполнитель</h3>
+          <p class="task-section__description">
+            Эти задачи вы принимаете в исполнение, формируете алгоритм выполнения,
+            контролируете подготовку отчётов и завершаете после формирования
+            итогового документа.
+          </p>
+        </div>
+        <span class="task-section__count">{{ primary_task_list | length }}</span>
+      </div>
 
-              <td class="nowrap">
+      <div class="card card--large">
+        <div class="table-scroll">
+          <table class="plan">
+            <thead>
+            <tr>
+              <th class="nowrap">Неделя</th>
+              <th class="nowrap">Срок</th>
+              <th>Тақырып / Тема</th>
+              <th>Мақсаты / Цель</th>
+              <th>Объект контроля</th>
+              <th>Тип контроля</th>
+              <th>Место рассмотрения</th>
+              <th class="nowrap">Роль</th>
+              <th class="nowrap">Действие</th>
+              <th class="nowrap">Статус</th>
+            </tr>
+            </thead>
 
-  {% if task_status in ["todo", "not_executed"] %}
-    <form method="post" action="{{ url_for('take_task_to_work') }}">
-      <input type="hidden" name="task_id" value="{{ t.month_item_id }}">
-      <input type="hidden" name="month" value="{{ month }}">
+            <tbody>
+            {% for t in primary_task_list %}
+              {% set task_status = t.status %}
 
-      <button type="submit" class="btn btn-primary btn-sm">
-        Принять на исполнение
+              <tr class="{% if accepted_task_id and accepted_task_id|int == t.month_item_id %}row-current{% elif current_week is not none and t.week_of_month == current_week %}row-current{% endif %}">
+                <td class="nowrap">{{ t.week_of_month or "—" }}</td>
+                <td class="nowrap">{{ render_period(t) }}</td>
+                <td>{{ t.topic or "—" }}</td>
+                <td>{{ t.goal or "—" }}</td>
+                <td>{{ t.control_object or "—" }}</td>
+                <td>{{ t.control_type or "—" }}</td>
+                <td>{{ t.review_place or "—" }}</td>
+
+                <td class="nowrap">
+                  <span class="task-role-badge task-role-badge--primary">Ответственный</span>
+                </td>
+
+                <td class="nowrap">
+
+  {% if t.action_kind == "take" %}
+    <form
+      method="post"
+      action="{{ request.url_for('take_task_to_work') }}"
+      class="task-action-form"
+    >
+      <input
+        type="hidden"
+        name="task_id"
+        value="{{ t.month_item_id }}"
+      >
+
+      <input
+        type="hidden"
+        name="month"
+        value="{{ month }}"
+      >
+
+      <button
+        type="submit"
+        class="btn btn-primary btn-sm"
+      >
+        {{ t.action_label or "Принять на исполнение" }}
       </button>
     </form>
 
   {% elif t.action_url %}
-    <a href="{{ t.action_url }}"
-       class="btn
-              {% if t.action_kind == 'continue' %}
-                btn-outline-success
-              {% elif t.action_kind == 'view' %}
-                btn-outline-secondary
-              {% else %}
-                btn-outline-primary
-              {% endif %}
-              btn-sm">
+    <a
+      href="{{ t.action_url }}"
+      class="btn {{ t.action_css or 'btn-outline-primary' }} btn-sm"
+    >
       {{ t.action_label or "Открыть" }}
     </a>
 
   {% else %}
-    —
+    <span class="action-placeholder">
+      {{ t.action_label or "Действие недоступно" }}
+    </span>
   {% endif %}
 
 </td>
-              <td>
-                <div class="traffic-status">
-                  {% if task_status == "todo" %}
-                    <span class="traffic traffic--yellow"></span>
-                    <span class="traffic-status__text">{{ t.status_label or "Жоспарланған" }}</span>
 
-                  {% elif task_status == "in_progress" %}
-                    <span class="traffic traffic--green"></span>
-                    <span class="traffic-status__text">{{ t.status_label or "Орындалу үстінде" }}</span>
+<td>
+  {{ render_status(task_status, t.status_label) }}
+</td>
+              </tr>
 
-                  {% elif task_status == "done" %}
-                    <span class="traffic traffic--blue"></span>
-                    <span class="traffic-status__text">{{ t.status_label or "Орындалды" }}</span>
+            {% else %}
+              <tr>
+                <td colspan="10" class="empty">
+                  На этот месяц ответственные задачи не назначены
+                </td>
+              </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
 
-                  {% elif task_status == "not_executed" %}
-                    <span class="traffic traffic--red"></span>
-                    <span class="traffic-status__text">{{ t.status_label or "Орындалмады" }}</span>
+    </section>
+
+
+    <section class="task-section">
+
+      <div class="task-section__header">
+        <div>
+          <h3 class="task-section__title">Соисполнитель</h3>
+          <p class="task-section__description">
+            Доступ к заполнению отчётов появляется после того, как ответственный
+            исполнитель примет задачу, сформирует алгоритм выполнения
+            и назначит вам конкретные отчёты.
+          </p>
+        </div>
+        <span class="task-section__count">{{ co_executor_task_list | length }}</span>
+      </div>
+
+      <div class="card card--large">
+        <div class="table-scroll">
+          <table class="plan plan--coexecutor">
+            <thead>
+            <tr>
+              <th class="nowrap">Неделя</th>
+              <th class="nowrap">Срок</th>
+              <th>Тақырып / Тема</th>
+              <th>Мақсаты / Цель</th>
+              <th>Ответственный</th>
+              <th class="nowrap">Роль</th>
+              <th>Доступ к работе</th>
+              <th class="nowrap">Действие</th>
+              <th class="nowrap">Статус</th>
+            </tr>
+            </thead>
+
+            <tbody>
+            {% for t in co_executor_task_list %}
+              {% set task_status = t.status %}
+
+              <tr class="{% if current_week is not none and t.week_of_month == current_week %}row-current{% endif %}">
+                <td class="nowrap">{{ t.week_of_month or "—" }}</td>
+                <td class="nowrap">{{ render_period(t) }}</td>
+                <td>{{ t.topic or "—" }}</td>
+                <td>{{ t.goal or "—" }}</td>
+
+                <td>
+                  <div class="responsible-person">
+                    <div class="responsible-person__name">
+                      {{ t.primary_full_name or "Не назначен" }}
+                    </div>
+                    {% if t.primary_position_text %}
+                      <div class="responsible-person__position">
+                        {{ t.primary_position_text }}
+                      </div>
+                    {% endif %}
+                  </div>
+                </td>
+
+                <td class="nowrap">
+                  <span class="task-role-badge task-role-badge--coexecutor">Соисполнитель</span>
+                </td>
+
+                <td>
+                  {% if not t.is_accepted %}
+                    <span class="work-state work-state--waiting">
+                      Ответственный ещё не принял задачу
+                    </span>
+
+                  {% elif not t.has_execution_algorithm %}
+                    <span class="work-state work-state--waiting">
+                      Алгоритм выполнения ещё не составлен
+                    </span>
+
+                  {% elif not t.has_assigned_reports %}
+                    <span class="work-state work-state--warning">
+                      Для вас отчёты ещё не назначены
+                    </span>
+
+                  {% elif t.can_fill_reports %}
+                    <span class="work-state work-state--ready">
+                      Можно заполнять отчёты
+                    </span>
 
                   {% else %}
-                    <span class="traffic-status__text">—</span>
+                    <span class="work-state work-state--done">
+                      Работа по отчётам завершена
+                    </span>
                   {% endif %}
-                </div>
-              </td>
-            </tr>
-          {% else %}
-            <tr>
-              <td colspan="9" class="empty">
-                На этот месяц задачи не назначены
-              </td>
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+                </td>
 
-    </div>
+                <td class="nowrap">
+                  {% if t.action_url and t.can_fill_reports %}
+                    <a href="{{ t.action_url }}"
+                       class="btn {{ t.action_css or 'btn-outline-primary' }} btn-sm">
+                      {{ t.action_label or "Заполнить отчёты" }}
+                    </a>
+
+                  {% elif t.action_url and t.action_kind == "view" %}
+                    <a href="{{ t.action_url }}"
+                       class="btn {{ t.action_css or 'btn-outline-secondary' }} btn-sm">
+                      {{ t.action_label or "Просмотреть отчёты" }}
+                    </a>
+
+                  {% else %}
+                    <span class="action-placeholder">
+                      {{ t.action_label or "Ожидание действий ответственного" }}
+                    </span>
+                  {% endif %}
+                </td>
+
+                <td>{{ render_status(task_status, t.status_label) }}</td>
+              </tr>
+
+            {% else %}
+              <tr>
+                <td colspan="9" class="empty">
+                  На этот месяц задачи соисполнителя не назначены
+                </td>
+              </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </section>
+
   </div>
 
 </div>

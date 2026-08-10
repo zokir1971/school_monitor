@@ -10,11 +10,11 @@
 
 <div class="page-header">
   <div>
-    <h2>{{ document.report_label or "Проверка тетрадей" }}</h2>
-    <div class="muted">Заполнение отчета по личному шаблону</div>
+    <h2>{{ document.report_label if document else "Проверка тетрадей" }}</h2>
+    <div class="muted">Заполнение отчета</div>
   </div>
 
-  <a href="{{ url_for('staff_report_templates_page', month_item_id=document.month_item_id) }}"
+  <a href="{{ url_for('staff_report_templates_page', month_item_id=month_item_id) }}{% if request.query_params.get('month') %}?month={{ request.query_params.get('month') }}{% endif %}"
      class="btn btn-secondary">
     Назад к отчетам
   </a>
@@ -62,12 +62,14 @@ report.level: {{ report.level if report else "NO REPORT" }}
 
 {% set readonly = report and report.submitted_at %}
 
+{% set checking_post_url = request.url_for(
+    'staff_user_checking_notebooks_fill_submit',
+    month_item_id=month_item_id,
+    selected_report_id=selected_report_id
+) %}
+
 <form method="post"
-      action="{{ request.url_for(
-          'checking_notebooks_save_post',
-          month_item_id=month_item_id,
-          document_id=task_execution_document_id
-      ) }}?selected_report_id={{ selected_report_id }}">
+      action="{{ checking_post_url }}{% if template_id %}?template_id={{ template_id }}{% if request.query_params.get('month') %}&month={{ request.query_params.get('month') }}{% endif %}{% elif request.query_params.get('month') %}?month={{ request.query_params.get('month') }}{% endif %}">
 
   <!-- 1. Общая информация -->
   <div class="card report-card">
@@ -286,14 +288,14 @@ report.level: {{ report.level if report else "NO REPORT" }}
       <label>Вывод</label>
       <textarea name="info_conclusion"
                 rows="3"
-                {% if readonly %}disabled{% endif %}>{{ report.conclusion if report else '' }}</textarea>
+                {% if readonly %}disabled{% endif %}>{{ saved_info.get('conclusion', report.conclusion if report else '') }}</textarea>
     </div>
 
     <div class="form-field form-field--full">
       <label>Рекомендации</label>
       <textarea name="info_recommendations"
                 rows="3"
-                {% if readonly %}disabled{% endif %}>{{ report.recommendations if report else '' }}</textarea>
+                {% if readonly %}disabled{% endif %}>{{ saved_info.get('recommendations', report.recommendations if report else '') }}</textarea>
     </div>
   </div>
 
@@ -314,6 +316,11 @@ report.level: {{ report.level if report else "NO REPORT" }}
       Подписать и сохранить
     </button>
 
+    <a href="{{ url_for('staff_report_templates_page', month_item_id=month_item_id) }}{% if request.query_params.get('month') %}?month={{ request.query_params.get('month') }}{% endif %}"
+       class="btn btn-secondary">
+      Отмена
+    </a>
+
   {% else %}
 
     <a href="{{ url_for('checking_notebooks_pdf_view', report_id=report.id) }}"
@@ -325,6 +332,11 @@ report.level: {{ report.level if report else "NO REPORT" }}
     <a href="{{ url_for('checking_notebooks_pdf_download', report_id=report.id) }}"
        class="btn btn-primary">
       Скачать PDF
+    </a>
+
+    <a href="{{ url_for('staff_report_templates_page', month_item_id=month_item_id) }}{% if request.query_params.get('month') %}?month={{ request.query_params.get('month') }}{% endif %}"
+       class="btn btn-secondary">
+      Назад к отчетам
     </a>
 
   {% endif %}

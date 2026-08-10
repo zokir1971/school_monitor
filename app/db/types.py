@@ -1,55 +1,115 @@
-# app/db/types.py (Типы одинаковые Python Enum ↔ SQLAlchemy ↔ Postgres ENUM)
+# app/db/types.py
+# Типы одинаковые Python Enum ↔ SQLAlchemy ↔ PostgreSQL ENUM
 
 from __future__ import annotations
 
 from sqlalchemy import Enum as SAEnum
+
 from app.modules.users.enums import UserRole
+
 from app.modules.planning.enums import (
+    AssignmentKind,
+    MonthPlanNotificationStatus,
+    PlanItemStatus,
     PlanPeriodType,
     PlanStatus,
-    PlanItemStatus,
     ResponsibleRole,
     ReviewPlace,
-    AssignmentKind
 )
-from app.modules.reports.enums import DocumentType, DocumentStatus, TaskDocumentStatus, TaskDocumentSource
 
+from app.modules.reports.enums import (
+    DocumentStatus,
+    DocumentType,
+    ReportAssignmentStatus,
+    TaskDocumentSource,
+    TaskDocumentStatus,
+)
+
+
+# =========================================================
+# ENUM HELPERS
+# =========================================================
 
 def enum_values(enum_cls):
-    return [e.value for e in enum_cls]
-
-
-def enum_labels(enum_cls):
-    return {e.value: getattr(e, "label_kz", e.value) for e in enum_cls}
-
-
-def enum_items(enum_cls, selected_values: list[str] | None = None):
-    selected = set(selected_values or [])
+    """
+    Возвращает значения Python Enum,
+    которые сохраняются в PostgreSQL ENUM.
+    """
     return [
-        {
-            "value": e.value,
-            "label_kz": getattr(e, "label_kz", e.value),
-        }
-        for e in enum_cls
-        if not selected or e.value in selected
+        item.value
+        for item in enum_cls
     ]
 
 
+def enum_labels(enum_cls):
+    """
+    Возвращает словарь:
+
+        value -> label_kz
+    """
+    return {
+        item.value: getattr(
+            item,
+            "label_kz",
+            item.value,
+        )
+        for item in enum_cls
+    }
+
+
+def enum_items(
+    enum_cls,
+    selected_values: list[str] | None = None,
+):
+    """
+    Возвращает элементы enum для интерфейса.
+    """
+    selected = set(
+        selected_values or []
+    )
+
+    return [
+        {
+            "value": item.value,
+            "label_kz": getattr(
+                item,
+                "label_kz",
+                item.value,
+            ),
+        }
+        for item in enum_cls
+        if (
+            not selected
+            or item.value in selected
+        )
+    ]
+
+
+# =========================================================
+# USERS
+# =========================================================
+
 USER_ROLE_ENUM = SAEnum(
     UserRole,
-    name="user_role",  # один тип в Postgres
-    values_callable=enum_values,  # используем .value (lowercase)
+    name="user_role",
+    values_callable=enum_values,
     native_enum=True,
     validate_strings=True,
 )
+
+
+# =========================================================
+# PLANNING
+# =========================================================
 
 RESPONSIBLE_ROLE_ENUM = SAEnum(
     ResponsibleRole,
     name="responsible_role_enum",
     values_callable=enum_values,
-    native_enum=True,  # для Postgres (создаёт TYPE)
-    validate_strings=True,  # защита от неправильных строк
+    native_enum=True,
+    validate_strings=True,
 )
+
 
 ASSIGNMENT_KIND_ENUM = SAEnum(
     AssignmentKind,
@@ -59,9 +119,15 @@ ASSIGNMENT_KIND_ENUM = SAEnum(
     validate_strings=True,
 )
 
-# =========================================================
-# SQLAlchemy Enum objects (ОДИН ОБЪЕКТ НА ВЕСЬ ПРОЕКТ)
-# =========================================================
+
+MONTH_PLAN_NOTIFICATION_STATUS_ENUM = SAEnum(
+    MonthPlanNotificationStatus,
+    name="month_plan_notification_status_enum",
+    values_callable=enum_values,
+    native_enum=True,
+    validate_strings=True,
+)
+
 
 PLAN_PERIOD_ENUM = SAEnum(
     PlanPeriodType,
@@ -71,6 +137,7 @@ PLAN_PERIOD_ENUM = SAEnum(
     validate_strings=True,
 )
 
+
 PLAN_STATUS_ENUM = SAEnum(
     PlanStatus,
     name="plan_status",
@@ -78,6 +145,7 @@ PLAN_STATUS_ENUM = SAEnum(
     native_enum=True,
     validate_strings=True,
 )
+
 
 PLAN_ITEM_STATUS_ENUM = SAEnum(
     PlanItemStatus,
@@ -87,6 +155,20 @@ PLAN_ITEM_STATUS_ENUM = SAEnum(
     validate_strings=True,
 )
 
+
+REVIEW_PLACE_ENUM = SAEnum(
+    ReviewPlace,
+    name="review_place",
+    values_callable=enum_values,
+    native_enum=True,
+    validate_strings=True,
+)
+
+
+# =========================================================
+# DOCUMENTS / REPORTS
+# =========================================================
+
 DOCUMENT_TYPE_ENUM = SAEnum(
     DocumentType,
     name="document_type",
@@ -95,17 +177,10 @@ DOCUMENT_TYPE_ENUM = SAEnum(
     validate_strings=True,
 )
 
+
 DOCUMENT_STATUS_ENUM = SAEnum(
     DocumentStatus,
     name="document_status",
-    values_callable=enum_values,
-    native_enum=True,
-    validate_strings=True,
-)
-
-REVIEW_PLACE_ENUM = SAEnum(
-    ReviewPlace,
-    name="review_place",
     values_callable=enum_values,
     native_enum=True,
     validate_strings=True,
@@ -121,9 +196,20 @@ TASK_DOCUMENT_STATUS_ENUM = SAEnum(
     create_type=False,
 )
 
+
 TASK_DOCUMENT_SOURCE_ENUM = SAEnum(
     TaskDocumentSource,
     name="task_document_source_enum",
+    values_callable=enum_values,
+    native_enum=True,
+    validate_strings=True,
+    create_type=False,
+)
+
+
+REPORT_ASSIGNMENT_STATUS_ENUM = SAEnum(
+    ReportAssignmentStatus,
+    name="report_assignment_status_enum",
     values_callable=enum_values,
     native_enum=True,
     validate_strings=True,

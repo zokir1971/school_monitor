@@ -32,7 +32,7 @@ class UserReportTemplateRepo:
         """
         Найти тип отчета в report_types по code.
 
-        report_type_id используем как удобную связь,
+        Report_type_id используем как удобную связь,
         но главный стабильный ключ всё равно report_code.
         """
 
@@ -87,7 +87,7 @@ class UserReportTemplateRepo:
         """
         Получить личный шаблон пользователя по id.
 
-        owner_user_id обязателен, чтобы пользователь не мог открыть чужой шаблон.
+        Owner_user_id обязателен, чтобы пользователь не мог открыть чужой шаблон.
         """
 
         stmt = (
@@ -117,7 +117,7 @@ class UserReportTemplateRepo:
         """
         Создать личный шаблон исполнителя.
 
-        schema_json должен быть dict, потому что в БД поле JSONB.
+        Schema_json должен быть dict, потому что в БД поле JSONB.
         """
 
         template = UserReportTemplate(

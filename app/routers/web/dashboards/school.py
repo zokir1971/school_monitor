@@ -15,16 +15,30 @@ from app.routers.web.web_common import templates
 router = APIRouter()
 
 
-@router.get("/dashboards/l3", response_class=HTMLResponse)
+@router.get(
+    "/dashboards/l3",
+    name="school_admin_dashboard",
+    response_class=HTMLResponse,
+)
 async def dashboard_l3(
-        request: Request,
-        db: AsyncSession = Depends(get_db),
-        user=Depends(require_roles(UserRole.SUPERUSER, UserRole.SCHOOL_ADMIN)),
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    user=Depends(
+        require_roles(
+            UserRole.SUPERUSER,
+            UserRole.SCHOOL_ADMIN,
+        )
+    ),
 ):
-    academic_year = await SchoolPlanningService.get_active_academic_year(db)
+    academic_year = (
+        await SchoolPlanningService.get_active_academic_year(db)
+    )
 
     return templates.TemplateResponse(
         request,
         "dashboards/l3.html",
-        {"user": user, "academic_year": academic_year},
+        {
+            "user": user,
+            "academic_year": academic_year,
+        },
     )

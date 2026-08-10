@@ -9,8 +9,8 @@ from starlette.requests import Request
 from starlette.responses import HTMLResponse
 
 from app.modules.planning.models import PlanDirection, PlanTemplate, PlanTemplateRow11, PlanTemplateRow4
-from app.modules.planning.repo import PlanDirectionRepo, PlanTemplateDirectionRepo
-from app.modules.planning.services.superuser_service import SuperuserBuilderService
+from app.modules.planning.repositories.plan_template_repository import PlanDirectionRepo, PlanTemplateDirectionRepo
+from app.modules.planning.services.plan_template_service import SuperuserBuilderService
 from app.modules.users.deps import require_roles, get_db
 from app.modules.users.enums import UserRole
 from app.routers.web.helpers.render import render, render_error

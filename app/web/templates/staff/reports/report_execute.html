@@ -460,6 +460,10 @@
              name="month_item_id"
              value="{{ task.id }}">
 
+      <input type="hidden"
+       name="month"
+       value="{{ month or '' }}">
+
       {% set current_required_document = required_documents[0] if required_documents else None %}
 
       {% if current_required_document %}
@@ -596,13 +600,16 @@
 
           </button>
 
-          <a id="btn-open-system-reports"
-             href="{{ url_for('staff_report_templates_page', month_item_id=task.id) }}{% if month %}?month={{ month }}{% endif %}"
-             class="btn btn-secondary">
-
-            Перейти к заполнению отчетов
-
-          </a>
+          <button
+  type="submit"
+  id="btn-open-system-reports"
+  name="action"
+  value="continue_with_reports"
+  class="btn btn-secondary"
+  {% if is_done %}disabled{% endif %}
+>
+  Перейти к построению алгоритма
+</button>
 
         </div>
 

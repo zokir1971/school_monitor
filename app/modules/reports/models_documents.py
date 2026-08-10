@@ -35,6 +35,7 @@ if TYPE_CHECKING:
     from app.modules.planning.models_school import SchoolPlanRow11RequiredDocument  # noqa: F401
     from app.modules.users.models import User  # noqa: F401
     from app.modules.reports.models_report_signature_token import ReportSignatureToken
+    from app.modules.reports.models_report_assignments import TaskSelectedReportAssignment
 
 
 class TaskExecutionDocument(Base):
@@ -229,51 +230,53 @@ class TaskExecutionDocument(Base):
     month_item: Mapped["SchoolMonthPlanItem"] = relationship(
         "SchoolMonthPlanItem",
         back_populates="execution_documents",
+        lazy="raise",
     )
 
     required_document: Mapped["SchoolPlanRow11RequiredDocument | None"] = relationship(
         "SchoolPlanRow11RequiredDocument",
         back_populates="task_execution_documents",
+        lazy="raise",
     )
 
     report_type: Mapped["ReportTypeModel | None"] = relationship(
         "ReportTypeModel",
-        lazy="selectin",
+        lazy="raise",
     )
 
     selected_report: Mapped["TaskExecutionSelectedReport | None"] = relationship(
         "TaskExecutionSelectedReport",
-        lazy="selectin",
+        lazy="raise",
     )
 
     uploaded_by_user: Mapped["User | None"] = relationship(
         "User",
         foreign_keys=[uploaded_by_user_id],
-        lazy="selectin",
+        lazy="raise",
     )
 
     submitted_by_user: Mapped["User | None"] = relationship(
         "User",
         foreign_keys=[submitted_by_user_id],
-        lazy="selectin",
+        lazy="raise",
     )
 
     reviewed_by_user: Mapped["User | None"] = relationship(
         "User",
         foreign_keys=[reviewed_by_user_id],
-        lazy="selectin",
+        lazy="raise",
     )
 
     custom_template: Mapped["UserReportTemplate | None"] = relationship(
         "UserReportTemplate",
-        lazy="selectin",
+        lazy="raise",
     )
 
     signature_tokens: Mapped[list["ReportSignatureToken"]] = relationship(
         "ReportSignatureToken",
         back_populates="document",
         cascade="all, delete-orphan",
-        lazy="selectin",
+        lazy="raise",
     )
 
 
@@ -353,13 +356,14 @@ class TaskExecutionData(Base):
     month_item: Mapped["SchoolMonthPlanItem"] = relationship(
         "SchoolMonthPlanItem",
         back_populates="execution_data",
+        lazy="raise",
     )
 
     selected_reports: Mapped[list["TaskExecutionSelectedReport"]] = relationship(
         "TaskExecutionSelectedReport",
         back_populates="execution_data",
         cascade="all, delete-orphan",
-        lazy="selectin",
+        lazy="raise",
     )
 
 
@@ -422,10 +426,20 @@ class TaskExecutionSelectedReport(Base):
     execution_data: Mapped["TaskExecutionData"] = relationship(
         "TaskExecutionData",
         back_populates="selected_reports",
+        lazy="raise",
     )
 
     report_type: Mapped["ReportTypeModel"] = relationship(
         "ReportTypeModel",
         back_populates="selected_report_links",
-        lazy="selectin",
+        lazy="raise",
+    )
+
+    executor_assignment: Mapped[TaskSelectedReportAssignment | None] = relationship(
+        "TaskSelectedReportAssignment",
+        back_populates="selected_report",
+        lazy="raise",
+        uselist=False,
+        cascade="all, delete-orphan",
+        single_parent=True,
     )

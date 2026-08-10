@@ -1,4 +1,4 @@
-# app/web/helpers/render.py (Стандарт “рендер + ошибка”)
+# app/routers/web/helpers/render.py (Стандарт “рендер + ошибка”)
 
 from __future__ import annotations
 

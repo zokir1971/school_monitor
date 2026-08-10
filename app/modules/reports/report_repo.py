@@ -7,9 +7,12 @@ from sqlalchemy import select, delete, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.core.storage.schemas import SchoolStorageContext
+from app.modules.org.models import School
+
 from app.modules.planning.enums import PlanItemStatus
-from app.modules.planning.models_month_plan import SchoolMonthPlanItem, SchoolMonthPlanItemAssignee
-from app.modules.planning.models_school import SchoolPlanRow11RequiredDocument, SchoolPlanRow11
+from app.modules.planning.models_month_plan import SchoolMonthPlanItem, SchoolMonthPlanItemAssignee, SchoolMonthPlan
+from app.modules.planning.models_school import SchoolPlanRow11RequiredDocument, SchoolPlanRow11, SchoolPlan
 from app.modules.reports.enums import DocumentType, TaskDocumentSource, TaskDocumentStatus
 from app.modules.reports.models_documents import (
     TaskExecutionData,
@@ -334,24 +337,25 @@ class ReportRepo:
         await db.execute(stmt)
 
     @classmethod
-    async def create_or_replace_final_document(
+    async def prepare_final_document(
             cls,
             db: AsyncSession,
             *,
             month_item_id: int,
             required_document_id: int | None,
             document_type: DocumentType,
-            original_file_name: str | None,
-            stored_file_name: str | None,
-            file_path: str | None,
-            mime_type: str | None,
-            file_size: int | None,
             uploaded_by_user_id: int | None,
             source: TaskDocumentSource,
             status: TaskDocumentStatus,
     ) -> TaskExecutionDocument:
+        """
+        Создать или подготовить текущий итоговый документ.
 
-        # Ищем существующий итоговый документ (upload)
+        На этом этапе файловые поля ещё не заполняются.
+        После flush документ получает id, который используется
+        для построения object_key в SchoolStorageService.
+        """
+
         existing_doc = await cls.get_uploaded_document(
             db,
             month_item_id=month_item_id,
@@ -359,55 +363,132 @@ class ReportRepo:
             document_type=document_type,
         )
 
-        if existing_doc:
-            # ОБНОВЛЯЕМ существующую запись (никаких новых строк)
-
+        if existing_doc is not None:
             existing_doc.required_document_id = required_document_id
             existing_doc.document_type = document_type
             existing_doc.status = status
             existing_doc.source = source
-
-            existing_doc.title = original_file_name
-            existing_doc.original_file_name = original_file_name
-            existing_doc.stored_file_name = stored_file_name
-            existing_doc.file_path = file_path
-            existing_doc.mime_type = mime_type
-            existing_doc.file_size = file_size
-
             existing_doc.uploaded_by_user_id = uploaded_by_user_id
 
-            # гарантируем флаги
             existing_doc.is_current = True
             existing_doc.is_final = True
-
-            # version НЕ трогаем (можно вообще всегда = 1 держать)
             existing_doc.version = 1
 
             await db.flush()
+
             return existing_doc
 
-        # если нет — создаём ОДНУ запись
         new_doc = TaskExecutionDocument(
             month_item_id=month_item_id,
             required_document_id=required_document_id,
             document_type=document_type,
             status=status,
             source=source,
-            version=1,  # всегда 1
+            version=1,
             is_current=True,
             is_final=True,
-            title=original_file_name,
-            original_file_name=original_file_name,
-            stored_file_name=stored_file_name,
-            file_path=file_path,
-            mime_type=mime_type,
-            file_size=file_size,
             uploaded_by_user_id=uploaded_by_user_id,
         )
 
         db.add(new_doc)
         await db.flush()
+
         return new_doc
+
+    @staticmethod
+    async def update_document_file_data(
+            db: AsyncSession,
+            *,
+            document: TaskExecutionDocument,
+            original_file_name: str,
+            stored_file_name: str,
+            file_path: str,
+            mime_type: str,
+            file_size: int,
+    ) -> TaskExecutionDocument:
+        """
+        Заполнить файловые поля после успешного сохранения
+        файла через SchoolStorageService.
+        """
+
+        document.title = original_file_name
+        document.original_file_name = original_file_name
+        document.stored_file_name = stored_file_name
+        document.file_path = file_path
+        document.mime_type = mime_type
+        document.file_size = file_size
+
+        await db.flush()
+
+        return document
+
+    @staticmethod
+    async def get_storage_context_for_month_item(
+            db: AsyncSession,
+            *,
+            month_item_id: int,
+    ) -> SchoolStorageContext | None:
+        """
+        Получить контекст хранения для документа задачи.
+
+        Цепочка:
+        SchoolMonthPlanItem
+            -> month_plan
+            -> school_plan
+            -> school
+            -> district
+        """
+
+        stmt = (
+            select(SchoolMonthPlanItem)
+            .where(
+                SchoolMonthPlanItem.id == month_item_id
+            )
+            .options(
+                selectinload(
+                    SchoolMonthPlanItem.month_plan
+                )
+                .selectinload(
+                    SchoolMonthPlan.school_plan
+                )
+                .selectinload(
+                    SchoolPlan.school
+                )
+                .selectinload(
+                    School.district
+                )
+            )
+        )
+
+        month_item = await db.scalar(stmt)
+
+        if month_item is None:
+            return None
+
+        month_plan = month_item.month_plan
+        if month_plan is None:
+            return None
+
+        school_plan = month_plan.school_plan
+        if school_plan is None:
+            return None
+
+        school = school_plan.school
+        if school is None:
+            return None
+
+        district = school.district
+        if district is None:
+            return None
+
+        return SchoolStorageContext(
+            region_id=district.region_id,
+            district_id=district.id,
+            school_id=school.id,
+            academic_year=school_plan.academic_year,
+            school_plan_id=school_plan.id,
+            month_item_id=month_item.id,
+        )
 
     @staticmethod
     def _apply_executor_user_filter(stmt, *, user_id: int):

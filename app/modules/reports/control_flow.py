@@ -212,6 +212,67 @@ REPORT_TARGET_RULES = {
     },
 }
 
+TARGET_KIND_ALIASES: dict[str, str] = {
+    # В сохранённых данных сейчас встречается такое название,
+    # а в REPORT_TARGET_RULES используется "parallel".
+    "parallel_class": "parallel",
+}
+
+
+def normalize_report_target_kind(
+        target_kind: str | None,
+) -> str:
+    """
+    Нормализовать техническое имя цели отчёта.
+
+    Позволяет поддерживать старые или альтернативные
+    названия target_kind без дублирования правил.
+    """
+
+    normalized = str(
+        target_kind or ""
+    ).strip()
+
+    return TARGET_KIND_ALIASES.get(
+        normalized,
+        normalized,
+    )
+
+
+def is_report_target_assignable(
+        *,
+        report_code: str,
+        target_kind: str | None,
+) -> bool:
+    """
+    Проверить, является ли выбранная строка отчёта
+    самостоятельным объектом распределения.
+
+    Строка участвует в распределении только тогда,
+    когда её target_kind допустим для указанного
+    типа отчёта согласно REPORT_TARGET_RULES.
+    """
+
+    rule = REPORT_TARGET_RULES.get(
+        str(report_code or "").strip()
+    )
+
+    # Для отчётов без специальных ограничений
+    # сохраняем прежнее поведение.
+    if rule is None:
+        return True
+
+    normalized_target_kind = (
+        normalize_report_target_kind(
+            target_kind
+        )
+    )
+
+    return (
+        normalized_target_kind
+        in rule["allowed_target_kinds"]
+    )
+
 
 def reports_to_ui(reports: list[ReportType]) -> list[dict]:
     return [
@@ -418,12 +479,27 @@ def validate_report_target(
         report_code: str,
         target_kind: str | None,
 ) -> tuple[bool, str | None]:
-    rule = REPORT_TARGET_RULES.get(report_code)
+    """
+    Проверить допустимость цели для выбранного типа отчёта.
+    """
+
+    rule = REPORT_TARGET_RULES.get(
+        str(report_code or "").strip()
+    )
 
     if not rule:
         return True, None
 
-    if target_kind in rule["allowed_target_kinds"]:
+    normalized_target_kind = (
+        normalize_report_target_kind(
+            target_kind
+        )
+    )
+
+    if (
+        normalized_target_kind
+        in rule["allowed_target_kinds"]
+    ):
         return True, None
 
     return False, rule["error"]

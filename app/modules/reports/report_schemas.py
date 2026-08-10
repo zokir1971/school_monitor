@@ -6,7 +6,32 @@ import json
 from dataclasses import dataclass, field
 from datetime import date
 
+from app.modules.planning.enums import ResponsibleRole, AssignmentKind
 from app.modules.reports.models_documents import TaskExecutionData
+
+
+# =========================
+# TASK PARTICIPANTS DTOs
+# =========================
+@dataclass(slots=True)
+class StaffTaskParticipantDTO:
+    """
+    Участник выполнения задачи месячного плана.
+    """
+    staff_member_id: int
+    staff_role_id: int
+
+    full_name: str
+
+    position_text: str = ""
+
+    role: ResponsibleRole | None = None
+    role_label: str = ""
+
+    assignment_kind: AssignmentKind | None = None
+    assignment_kind_label: str = ""
+
+    is_current_user: bool = False
 
 
 # =========================
@@ -34,6 +59,22 @@ class StaffExecutionTaskDTO:
     status_label: str = ""
     status_color: str = ""
 
+    responsible: StaffTaskParticipantDTO | None = None
+
+    co_executors: list[StaffTaskParticipantDTO] = field(
+        default_factory=list
+    )
+
+    current_user_role: str = ""
+    current_user_role_label: str = ""
+
+    can_execute: bool = False
+    can_view: bool = True
+
+    has_execution: bool = False
+    has_draft: bool = False
+    has_submitted_document: bool = False
+
 
 @dataclass(slots=True)
 class ExecutionFormDTO:
@@ -54,7 +95,10 @@ class ExecutionFormDTO:
     generated_reports_json: str = "[]"
 
     @classmethod
-    def from_model(cls, execution: TaskExecutionData | "ExecutionFormDTO" | None) -> "ExecutionFormDTO":
+    def from_model(
+        cls,
+        execution: TaskExecutionData | ExecutionFormDTO | None,
+    ) -> ExecutionFormDTO:
         if not execution:
             return cls()
 
@@ -71,20 +115,29 @@ class ExecutionFormDTO:
 
         for item in execution.selected_reports or []:
             report_type = item.report_type
-            report_code = str(getattr(report_type, "code", "") or "").strip()
+
+            report_code = str(
+                getattr(report_type, "code", "") or ""
+            ).strip()
 
             if report_code and report_code not in report_types:
                 report_types.append(report_code)
 
-            report_type_id = getattr(report_type, "id", 0) or 0
-            report_label = (
-                    getattr(report_type, "name_kz", None)
-                    or getattr(report_type, "name_ru", None)
-                    or report_code
-                    or "—"
+            report_type_id = (
+                getattr(report_type, "id", 0) or 0
             )
 
-            key = (report_type_id, report_code or report_label)
+            report_label = (
+                getattr(report_type, "name_kz", None)
+                or getattr(report_type, "name_ru", None)
+                or report_code
+                or "—"
+            )
+
+            key = (
+                report_type_id,
+                report_code or report_label,
+            )
 
             if key not in grouped:
                 grouped[key] = {
@@ -94,9 +147,19 @@ class ExecutionFormDTO:
                     "targets": [],
                 }
 
-            kind = str(item.target_kind or "").strip()
-            value = str(item.target_value or "").strip()
-            label = str(item.target_label or item.target_value or "").strip()
+            kind = str(
+                item.target_kind or ""
+            ).strip()
+
+            value = str(
+                item.target_value or ""
+            ).strip()
+
+            label = str(
+                item.target_label
+                or item.target_value
+                or ""
+            ).strip()
 
             grouped[key]["targets"].append(
                 {
@@ -109,16 +172,42 @@ class ExecutionFormDTO:
             if not value:
                 continue
 
-            if kind in {"subject", "subjects"} and value not in subjects:
+            if (
+                kind in {"subject", "subjects"}
+                and value not in subjects
+            ):
                 subjects.append(value)
-            elif kind in {"class_group", "class_groups"} and value not in class_groups:
+
+            elif (
+                kind in {"class_group", "class_groups"}
+                and value not in class_groups
+            ):
                 class_groups.append(value)
-            elif kind in {"parallel_class", "parallel_classes"} and value not in parallel_classes:
+
+            elif (
+                kind in {
+                    "parallel_class",
+                    "parallel_classes",
+                }
+                and value not in parallel_classes
+            ):
                 parallel_classes.append(value)
-            elif kind in {"teacher", "teacher_id", "teacher_ids"} and value not in teacher_ids:
+
+            elif (
+                kind in {
+                    "teacher",
+                    "teacher_id",
+                    "teacher_ids",
+                }
+                and value not in teacher_ids
+            ):
                 teacher_ids.append(value)
 
-        teacher_id = teacher_ids[0] if len(teacher_ids) == 1 else ""
+        teacher_id = (
+            teacher_ids[0]
+            if len(teacher_ids) == 1
+            else ""
+        )
 
         return cls(
             control_scope=execution.control_scope or "",
@@ -158,30 +247,65 @@ class SelectOptionDTO:
 class DetailConfigDTO:
     """
     Конфигурация дополнительного блока слева:
+
     - type = "checkbox" -> renderCheckboxGroup
     - type = "select"   -> renderSingleSelect
     """
+
     label: str
     name: str
     type: str
-    options: list[SelectOptionDTO] = field(default_factory=list)
+
+    options: list[SelectOptionDTO] = field(
+        default_factory=list
+    )
 
 
 @dataclass(slots=True)
 class ControlFlowDTO:
     """
-    Полный контракт для static/js/task_execute.js
+    Полный контракт для static/js/task_execute.js.
     """
-    scopes: list[SelectOptionDTO] = field(default_factory=list)
-    forms_by_scope: dict[str, list[SelectOptionDTO]] = field(default_factory=dict)
-    kinds: list[SelectOptionDTO] = field(default_factory=list)
-    reports_by_scope: dict[str, list[SelectOptionDTO]] = field(default_factory=dict)
-    details_by_scope: dict[str, DetailConfigDTO] = field(default_factory=dict)
 
-    subjects: list[SelectOptionDTO] = field(default_factory=list)
-    all_teachers: list[SelectOptionDTO] = field(default_factory=list)
-    teachers_by_subject: dict[str, list[SelectOptionDTO]] = field(default_factory=dict)
-    primary_teachers: list[SelectOptionDTO] = field(default_factory=list)
+    scopes: list[SelectOptionDTO] = field(
+        default_factory=list
+    )
+
+    forms_by_scope: dict[
+        str,
+        list[SelectOptionDTO],
+    ] = field(default_factory=dict)
+
+    kinds: list[SelectOptionDTO] = field(
+        default_factory=list
+    )
+
+    reports_by_scope: dict[
+        str,
+        list[SelectOptionDTO],
+    ] = field(default_factory=dict)
+
+    details_by_scope: dict[
+        str,
+        DetailConfigDTO,
+    ] = field(default_factory=dict)
+
+    subjects: list[SelectOptionDTO] = field(
+        default_factory=list
+    )
+
+    all_teachers: list[SelectOptionDTO] = field(
+        default_factory=list
+    )
+
+    teachers_by_subject: dict[
+        str,
+        list[SelectOptionDTO],
+    ] = field(default_factory=dict)
+
+    primary_teachers: list[SelectOptionDTO] = field(
+        default_factory=list
+    )
 
 
 # =========================

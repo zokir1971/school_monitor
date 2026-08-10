@@ -13,6 +13,10 @@ from .org import router as org_router
 from .planning import router as planning_router
 from .staff import router as staff_router
 from .tasks import router as tasks_router
+from .schools import router as schools_router
+from .reviews import router as reviews_router
+from .statistics import router as statistics_router
+from .monitoring import router as monitoring_router
 
 
 router = APIRouter()
@@ -26,3 +30,7 @@ router.include_router(org_router)
 router.include_router(planning_router)
 router.include_router(staff_router)
 router.include_router(tasks_router)
+router.include_router(schools_router)
+router.include_router(reviews_router)
+router.include_router(statistics_router)
+router.include_router(monitoring_router)

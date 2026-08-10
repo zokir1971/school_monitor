@@ -30,9 +30,8 @@ engine = create_async_engine(
     pool_pre_ping=True,
     pool_size=20,
     max_overflow=40,
-    echo=settings.is_debug,  # правильнее чем APP_ENV == "dev"
+    echo=False,
 )
-
 
 # ---------------------------------
 # Session factory
