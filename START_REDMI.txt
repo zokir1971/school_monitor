@@ -78,3 +78,12 @@ JOIN pg_enum e ON t.oid = e.enumtypid
 GROUP BY t.typname
 ORDER BY t.typname;
 SELECT unnest(enum_range(NULL::user_role));
+
+пароль файловой хранилище: nano /etc/minio/minio.env
+порт http://127.0.0.1:9001/
+Username: school_monitor_admin
+пароль: 2170d8012cc0
+
+пользователь приложение: school_monitor_app
+
+bucket name: school-monitor-documents
