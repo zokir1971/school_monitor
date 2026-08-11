@@ -17,7 +17,8 @@
       </div>
 
       <div>
-        <a href="{{ request.url_for('staff_tasks_page') }}?month={{ month }}" class="btn btn-secondary">
+        <a href="{{ request.url_for('staff_tasks_page') }}{% if month is not none %}?month={{ month }}{% endif %}"
+           class="btn btn-secondary">
           Назад к задачам
         </a>
       </div>

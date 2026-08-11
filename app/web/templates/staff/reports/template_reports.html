@@ -607,17 +607,11 @@
       <div class="reports-header-right">
 
         {% if can_manage_assignments %}
-          <a
-            href="{{ url_for(
-              'staff_report_assignments_page',
-              month_item_id=page_data.month_item_id
-            ) }}?month={{ month }}"
-            class="btn btn-manage-assignments"
-          >
+          <a href="{{ url_for('staff_report_assignments_page', month_item_id=page_data.month_item_id) }}{% if month is not none %}?month={{ month }}{% endif %}"
+            class="btn btn-manage-assignments">
             👥 Управление распределением
           </a>
         {% endif %}
-
         <a
           href="{{ url_for(
             'staff_report_execute_page',
@@ -1046,8 +1040,7 @@
     </div>
 
     <form method="post"
-          action="{{ url_for('staff_report_templates_complete_post', month_item_id=page_data.month_item_id
-          ) }}?month={{ month }}"
+          action="{{ url_for('staff_report_templates_complete_post', month_item_id=page_data.month_item_id) }}{% if month is not none %}?month={{ month }}{% endif %}"
           enctype="multipart/form-data">
 
       <div class="form-grid">
@@ -1094,11 +1087,7 @@
     <div class="action-panel report-actions" style="margin-top: 14px;">
 
       {% if can_manage_assignments %}
-        <a
-          href="{{ url_for(
-            'staff_report_assignments_page',
-            month_item_id=page_data.month_item_id
-          ) }}?month={{ month }}"
+        <a href="{{ url_for('staff_report_assignments_page', month_item_id=page_data.month_item_id) }}{% if month is not none %}?month={{ month }}{% endif %}"
           class="btn btn-manage-assignments"
         >
           👥 Управление распределением

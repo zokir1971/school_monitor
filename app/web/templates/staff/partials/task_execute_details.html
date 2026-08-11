@@ -979,7 +979,7 @@
 
         {% if current_draft is not none %}
 
-          <a href="{{ request.url_for('staff_report_assignments_page', month_item_id=task.month_item_id) }}?month={{ month }}"
+          <a href="{{ request.url_for('staff_report_assignments_page', month_item_id=task.month_item_id) }}{% if month is not none %}?month={{ month }}{% endif %}"
              class="btn btn-primary">
             Перейти к распределению отчётов
           </a>

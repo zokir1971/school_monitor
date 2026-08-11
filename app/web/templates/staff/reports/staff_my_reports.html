@@ -161,7 +161,7 @@
 
                             <td>
                                 <a class="btn btn-primary"
-                                   href="{{ request.url_for('staff_my_reports_page') }}?month={{ month }}&task_id={{ task.month_item_id }}">
+                                   href="{{ request.url_for('staff_my_reports_page') }}{% if month is not none %}?month={{ month }}&{% else %}?{% endif %}task_id={{ task.month_item_id }}">
                                     Открыть отчеты
                                 </a>
                             </td>
