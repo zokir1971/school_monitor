@@ -18,13 +18,14 @@ class S3Storage(BaseStorage):
         self,
         *,
         endpoint_url: str | None,
+        public_endpoint_url: str | None,
         access_key: str,
         secret_key: str,
         region: str,
         bucket: str,
         verify_ssl: bool,
     ) -> None:
-        client_kwargs: dict[str, Any] = {
+        common_client_kwargs: dict[str, Any] = {
             "service_name": "s3",
             "aws_access_key_id": access_key,
             "aws_secret_access_key": secret_key,
@@ -42,13 +43,34 @@ class S3Storage(BaseStorage):
             ),
         }
 
+        internal_client_kwargs = dict(
+            common_client_kwargs
+        )
+
         if endpoint_url:
-            client_kwargs["endpoint_url"] = (
+            internal_client_kwargs["endpoint_url"] = (
                 endpoint_url
             )
 
         self._client: BaseClient = boto3.client(
-            **client_kwargs
+            **internal_client_kwargs
+        )
+
+        presign_client_kwargs = dict(
+            common_client_kwargs
+        )
+
+        if public_endpoint_url:
+            presign_client_kwargs["endpoint_url"] = (
+                public_endpoint_url
+            )
+        elif endpoint_url:
+            presign_client_kwargs["endpoint_url"] = (
+                endpoint_url
+            )
+
+        self._presign_client: BaseClient = boto3.client(
+            **presign_client_kwargs
         )
 
         self._bucket = bucket
@@ -136,7 +158,7 @@ class S3Storage(BaseStorage):
         )
 
         return await asyncio.to_thread(
-            self._client.generate_presigned_url,
+            self._presign_client.generate_presigned_url,
             "get_object",
             Params={
                 "Bucket": self._bucket,

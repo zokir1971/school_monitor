@@ -4,9 +4,10 @@ from urllib.parse import urlencode
 
 import jwt
 from fastapi import APIRouter, Request, Depends, HTTPException, Query
-from fastapi.responses import HTMLResponse, RedirectResponse, FileResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.storage.factory import get_storage
 from app.db.session import get_db
 from app.modules.reports.repositories.checking_notebooks_repo import CheckingNotebooksRepo
 from app.modules.reports.services.checking_notebooks_service import CheckingNotebooksService
@@ -17,7 +18,6 @@ from app.modules.users.enums import UserRole
 from app.modules.users.models import User
 from app.routers.web.web_common import templates
 from app.routers.web.helpers.render import render
-from app.utils.storage import resolve_storage_file
 
 router = APIRouter(prefix="/staff/reports", tags=["Checking Notebooks Web"])
 
@@ -258,14 +258,24 @@ async def checking_notebooks_pdf_view(
             detail="PDF не найден",
         )
 
-    pdf_path = resolve_storage_file(str(pdf_file))
-    filename = f"checking_notebooks_{report.id}.pdf"
+    storage = get_storage()
 
-    return FileResponse(
-        path=str(pdf_path),
-        media_type="application/pdf",
-        filename=filename,
-        content_disposition_type="inline",
+    if not await storage.exists(
+        object_key=str(pdf_file),
+    ):
+        raise HTTPException(
+            status_code=404,
+            detail="PDF-файл не найден в хранилище",
+        )
+
+    download_url = await storage.get_download_url(
+        object_key=str(pdf_file),
+        expires_in=300,
+    )
+
+    return RedirectResponse(
+        url=download_url,
+        status_code=302,
     )
 
 
@@ -312,14 +322,24 @@ async def checking_notebooks_pdf_download(
             detail="PDF не найден",
         )
 
-    pdf_path = resolve_storage_file(str(pdf_file))
-    filename = f"checking_notebooks_{report.id}.pdf"
+    storage = get_storage()
 
-    return FileResponse(
-        path=str(pdf_path),
-        media_type="application/pdf",
-        filename=filename,
-        content_disposition_type="attachment",
+    if not await storage.exists(
+        object_key=str(pdf_file),
+    ):
+        raise HTTPException(
+            status_code=404,
+            detail="PDF-файл не найден в хранилище",
+        )
+
+    download_url = await storage.get_download_url(
+        object_key=str(pdf_file),
+        expires_in=300,
+    )
+
+    return RedirectResponse(
+        url=download_url,
+        status_code=302,
     )
 
 

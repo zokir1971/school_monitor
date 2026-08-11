@@ -1,5 +1,4 @@
 # app/core/config.py
-# app/core/config.py
 from __future__ import annotations
 
 from enum import Enum
@@ -53,6 +52,13 @@ class Settings(BaseSettings):
     # Для AWS S3:
     # переменную можно не задавать
     S3_ENDPOINT_URL: str | None = None
+
+    # Публичный endpoint для presigned URL.
+    # Для MinIO обычно отличается от внутреннего endpoint:
+    # S3_ENDPOINT_URL=http://127.0.0.1:9000
+    # S3_PUBLIC_ENDPOINT_URL=http://<public-host>:9000
+    # Для AWS S3 можно не задавать.
+    S3_PUBLIC_ENDPOINT_URL: str | None = None
 
     S3_ACCESS_KEY: str | None = None
     S3_SECRET_KEY: str | None = None
@@ -158,6 +164,26 @@ class Settings(BaseSettings):
         )
 
         return normalized_url or None
+
+    @property
+    def s3_public_endpoint_url(self) -> str | None:
+        """
+        Публичный endpoint для формирования presigned URL.
+
+        Если отдельный публичный endpoint не задан,
+        используется основной S3 endpoint.
+        """
+
+        if self.S3_PUBLIC_ENDPOINT_URL is None:
+            return self.s3_endpoint_url
+
+        normalized_url = (
+            self.S3_PUBLIC_ENDPOINT_URL
+            .strip()
+            .rstrip("/")
+        )
+
+        return normalized_url or self.s3_endpoint_url
 
     @property
     def s3_bucket(self) -> str:

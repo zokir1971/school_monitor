@@ -27,6 +27,9 @@ def get_storage() -> BaseStorage:
             endpoint_url=(
                 settings.s3_endpoint_url
             ),
+            public_endpoint_url=(
+                settings.s3_public_endpoint_url
+            ),
             access_key=(
                 settings.S3_ACCESS_KEY
             ),
