@@ -3,18 +3,18 @@ from dataclasses import asdict
 from urllib.parse import urlencode
 
 from fastapi import APIRouter, Depends, Request, HTTPException, Query
-from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.storage.factory import get_storage
 from app.db.session import get_db
 from app.modules.reports.repositories.lesson_observation_repo import LessonObservationRepo
 from app.modules.reports.services.lesson_observation_service import LessonObservationService
 from app.modules.users.deps import require_roles
 from app.modules.users.enums import UserRole
 from app.modules.users.models import User
-from app.routers.web.web_common import templates
 from app.routers.web.helpers.render import render, render_error
-from app.utils.storage import resolve_storage_file
+from app.routers.web.web_common import templates
 
 router = APIRouter(
     prefix="/staff/reports/templates/my",
@@ -234,7 +234,10 @@ async def lesson_observation_pdf_view(
             )
         ),
 ):
-    report = await LessonObservationRepo.get_by_id(db, report_id)
+    report = await LessonObservationRepo.get_by_id(
+        db,
+        report_id,
+    )
 
     if not report:
         raise HTTPException(
@@ -256,15 +259,24 @@ async def lesson_observation_pdf_view(
             detail="PDF не найден",
         )
 
-    pdf_path = resolve_storage_file(str(pdf_file))
+    storage = get_storage()
 
-    filename = f"lesson_observation_{report.id}.pdf"
+    if not await storage.exists(
+        object_key=str(pdf_file),
+    ):
+        raise HTTPException(
+            status_code=404,
+            detail="PDF-файл не найден в хранилище",
+        )
 
-    return FileResponse(
-        path=str(pdf_path),
-        media_type="application/pdf",
-        filename=filename,
-        content_disposition_type="inline",
+    download_url = await storage.get_download_url(
+        object_key=str(pdf_file),
+        expires_in=300,
+    )
+
+    return RedirectResponse(
+        url=download_url,
+        status_code=302,
     )
 
 
@@ -282,7 +294,10 @@ async def lesson_observation_pdf_download(
             )
         ),
 ):
-    report = await LessonObservationRepo.get_by_id(db, report_id)
+    report = await LessonObservationRepo.get_by_id(
+        db,
+        report_id,
+    )
 
     if not report:
         raise HTTPException(
@@ -304,15 +319,24 @@ async def lesson_observation_pdf_download(
             detail="PDF не найден",
         )
 
-    pdf_path = resolve_storage_file(str(pdf_file))
+    storage = get_storage()
 
-    filename = f"lesson_observation_{report.id}.pdf"
+    if not await storage.exists(
+        object_key=str(pdf_file),
+    ):
+        raise HTTPException(
+            status_code=404,
+            detail="PDF-файл не найден в хранилище",
+        )
 
-    return FileResponse(
-        path=str(pdf_path),
-        media_type="application/pdf",
-        filename=filename,
-        content_disposition_type="attachment",
+    download_url = await storage.get_download_url(
+        object_key=str(pdf_file),
+        expires_in=300,
+    )
+
+    return RedirectResponse(
+        url=download_url,
+        status_code=302,
     )
 
 
