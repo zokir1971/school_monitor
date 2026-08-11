@@ -200,6 +200,21 @@
       line-height: 1.55;
     }
 
+    .completion-mode-next-step {
+      grid-column: 2;
+      margin-top: -4px;
+    }
+
+    .completion-mode-next-step .hint-box {
+      margin: 0;
+    }
+
+    .completion-mode-next-step__actions {
+      margin-top: 12px;
+      display: flex;
+      justify-content: flex-start;
+    }
+
     .completion-flow-actions {
       margin-top: 18px;
       padding-top: 18px;
@@ -245,6 +260,10 @@
 
       .completion-mode-option__content {
         min-height: auto;
+      }
+
+      .completion-mode-next-step {
+        grid-column: 1;
       }
     }
   </style>
@@ -494,6 +513,33 @@
         </div>
 
       </label>
+
+      {% if (
+        saved_completion_mode == "final_with_system_reports"
+        and current_draft is not none
+      ) %}
+        <div class="completion-mode-next-step">
+          <div class="hint-box">
+            <div class="hint-box__title">
+              ✓ Алгоритм сохранён
+            </div>
+
+            <div class="hint-box__text">
+              Следующий шаг — распределите выбранные системные отчёты
+              между исполнителями.
+            </div>
+
+            <div class="completion-mode-next-step__actions">
+              <a
+                href="{{ request.url_for('staff_report_assignments_page', month_item_id=task.month_item_id) }}?month={{ month }}"
+                class="btn btn-primary"
+              >
+                Перейти к распределению отчётов
+              </a>
+            </div>
+          </div>
+        </div>
+      {% endif %}
 
     </div>
 
@@ -976,15 +1022,6 @@
           {% endif %}
         </button>
 
-
-        {% if current_draft is not none %}
-
-          <a href="{{ request.url_for('staff_report_assignments_page', month_item_id=task.month_item_id) }}?month={{ month }}"
-             class="btn btn-primary">
-            Перейти к распределению отчётов
-          </a>
-
-        {% endif %}
 
       </div>
 
