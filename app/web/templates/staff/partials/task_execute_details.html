@@ -514,10 +514,7 @@
 
       </label>
 
-      {% if (
-        saved_completion_mode == "final_with_system_reports"
-        and current_draft is not none
-      ) %}
+      {% if current_draft is not none %}
         <div class="completion-mode-next-step">
           <div class="hint-box">
             <div class="hint-box__title">
