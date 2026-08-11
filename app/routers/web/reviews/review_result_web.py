@@ -2,9 +2,7 @@
 
 from __future__ import annotations
 
-import mimetypes
 from dataclasses import asdict
-from pathlib import Path
 
 from fastapi import (
     APIRouter,
@@ -13,8 +11,9 @@ from fastapi import (
     Request,
 )
 from sqlalchemy.ext.asyncio import AsyncSession
-from starlette.responses import FileResponse
+from fastapi.responses import RedirectResponse
 
+from app.core.storage.factory import get_storage
 from app.db.session import get_db
 from app.modules.planning.enums import ReviewPlace
 from app.modules.reviews.services.review_result_service import (
@@ -35,46 +34,6 @@ router = APIRouter(
     prefix="/staff/reviews",
     tags=["Review results"],
 )
-
-PROJECT_ROOT = Path(__file__).resolve().parents[4]
-STORAGE_ROOT = PROJECT_ROOT / "storage"
-
-
-def _resolve_review_document_path(
-        stored_file_path: str,
-) -> Path:
-    """
-    Преобразует путь из БД в абсолютный путь файла.
-
-    В БД:
-        schools/region-1/...
-
-    На диске:
-        <project>/storage/schools/region-1/...
-    """
-
-    relative_path = Path(
-        stored_file_path.replace("\\", "/")
-    )
-
-    if relative_path.is_absolute():
-        resolved_path = relative_path.resolve()
-    else:
-        resolved_path = (
-                STORAGE_ROOT / relative_path
-        ).resolve()
-
-    storage_root_resolved = STORAGE_ROOT.resolve()
-
-    try:
-        resolved_path.relative_to(storage_root_resolved)
-    except ValueError as exc:
-        raise ValueError(
-            "Некорректный путь документа."
-        ) from exc
-
-    return resolved_path
-
 
 # ==========================================================
 # 1. Список задач и результатов рассмотрения
@@ -389,11 +348,12 @@ async def review_result_document_view(
         user: User = Depends(require_school_member_scope),
 ):
     """
-        Открывает документ в браузере.
+    Открывает документ результата рассмотрения.
 
-        Доступ проверяется через ReviewResultService.
-        Клиент передаёт только идентификатор документа.
-        """
+    Доступ проверяется через ReviewResultService.
+    Файл читается через выбранный backend хранилища
+    (LocalStorage / S3 / MinIO).
+    """
     selected_school_id = parse_optional_int(school_id)
 
     try:
@@ -404,24 +364,30 @@ async def review_result_document_view(
             selected_school_id=selected_school_id,
         )
 
-        file_path = _resolve_review_document_path(
-            document.file_path
-        )
+        object_key = str(document.file_path or "").strip()
 
-        if not file_path.is_file():
+        if not object_key:
             raise ValueError(
-                "Файл документа не найден."
+                "У документа отсутствует путь к файлу."
             )
 
-        media_type, _ = mimetypes.guess_type(
-            str(file_path)
+        storage = get_storage()
+
+        if not await storage.exists(
+            object_key=object_key,
+        ):
+            raise ValueError(
+                "Файл документа не найден в хранилище."
+            )
+
+        download_url = await storage.get_download_url(
+            object_key=object_key,
+            expires_in=300,
         )
 
-        return FileResponse(
-            path=file_path,
-            media_type=media_type or "application/octet-stream",
-            filename=document.file_name or file_path.name,
-            content_disposition_type="inline",
+        return RedirectResponse(
+            url=download_url,
+            status_code=302,
         )
 
     except ValueError as exc:
@@ -458,10 +424,12 @@ async def review_result_document_download(
         user: User = Depends(require_school_member_scope),
 ):
     """
-        Скачивает документ результата рассмотрения.
+    Скачивает документ результата рассмотрения.
 
-        Доступ проверяется через ReviewResultService.
-        """
+    Доступ проверяется через ReviewResultService.
+    Файл читается через выбранный backend хранилища
+    (LocalStorage / S3 / MinIO).
+    """
     selected_school_id = parse_optional_int(school_id)
 
     try:
@@ -472,24 +440,30 @@ async def review_result_document_download(
             selected_school_id=selected_school_id,
         )
 
-        file_path = _resolve_review_document_path(
-            document.file_path
-        )
+        object_key = str(document.file_path or "").strip()
 
-        if not file_path.is_file():
+        if not object_key:
             raise ValueError(
-                "Файл документа не найден."
+                "У документа отсутствует путь к файлу."
             )
 
-        media_type, _ = mimetypes.guess_type(
-            str(file_path)
+        storage = get_storage()
+
+        if not await storage.exists(
+            object_key=object_key,
+        ):
+            raise ValueError(
+                "Файл документа не найден в хранилище."
+            )
+
+        download_url = await storage.get_download_url(
+            object_key=object_key,
+            expires_in=300,
         )
 
-        return FileResponse(
-            path=file_path,
-            media_type=media_type or "application/octet-stream",
-            filename=document.file_name or file_path.name,
-            content_disposition_type="inline",
+        return RedirectResponse(
+            url=download_url,
+            status_code=302,
         )
 
     except ValueError as exc:

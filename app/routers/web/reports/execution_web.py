@@ -1,16 +1,14 @@
 # app/routers/web/reports/execution_web.py
 from __future__ import annotations
 
-from pathlib import Path
 import logging
-from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, Request, HTTPException, status
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
-from starlette.responses import FileResponse
 
+from app.core.storage.factory import get_storage
 from app.db.session import get_db
 from app.modules.planning.enums import PlanItemStatus
 from app.modules.reports.enums import DocumentType, TaskCompletionMode
@@ -359,60 +357,33 @@ async def staff_report_document_view(
             detail="Документ не найден или нет доступа",
         )
 
-    file_path = str(document.file_path or "").strip()
+    object_key = str(document.file_path or "").strip()
 
-    if not file_path:
+    if not object_key:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="У документа отсутствует путь к файлу",
         )
 
-    normalized_path = file_path.replace("\\", "/")
-    path_obj = Path(normalized_path)
+    storage = get_storage()
 
-    candidate_paths = []
-
-    if path_obj.is_absolute():
-        candidate_paths.append(path_obj)
-    else:
-        candidate_paths.append(Path("storage") / path_obj)
-        candidate_paths.append(path_obj)
-
-    abs_path = next((p for p in candidate_paths if p.exists()), None)
-
-    if abs_path is None:
+    if not await storage.exists(
+        object_key=object_key,
+    ):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=(
-                    "Файл не найден на диске. Проверены пути: "
-                    + ", ".join(str(p) for p in candidate_paths)
-            ),
+            detail="Файл не найден в хранилище",
         )
 
-    display_name = (
-            document.original_file_name
-            or document.stored_file_name
-            or f"document_{document.id}.pdf"
+    download_url = await storage.get_download_url(
+        object_key=object_key,
+        expires_in=300,
     )
 
-    media_type = str(document.mime_type or "").strip().lower()
-    if not media_type or media_type == "application/octet-stream":
-        if file_path.lower().endswith(".pdf"):
-            media_type = "application/pdf"
-        else:
-            media_type = "application/octet-stream"
-
-    response = FileResponse(
-        path=str(abs_path),
-        media_type=media_type,
+    return RedirectResponse(
+        url=download_url,
+        status_code=302,
     )
-
-    quoted_name = quote(display_name)
-    response.headers["Content-Disposition"] = (
-        f"inline; filename*=UTF-8''{quoted_name}"
-    )
-
-    return response
 
 
 # Выгрузка итогового документа
@@ -435,42 +406,30 @@ async def staff_report_document_download(
             detail="Документ не найден или нет доступа",
         )
 
-    file_path = str(document.file_path or "").strip()
+    object_key = str(document.file_path or "").strip()
 
-    if not file_path:
+    if not object_key:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="У документа отсутствует путь к файлу",
         )
 
-    normalized_path = file_path.replace("\\", "/")
-    path_obj = Path(normalized_path)
+    storage = get_storage()
 
-    candidate_paths = []
-
-    if path_obj.is_absolute():
-        candidate_paths.append(path_obj)
-    else:
-        candidate_paths.append(Path("storage") / path_obj)
-        candidate_paths.append(path_obj)
-
-    abs_path = next((p for p in candidate_paths if p.exists()), None)
-
-    if abs_path is None:
+    if not await storage.exists(
+        object_key=object_key,
+    ):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=(
-                    "Файл не найден на диске. Проверены пути: "
-                    + ", ".join(str(p) for p in candidate_paths)
-            ),
+            detail="Файл не найден в хранилище",
         )
 
-    return FileResponse(
-        path=str(abs_path),
-        media_type=document.mime_type or "application/octet-stream",
-        filename=(
-                document.original_file_name
-                or document.stored_file_name
-                or f"document_{document.id}"
-        ),
+    download_url = await storage.get_download_url(
+        object_key=object_key,
+        expires_in=300,
+    )
+
+    return RedirectResponse(
+        url=download_url,
+        status_code=302,
     )
