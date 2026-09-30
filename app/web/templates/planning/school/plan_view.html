@@ -1,44 +1,585 @@
 {% extends "base.html" %}
-{% block title %}План ВШК{% endblock %}
+
+{% block title %}
+ВШК жоспары
+{% endblock %}
+
 
 {% block extra_css %}
-<link rel="stylesheet" href="{{ url_for('static', path='css/admin.css') }}">
+
+<link
+  rel="stylesheet"
+  href="{{ url_for('static', path='css/admin.css') }}"
+>
+
+<style>
+
+  /* =====================================================
+     PAGE
+     ===================================================== */
+
+  .planning-page {
+    min-height: 100vh;
+    background: #f3f7fc;
+    padding: 24px 20px 48px;
+  }
+
+  .planning-container {
+    width: 100%;
+    max-width: 960px;
+    margin: 0 auto;
+  }
+
+
+  /* =====================================================
+     HERO
+     ===================================================== */
+
+  .planning-hero {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 24px;
+
+    padding: 24px 26px;
+    margin-bottom: 18px;
+
+    background: #ffffff;
+    border: 1px solid #dfe7f1;
+    border-radius: 14px;
+  }
+
+  .planning-hero__eyebrow {
+    margin-bottom: 6px;
+
+    color: #2563eb;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+  }
+
+  .planning-hero__title {
+    margin: 0;
+
+    color: #111827;
+    font-size: 26px;
+    line-height: 1.2;
+  }
+
+  .planning-hero__description {
+    margin: 8px 0 0;
+
+    color: #64748b;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  .planning-back-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+
+    min-height: 38px;
+    padding: 0 14px;
+
+    color: #334155;
+    background: #ffffff;
+
+    border: 1px solid #cbd5e1;
+    border-radius: 9px;
+
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+
+    white-space: nowrap;
+
+    transition:
+      border-color .15s ease,
+      background .15s ease;
+  }
+
+  .planning-back-btn:hover {
+    background: #f8fafc;
+    border-color: #94a3b8;
+  }
+
+
+  /* =====================================================
+     PLAN INFO
+     ===================================================== */
+
+  .planning-info {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+
+    margin-bottom: 18px;
+
+    background: #ffffff;
+    border: 1px solid #dfe7f1;
+    border-radius: 14px;
+
+    overflow: hidden;
+  }
+
+  .planning-info__item {
+    padding: 16px 20px;
+  }
+
+  .planning-info__item + .planning-info__item {
+    border-left: 1px solid #e5e7eb;
+  }
+
+  .planning-info__label {
+    margin-bottom: 5px;
+
+    color: #64748b;
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  .planning-info__value {
+    color: #111827;
+    font-size: 14px;
+    font-weight: 700;
+  }
+
+  .planning-status {
+    display: inline-flex;
+    align-items: center;
+
+    padding: 4px 9px;
+
+    background: #eff6ff;
+    color: #1d4ed8;
+
+    border-radius: 999px;
+
+    font-size: 11px;
+    font-weight: 700;
+  }
+
+
+  /* =====================================================
+     DIRECTIONS SECTION
+     ===================================================== */
+
+  .planning-directions {
+    background: #ffffff;
+    border: 1px solid #dfe7f1;
+    border-radius: 14px;
+    overflow: hidden;
+  }
+
+  .planning-directions__header {
+    padding: 20px 22px 16px;
+    border-bottom: 1px solid #e5e7eb;
+  }
+
+  .planning-directions__title {
+    margin: 0;
+
+    color: #111827;
+    font-size: 18px;
+    font-weight: 700;
+  }
+
+  .planning-directions__description {
+    margin: 5px 0 0;
+
+    color: #64748b;
+    font-size: 13px;
+    line-height: 1.45;
+  }
+
+  .planning-directions__body {
+    padding: 18px;
+  }
+
+
+  /* =====================================================
+     DIRECTION GRID
+     ===================================================== */
+
+  .planning-direction-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .planning-direction-card {
+    position: relative;
+
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+
+    min-height: 105px;
+    padding: 17px;
+
+    color: inherit;
+    background: #f8fafc;
+
+    border: 1px solid #e2e8f0;
+    border-radius: 11px;
+
+    text-decoration: none;
+
+    transition:
+      transform .15s ease,
+      border-color .15s ease,
+      background .15s ease,
+      box-shadow .15s ease;
+  }
+
+  .planning-direction-card:hover {
+    transform: translateY(-1px);
+
+    background: #ffffff;
+    border-color: #93c5fd;
+
+    box-shadow:
+      0 6px 18px rgba(15, 23, 42, .06);
+  }
+
+  .planning-direction-card__icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    flex: 0 0 40px;
+    width: 40px;
+    height: 40px;
+
+    background: #eaf2ff;
+    border-radius: 10px;
+
+    font-size: 18px;
+  }
+
+  .planning-direction-card__content {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .planning-direction-card__number {
+    margin-bottom: 4px;
+
+    color: #2563eb;
+    font-size: 11px;
+    font-weight: 700;
+  }
+
+  .planning-direction-card__title {
+    margin: 0;
+
+    color: #172033;
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1.35;
+  }
+
+  .planning-direction-card__description {
+    margin-top: 6px;
+
+    color: #64748b;
+    font-size: 12px;
+    line-height: 1.45;
+  }
+
+  .planning-direction-card__arrow {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+
+    color: #94a3b8;
+    font-size: 16px;
+  }
+
+  .planning-direction-card:hover
+  .planning-direction-card__arrow {
+    color: #2563eb;
+  }
+
+
+  /* =====================================================
+     EMPTY
+     ===================================================== */
+
+  .planning-empty {
+    padding: 48px 20px;
+
+    text-align: center;
+
+    background: #f8fafc;
+    border: 1px dashed #cbd5e1;
+    border-radius: 11px;
+  }
+
+  .planning-empty__icon {
+    margin-bottom: 10px;
+    font-size: 28px;
+  }
+
+  .planning-empty__title {
+    color: #334155;
+    font-size: 14px;
+    font-weight: 700;
+  }
+
+  .planning-empty__text {
+    margin-top: 5px;
+
+    color: #64748b;
+    font-size: 12px;
+  }
+
+
+  /* =====================================================
+     RESPONSIVE
+     ===================================================== */
+
+  @media (max-width: 760px) {
+
+    .planning-page {
+      padding: 14px 10px 32px;
+    }
+
+    .planning-hero {
+      flex-direction: column;
+    }
+
+    .planning-info {
+      grid-template-columns: 1fr;
+    }
+
+    .planning-info__item + .planning-info__item {
+      border-left: 0;
+      border-top: 1px solid #e5e7eb;
+    }
+
+    .planning-direction-grid {
+      grid-template-columns: 1fr;
+    }
+
+  }
+
+</style>
+
 {% endblock %}
+
 
 {% block content %}
 
-<div class="card card--large">
-  <div class="card__header">
-    <div>
-      <h2 style="margin:0;">План ВШК</h2>
-      <div style="color:#6b7280; margin-top:6px;">
-        Учебный год: <b>{{ plan.academic_year }}</b> · Статус: <b>{{ plan.status }}</b>
-      </div>
-    </div>
-      <a href="{{ request.url_for('school_dashboard') }}?academic_year={{ plan.academic_year }}" class="btn btn--light">
-        ← Назад
-      </a>
-  </div>
+<div class="planning-page">
 
-  <h3 style="margin-top:14px;">Выберите направление</h3>
+  <div class="planning-container">
 
-  <div class="card-grid" style="margin-top:12px;">
-    {% for td in template_directions %}
-      <a class="card" href="/planning/school/{{ plan.id }}/direction/{{ td.direction_id }}">
-        <div class="card__inner">
-          <div class="card__top">
-            <div class="card__icon">📌</div>
-          </div>
-          <h3 class="card__title">{{ td.direction.short_title if td.direction else ("Direction #" ~ td.direction_id) }}</h3>
-          {% if td.direction and td.direction.full_title %}
-            <div class="card__desc">{{ td.direction.full_title }}</div>
-          {% endif %}
+
+    <!-- =================================================
+         HERO
+         ================================================= -->
+
+    <section class="planning-hero">
+
+      <div>
+
+        <div class="planning-hero__eyebrow">
+          Мектепішілік бақылау
         </div>
+
+        <h1 class="planning-hero__title">
+          ВШК жоспары
+        </h1>
+
+        <p class="planning-hero__description">
+          Жылдық жоспардың бағыттарын қарап,
+          қажетті бағыт бойынша жоспарды толтырыңыз.
+        </p>
+
+      </div>
+
+
+      <a
+        href="{{
+          request.url_for('school_dashboard')
+        }}?academic_year={{ plan.academic_year }}"
+        class="planning-back-btn"
+      >
+        ← Жоспарларға қайту
       </a>
-    {% else %}
-      <div class="empty">В шаблоне нет направлений</div>
-    {% endfor %}
+
+    </section>
+
+
+    <!-- =================================================
+         PLAN INFO
+         ================================================= -->
+
+    <section class="planning-info">
+
+      <div class="planning-info__item">
+
+        <div class="planning-info__label">
+          Оқу жылы
+        </div>
+
+        <div class="planning-info__value">
+          {{ plan.academic_year }}
+        </div>
+
+      </div>
+
+
+      <div class="planning-info__item">
+
+        <div class="planning-info__label">
+          Жоспар мәртебесі
+        </div>
+
+        <div class="planning-info__value">
+
+          <span class="planning-status">
+
+            {% set plan_status =
+              plan.status.value
+              if plan.status.value is defined
+              else plan.status
+            %}
+
+            {% if plan_status == 'draft' %}
+              Жоба
+            {% elif plan_status == 'active' %}
+              Белсенді
+            {% elif plan_status == 'archived' %}
+              Мұрағатталған
+            {% else %}
+              {{ plan_status }}
+            {% endif %}
+
+          </span>
+
+        </div>
+
+      </div>
+
+    </section>
+
+
+    <!-- =================================================
+         DIRECTIONS
+         ================================================= -->
+
+    <section class="planning-directions">
+
+      <div class="planning-directions__header">
+
+        <h2 class="planning-directions__title">
+          Бақылау бағыттары
+        </h2>
+
+        <p class="planning-directions__description">
+          Жоспарды толтыру үшін қажетті бағытты таңдаңыз.
+        </p>
+
+      </div>
+
+
+      <div class="planning-directions__body">
+
+        {% if template_directions %}
+
+          <div class="planning-direction-grid">
+
+            {% for td in template_directions %}
+
+              <a
+                class="planning-direction-card"
+                href="{{ request.url_for('school_direction_edit', plan_id=plan.id, direction_id=td.direction_id) }}"
+              >
+
+                <div class="planning-direction-card__icon">
+                  📌
+                </div>
+
+
+                <div class="planning-direction-card__content">
+
+                  <div class="planning-direction-card__number">
+                    {{ loop.index }}-бағыт
+                  </div>
+
+                  <h3 class="planning-direction-card__title">
+
+                    {{
+                      td.direction.short_title
+                      if td.direction
+                      else (
+                        "Direction #"
+                        ~ td.direction_id
+                      )
+                    }}
+
+                  </h3>
+
+
+                  {% if
+                    td.direction
+                    and td.direction.full_title
+                  %}
+
+                    <div
+                      class="
+                        planning-direction-card__description
+                      "
+                    >
+                      {{ td.direction.full_title }}
+                    </div>
+
+                  {% endif %}
+
+                </div>
+
+
+                <div class="planning-direction-card__arrow">
+                  →
+                </div>
+
+              </a>
+
+            {% endfor %}
+
+          </div>
+
+        {% else %}
+
+          <div class="planning-empty">
+
+            <div class="planning-empty__icon">
+              📋
+            </div>
+
+            <div class="planning-empty__title">
+              Бағыттар табылмады
+            </div>
+
+            <div class="planning-empty__text">
+              Таңдалған үлгіде бақылау бағыттары жоқ.
+            </div>
+
+          </div>
+
+        {% endif %}
+
+      </div>
+
+    </section>
+
+
   </div>
+
 </div>
 
 {% endblock %}

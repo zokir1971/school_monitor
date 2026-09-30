@@ -91,17 +91,22 @@ class SchoolMonthPlanAssigneeRepo:
             .options(
                 selectinload(
                     SchoolMonthPlanItem.month_plan
+                ).selectinload(
+                    SchoolMonthPlan.school_plan
                 ),
+
                 selectinload(
                     SchoolMonthPlanItem.source_row11
                 ).selectinload(
                     SchoolPlanRow11.direction
                 ),
+
                 selectinload(
                     SchoolMonthPlanItem.source_row11
                 ).selectinload(
                     SchoolPlanRow11.role_assignments
                 ),
+
                 selectinload(
                     SchoolMonthPlanItem.source_row11
                 ).selectinload(

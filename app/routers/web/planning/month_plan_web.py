@@ -428,6 +428,33 @@ async def school_monthly_save_draft(
                     "годовому плану или выбранному месяцу."
                 ),
             )
+        # =====================================================
+        # ARCHIVE GUARD
+        # =====================================================
+
+        school_plan_status = (
+            school_plan.status.value
+            if hasattr(school_plan.status, "value")
+            else str(school_plan.status)
+        )
+
+        if school_plan_status == PlanStatus.ARCHIVED.value:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=(
+                    "Мұрағатталған оқу жылының "
+                    "айлық жоспарын өзгертуге болмайды."
+                ),
+            )
+
+        if month_plan.status == PlanStatus.ARCHIVED:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=(
+                    "Мұрағатталған айлық жоспарды "
+                    "өзгертуге болмайды."
+                ),
+            )
 
         if month_plan.status != PlanStatus.DRAFT:
             raise HTTPException(

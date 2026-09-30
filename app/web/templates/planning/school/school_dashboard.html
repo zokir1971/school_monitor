@@ -1,173 +1,526 @@
 {% extends "base.html" %}
-{% block title %}Планирование ВШК{% endblock %}
+
+{% block title %}ВШК жоспарлау{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{{ url_for('static', path='css/admin.css') }}">
+<link
+  rel="stylesheet"
+  href="{{ url_for('static', path='css/planning/school_dashboard.css') }}"
+>
 {% endblock %}
 
 {% block content %}
 
-<div class="dashboard-grid">
+<div class="planning-page">
 
-  <!-- Левая часть -->
-  <div class="card card--large">
+  <!-- ==================================================
+       HEADER
+       ================================================== -->
 
-    <div class="card__header" style="align-items:flex-start; gap:12px;">
-      <div>
-        <h2 style="margin:0;">📅 Планирование ВШК</h2>
-        <div style="color:#6b7280; font-size:14px; margin-top:4px;">
-          Выберите учебный год и активный шаблон супер администратора, затем сформируйте школьный план.
-        </div>
-      </div>
-    </div>
+  <header class="planning-header">
 
-{# Ошибка #}
-{% if error %}
-  <div class="alert alert--error" style="margin-top:12px;">{{ error }}</div>
-{% endif %}
-
-<div style="display:flex; gap:12px; flex-wrap:wrap; margin-top:14px;">
-  {# Выбор учебного года #}
-  <form method="get" action="/planning/school" style="display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap;">
-    <div class="field">
-      <label>Учебный год</label>
-      <input name="academic_year" value="{{ academic_year }}" placeholder="2026-2027" style="width:160px;">
-    </div>
-    <button class="btn btn--light" type="submit">Показать</button>
-  </form>
-
-  {# Создать план (POST) #}
-  <form method="post" action="/planning/school/create" style="display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap;">
-    <div class="field">
-      <label>Активный шаблон</label>
-      <select name="template_id" required style="min-width:260px;">
-        {% for t in templates_active %}
-          <option value="{{ t.id }}" {% if t.id == active_template_id %}selected{% endif %}>
-            {{ t.name }}
-          </option>
-        {% endfor %}
-      </select>
-    </div>
-
-    <input type="hidden" name="academic_year" value="{{ academic_year }}">
-
-    <button class="btn btn--primary" type="submit" {% if not templates_active %}disabled{% endif %}>
-      Сформировать план
-    </button>
-    {% for plan in plans %}
-  <a href="{{ url_for('school_plan_preview', plan_id=plan.id) }}"
-     class="btn btn--primary">
-      Просмотр
-  </a>
-{% endfor %}
-  </form>
-</div>
-    </div>
-
-    <!-- Tabs -->
-    <div class="tabs" style="margin-top:16px;">
-      <a href="?academic_year={{ academic_year }}&tab=my" class="tab {% if tab == 'my' %}active{% endif %}">Мои планы</a>
-      <a href="?academic_year={{ academic_year }}&tab=active" class="tab {% if tab == 'active' %}active{% endif %}">Активный план</a>
-      <a href="?academic_year={{ academic_year }}&tab=archive" class="tab {% if tab == 'archive' %}active{% endif %}">Архив</a>
-    </div>
-
-    <!-- Таблица -->
-    <div class="table-wrapper">
-      <table class="table">
-        <thead>
-          <tr>
-            <th>Шаблон</th>
-            <th>Учебный год</th>
-            <th>Статус</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-        {% for plan in plans %}
-          <tr>
-            <td>
-              {# У SchoolPlan нет name, берем имя шаблона #}
-              {{ plan.template.name if plan.template else ("Шаблон #" ~ plan.template_id) }}
-            </td>
-            <td>{{ plan.academic_year }}</td>
-            <td>
-              <span class="status status--{{ plan.status }}">
-                {# если label не передан - показываем статус как есть #}
-                {{ plan.status_label if plan.status_label is defined else plan.status }}
-              </span>
-            </td>
-            <td>
-              <a href="{{ request.url_for('school_plan_view', plan_id=plan.id) }}" class="btn btn--primary">
-                Открыть
-              </a>
-            </td>
-          </tr>
-        {% else %}
-          <tr>
-            <td colspan="4" class="empty">Нет данных</td>
-          </tr>
-        {% endfor %}
-        </tbody>
-      </table>
-    </div>
-
-  </div>
-
-  <!-- Правая часть -->
-  <div class="sidebar">
-
-    <div class="card">
-      <div class="card__header">
-        <h3>🏫 Школа</h3>
-      </div>
-      <div class="card__body">
-        {% if school %}
-          <p><b>{{ school.name }}</b></p>
-          {# director может не существовать в модели #}
-          {% if school.director is defined and school.director %}
-            <p>Директор: {{ school.director }}</p>
-          {% endif %}
-        {% else %}
-          <p class="empty">Школа не привязана</p>
-        {% endif %}
-        <p>Учебный год: {{ academic_year }}</p>
-      </div>
-    </div>
-
-    <div class="card">
-      <div class="card__header">
-        <h3>📌 Текущий статус</h3>
-      </div>
-      <div class="card__body">
-        {% if active_plan %}
-          <p>
-            <b>{{ active_plan.template.name if active_plan.template else ("Шаблон #" ~ active_plan.template_id) }}</b>
-          </p>
-          <p class="status status--{{ active_plan.status }}">
-            {{ active_plan.status_label if active_plan.status_label is defined else active_plan.status }}
-          </p>
-        {% else %}
-          <p class="empty">Активный план отсутствует</p>
-        {% endif %}
-      </div>
-    </div>
     <div>
-{% if active_plan %}
-  {% if active_plan.status != PlanStatus.ACTIVE %}
-    <form method="post"
-          action="{{ request.url_for('school_plan_activate', plan_id=active_plan.id) }}">
-      <button type="submit" class="btn btn--primary">
-        Сделать активным
-      </button>
-    </form>
-  {% else %}
-    <div class="badge badge--success">
-      Активный план
+      <div class="planning-header__eyebrow">
+        Мектепішілік бақылау
+      </div>
+
+      <h1 class="planning-header__title">
+        ВШК жоспарлау
+      </h1>
+
+      <p class="planning-header__description">
+        Оқу жылын таңдаңыз, жылдық жоспарды басқарыңыз
+        және аяқталған оқу жылдарын мұрағаттаңыз.
+      </p>
+    </div>
+
+    <div class="planning-header__school">
+
+      <span class="planning-header__school-label">
+        Мектеп
+      </span>
+
+      <strong>
+        {% if school %}
+          {{ school.name }}
+        {% else %}
+          Мектеп тіркелмеген
+        {% endif %}
+      </strong>
+
+    </div>
+
+  </header>
+
+
+  <!-- ==================================================
+       ERROR
+       ================================================== -->
+
+  {% if error %}
+    <div class="planning-alert planning-alert--error">
+      {{ error }}
     </div>
   {% endif %}
-{% endif %}
-</div>
 
-  </div>
+
+  <!-- ==================================================
+       ACADEMIC YEAR
+       ================================================== -->
+
+  <section class="planning-panel">
+
+    <div class="planning-panel__header">
+
+      <div>
+        <h2 class="planning-panel__title">
+          Оқу жылы
+        </h2>
+
+        <p class="planning-panel__description">
+          Жоспарларды көру немесе жаңа жоспар құру
+          үшін оқу жылын көрсетіңіз.
+        </p>
+      </div>
+
+      <div class="planning-year-badge">
+        {{ academic_year }}
+      </div>
+
+    </div>
+
+
+    <div class="planning-actions">
+
+      <!-- YEAR FILTER -->
+
+      <form
+        method="get"
+        action="{{ request.url_for('school_dashboard') }}"
+        class="planning-form planning-form--year"
+      >
+
+        <div class="planning-field">
+
+          <label
+            class="planning-field__label"
+            for="academic-year"
+          >
+            Оқу жылы
+          </label>
+
+          <input
+            id="academic-year"
+            class="planning-field__control"
+            type="text"
+            name="academic_year"
+            value="{{ academic_year }}"
+            placeholder="2026-2027"
+            autocomplete="off"
+          >
+
+        </div>
+
+        <button
+          class="planning-btn planning-btn--secondary"
+          type="submit"
+        >
+          Көрсету
+        </button>
+
+      </form>
+
+
+      <!-- CREATE PLAN -->
+
+      <form
+        method="post"
+        action="/planning/school/create"
+        class="planning-form planning-form--create"
+      >
+
+        <input
+          type="hidden"
+          name="academic_year"
+          value="{{ academic_year }}"
+        >
+
+        <div class="planning-field">
+
+          <label
+            class="planning-field__label"
+            for="template-id"
+          >
+            Белсенді үлгі
+          </label>
+
+          <select
+            id="template-id"
+            class="planning-field__control"
+            name="template_id"
+            required
+            {% if not templates_active %}disabled{% endif %}
+          >
+
+            {% if templates_active %}
+
+              {% for template in templates_active %}
+
+                <option
+                  value="{{ template.id }}"
+                  {% if template.id == active_template_id %}
+                    selected
+                  {% endif %}
+                >
+                  {{ template.name }}
+                </option>
+
+              {% endfor %}
+
+            {% else %}
+
+              <option value="">
+                Белсенді үлгі жоқ
+              </option>
+
+            {% endif %}
+
+          </select>
+
+        </div>
+
+        <button
+          class="planning-btn planning-btn--primary"
+          type="submit"
+          {% if not templates_active %}disabled{% endif %}
+        >
+          Жоспар құру
+        </button>
+
+      </form>
+
+    </div>
+
+  </section>
+
+
+  <!-- ==================================================
+       PLANS
+       ================================================== -->
+
+  <section class="planning-panel">
+
+    <div class="planning-panel__header">
+
+      <div>
+        <h2 class="planning-panel__title">
+          Жылдық жоспарлар
+        </h2>
+
+        <p class="planning-panel__description">
+          {{ academic_year }} оқу жылына арналған
+          мектептің ВШК жоспарлары.
+        </p>
+      </div>
+
+    </div>
+
+
+    <!-- TABS -->
+
+    <nav class="planning-tabs">
+
+      <a
+        href="?academic_year={{ academic_year }}&tab=my"
+        class="planning-tab {% if tab == 'my' %}is-active{% endif %}"
+      >
+        Менің жоспарларым
+      </a>
+
+      <a
+        href="?academic_year={{ academic_year }}&tab=active"
+        class="planning-tab {% if tab == 'active' %}is-active{% endif %}"
+      >
+        Белсенді
+      </a>
+
+      <a
+        href="?academic_year={{ academic_year }}&tab=archive"
+        class="planning-tab {% if tab == 'archive' %}is-active{% endif %}"
+      >
+        Мұрағат
+      </a>
+
+    </nav>
+
+
+    <!-- PLAN LIST -->
+
+    <div class="planning-plan-list">
+
+      {% for plan in plans %}
+
+        {% set plan_status =
+          plan.status.value
+          if plan.status.value is defined
+          else plan.status
+        %}
+
+        <article
+          class="
+            planning-plan-card
+            {% if plan_status == 'archived' %}
+              planning-plan-card--archived
+            {% endif %}
+          "
+        >
+
+          <div class="planning-plan-card__main">
+
+            <div class="planning-plan-card__top">
+
+              <div>
+
+                <div class="planning-plan-card__year">
+                  {{ plan.academic_year }}
+                </div>
+
+                <h3 class="planning-plan-card__title">
+                  {% if plan.template %}
+                    {{ plan.template.name }}
+                  {% else %}
+                    Үлгі #{{ plan.template_id }}
+                  {% endif %}
+                </h3>
+
+              </div>
+
+
+              {% if plan_status == 'active' %}
+
+                <span class="planning-status planning-status--active">
+                  Белсенді
+                </span>
+
+              {% elif plan_status == 'archived' %}
+
+                <span class="planning-status planning-status--archived">
+                  Мұрағатталған
+                </span>
+
+              {% else %}
+
+                <span class="planning-status planning-status--draft">
+                  Жоба
+                </span>
+
+              {% endif %}
+
+            </div>
+
+
+            {% if plan_status == 'archived' %}
+
+              <div class="planning-plan-card__notice">
+                Бұл оқу жылы мұрағатталған.
+                Жоспар тарихи деректер ретінде сақталады.
+              </div>
+
+            {% endif %}
+
+          </div>
+
+
+          <div class="planning-plan-card__actions">
+
+            {# =====================================================
+              EDIT Только для неархивного плана
+              ===================================================== #}
+
+            {% if plan_status != 'archived' %}
+
+              <a
+                href="{{ request.url_for(
+                  'school_plan_view',
+                  plan_id=plan.id
+                ) }}"
+                class="planning-btn planning-btn--secondary"
+              >
+                Ашу
+              </a>
+
+            {% endif %}
+
+
+            {# =====================================================
+              PREVIEW Доступен всегда, включая архив
+              ===================================================== #}
+
+            <a
+              href="{{ request.url_for(
+                'school_plan_preview',
+                plan_id=plan.id
+              ) }}"
+              class="planning-btn planning-btn--secondary"
+            >
+              Қарау
+            </a>
+
+
+            {# =====================================================
+              ARCHIVE Только для неархивного плана
+              ===================================================== #}
+
+            {% if plan_status != 'archived' %}
+
+              <form
+                method="post"
+                action="{{ request.url_for(
+                  'school_plan_archive',
+                  plan_id=plan.id
+                ) }}"
+                class="planning-archive-form"
+                onsubmit="
+                  return confirm(
+                    '{{ plan.academic_year }} оқу жылының ВШК жоспарын мұрағаттайсыз ба? Бұл әрекеттен кейін жоспар тек қарау режимінде қолжетімді болады.'
+                  );
+                "
+              >
+
+                <button
+                  type="submit"
+                  class="planning-btn planning-btn--danger"
+                >
+                  Мұрағаттау
+                </button>
+
+              </form>
+
+            {% endif %}
+
+          </div>
+
+        </article>
+
+      {% else %}
+
+        <div class="planning-empty">
+
+          <div class="planning-empty__icon">
+            📋
+          </div>
+
+          <h3 class="planning-empty__title">
+            Жоспар табылмады
+          </h3>
+
+          <p class="planning-empty__text">
+            {{ academic_year }} оқу жылына жоспар
+            әлі құрылмаған.
+          </p>
+
+        </div>
+
+      {% endfor %}
+
+    </div>
+
+  </section>
+
+
+  <!-- ==================================================
+       CURRENT STATUS
+       ================================================== -->
+
+  <section class="planning-summary">
+
+    <div class="planning-summary__item">
+
+      <span class="planning-summary__label">
+        Мектеп
+      </span>
+
+      <strong class="planning-summary__value">
+        {% if school %}
+          {{ school.name }}
+        {% else %}
+          —
+        {% endif %}
+      </strong>
+
+    </div>
+
+
+    <div class="planning-summary__item">
+
+      <span class="planning-summary__label">
+        Оқу жылы
+      </span>
+
+      <strong class="planning-summary__value">
+        {{ academic_year }}
+      </strong>
+
+    </div>
+
+
+    <div class="planning-summary__item">
+
+      <span class="planning-summary__label">
+        Ағымдағы жоспар
+      </span>
+
+      {% if active_plan %}
+
+        {% set active_status =
+          active_plan.status.value
+          if active_plan.status.value is defined
+          else active_plan.status
+        %}
+
+        <strong class="planning-summary__value">
+          {% if active_plan.template %}
+            {{ active_plan.template.name }}
+          {% else %}
+            Үлгі #{{ active_plan.template_id }}
+          {% endif %}
+        </strong>
+
+        {% if active_status != 'active'
+              and active_status != 'archived' %}
+
+          <form
+            method="post"
+            action="{{ request.url_for(
+              'school_plan_activate',
+              plan_id=active_plan.id
+            ) }}"
+            class="planning-summary__action"
+          >
+
+            <button
+              type="submit"
+              class="planning-btn planning-btn--primary"
+            >
+              Белсенді ету
+            </button>
+
+          </form>
+
+        {% endif %}
+
+      {% else %}
+
+        <strong class="planning-summary__value planning-summary__value--muted">
+          Жоспар жоқ
+        </strong>
+
+      {% endif %}
+
+    </div>
+
+  </section>
+
+</div>
 
 {% endblock %}

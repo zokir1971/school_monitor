@@ -1,0 +1,1050 @@
+{% extends "base.html" %}
+
+{% block title %}
+Тапсырманы өңдеу — {{ page.academic_year }}
+{% endblock %}
+
+{% block content %}
+
+<style>
+  .row11-page {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 24px 20px 48px;
+  }
+
+  .row11-page *,
+  .row11-page *::before,
+  .row11-page *::after {
+    box-sizing: border-box;
+  }
+
+  /* =========================
+     HEADER
+     ========================= */
+
+  .row11-header {
+    background: #fff;
+    border: 1px solid #dfe5ec;
+    border-radius: 14px;
+    padding: 22px 24px;
+    margin-bottom: 18px;
+  }
+
+  .row11-header__top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 20px;
+  }
+
+  .row11-eyebrow {
+    margin-bottom: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: #2563eb;
+  }
+
+  .row11-title {
+    margin: 0;
+    font-size: 25px;
+    line-height: 1.25;
+    color: #172033;
+  }
+
+  .row11-subtitle {
+    margin: 7px 0 0;
+    color: #64748b;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  .row11-year {
+    flex: 0 0 auto;
+    border: 1px solid #bfdbfe;
+    background: #eff6ff;
+    color: #1d4ed8;
+    border-radius: 999px;
+    padding: 7px 12px;
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  /* =========================
+     FORM CARDS
+     ========================= */
+
+  .row11-form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .row11-card {
+    background: #fff;
+    border: 1px solid #dfe5ec;
+    border-radius: 14px;
+    overflow: hidden;
+  }
+
+  .row11-card__header {
+    padding: 16px 20px;
+    border-bottom: 1px solid #e7ebf0;
+  }
+
+  .row11-card__title {
+    margin: 0;
+    font-size: 16px;
+    color: #172033;
+  }
+
+  .row11-card__hint {
+    margin: 5px 0 0;
+    font-size: 12px;
+    color: #64748b;
+  }
+
+  .row11-card__body {
+    padding: 20px;
+  }
+
+  /* =========================
+     FIELDS
+     ========================= */
+
+  .row11-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px;
+  }
+
+  .row11-grid--3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .row11-field--full {
+    grid-column: 1 / -1;
+  }
+
+  .row11-label {
+    display: block;
+    margin-bottom: 7px;
+    font-size: 13px;
+    font-weight: 700;
+    color: #334155;
+  }
+
+  .row11-required {
+    color: #dc2626;
+  }
+
+  .row11-input,
+  .row11-select,
+  .row11-textarea {
+    width: 100%;
+    border: 1px solid #cbd5e1;
+    border-radius: 9px;
+    background: #fff;
+    color: #172033;
+    font: inherit;
+    font-size: 14px;
+    outline: none;
+    transition:
+      border-color .15s ease,
+      box-shadow .15s ease;
+  }
+
+  .row11-input,
+  .row11-select {
+    min-height: 42px;
+    padding: 8px 11px;
+  }
+
+  .row11-textarea {
+    min-height: 92px;
+    padding: 10px 11px;
+    resize: vertical;
+    line-height: 1.5;
+  }
+
+  .row11-textarea--large {
+    min-height: 125px;
+  }
+
+  .row11-input:focus,
+  .row11-select:focus,
+  .row11-textarea:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, .10);
+  }
+
+  /* =========================
+     CHECK OPTIONS
+     ========================= */
+
+  .row11-options {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .row11-option {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    min-height: 44px;
+    padding: 11px 12px;
+    border: 1px solid #dbe2ea;
+    border-radius: 9px;
+    background: #fafcff;
+    cursor: pointer;
+  }
+
+  .row11-option:hover {
+    border-color: #bfdbfe;
+    background: #f8fbff;
+  }
+
+  .row11-option input {
+    margin-top: 2px;
+    width: 16px;
+    height: 16px;
+    flex: 0 0 auto;
+  }
+
+  .row11-option__label {
+    color: #334155;
+    font-size: 13px;
+    line-height: 1.4;
+  }
+
+  /* ================================================
+   PERIOD
+   ================================================ */
+
+.row11-period-sample {
+  margin-bottom: 20px;
+  padding: 14px 16px;
+  border: 1px solid #dbe3ec;
+  border-radius: 10px;
+  background: #f8fafc;
+}
+
+.row11-period-sample__label {
+  margin-bottom: 5px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  color: #64748b;
+}
+
+.row11-period-sample__value {
+  font-size: 14px;
+  font-weight: 600;
+  color: #334155;
+}
+
+.row11-months-field {
+  margin-top: 20px;
+}
+
+.row11-month-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.row11-month-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  min-height: 44px;
+  padding: 10px 12px;
+
+  border: 1px solid #dbe3ec;
+  border-radius: 9px;
+
+  background: #fff;
+  cursor: pointer;
+
+  transition:
+    border-color .15s ease,
+    background-color .15s ease,
+    box-shadow .15s ease;
+}
+
+.row11-month-option:hover {
+  border-color: #94a3b8;
+  background: #f8fafc;
+}
+
+.row11-month-option:has(input:checked) {
+  border-color: #64748b;
+  background: #f1f5f9;
+  box-shadow: 0 0 0 1px #64748b;
+}
+
+.row11-month-checkbox {
+  width: 17px;
+  height: 17px;
+  margin: 0;
+  cursor: pointer;
+}
+
+.row11-month-option__text {
+  font-size: 14px;
+  font-weight: 600;
+  color: #334155;
+}
+
+@media (max-width: 900px) {
+  .row11-month-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 650px) {
+  .row11-month-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* ================================================
+   TEMPLATE SAMPLE
+   ================================================ */
+
+.row11-sample {
+  margin-bottom: 20px;
+  padding: 14px 16px;
+  border: 1px solid #dbe3ec;
+  border-radius: 10px;
+  background: #f8fafc;
+}
+
+.row11-sample__label {
+  margin-bottom: 5px;
+
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.2;
+
+  text-transform: uppercase;
+  letter-spacing: .04em;
+
+  color: #64748b;
+}
+
+.row11-sample__value {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.5;
+
+  color: #334155;
+}
+  /* =========================
+     ACTIONS
+     ========================= */
+
+  .row11-actions {
+    position: sticky;
+    bottom: 0;
+    z-index: 10;
+
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+
+    margin-top: 2px;
+    padding: 15px 18px;
+
+    border: 1px solid #dfe5ec;
+    border-radius: 12px;
+
+    background: rgba(255, 255, 255, .96);
+  }
+
+  .row11-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    min-height: 40px;
+    padding: 8px 16px;
+
+    border-radius: 8px;
+    border: 1px solid transparent;
+
+    font-size: 13px;
+    font-weight: 700;
+    text-decoration: none;
+    cursor: pointer;
+  }
+
+  .row11-btn--secondary {
+    border-color: #cbd5e1;
+    background: #fff;
+    color: #334155;
+  }
+
+  .row11-btn--primary {
+    border-color: #2563eb;
+    background: #2563eb;
+    color: #fff;
+  }
+
+  .row11-btn--primary:hover {
+    background: #1d4ed8;
+  }
+
+  @media (max-width: 800px) {
+    .row11-header__top {
+      flex-direction: column;
+    }
+
+    .row11-grid,
+    .row11-grid--3,
+    .row11-options {
+      grid-template-columns: 1fr;
+    }
+
+    .row11-actions {
+      position: static;
+    }
+  }
+</style>
+
+
+<div class="row11-page">
+
+  <!-- ==================================================
+       HEADER
+       ================================================== -->
+
+  <section class="row11-header">
+
+    <div class="row11-header__top">
+
+      <div>
+        <div class="row11-eyebrow">
+          Мектепішілік бақылау
+        </div>
+
+        <h1 class="row11-title">
+          Тапсырманы өңдеу
+        </h1>
+
+        <p class="row11-subtitle">
+          {{ page.direction_name }}
+          · №{{ page.row_order }}
+        </p>
+      </div>
+
+      <div class="row11-year">
+        {{ page.academic_year }}
+      </div>
+
+    </div>
+
+  </section>
+
+
+  <!-- ==================================================
+       FORM
+       ================================================== -->
+
+  <form
+    method="post"
+    action="{{ request.url_for(
+      'school_row11_update',
+      plan_id=page.plan_id,
+      direction_id=page.direction_id,
+      row11_id=page.row_id
+    ) }}"
+    class="row11-form"
+  >
+
+    <!-- ================================================
+         1. MAIN DATA
+         ================================================ -->
+
+    <section class="row11-card">
+
+      <div class="row11-card__header">
+        <h2 class="row11-card__title">
+          Негізгі мәліметтер
+        </h2>
+
+        <p class="row11-card__hint">
+          Бақылау тапсырмасының мазмұны мен мақсатын көрсетіңіз.
+        </p>
+      </div>
+
+      <div class="row11-card__body">
+
+        <div class="row11-grid">
+
+          <div class="row11-field--full">
+            <label class="row11-label" for="topic">
+              Тақырып
+              <span class="row11-required">*</span>
+            </label>
+
+            <textarea
+              id="topic"
+              name="topic"
+              class="row11-textarea"
+              required
+            >{{ page.topic }}</textarea>
+          </div>
+
+
+          <div class="row11-field--full">
+            <label class="row11-label" for="goal">
+              Мақсаты
+            </label>
+
+            <textarea
+              id="goal"
+              name="goal"
+              class="row11-textarea"
+            >{{ page.goal }}</textarea>
+          </div>
+
+
+          <div>
+            <label class="row11-label" for="control_object">
+              Бақылау нысаны
+            </label>
+
+            <input
+              id="control_object"
+              name="control_object"
+              type="text"
+              class="row11-input"
+              value="{{ page.control_object }}"
+            >
+          </div>
+
+
+          <div>
+            <label class="row11-label" for="control_type">
+              Бақылау түрі
+            </label>
+
+            <input
+              id="control_type"
+              name="control_type"
+              type="text"
+              class="row11-input"
+              value="{{ page.control_type }}"
+            >
+          </div>
+
+
+          <div class="row11-field--full">
+            <label class="row11-label" for="methods">
+              Бақылау әдістері
+            </label>
+
+            <textarea
+              id="methods"
+              name="methods"
+              class="row11-textarea"
+            >{{ page.methods }}</textarea>
+          </div>
+
+        </div>
+
+      </div>
+
+    </section>
+
+
+    <!-- ================================================
+     2. PERIOD
+     ================================================ -->
+
+<section class="row11-card">
+
+  <div class="row11-card__header">
+    <h2 class="row11-card__title">
+      Орындау кезеңі
+    </h2>
+
+    <p class="row11-card__hint">
+      Тапсырманың орындалу мерзімін таңдаңыз.
+    </p>
+  </div>
+
+  <div class="row11-card__body">
+
+    <!-- Образец из годового плана -->
+    <div class="row11-period-sample">
+      <div class="row11-period-sample__label">
+        Үлгі
+      </div>
+
+      <div class="row11-period-sample__value">
+        {{ page.sample_period_text or "—" }}
+      </div>
+    </div>
+
+
+    <div class="row11-grid">
+
+      <!-- Тип периода -->
+      <div>
+        <label class="row11-label" for="period_type">
+          Кезең түрі
+          <span class="row11-required">*</span>
+        </label>
+
+        <select
+          id="period_type"
+          name="period_type"
+          class="row11-select"
+          required
+        >
+          <option value="">
+            Кезеңді таңдаңыз
+          </option>
+
+          {% if page.period_type == "all_year" %}
+            <option value="all_year" selected>Оқу жылы бойы</option>
+          {% else %}
+            <option value="all_year">Оқу жылы бойы</option>
+          {% endif %}
+
+          {% if page.period_type == "monthly" %}
+            <option value="monthly" selected>Ай сайын</option>
+          {% else %}
+            <option value="monthly">Ай сайын</option>
+          {% endif %}
+
+          {% if page.period_type == "quarter" %}
+            <option value="quarter" selected>Тоқсан сайын</option>
+          {% else %}
+            <option value="quarter">Тоқсан сайын</option>
+          {% endif %}
+
+          {% if page.period_type == "month" %}
+            <option value="month" selected>Бір ай</option>
+          {% else %}
+            <option value="month">Бір ай</option>
+          {% endif %}
+
+          {% if page.period_type == "months" %}
+            <option value="months" selected>Бірнеше ай</option>
+          {% else %}
+            <option value="months">Бірнеше ай</option>
+          {% endif %}
+        </select>
+      </div>
+
+
+      <!-- Один месяц -->
+      <div
+        id="monthField"
+        class="row11-period-extra"
+      >
+        <label class="row11-label" for="month">
+          Ай
+        </label>
+
+        <select
+          id="month"
+          name="month"
+          class="row11-select"
+        >
+          <option value="">
+            Айды таңдаңыз
+          </option>
+
+          {% for month_number, month_name in MONTH_NAMES.items() %}
+            <option
+              value="{{ month_number }}"
+              {% if page.month == month_number %}selected{% endif %}
+            >
+              {{ month_name }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+    </div>
+
+
+    <!-- Несколько месяцев -->
+    <div
+      id="monthsField"
+      class="row11-period-extra row11-months-field"
+    >
+      <div class="row11-label">
+        Айларды таңдаңыз
+      </div>
+
+      <div class="row11-month-grid">
+
+        {% for month_number, month_name in MONTH_NAMES.items() %}
+
+          <label class="row11-month-option">
+
+            <input
+              type="checkbox"
+              class="row11-month-checkbox"
+              value="{{ month_number }}"
+              {% if month_number in page.selected_months %}checked{% endif %}
+            >
+
+            <span class="row11-month-option__text">
+              {{ month_name }}
+            </span>
+
+          </label>
+
+        {% endfor %}
+
+      </div>
+
+      <!--
+        Backend пока продолжает получать:
+        period_values = "9,11"
+      -->
+      <input
+        type="hidden"
+        id="period_values"
+        name="period_values"
+        value="{{ page.period_values }}"
+      >
+
+    </div>
+
+  </div>
+
+</section>
+
+    <!-- ================================================
+         3. RESPONSIBLES
+         ================================================ -->
+
+    <section class="row11-card">
+
+      <div class="row11-card__header">
+        <h2 class="row11-card__title">
+          Жауаптылар
+        </h2>
+
+        <p class="row11-card__hint">
+          Тапсырманың орындалуына жауапты лауазымдарды таңдаңыз.
+        </p>
+
+        <div class="row11-sample">
+          <div class="row11-sample__label">
+            Үлгі
+          </div>
+
+          <div class="row11-sample__value">
+            {{ page.sample_responsibles_text or "—" }}
+          </div>
+        </div>
+
+      </div>
+
+      <div class="row11-card__body">
+
+        <div class="row11-options">
+
+          {% for option in page.responsible_roles %}
+
+            <label class="row11-option">
+
+              <input
+                type="checkbox"
+                name="responsible_roles"
+                value="{{ option.value }}"
+                {% if option.selected %}checked{% endif %}
+              >
+
+              <span class="row11-option__label">
+                {{ option.label }}
+              </span>
+
+            </label>
+
+          {% endfor %}
+
+        </div>
+
+      </div>
+
+    </section>
+
+
+    <!-- ================================================
+         4. REVIEW PLACE
+         ================================================ -->
+
+    <section class="row11-card">
+
+      <div class="row11-card__header">
+        <h2 class="row11-card__title">
+          Қарау орны
+        </h2>
+
+        <p class="row11-card__hint">
+          Нәтиже қаралатын алқалы органды таңдаңыз.
+        </p>
+
+        <div class="row11-sample">
+          <div class="row11-sample__label">
+            Үлгі
+          </div>
+
+          <div class="row11-sample__value">
+            {{ page.sample_review_place_text or "—" }}
+          </div>
+        </div>
+
+      </div>
+
+      <div class="row11-card__body">
+
+        <div class="row11-options">
+
+          {% for option in page.review_places %}
+
+            <label class="row11-option">
+
+              <input
+                type="checkbox"
+                name="review_places"
+                value="{{ option.value }}"
+                {% if option.selected %}checked{% endif %}
+              >
+
+              <span class="row11-option__label">
+                {{ option.label }}
+              </span>
+
+            </label>
+
+          {% endfor %}
+
+        </div>
+
+      </div>
+
+    </section>
+
+
+    <!-- ================================================
+         5. DOCUMENTS
+         ================================================ -->
+
+    <section class="row11-card">
+
+      <div class="row11-card__header">
+        <h2 class="row11-card__title">
+          Қорытынды құжаттар
+        </h2>
+
+        <p class="row11-card__hint">
+          Тапсырма нәтижесі бойынша дайындалатын құжаттарды таңдаңыз.
+        </p>
+
+        <div class="row11-sample">
+          <div class="row11-sample__label">
+            Үлгі
+          </div>
+
+          <div class="row11-sample__value">
+            {{ page.sample_document_text or "—" }}
+          </div>
+        </div>
+
+
+      </div>
+
+      <div class="row11-card__body">
+
+        <div class="row11-options">
+
+          {% for option in page.required_documents %}
+
+            <label class="row11-option">
+
+              <input
+                type="checkbox"
+                name="required_document_types"
+                value="{{ option.value }}"
+                {% if option.selected %}checked{% endif %}
+              >
+
+              <span class="row11-option__label">
+                {{ option.label }}
+              </span>
+
+            </label>
+
+          {% endfor %}
+
+        </div>
+
+      </div>
+
+    </section>
+
+
+    <!-- ================================================
+         6. ADDITIONAL
+         ================================================ -->
+
+    <section class="row11-card">
+
+      <div class="row11-card__header">
+        <h2 class="row11-card__title">
+          Қосымша мәліметтер
+        </h2>
+      </div>
+
+      <div class="row11-card__body">
+
+        <div class="row11-grid">
+
+          <div>
+            <label class="row11-label" for="deadlines">
+              Мерзімі
+            </label>
+
+            <input
+              id="deadlines"
+              name="deadlines"
+              type="text"
+              class="row11-input"
+              value="{{ page.deadlines }}"
+            >
+          </div>
+
+
+          <div>
+            <label class="row11-label" for="second_control">
+              Екінші бақылау
+            </label>
+
+            <input
+              id="second_control"
+              name="second_control"
+              type="text"
+              class="row11-input"
+              value="{{ page.second_control }}"
+            >
+          </div>
+
+        </div>
+
+      </div>
+
+    </section>
+
+
+    <!-- ================================================
+         ACTIONS
+         ================================================ -->
+
+    <div class="row11-actions">
+
+      <a
+        href="{{ request.url_for(
+          'school_direction_edit',
+          plan_id=page.plan_id,
+          direction_id=page.direction_id
+        ) }}#row11-{{ page.row_id }}"
+        class="row11-btn row11-btn--secondary"
+      >
+        Болдырмау
+      </a>
+
+      <button
+        type="submit"
+        class="row11-btn row11-btn--primary"
+      >
+        Өзгерістерді сақтау
+      </button>
+
+    </div>
+
+  </form>
+
+</div>
+
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const periodType = document.getElementById("period_type");
+  const monthField = document.getElementById("monthField");
+  const monthsField = document.getElementById("monthsField");
+
+  const monthSelect = document.getElementById("month");
+  const periodValuesInput = document.getElementById("period_values");
+
+  const monthCheckboxes = Array.from(
+    document.querySelectorAll(".row11-month-checkbox")
+  );
+
+  function syncPeriodFields() {
+    const value = periodType.value;
+
+    monthField.style.display =
+      value === "month" ? "" : "none";
+
+    monthsField.style.display =
+      value === "months" ? "" : "none";
+
+    if (monthSelect) {
+      monthSelect.disabled = value !== "month";
+    }
+
+    monthCheckboxes.forEach((checkbox) => {
+      checkbox.disabled = value !== "months";
+    });
+  }
+
+  function syncSelectedMonths() {
+    if (periodType.value !== "months") {
+      return;
+    }
+
+    const selectedMonths = monthCheckboxes
+      .filter((checkbox) => checkbox.checked)
+      .map((checkbox) => checkbox.value);
+
+    periodValuesInput.value = selectedMonths.join(",");
+  }
+
+  periodType.addEventListener("change", () => {
+    syncPeriodFields();
+
+    if (periodType.value === "months") {
+      syncSelectedMonths();
+    }
+  });
+
+  monthCheckboxes.forEach((checkbox) => {
+    checkbox.addEventListener(
+      "change",
+      syncSelectedMonths
+    );
+  });
+
+  syncPeriodFields();
+
+  if (periodType.value === "months") {
+    syncSelectedMonths();
+  }
+});
+</script>
+
+{% endblock %}

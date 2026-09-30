@@ -229,6 +229,38 @@ class SchoolPlanningRepo:
         )
         return cast(list[PlanTemplateRow11], res.scalars().all())
 
+    @staticmethod
+    async def get_template_row11_for_school_row(
+            db: AsyncSession,
+            *,
+            template_id: int,
+            direction_id: int,
+            row_order: int,
+    ) -> PlanTemplateRow11 | None:
+        """
+        Возвращает исходную строку шаблона PlanTemplateRow11,
+        соответствующую строке SchoolPlanRow11.
+
+        Связь определяется через:
+        template_id + direction_id + row_order.
+        """
+
+        stmt = (
+            select(PlanTemplateRow11)
+            .join(
+                PlanTemplateDirection,
+                PlanTemplateDirection.id
+                == PlanTemplateRow11.template_direction_id,
+            )
+            .where(
+                PlanTemplateDirection.template_id == template_id,
+                PlanTemplateDirection.direction_id == direction_id,
+                PlanTemplateRow11.row_order == row_order,
+            )
+        )
+
+        return await db.scalar(stmt)
+
     # =========================================================
     # School plans
     # =========================================================
@@ -282,20 +314,84 @@ class SchoolPlanningRepo:
         return await SchoolPlanningRepo.get_school_plan(db, plan_id=school_plan_id, school_id=school_id)
 
     @staticmethod
+    async def set_school_plan_status(
+            db: AsyncSession,
+            *,
+            plan_id: int,
+            school_id: int,
+            status: PlanStatus,
+    ) -> bool:
+        """
+        Изменяет статус годового плана конкретной школы.
+
+        Repository:
+        - не проверяет права пользователя;
+        - не выполняет commit / rollback;
+        - не изменяет связанные месячные планы.
+        """
+
+        result = await db.execute(
+            update(SchoolPlan)
+            .where(
+                SchoolPlan.id == plan_id,
+                SchoolPlan.school_id == school_id,
+            )
+            .values(
+                status=status.value,
+            )
+        )
+
+        return bool(result.rowcount)
+
+    @staticmethod
     async def list_plan_directions(db: AsyncSession, *, template_id: int) -> list[PlanTemplateDirection]:
         # это дублирует list_template_directions, но пусть останется как semantic alias
         return await SchoolPlanningRepo.list_template_directions(db, template_id=template_id)
 
     @staticmethod
     async def list_school_plans(
-            db: AsyncSession, *, school_id: int, academic_year: str | None = None
+            db: AsyncSession,
+            *,
+            school_id: int,
+            academic_year: str | None = None,
+            status: PlanStatus | None = None,
     ) -> list[SchoolPlan]:
-        stmt = select(SchoolPlan).where(SchoolPlan.school_id == school_id)
+        """
+        Возвращает годовые планы школы.
+
+        Можно дополнительно ограничить выборку:
+            - учебным годом;
+            - статусом плана.
+        """
+
+        stmt = (
+            select(SchoolPlan)
+            .where(
+                SchoolPlan.school_id == school_id
+            )
+        )
+
         if academic_year:
-            stmt = stmt.where(SchoolPlan.academic_year == academic_year)
-        stmt = stmt.order_by(SchoolPlan.created_at.desc(), SchoolPlan.id.desc())
+            stmt = stmt.where(
+                SchoolPlan.academic_year == academic_year
+            )
+
+        if status is not None:
+            stmt = stmt.where(
+                SchoolPlan.status == status.value
+            )
+
+        stmt = stmt.order_by(
+            SchoolPlan.created_at.desc(),
+            SchoolPlan.id.desc(),
+        )
+
         res = await db.execute(stmt)
-        return cast(list[SchoolPlan], res.scalars().all())
+
+        return cast(
+            list[SchoolPlan],
+            res.scalars().all(),
+        )
 
     # =========================================================
     # Insert rows (bulk)

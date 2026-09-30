@@ -1,22 +1,20 @@
 # app/routers/web/planning/school_web.py
 from __future__ import annotations
 
-import traceback
 from typing import cast
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request, Response
 from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
-from starlette.responses import HTMLResponse, RedirectResponse, JSONResponse
+from starlette.responses import HTMLResponse, RedirectResponse
 
 from app.db.session import get_db
-from app.db.types import enum_items
 from app.modules.org.models import School
 from app.modules.planning.enums import PlanStatus, ResponsibleRole, ReviewPlace
-from app.modules.reports.enums import DocumentType
 from app.modules.planning.models_school import SchoolPlan, SchoolPlanRow11, SchoolPlanRow4
 from app.modules.planning.repositories.school_plan_repository import SchoolPlanningRepo
+from app.modules.planning.schemas.school_plan_row11_schemas import SchoolPlanRow11UpdateDTO
 from app.modules.planning.services.plan_export_service import SchoolPlanExportService
 from app.modules.planning.services.school_plan_service import (
     SchoolPlanEditService,
@@ -24,6 +22,7 @@ from app.modules.planning.services.school_plan_service import (
     SchoolRowsService,
 )
 from app.modules.planning.validators import normalize_months_text_to_list
+from app.modules.reports.enums import DocumentType
 from app.modules.users.deps import require_roles
 from app.modules.users.enums import UserRole
 from app.modules.users.models import User
@@ -105,25 +104,105 @@ MONTH_NAMES = {
 # -----------------------------
 # 1) Dashboard (HTML)
 # -----------------------------
-@router.get("/", name="school_dashboard")
+@router.get(
+    "/",
+    name="school_dashboard",
+)
 async def school_dashboard(
         request: Request,
         academic_year: str | None = None,
         tab: str | None = None,
         db: AsyncSession = Depends(get_db),
-        user=Depends(require_roles(UserRole.SCHOOL_ADMIN)),
+        user=Depends(
+            require_roles(UserRole.SCHOOL_ADMIN)
+        ),
 ):
-    year = _normalize_academic_year(academic_year)
-    tab_val = _normalize_tab(tab)
+    year = _normalize_academic_year(
+        academic_year
+    )
+
+    tab_val = _normalize_tab(
+        tab
+    )
+
+    # =====================================================
+    # SCHOOL
+    # =====================================================
 
     school_id = _require_school_id(user)
-    school = await _get_school_or_400(db, school_id=school_id)
 
-    templates_active = await SchoolPlanningRepo.list_active_templates(db)
-    plans = await SchoolPlanningRepo.list_school_plans(db, school_id=school_id, academic_year=year)
+    school = await _get_school_or_400(
+        db,
+        school_id=school_id,
+    )
 
-    active_template_id = templates_active[0].id if templates_active else None
-    active_plan = _pick_active_plan(plans)
+    # =====================================================
+    # TEMPLATES
+    # =====================================================
+
+    templates_active = (
+        await SchoolPlanningRepo.list_active_templates(
+            db
+        )
+    )
+
+    active_template_id = (
+        templates_active[0].id
+        if templates_active
+        else None
+    )
+
+    # =====================================================
+    # ALL PLANS FOR SELECTED ACADEMIC YEAR
+    # =====================================================
+
+    all_plans = (
+        await SchoolPlanningRepo.list_school_plans(
+            db,
+            school_id=school_id,
+            academic_year=year,
+        )
+    )
+
+    active_plan = _pick_active_plan(
+        all_plans
+    )
+
+    # =====================================================
+    # TAB FILTER
+    # =====================================================
+
+    status_filter: PlanStatus | None = None
+
+    if tab_val == "active":
+        status_filter = PlanStatus.ACTIVE
+
+    elif tab_val == "archive":
+        status_filter = PlanStatus.ARCHIVED
+
+    # tab == "my"
+    # status_filter остаётся None:
+    # показываем все планы выбранного учебного года.
+
+    # =====================================================
+    # VISIBLE PLANS
+    # =====================================================
+
+    if status_filter is None:
+        plans = all_plans
+    else:
+        plans = (
+            await SchoolPlanningRepo.list_school_plans(
+                db,
+                school_id=school_id,
+                academic_year=year,
+                status=status_filter,
+            )
+        )
+
+    # =====================================================
+    # RENDER
+    # =====================================================
 
     return render(
         templates,
@@ -231,13 +310,16 @@ async def school_plan_view(
             "user": user,
             "plan": plan,
             "template_directions": tds,
-            "rows11": rows11,  # 👈 добавили
+            "rows11": rows11,
             "MONTH_NAMES": MONTH_NAMES,
         },
     )
 
 
-@router.get("/{plan_id}/direction/{direction_id}", name="school_direction_edit")
+@router.get(
+    "/{plan_id}/direction/{direction_id}",
+    name="school_direction_edit",
+)
 async def school_direction_edit(
         request: Request,
         plan_id: int,
@@ -245,36 +327,66 @@ async def school_direction_edit(
         db: AsyncSession = Depends(get_db),
         user=Depends(require_roles(UserRole.SCHOOL_ADMIN)),
 ):
-    school_id = _require_school_id(user)
-    plan = await _get_plan_or_404(db, plan_id=plan_id, school_id=school_id)
+    """
+    Страница направления годового плана ВШК.
 
-    dto = await SchoolPlanEditService.get_direction_data(
-        db, plan_id=plan_id, direction_id=direction_id, user=user
+    Показывает:
+    - строки направления;
+    - период выполнения;
+    - места рассмотрения;
+    - итоговые документы.
+
+    Редактирование строки row11 выполняется
+    на отдельной странице.
+    """
+
+    school_id = _require_school_id(user)
+
+    plan = await _get_plan_or_404(
+        db,
+        plan_id=plan_id,
+        school_id=school_id,
     )
 
+    dto = await SchoolPlanEditService.get_direction_data(
+        db,
+        plan_id=plan_id,
+        direction_id=direction_id,
+        user=user,
+    )
+
+    # =====================================================
+    # Данные для read-only отображения rows11
+    # =====================================================
+
     row_months_map: dict[int, list[int]] = {}
-    row_roles_map: dict[int, list[str]] = {}
     row_required_docs_map: dict[int, list[str]] = {}
     row_review_places_map: dict[int, list[str]] = {}
 
-    for r in dto.rows11:
-        pv = (getattr(r, "period_values", None) or "").strip()
-        row_months_map[r.id] = normalize_months_text_to_list(pv) if pv else []
+    for row in dto.rows11:
+        period_values = (
+                getattr(row, "period_values", None) or ""
+        ).strip()
 
-        row_roles_map[r.id] = [a.role.value for a in (r.role_assignments or [])]
+        row_months_map[row.id] = (
+            normalize_months_text_to_list(period_values)
+            if period_values
+            else []
+        )
 
-        row_required_docs_map[r.id] = [
-            x.document_type.value for x in (r.required_documents or [])
+        row_required_docs_map[row.id] = [
+            item.document_type.value
+            for item in (row.required_documents or [])
         ]
 
-        row_review_places_map[r.id] = [
-            x.review_place.value for x in (r.review_places or [])
+        row_review_places_map[row.id] = [
+            item.review_place.value
+            for item in (row.review_places or [])
         ]
 
-    responsible_roles = [
-        {"value": role.value, "label_kz": role.label_kz}
-        for role in ResponsibleRole.__members__.values()
-    ]
+    # =====================================================
+    # Render
+    # =====================================================
 
     return render(
         templates,
@@ -287,15 +399,183 @@ async def school_direction_edit(
             "direction": dto.direction,
             "rows4": dto.rows4,
             "rows11": dto.rows11,
+
+            # Период
             "MONTH_NAMES": MONTH_NAMES,
             "row_months_selected": row_months_map,
-            "row_roles_selected": row_roles_map,
-            "RESPONSIBLE_ROLES": responsible_roles,
+
+            # Итоговые документы
             "document_types": list(DocumentType),
-            "review_places": list(ReviewPlace),
             "row_required_docs_map": row_required_docs_map,
+
+            # Места рассмотрения
+            "review_places": list(ReviewPlace),
             "row_review_places_map": row_review_places_map,
         },
+    )
+
+
+@router.get(
+    "/{plan_id}/direction/{direction_id}/rows11/{row11_id}/edit",
+    name="school_row11_edit",
+    response_class=HTMLResponse,
+)
+async def school_row11_edit(
+        request: Request,
+        plan_id: int,
+        direction_id: int,
+        row11_id: int,
+        db: AsyncSession = Depends(get_db),
+        user: User = Depends(
+            require_roles(UserRole.SCHOOL_ADMIN)
+        ),
+):
+    """
+    Страница полного редактирования одной задачи
+    годового плана ВШК.
+    """
+
+    school_id = _require_school_id(user)
+
+    # План должен принадлежать школе пользователя.
+    await _get_plan_or_404(
+        db,
+        plan_id=plan_id,
+        school_id=school_id,
+    )
+
+    page = await SchoolPlanEditService.get_row11_edit_page(
+        db,
+        row11_id=row11_id,
+        user=user,
+    )
+
+    # Защита от подстановки plan_id / direction_id в URL.
+    if (
+            page.plan_id != plan_id
+            or page.direction_id != direction_id
+    ):
+        raise HTTPException(
+            status_code=404,
+            detail="Тапсырма табылмады.",
+        )
+
+    return render(
+        templates,
+        request,
+        "planning/school/row11_edit.html",
+        {
+            "user": user,
+            "page": page,
+            "MONTH_NAMES": MONTH_NAMES,
+        },
+    )
+
+
+@router.post(
+    "/{plan_id}/direction/{direction_id}/rows11/{row11_id}/edit",
+    name="school_row11_update",
+)
+async def school_row11_update(
+        request: Request,
+        plan_id: int,
+        direction_id: int,
+        row11_id: int,
+
+        topic: str = Form(...),
+        goal: str = Form(default=""),
+        control_object: str = Form(default=""),
+        control_type: str = Form(default=""),
+        methods: str = Form(default=""),
+
+        deadlines: str = Form(default=""),
+        second_control: str = Form(default=""),
+
+        period_type: str = Form(...),
+        month: int | None = Form(default=None),
+        period_values: str = Form(default=""),
+
+        responsible_roles: list[str] = Form(default=[]),
+        review_places: list[str] = Form(default=[]),
+        required_document_types: list[str] = Form(default=[]),
+
+        db: AsyncSession = Depends(get_db),
+        user: User = Depends(
+            require_roles(UserRole.SCHOOL_ADMIN)
+        ),
+):
+    """
+    Полное сохранение одной задачи годового плана ВШК.
+    """
+
+    school_id = _require_school_id(user)
+
+    await _get_plan_or_404(
+        db,
+        plan_id=plan_id,
+        school_id=school_id,
+    )
+
+    # Сначала получаем страницу/контекст строки,
+    # чтобы проверить принадлежность plan + direction.
+    page = await SchoolPlanEditService.get_row11_edit_page(
+        db,
+        row11_id=row11_id,
+        user=user,
+    )
+
+    if (
+            page.plan_id != plan_id
+            or page.direction_id != direction_id
+    ):
+        raise HTTPException(
+            status_code=404,
+            detail="Тапсырма табылмады.",
+        )
+
+    data = SchoolPlanRow11UpdateDTO(
+        topic=topic,
+
+        goal=goal,
+        control_object=control_object,
+        control_type=control_type,
+        methods=methods,
+
+        deadlines=deadlines,
+        second_control=second_control,
+
+        period_type=period_type,
+        month=month,
+        period_values=period_values,
+
+        responsible_roles=responsible_roles,
+        review_places=review_places,
+        required_document_types=required_document_types,
+    )
+
+    try:
+        await SchoolPlanEditService.update_row11(
+            db,
+            row11_id=row11_id,
+            data=data,
+            user=user,
+        )
+
+        await db.commit()
+
+    except Exception:
+        await db.rollback()
+        raise
+
+    redirect_url = request.url_for(
+        "school_direction_edit",
+        plan_id=plan_id,
+        direction_id=direction_id,
+    )
+
+    return RedirectResponse(
+        url=f"{redirect_url}#row11-{row11_id}",
+        status_code=303,
     )
 
 
@@ -353,73 +633,7 @@ async def school_add_row11(
 
 
 # -----------------------------
-# 6) Update period + responsible (one modal)
-# -----------------------------
-@router.post("/{plan_id}/direction/{direction_id}/rows11/{row_id}/meta")
-async def school_row11_update_meta_web(
-        request: Request,
-        plan_id: int,
-        direction_id: int,
-        row_id: int,
-
-        # PERIOD
-        period_type: str = Form(...),
-        month: int | None = Form(None),
-        period_values: str | None = Form(None),
-
-        # ✅ MULTI RESPONSIBLE (чекбоксы с name="responsible_roles_cb")
-        responsible_roles_cb: list[str] = Form([]),
-
-        db: AsyncSession = Depends(get_db),
-        user=Depends(require_roles(UserRole.SCHOOL_ADMIN)),
-):
-    # ✅ уже список, ничего парсить не надо
-    roles_list: list[str] = [str(x) for x in (responsible_roles_cb or []) if x]
-
-    try:
-        row = await SchoolRowsService.update_row11_meta(
-            db,
-            row_id=row_id,
-            period_type=period_type,
-            month=month,
-            period_values=period_values,
-            responsible_roles=roles_list,  # ✅ напрямую
-            user=user,
-        )
-    except Exception:
-        await db.rollback()
-        raise
-
-    is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest"
-
-    if is_ajax:
-        from app.modules.planning.enums import ResponsibleRole
-
-        role_vals = [ra.role.value for ra in (row.role_assignments or [])]
-
-        labels_map = {
-            cast(ResponsibleRole, rr).value: cast(ResponsibleRole, rr).label_kz
-            for rr in ResponsibleRole.__members__.values()
-        }
-
-        return {
-            "ok": True,
-            "row_id": row_id,
-            "period_type": row.period_type.value if row.period_type else None,
-            "period_value_int": row.period_value_int,
-            "period_values": row.period_values,
-            "responsible_roles": role_vals,
-            "responsible_labels_kz": labels_map,
-        }
-
-    return RedirectResponse(
-        url=f"/planning/school/{plan_id}/direction/{direction_id}",
-        status_code=303,
-    )
-
-
-# -----------------------------
-# 7) Delete rows_11, rows_11
+# 6) Delete rows_11, rows_11
 # -----------------------------
 @router.post("/{plan_id}/direction/{direction_id}/rows4/{row_id}/delete")
 async def school_delete_row4(
@@ -597,159 +811,3 @@ async def school_plan_activate(
         request.url_for("school_plan_view", plan_id=plan_id),
         status_code=303,
     )
-
-
-@router.post(
-    "/{plan_id}/direction/{direction_id}/rows11/{row11_id}/documents",
-    name="school_row11_documents_update",
-)
-async def school_row11_documents_update(
-        request: Request,
-        plan_id: int,
-        direction_id: int,
-        row11_id: int,
-        required_document_types: list[str] = Form(default=[]),
-        db: AsyncSession = Depends(get_db),
-        _user: User = Depends(require_roles(UserRole.SCHOOL_ADMIN)),
-):
-    row = await SchoolPlanningRepo.get_row11(db, row_id=row11_id)
-    if not row:
-        raise HTTPException(status_code=404, detail="Жол табылмады")
-
-    await SchoolPlanEditService.save_row11_required_documents(
-        db,
-        row11_id=row11_id,
-        document_type_values=required_document_types,
-    )
-    await db.commit()
-
-    return RedirectResponse(
-        url=request.url_for(
-            "school_direction_edit",
-            plan_id=plan_id,
-            direction_id=direction_id,
-        ),
-        status_code=303,
-    )
-
-
-@router.post(
-    "/{plan_id}/direction/{direction_id}/rows11/{row11_id}/review-places",
-    name="school_row11_review_places_update",
-)
-async def school_row11_review_places_update(
-        request: Request,
-        plan_id: int,
-        direction_id: int,
-        row11_id: int,
-        review_places: list[str] = Form(default=[]),
-        db: AsyncSession = Depends(get_db),
-        _user: User = Depends(require_roles(UserRole.SCHOOL_ADMIN)),
-):
-    row = await SchoolPlanningRepo.get_row11(db, row_id=row11_id)
-    if not row:
-        raise HTTPException(status_code=404, detail="Жол табылмады")
-
-    await SchoolPlanEditService.save_row11_review_places(
-        db,
-        row11_id=row11_id,
-        review_place_values=review_places,
-    )
-    await db.commit()
-
-    return RedirectResponse(
-        url=request.url_for(
-            "school_direction_edit",
-            plan_id=plan_id,
-            direction_id=direction_id,
-        ),
-        status_code=303,
-    )
-
-
-# обновление данных из модального окна: место рассмотрения
-@router.post(
-    "/{plan_id}/direction/{direction_id}/rows11/{row11_id}/review-places",
-    name="school_row11_review_places_update",
-)
-async def school_row11_review_places_update(
-        plan_id: int,
-        direction_id: int,
-        row11_id: int,
-        review_places: list[str] = Form(default=[]),
-        db: AsyncSession = Depends(get_db),
-        user: User = Depends(require_roles(UserRole.SCHOOL_ADMIN)),
-):
-    try:
-        school_id = _require_school_id(user)
-
-        await _get_plan_or_404(db, plan_id=plan_id, school_id=school_id)
-
-        row = await SchoolPlanningRepo.get_row11(db, row_id=row11_id)
-        if not row or row.direction_id != direction_id:
-            raise HTTPException(status_code=404)
-
-        await SchoolRowsService.save_row11_requirements(
-            db,
-            row11_id=row11_id,
-            document_types=None,
-            review_places=review_places,
-        )
-        await db.commit()
-
-        return JSONResponse({
-            "status": "ok",
-            "review_places": review_places,
-            "review_items": enum_items(ReviewPlace, review_places),
-        })
-
-    except Exception as e:
-        traceback.print_exc()
-        return JSONResponse({
-            "status": "error",
-            "message": str(e),
-        }, status_code=500)
-
-
-# обновление данных из модального окна: тип документов
-@router.post(
-    "/{plan_id}/direction/{direction_id}/rows11/{row11_id}/documents",
-    name="school_row11_documents_update",
-)
-async def school_row11_documents_update(
-        plan_id: int,
-        direction_id: int,
-        row11_id: int,
-        required_document_types: list[str] = Form(default=[]),
-        db: AsyncSession = Depends(get_db),
-        user: User = Depends(require_roles(UserRole.SCHOOL_ADMIN)),
-):
-    try:
-        school_id = _require_school_id(user)
-
-        await _get_plan_or_404(db, plan_id=plan_id, school_id=school_id)
-
-        row = await SchoolPlanningRepo.get_row11(db, row_id=row11_id)
-        if not row or row.direction_id != direction_id:
-            raise HTTPException(status_code=404)
-
-        await SchoolRowsService.save_row11_requirements(
-            db,
-            row11_id=row11_id,
-            document_types=required_document_types,
-            review_places=None,
-        )
-        await db.commit()
-
-        return JSONResponse({
-            "status": "ok",
-            "documents": required_document_types,
-            "document_items": enum_items(DocumentType, required_document_types),
-        })
-
-    except Exception as e:
-        traceback.print_exc()
-        return JSONResponse({
-            "status": "error",
-            "message": str(e),
-        }, status_code=500)

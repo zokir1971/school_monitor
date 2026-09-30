@@ -7,7 +7,7 @@ from collections import defaultdict
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.modules.planning.enums import AssignmentKind, ResponsibleRole
+from app.modules.planning.enums import AssignmentKind, ResponsibleRole, PlanStatus
 from app.modules.planning.schemas.month_plan_assignee_schemas import (
     AssignedParticipantDTO,
     AssigneeGroupDTO,
@@ -34,11 +34,11 @@ class SchoolMonthPlanAssigneeService:
 
     @classmethod
     async def get_assignment_page_data(
-        cls,
-        db: AsyncSession,
-        *,
-        school_id: int,
-        month_item_id: int,
+            cls,
+            db: AsyncSession,
+            *,
+            school_id: int,
+            month_item_id: int,
     ) -> MonthItemAssigneePageDTO | None:
         item = await SchoolMonthPlanAssigneeRepo.get_month_item_for_school_with_row11(
             db,
@@ -91,9 +91,9 @@ class SchoolMonthPlanAssigneeService:
         )
 
         if (
-            selected_primary_role_id is None
-            and not selected_co_executor_role_ids
-            and len(planned_staff_roles) == 1
+                selected_primary_role_id is None
+                and not selected_co_executor_role_ids
+                and len(planned_staff_roles) == 1
         ):
             selected_primary_role_id = planned_staff_roles[0].id
 
@@ -143,11 +143,29 @@ class SchoolMonthPlanAssigneeService:
         planned_start = getattr(item, "planned_start", None)
         planned_end = getattr(item, "planned_end", None)
         is_included = bool(getattr(item, "is_included", False))
+        month_plan = getattr(
+            item,
+            "month_plan",
+            None,
+        )
+
+        school_plan = (
+            getattr(month_plan, "school_plan", None)
+            if month_plan is not None
+            else None
+        )
+
+        is_archived = (
+                month_plan is None
+                or school_plan is None
+                or cls._is_archived(
+                    getattr(month_plan, "status", None)) or cls._is_archived(getattr(school_plan, "status", None))
+                )
 
         has_deadline = (
-            week_of_month is not None
-            and planned_start is not None
-            and planned_end is not None
+                week_of_month is not None
+                and planned_start is not None
+                and planned_end is not None
         )
 
         direction = getattr(row11, "direction", None)
@@ -156,9 +174,9 @@ class SchoolMonthPlanAssigneeService:
             month_item_id=item.id,
             row11_id=getattr(row11, "id", None),
             direction_name=(
-                getattr(direction, "short_title", None)
-                or getattr(direction, "title", None)
-                or "—"
+                    getattr(direction, "short_title", None)
+                    or getattr(direction, "title", None)
+                    or "—"
             ),
             topic=getattr(row11, "topic", None) or "—",
             goal=getattr(row11, "goal", None) or "—",
@@ -167,9 +185,10 @@ class SchoolMonthPlanAssigneeService:
             planned_end=planned_end,
             is_included=is_included,
             can_assign=(
-                is_included
-                and has_deadline
-                and bool(planned_staff_roles)
+                    not is_archived
+                    and is_included
+                    and has_deadline
+                    and bool(planned_staff_roles)
             ),
             primary_groups=primary_groups,
             planned_co_executor_groups=planned_co_executor_groups,
@@ -224,7 +243,13 @@ class SchoolMonthPlanAssigneeService:
         month = item.month_plan.month
         school_plan_id = item.month_plan.school_plan_id
 
-        cls._validate_item_can_be_assigned(item)
+        cls._validate_plan_not_archived(
+            item
+        )
+
+        cls._validate_item_can_be_assigned(
+            item
+        )
 
         row11 = item.source_row11
 
@@ -397,6 +422,75 @@ class SchoolMonthPlanAssigneeService:
         return month, school_plan_id
 
     @staticmethod
+    def _is_archived(value) -> bool:
+        status_value = str(
+            getattr(
+                value,
+                "value",
+                value,
+            )
+        )
+
+        return status_value == PlanStatus.ARCHIVED.value
+
+    @classmethod
+    def _validate_plan_not_archived(
+            cls,
+            item,
+    ) -> None:
+        """
+        Запрещает изменение назначений исполнителей
+        архивного месячного или годового плана.
+        """
+
+        month_plan = getattr(
+            item,
+            "month_plan",
+            None,
+        )
+
+        if month_plan is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Месячный план не найден.",
+            )
+
+        if cls._is_archived(
+                getattr(month_plan, "status", None)
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=(
+                    "Мұрағатталған айлық жоспардың "
+                    "орындаушыларын өзгертуге болмайды."
+                ),
+            )
+
+        school_plan = getattr(
+            month_plan,
+            "school_plan",
+            None,
+        )
+
+        if school_plan is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Годовой план не найден.",
+            )
+
+        if cls._is_archived(
+                getattr(school_plan, "status", None)
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=(
+                    "Мұрағатталған оқу жылының "
+                    "тапсырма орындаушыларын "
+                    "өзгертуге болмайды."
+                ),
+            )
+
+    @staticmethod
     def _validate_item_can_be_assigned(item) -> None:
         if not bool(getattr(item, "is_included", False)):
             raise HTTPException(
@@ -408,9 +502,9 @@ class SchoolMonthPlanAssigneeService:
             )
 
         if (
-            getattr(item, "week_of_month", None) is None
-            or getattr(item, "planned_start", None) is None
-            or getattr(item, "planned_end", None) is None
+                getattr(item, "week_of_month", None) is None
+                or getattr(item, "planned_start", None) is None
+                or getattr(item, "planned_end", None) is None
         ):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -422,12 +516,12 @@ class SchoolMonthPlanAssigneeService:
 
     @classmethod
     def _build_groups(
-        cls,
-        staff_roles: list[SchoolStaffRole],
-        *,
-        selected_primary_staff_role_id: int | None,
-        selected_co_executor_staff_role_ids: set[int],
-        allow_primary: bool,
+            cls,
+            staff_roles: list[SchoolStaffRole],
+            *,
+            selected_primary_staff_role_id: int | None,
+            selected_co_executor_staff_role_ids: set[int],
+            allow_primary: bool,
     ) -> list[AssigneeGroupDTO]:
         grouped: dict[
             tuple[str, str],
@@ -448,8 +542,8 @@ class SchoolMonthPlanAssigneeService:
             role_code = cls._enum_value(role)
             role_label = cls._enum_label(role)
             role_context = (
-                getattr(staff_role, "role_context", None)
-                or ""
+                    getattr(staff_role, "role_context", None)
+                    or ""
             ).strip()
 
             group_key = (role_code, role_context)
@@ -460,28 +554,28 @@ class SchoolMonthPlanAssigneeService:
                     staff_role_id=staff_role.id,
                     staff_member_id=staff_member.id,
                     full_name=(
-                        getattr(staff_member, "full_name", None)
-                        or "—"
+                            getattr(staff_member, "full_name", None)
+                            or "—"
                     ),
                     role=role_code,
                     role_label=role_label,
                     role_context=role_context,
                     position_text=(
-                        getattr(staff_member, "position_text", None)
-                        or ""
+                            getattr(staff_member, "position_text", None)
+                            or ""
                     ),
                     subject=(
-                        getattr(staff_member, "subject", None)
-                        or ""
+                            getattr(staff_member, "subject", None)
+                            or ""
                     ),
                     selected_as_primary=(
-                        allow_primary
-                        and staff_role.id
-                        == selected_primary_staff_role_id
+                            allow_primary
+                            and staff_role.id
+                            == selected_primary_staff_role_id
                     ),
                     selected_as_co_executor=(
-                        staff_role.id
-                        in selected_co_executor_staff_role_ids
+                            staff_role.id
+                            in selected_co_executor_staff_role_ids
                     ),
                 )
             )
@@ -492,7 +586,7 @@ class SchoolMonthPlanAssigneeService:
             role_code, role_context = group_key
             options.sort(
                 key=lambda option: (
-                    option.full_name or ""
+                        option.full_name or ""
                 ).casefold()
             )
 
@@ -519,8 +613,8 @@ class SchoolMonthPlanAssigneeService:
 
     @classmethod
     def _build_assigned_participants(
-        cls,
-        assignments,
+            cls,
+            assignments,
     ) -> list[AssignedParticipantDTO]:
         participants: list[AssignedParticipantDTO] = []
 
@@ -544,8 +638,8 @@ class SchoolMonthPlanAssigneeService:
                     staff_role_id=staff_role.id,
                     staff_member_id=staff_member.id,
                     full_name=(
-                        getattr(staff_member, "full_name", None)
-                        or "—"
+                            getattr(staff_member, "full_name", None)
+                            or "—"
                     ),
                     role_label=cls._enum_label(
                         getattr(staff_role, "role", None)
@@ -557,12 +651,12 @@ class SchoolMonthPlanAssigneeService:
                         assignment_kind
                     ),
                     role_context=(
-                        getattr(staff_role, "role_context", None)
-                        or ""
+                            getattr(staff_role, "role_context", None)
+                            or ""
                     ).strip(),
                     position_text=(
-                        getattr(staff_member, "position_text", None)
-                        or ""
+                            getattr(staff_member, "position_text", None)
+                            or ""
                     ),
                 )
             )
@@ -570,8 +664,7 @@ class SchoolMonthPlanAssigneeService:
         participants.sort(
             key=lambda participant: (
                 0
-                if participant.assignment_kind
-                == AssignmentKind.PRIMARY.value
+                if participant.assignment_kind == AssignmentKind.PRIMARY.value
                 else 1,
                 participant.full_name.casefold(),
             )
@@ -582,8 +675,8 @@ class SchoolMonthPlanAssigneeService:
     def _find_primary_staff_role_id(assignments) -> int | None:
         for assignment in assignments:
             if (
-                getattr(assignment, "assignment_kind", None)
-                == AssignmentKind.PRIMARY
+                    getattr(assignment, "assignment_kind", None)
+                    == AssignmentKind.PRIMARY
             ):
                 return getattr(assignment, "staff_role_id", None)
         return None
@@ -593,8 +686,7 @@ class SchoolMonthPlanAssigneeService:
         return {
             assignment.staff_role_id
             for assignment in assignments
-            if getattr(assignment, "assignment_kind", None)
-            == AssignmentKind.CO_EXECUTOR
+            if getattr(assignment, "assignment_kind", None) == AssignmentKind.CO_EXECUTOR
         }
 
     @staticmethod

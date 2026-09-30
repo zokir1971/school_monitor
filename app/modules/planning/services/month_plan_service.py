@@ -22,6 +22,92 @@ from app.modules.planning.utils.month_plan_utils import (
 from app.utils.calendar_weeks import month_weeks_grid
 
 
+async def _guard_month_plan_edit(
+        db: AsyncSession,
+        *,
+        month_plan_id: int,
+):
+    """
+    Единая точка защиты изменения месячного плана.
+
+    Проверяет:
+    - месячный план существует;
+    - месячный план не архивирован;
+    - родительский годовой план существует;
+    - родительский годовой план не архивирован.
+
+    Архивные планы остаются доступными для просмотра,
+    но не для изменения.
+    """
+
+    # =====================================================
+    # 1. MONTH PLAN
+    # =====================================================
+
+    month_plan = (
+        await SchoolMonthlyPlanRepo.get_month_plan_by_id(
+            db,
+            month_plan_id=month_plan_id,
+        )
+    )
+
+    if not month_plan:
+        raise HTTPException(
+            status_code=404,
+            detail="Месячный план не найден",
+        )
+
+    # =====================================================
+    # 2. MONTH PLAN ARCHIVE GUARD
+    # =====================================================
+
+    if month_plan.status == PlanStatus.ARCHIVED:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "Мұрағатталған айлық жоспарды "
+                "өзгертуге болмайды."
+            ),
+        )
+
+    # =====================================================
+    # 3. SCHOOL PLAN
+    # =====================================================
+
+    school_plan = await SchoolMonthlyPlanRepo.get_school_plan(
+        db,
+        school_plan_id=month_plan.school_plan_id,
+    )
+
+    if not school_plan:
+        raise HTTPException(
+            status_code=404,
+            detail="Годовой план не найден",
+        )
+
+    # SchoolPlan.status сейчас строковый.
+    school_plan_status = (
+        school_plan.status.value
+        if hasattr(school_plan.status, "value")
+        else str(school_plan.status)
+    )
+
+    # =====================================================
+    # 4. SCHOOL PLAN ARCHIVE GUARD
+    # =====================================================
+
+    if school_plan_status == PlanStatus.ARCHIVED.value:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "Мұрағатталған оқу жылының "
+                "айлық жоспарын өзгертуге болмайды."
+            ),
+        )
+
+    return month_plan
+
+
 class SchoolMonthlyPlanningService:
     @classmethod
     async def build_month_plan_direction_blocks(
@@ -308,9 +394,11 @@ class SchoolMonthlyPlanningService:
             *,
             month_plan_id: int,
     ) -> None:
-        month_plan = await SchoolMonthlyPlanRepo.get_month_plan_by_id(
-            db, month_plan_id=month_plan_id
+        month_plan = await _guard_month_plan_edit(
+            db,
+            month_plan_id=month_plan_id,
         )
+
         if not month_plan:
             raise HTTPException(status_code=404, detail="Месячный план не найден")
 
@@ -441,12 +529,21 @@ class SchoolMonthlyPlanningService:
         )
 
         if not month_plan:
-            raise HTTPException(404, "Месячный план не найден")
+            raise HTTPException(404, "Айлық жоспар табылмады")
+
+        if month_plan.status == PlanStatus.ARCHIVED:
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    "Мұрағатталған айлық жоспарды "
+                    "жоюға болмайды."
+                ),
+            )
 
         if month_plan.status != PlanStatus.DRAFT:
             raise HTTPException(
                 400,
-                "Удалять можно только черновик"
+                "Тек қана черновик жоспарды жоюға болады"
             )
 
         await SchoolMonthlyPlanRepo.delete_month_plan(
@@ -480,12 +577,29 @@ class MonthCalendarService:
             item_id: int,
             week_of_month: int,
     ) -> None:
-        item = await SchoolMonthPlanItemRepo.get_item(db, item_id=item_id)
-        if not item:
-            raise HTTPException(status_code=404, detail="Задача не найдена")
+        item = await SchoolMonthPlanItemRepo.get_item(
+            db,
+            item_id=item_id,
+        )
 
-        mp = item.month_plan  # у тебя relationship selectin — нормально
-        weeks = month_weeks_grid(mp.year, mp.month)
+        if not item:
+            raise HTTPException(
+                status_code=404,
+                detail="Задача не найдена",
+            )
+
+        mp = item.month_plan
+
+        await _guard_month_plan_edit(
+            db,
+            month_plan_id=mp.id,
+        )
+
+        weeks = month_weeks_grid(
+            mp.year,
+            mp.month,
+        )
+
         wk = next((w for w in weeks if w.week == week_of_month), None)
         if not wk:
             raise HTTPException(status_code=400, detail="Неделя вне диапазона (1..6) для этого месяца")
@@ -504,9 +618,10 @@ class MonthCalendarService:
             item_ids: list[int],
             week_of_month: int,
     ) -> dict:
-        mp = await SchoolMonthlyPlanRepo.get_month_plan_by_id(db, month_plan_id=month_plan_id)
-        if not mp:
-            raise HTTPException(status_code=404, detail="Месячный план не найден")
+        mp = await _guard_month_plan_edit(
+            db,
+            month_plan_id=month_plan_id,
+        )
 
         weeks = month_weeks_grid(mp.year, mp.month)
         wk = next((w for w in weeks if w.week == week_of_month), None)

@@ -1,159 +1,728 @@
 {% extends "base.html" %}
+
 {% block title %}План ВШК — просмотр{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', path='css/admin.css') }}">
+
 <style>
-  .wrap{max-width:1200px;margin:0 auto}
+  /* =========================================================
+     PAGE
+     ========================================================= */
 
-  .dir{margin-top:14px;border:1px solid #e5e7eb;border-radius:12px;background:#fff}
-  .dir__head{padding:14px;border-bottom:1px solid #e5e7eb}
-  .dir__title{margin:0}
-
-  .table-wrap{padding:14px;overflow:auto;max-height:70vh}
-
-  /* Ключевое: таблица занимает контейнер, а колонки ужимаются */
-  table{border-collapse:collapse; width:100%; table-layout:fixed}
-
-  th,td{border:1px solid #e5e7eb;padding:8px;vertical-align:top;font-size:12px;white-space:normal;overflow-wrap:anywhere;word-break:break-word;}
-
-  thead th{position:sticky;top:0;background:#f9fafb;z-index:2}
-
-  /* ЭЛЛИПСИС для заголовков, чтобы не раздували шапку */
-  th{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  .plan-preview {
+    max-width: 1600px;
+    margin: 0 auto;
+    padding: 0 16px 32px;
   }
 
-  /* Узкий столбец № (если это 1-я колонка) */
-  table th:first-child,
-  table td:first-child{width:25px}
+  .plan-preview__school {
+    margin-bottom: 14px;
+    padding: 10px 14px;
 
-  /* Если 4 колонки: №, объект, риски, решение */
-  table.cols-4 th:nth-child(2),
-  table.cols-4 td:nth-child(2){width:34%}
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
 
-  table.cols-4 th:nth-child(3),
-  table.cols-4 td:nth-child(3){width:33%}
+    background: #f9fafb;
 
-  table.cols-4 th:nth-child(4),
-  table.cols-4 td:nth-child(4){width:33%}
+    font-size: 14px;
+    line-height: 1.5;
+    color: #374151;
+  }
 
-  /* Если 11 колонок — просто пусть таблица фиксируется, а просмотр через горизонтальный скролл */
-  table.cols-11 th, table.cols-11 td{min-width:140px}
-  table.cols-11 th:first-child, table.cols-11 td:first-child{min-width:60px;width:60px}
 
-  .actions{display:flex;gap:8px;flex-wrap:wrap}
+  /* =========================================================
+     HEADER
+     ========================================================= */
+
+  .plan-header {
+    margin-bottom: 18px;
+    padding: 18px 20px;
+
+    border: 1px solid #e5e7eb;
+    border-radius: 14px;
+
+    background: #ffffff;
+  }
+
+  .plan-header__row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 20px;
+  }
+
+  .plan-header__title {
+    margin: 0;
+
+    font-size: 22px;
+    line-height: 1.25;
+    color: #111827;
+  }
+
+  .plan-header__meta {
+    margin-top: 7px;
+
+    font-size: 14px;
+    color: #6b7280;
+  }
+
+  .plan-header__actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .plan-header__back {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+
+  padding: 9px 16px;
+
+  border: 1px solid #64748b;
+  border-radius: 8px;
+
+  background: #ffffff;
+  color: #334155;
+
+  font-weight: 600;
+  text-decoration: none;
+
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    transform 0.15s ease;
+}
+
+.plan-header__back:hover {
+  background: #f1f5f9;
+  border-color: #475569;
+  color: #0f172a;
+  text-decoration: none;
+}
+
+.plan-header__back:active {
+  transform: translateY(1px);
+}
+
+
+  /* =========================================================
+     DIRECTION
+     ========================================================= */
+
+  .direction-card {
+    margin-top: 18px;
+
+    border: 1px solid #dfe3e8;
+    border-radius: 14px;
+
+    background: #ffffff;
+
+    overflow: hidden;
+  }
+
+  .direction-card__header {
+    padding: 15px 18px;
+
+    border-bottom: 1px solid #e5e7eb;
+
+    background: #f8fafc;
+  }
+
+  .direction-card__title {
+    margin: 0;
+
+    font-size: 17px;
+    line-height: 1.35;
+    color: #111827;
+  }
+
+  .direction-card__subtitle {
+    margin-top: 5px;
+
+    font-size: 13px;
+    line-height: 1.5;
+    color: #6b7280;
+  }
+
+
+  /* =========================================================
+     TABLE BLOCK
+     ========================================================= */
+
+  .plan-table-section {
+    padding: 16px;
+  }
+
+  .plan-table-section + .plan-table-section {
+    border-top: 1px solid #e5e7eb;
+  }
+
+  .plan-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: visible;
+
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+
+  scrollbar-width: thin;
+}
+
+
+  /* =========================================================
+     COMMON TABLE
+     ========================================================= */
+
+  .plan-table {
+    border-collapse: separate;
+    border-spacing: 0;
+
+    font-size: 13px;
+    line-height: 1.45;
+
+    color: #374151;
+    background: #ffffff;
+  }
+
+  .plan-table th,
+  .plan-table td {
+    padding: 9px 10px;
+
+    border-right: 1px solid #e5e7eb;
+    border-bottom: 1px solid #e5e7eb;
+
+    vertical-align: top;
+    text-align: left;
+
+    white-space: normal;
+    overflow-wrap: break-word;
+    word-break: normal;
+  }
+
+  .plan-table th:last-child,
+  .plan-table td:last-child {
+    border-right: 0;
+  }
+
+  .plan-table tbody tr:last-child td {
+    border-bottom: 0;
+  }
+
+  .plan-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+
+    background: #f3f4f6;
+
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.35;
+
+    color: #374151;
+  }
+
+  .plan-table tbody tr:nth-child(even) {
+    background: #fafafa;
+  }
+
+  .plan-table tbody tr:hover {
+    background: #f8fafc;
+  }
+
+
+  /* =========================================================
+     NUMBER COLUMN
+     ========================================================= */
+
+  .plan-table__number {
+    width: 46px;
+    min-width: 46px;
+    max-width: 46px;
+
+    text-align: center !important;
+    font-weight: 600;
+
+    color: #6b7280;
+  }
+
+
+  /* =========================================================
+     ROW4 TABLE
+     ========================================================= */
+
+  .plan-table--row4 {
+    width: 100%;
+    table-layout: fixed;
+  }
+
+  .plan-table--row4 .col-object {
+    width: 30%;
+  }
+
+  .plan-table--row4 .col-risk {
+    width: 35%;
+  }
+
+  .plan-table--row4 .col-decision {
+    width: 35%;
+  }
+
+
+  /* =========================================================
+   ROW11 TABLE
+   ========================================================= */
+
+.plan-table--row11 {
+  width: 100%;
+  min-width: 1450px;
+  table-layout: fixed;
+}
+
+/* № */
+.plan-table--row11 .plan-table__number {
+  width: 45px;
+  min-width: 45px;
+  max-width: 45px;
+}
+
+/* Тақырып */
+.plan-table--row11 .col-topic {
+  width: 190px;
+}
+
+/* Мақсаты */
+.plan-table--row11 .col-goal {
+  width: 220px;
+}
+
+/* Бақылау нысаны */
+.plan-table--row11 .col-object {
+  width: 150px;
+}
+
+/* Бақылау түрі */
+.plan-table--row11 .col-type {
+  width: 120px;
+}
+
+/* Әдістер */
+.plan-table--row11 .col-methods {
+  width: 170px;
+}
+
+/* Мерзімі */
+.plan-table--row11 .col-period {
+  width: 110px;
+}
+
+/* Жауаптылар */
+.plan-table--row11 .col-responsible {
+  width: 120px;
+}
+
+/* Қарау орны */
+.plan-table--row11 .col-review {
+  width: 120px;
+}
+
+/* Басшылық шешімі */
+.plan-table--row11 .col-document {
+  width: 130px;
+}
+
+/* Екінші бақылау */
+.plan-table--row11 .col-second {
+  width: 110px;
+}
+
+/* Длинный текст переносим внутри ячейки */
+.plan-table--row11 th,
+.plan-table--row11 td {
+  white-space: normal;
+  overflow-wrap: break-word;
+  word-break: normal;
+  hyphens: auto;
+}
+
+  /* =========================================================
+     MOBILE
+     ========================================================= */
+
+  @media (max-width: 768px) {
+    .plan-preview {
+      padding: 0 8px 24px;
+    }
+
+    .plan-header__row {
+      flex-direction: column;
+    }
+
+    .plan-header__actions {
+      width: 100%;
+    }
+
+    .plan-header__actions .btn {
+      flex: 1;
+      text-align: center;
+    }
+
+    .direction-card__header {
+      padding: 12px 14px;
+    }
+
+    .plan-table-section {
+      padding: 10px;
+    }
+  }
 </style>
 {% endblock %}
 
+
 {% block content %}
-Школа: <b>{{ meta.school_name }}</b> · Директор: <b>{{ meta.director_fio }}</b>
-<div class="wrap">
-  <div class="card card--large">
-    <div class="card__header" style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;">
-      <div>
-        <h2 style="margin:0;">План ВШК (просмотр)</h2>
-        <div style="color:#6b7280; margin-top:6px;">
-          Учебный год: <b>{{ plan.academic_year }}</b> · Статус: <b>{{ plan.status }}</b>
-        </div>
-      </div>
-      <div class="actions">
-        <a class="btn btn--primary" href="{{ request.url_for('school_plan_pdf', plan_id=plan.id) }}">Скачать PDF</a>
-        <a class="btn btn--light" href="{{ request.url_for('school_dashboard') }}?academic_year={{ plan.academic_year }}">← Назад</a>
-      </div>
-    </div>
+
+<div class="plan-preview">
+
+  <!-- =====================================================
+       SCHOOL
+       ===================================================== -->
+
+  <div class="plan-preview__school">
+    Мектеп:
+    <strong>{{ meta.school_name }}</strong>
+
+    · Директор:
+    <strong>{{ meta.director_fio }}</strong>
   </div>
 
-  {% for b in directions %}
-    <div class="dir">
-      <div class="dir__head">
-        <h3 class="dir__title">{{ b.direction.short_title }}</h3>
-        {% if b.direction.full_title %}
-          <div style="color:#6b7280;margin-top:6px;">{{ b.direction.full_title }}</div>
-        {% endif %}
+
+  <!-- =====================================================
+       HEADER
+       ===================================================== -->
+
+  <section class="plan-header">
+
+    <div class="plan-header__row">
+
+      <div>
+        <h2 class="plan-header__title">
+          ВШК жоспары
+        </h2>
+
+        <div class="plan-header__meta">
+          Оқу жылы:
+          <strong>{{ plan.academic_year }}</strong>
+
+          · Күйі:
+          <strong>{{ plan.status }}</strong>
+        </div>
       </div>
+
+
+      <div class="plan-header__actions">
+
+        <a
+          class="btn btn--primary"
+          href="{{ request.url_for('school_plan_pdf', plan_id=plan.id) }}"
+        >
+          PDF жүктеу
+        </a>
+
+        <a
+          class="plan-header__back"
+          href="{{ request.url_for('school_dashboard') }}?academic_year={{ plan.academic_year }}"
+        >
+          ← Артқа
+        </a>
+
+      </div>
+
+    </div>
+
+  </section>
+
+
+  <!-- =====================================================
+       DIRECTIONS
+       ===================================================== -->
+
+  {% for b in directions %}
+
+    <section class="direction-card">
+
+      <header class="direction-card__header">
+
+        <h3 class="direction-card__title">
+          {{ b.direction.short_title }}
+        </h3>
+
+        {% if b.direction.full_title %}
+          <div class="direction-card__subtitle">
+            {{ b.direction.full_title }}
+          </div>
+        {% endif %}
+
+      </header>
+
+
+      <!-- =================================================
+           ROW4
+           ================================================= -->
 
       {% if b.rows4 %}
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th style="min-width:70px;">№</th>
-              <th style="min-width:260px;">Бақылау нысаны</th>
-              <th style="min-width:260px;">Мәселелер, тәуекелдер</th>
-              <th style="min-width:260px;">Басшылық шешімі</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for r in b.rows4 %}
-              <tr>
-                <td>{{ loop.index  }}</td>
-                <td>{{ r.control_object or "" }}</td>
-                <td>{{ r.risk_text or "" }}</td>
-                <td>{{ r.decision_text or "" }}</td>
-              </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
+
+        <div class="plan-table-section">
+
+          <div class="plan-table-wrap">
+
+            <table class="plan-table plan-table--row4">
+
+              <thead>
+                <tr>
+                  <th class="plan-table__number">
+                    №
+                  </th>
+
+                  <th class="col-object">
+                    Бақылау нысаны
+                  </th>
+
+                  <th class="col-risk">
+                    Мәселелер, тәуекелдер
+                  </th>
+
+                  <th class="col-decision">
+                    Басшылық шешімі
+                  </th>
+                </tr>
+              </thead>
+
+
+              <tbody>
+
+                {% for r in b.rows4 %}
+
+                  <tr>
+
+                    <td class="plan-table__number">
+                      {{ loop.index }}
+                    </td>
+
+                    <td>
+                      {{ r.control_object or "" }}
+                    </td>
+
+                    <td>
+                      {{ r.risk_text or "" }}
+                    </td>
+
+                    <td>
+                      {{ r.decision_text or "" }}
+                    </td>
+
+                  </tr>
+
+                {% endfor %}
+
+              </tbody>
+
+            </table>
+
+          </div>
+
+        </div>
+
       {% endif %}
+
+
+      <!-- =================================================
+           ROW11
+           ================================================= -->
 
       {% if b.rows11 %}
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th style="min-width:70px;">№</th>
-              <th style="min-width:260px;">Тақырып</th>
-              <th style="min-width:260px;">Мақсаты</th>
-              <th style="min-width:260px;">Бақылау нысаны</th>
-              <th style="min-width:260px;">Бақылау түрі</th>
-              <th style="min-width:260px;">Әдістер</th>
-              <th style="min-width:160px;">Мерзімі</th>
-              <th style="min-width:160px;">Жауаптылар</th>
-              <th style="min-width:260px;">Қарау орны</th>
-              <th style="min-width:260px;">Басшылық шешімі</th>
-              <th style="min-width:260px;">Екінші бақылау</th>
-            </tr>
-          </thead>
 
-          <tbody>
-            {% for r in b.rows11 %}
-              {# period_type может быть Enum -> берём value если есть #}
-              {% set pt = (r.period_type.value if r.period_type is not none and r.period_type.value is defined else r.period_type) %}
+        <div class="plan-table-section">
 
-              <tr>
-                <td>{{ loop.index }}</td>
-                <td>{{ r.topic or "" }}</td>
-                <td>{{ r.goal or "" }}</td>
-                <td>{{ r.control_object or "" }}</td>
-                <td>{{ r.control_type or "" }}</td>
-                <td>{{ r.methods or "" }}</td>
+          <div class="plan-table-wrap">
 
-                {# ---------- ПЕРИОД (из period_*) ---------- #}
-<td class="nowrap">{{ r | row11_period }}</td>
-{# ---------- ОТВЕТСТВЕННЫЕ (из role_assignments) ---------- #}
-<td>
-  {% if r.role_assignments and r.role_assignments|length > 0 %}
-    {% for a in r.role_assignments %}
-      {% set key = a.role.value if a.role is not none and a.role.value is defined else a.role %}
-      {{ ROLE_LABELS.get(key, key) if ROLE_LABELS is defined else key }}{% if not loop.last %}, {% endif %}
-    {% endfor %}
-  {% else %}
-    {# fallback, если назначений ещё нет #}
-    {{ r.responsibles_text or "" }}
-  {% endif %}
-</td>
-                <td>{{ r.review_places_text or "" }}</td>
-                <td>{{ r.documents_text or "" }}</td>
-                <td>{{ r.second_control or "" }}</td>
-              </tr>
-            {% endfor %}
-          </tbody>
+            <table class="plan-table plan-table--row11">
 
-        </table>
-      </div>
+              <colgroup>
+                <col style="width:45px">
+                <col style="width:190px">
+                <col style="width:220px">
+                <col style="width:150px">
+                <col style="width:120px">
+                <col style="width:170px">
+                <col style="width:110px">
+                <col style="width:120px">
+                <col style="width:120px">
+                <col style="width:130px">
+                <col style="width:110px">
+              </colgroup>
+
+              <thead>
+                <tr>
+
+                  <th class="plan-table__number">
+                    №
+                  </th>
+
+                  <th class="col-topic">
+                    Тақырып
+                  </th>
+
+                  <th class="col-goal">
+                    Мақсаты
+                  </th>
+
+                  <th class="col-object">
+                    Бақылау нысаны
+                  </th>
+
+                  <th class="col-type">
+                    Бақылау түрі
+                  </th>
+
+                  <th class="col-methods">
+                    Әдістер
+                  </th>
+
+                  <th class="col-period">
+                    Мерзімі
+                  </th>
+
+                  <th class="col-responsible">
+                    Жауаптылар
+                  </th>
+
+                  <th class="col-review">
+                    Қарау орны
+                  </th>
+
+                  <th class="col-document">
+                    Басшылық шешімі
+                  </th>
+
+                  <th class="col-second">
+                    Екінші бақылау
+                  </th>
+
+                </tr>
+              </thead>
+
+
+              <tbody>
+
+                {% for r in b.rows11 %}
+
+                  <tr>
+
+                    <td class="plan-table__number">
+                      {{ loop.index }}
+                    </td>
+
+                    <td>
+                      {{ r.topic or "" }}
+                    </td>
+
+                    <td>
+                      {{ r.goal or "" }}
+                    </td>
+
+                    <td>
+                      {{ r.control_object or "" }}
+                    </td>
+
+                    <td>
+                      {{ r.control_type or "" }}
+                    </td>
+
+                    <td>
+                      {{ r.methods or "" }}
+                    </td>
+
+
+                    <!-- PERIOD -->
+
+                    <td>
+                      {{ r | row11_period }}
+                    </td>
+
+
+                    <!-- RESPONSIBLES -->
+
+                    <td>
+
+                      {% if r.role_assignments and r.role_assignments|length > 0 %}
+
+                        {% for a in r.role_assignments %}
+
+                          {% set key = (
+                            a.role.value
+                            if a.role is not none
+                            and a.role.value is defined
+                            else a.role
+                          ) %}
+
+                          {{ ROLE_LABELS.get(key, key)
+                             if ROLE_LABELS is defined
+                             else key
+                          }}{% if not loop.last %}, {% endif %}
+
+                        {% endfor %}
+
+                      {% else %}
+
+                        {{ r.responsibles_text or "" }}
+
+                      {% endif %}
+
+                    </td>
+
+
+                    <!-- REVIEW PLACE -->
+
+                    <td>
+                      {{ r.review_places_text or "" }}
+                    </td>
+
+
+                    <!-- DOCUMENT -->
+
+                    <td>
+                      {{ r.documents_text or "" }}
+                    </td>
+
+
+                    <!-- SECOND CONTROL -->
+
+                    <td>
+                      {{ r.second_control or "" }}
+                    </td>
+
+                  </tr>
+
+                {% endfor %}
+
+              </tbody>
+
+            </table>
+
+          </div>
+
+        </div>
+
       {% endif %}
-    </div>
+
+    </section>
+
   {% endfor %}
+
 </div>
+
 {% endblock %}

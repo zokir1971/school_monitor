@@ -60,10 +60,10 @@ class PlanVshkPdf:
         # Верх: две колонки
         left_block = [
             Paragraph("<b>Келісемін:</b>", p10l),
-            Paragraph(f"{district} қаласының білім", p10l),
+            Paragraph(f"{district} білім", p10l),
             Paragraph("бөлімінің басшысы", p10l),
             Spacer(1, 6),
-            Paragraph("___________Б.Төлімбет", p10l),
+            Paragraph("______________________", p10l),
             Paragraph("«____»________20_____ж.", p10l),
         ]
 

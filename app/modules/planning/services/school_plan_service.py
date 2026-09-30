@@ -9,7 +9,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from starlette.datastructures import FormData
 
-from app.modules.planning.enums import ResponsibleRole, PlanPeriodType, ReviewPlace
+from app.modules.planning.enums import ResponsibleRole, PlanPeriodType, ReviewPlace, PlanStatus
+from app.modules.planning.schemas.school_plan_row11_schemas import SchoolPlanRow11UpdateDTO, SchoolPlanRow11EditPageDTO, \
+    SchoolPlanRow11OptionDTO
 from app.modules.reports.enums import DocumentType
 from app.modules.planning.models import PlanDirection, PlanTemplate
 from app.modules.planning.models_school import SchoolPlanRow4, SchoolPlanRow11, SchoolPlan, SchoolPlanRow11Responsible
@@ -30,14 +32,57 @@ async def _get_plan_or_404(db: AsyncSession, *, plan_id: int) -> SchoolPlan:
     return plan
 
 
-async def _guard_plan_edit(db: AsyncSession, *, plan_id: int, user) -> SchoolPlan:
+async def _guard_plan_edit(
+        db: AsyncSession,
+        *,
+        plan_id: int,
+        user,
+) -> SchoolPlan:
     """
     Единая точка безопасности:
-    - план существует
-    - пользователь имеет право редактировать школу плана
+
+    - план существует;
+    - пользователь имеет право редактировать школу плана;
+    - архивный план доступен только для просмотра.
     """
-    plan = await _get_plan_or_404(db, plan_id=plan_id)
-    assert_can_edit_school(user, school_id=plan.school_id)
+
+    # =====================================================
+    # 1. PLAN
+    # =====================================================
+
+    plan = await _get_plan_or_404(
+        db,
+        plan_id=plan_id,
+    )
+
+    # =====================================================
+    # 2. ACCESS
+    # =====================================================
+
+    assert_can_edit_school(
+        user,
+        school_id=plan.school_id,
+    )
+
+    # =====================================================
+    # 3. ARCHIVE GUARD
+    # =====================================================
+
+    status_value = (
+        plan.status.value
+        if hasattr(plan.status, "value")
+        else str(plan.status)
+    )
+
+    if status_value == PlanStatus.ARCHIVED.value:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "Мұрағатталған ВШК жоспарын "
+                "өзгертуге болмайды."
+            ),
+        )
+
     return plan
 
 
@@ -341,55 +386,468 @@ class SchoolPlanEditService:
         return result
 
     @staticmethod
-    async def save_row11_required_documents(
+    async def update_row11(
             db: AsyncSession,
             *,
             row11_id: int,
-            document_type_values: list[str] | None,
-    ) -> None:
-        doc_types = SchoolPlanEditService._normalize_document_types(document_type_values)
+            data: SchoolPlanRow11UpdateDTO,
+            user,
+    ) -> SchoolPlanRow11:
+        """
+        Полное обновление одной строки годового плана ВШК.
 
-        await SchoolPlanningRepo.replace_required_documents(
+        Обновляет за одну операцию:
+        - основные поля;
+        - период выполнения;
+        - ответственные роли;
+        - места рассмотрения;
+        - итоговые документы.
+
+        Commit здесь намеренно не выполняется.
+        Транзакцией управляет вызывающий web-слой.
+        """
+
+        # =================================================
+        # 1. ROW
+        # =================================================
+
+        row = await SchoolPlanningRepo.get_row11(
             db,
-            row11_id=row11_id,
-            document_types=doc_types,
+            row_id=row11_id,
         )
 
-    @staticmethod
-    async def save_row11_review_places(
-            db: AsyncSession,
-            *,
-            row11_id: int,
-            review_place_values: list[str] | None,
-    ) -> None:
-        places = SchoolPlanEditService._normalize_review_places(review_place_values)
+        if row is None:
+            raise HTTPException(
+                status_code=404,
+                detail="Строка не найдена",
+            )
+
+        # =================================================
+        # 2. ACCESS + ARCHIVE GUARD
+        # =================================================
+
+        await _guard_plan_edit(
+            db,
+            plan_id=row.school_plan_id,
+            user=user,
+        )
+
+        # =================================================
+        # 3. REQUIRED FIELD
+        # =================================================
+
+        topic = _clean_str(data.topic)
+
+        if not topic:
+            raise HTTPException(
+                status_code=400,
+                detail="Тақырып міндетті түрде толтырылуы керек.",
+            )
+
+        # =================================================
+        # 4. PERIOD
+        # =================================================
+
+        try:
+            period_type = PlanPeriodType(data.period_type)
+        except (TypeError, ValueError) as exc:
+            raise HTTPException(
+                status_code=400,
+                detail="Некорректный period_type",
+            ) from exc
+
+        period_value_int: int | None = None
+        period_values: str | None = None
+
+        if period_type in (
+                PlanPeriodType.ALL_YEAR,
+                PlanPeriodType.MONTHLY,
+                PlanPeriodType.QUARTER,
+        ):
+            pass
+
+        elif period_type == PlanPeriodType.MONTH:
+            if (
+                    data.month is None
+                    or not 1 <= data.month <= 12
+            ):
+                raise HTTPException(
+                    status_code=400,
+                    detail=(
+                        "Айлық кезең үшін "
+                        "1-ден 12-ге дейінгі айды таңдаңыз."
+                    ),
+                )
+
+            period_value_int = data.month
+
+        elif period_type == PlanPeriodType.MONTHS:
+            months = normalize_months_text_to_list(
+                data.period_values or ""
+            )
+
+            if not months:
+                raise HTTPException(
+                    status_code=400,
+                    detail=(
+                        "Бірнеше ай кезеңі үшін "
+                        "айларды көрсетіңіз."
+                    ),
+                )
+
+            period_values = months_list_to_canonical_text(
+                months
+            )
+
+        # =================================================
+        # 5. RESPONSIBLE ROLES
+        # =================================================
+
+        responsible_roles: list[ResponsibleRole] = []
+        seen_roles: set[str] = set()
+
+        for raw_value in data.responsible_roles:
+            value = (raw_value or "").strip()
+
+            if not value or value in seen_roles:
+                continue
+
+            try:
+                role = ResponsibleRole(value)
+            except ValueError as exc:
+                raise HTTPException(
+                    status_code=400,
+                    detail=(
+                        "Некорректная ответственная роль: "
+                        f"{value}"
+                    ),
+                ) from exc
+
+            seen_roles.add(value)
+            responsible_roles.append(role)
+
+        # =================================================
+        # 6. REVIEW PLACES
+        # =================================================
+
+        try:
+            review_places = (
+                SchoolPlanEditService
+                ._normalize_review_places(
+                    data.review_places
+                )
+            )
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=400,
+                detail="Некорректное место рассмотрения.",
+            ) from exc
+
+        # =================================================
+        # 7. REQUIRED DOCUMENTS
+        # =================================================
+
+        try:
+            document_types = (
+                SchoolPlanEditService
+                ._normalize_document_types(
+                    data.required_document_types
+                )
+            )
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=400,
+                detail="Некорректный тип итогового документа.",
+            ) from exc
+
+        # =================================================
+        # 8. MAIN FIELDS
+        # =================================================
+
+        row.topic = topic
+        row.goal = _clean_str(data.goal)
+        row.control_object = _clean_str(
+            data.control_object
+        )
+        row.control_type = _clean_str(
+            data.control_type
+        )
+        row.methods = _clean_str(data.methods)
+
+        row.deadlines = _clean_str(data.deadlines)
+        row.second_control = _clean_str(
+            data.second_control
+        )
+
+        # =================================================
+        # 9. PERIOD APPLY
+        # =================================================
+
+        row.period_type = period_type
+        row.period_value_int = period_value_int
+        row.period_values = period_values
+
+        # =================================================
+        # 10. RESPONSIBLE ROLES APPLY
+        # =================================================
+
+        await db.execute(
+            delete(SchoolPlanRow11Responsible)
+            .where(
+                SchoolPlanRow11Responsible.row11_id
+                == row11_id
+            )
+        )
+
+        if responsible_roles:
+            db.add_all(
+                [
+                    SchoolPlanRow11Responsible(
+                        row11_id=row11_id,
+                        role=role,
+                        is_primary=False,
+                    )
+                    for role in responsible_roles
+                ]
+            )
+
+        # =================================================
+        # 11. REVIEW PLACES APPLY
+        # =================================================
 
         await SchoolPlanningRepo.replace_review_places(
             db,
             row11_id=row11_id,
-            review_places=places,
+            review_places=review_places,
         )
 
-    @staticmethod
-    async def save_row11_documents_and_review_places(
-            db: AsyncSession,
-            *,
-            row11_id: int,
-            document_type_values: list[str] | None,
-            review_place_values: list[str] | None,
-    ) -> None:
-        doc_types = SchoolPlanEditService._normalize_document_types(document_type_values)
-        places = SchoolPlanEditService._normalize_review_places(review_place_values)
+        # =================================================
+        # 12. REQUIRED DOCUMENTS APPLY
+        # =================================================
 
         await SchoolPlanningRepo.replace_required_documents(
             db,
             row11_id=row11_id,
-            document_types=doc_types,
+            document_types=document_types,
         )
-        await SchoolPlanningRepo.replace_review_places(
+
+        # =================================================
+        # 13. FLUSH
+        # =================================================
+
+        await db.flush()
+
+        return row
+
+    @staticmethod
+    async def get_row11_edit_page(
+            db: AsyncSession,
+            *,
+            row11_id: int,
+            user,
+    ) -> SchoolPlanRow11EditPageDTO:
+        """
+        Формирует DTO страницы полного редактирования
+        одной строки годового плана ВШК.
+        """
+
+        # =====================================================
+        # 1. ROW
+        # =====================================================
+
+        row = await SchoolPlanningRepo.get_row11(
             db,
-            row11_id=row11_id,
-            review_places=places,
+            row_id=row11_id,
+        )
+
+        if row is None:
+            raise HTTPException(
+                status_code=404,
+                detail="Строка не найдена",
+            )
+
+        # =====================================================
+        # 2. PLAN + ACCESS
+        # =====================================================
+
+        plan = await _guard_plan_edit(
+            db,
+            plan_id=row.school_plan_id,
+            user=user,
+        )
+
+        # =====================================================
+        # 3. DIRECTION
+        # =====================================================
+
+        direction_data = await SchoolPlanEditService.get_direction_data(
+            db,
+            plan_id=row.school_plan_id,
+            direction_id=row.direction_id,
+            user=user,
+        )
+
+        direction = direction_data.direction
+
+        # =====================================================
+        # 4. SOURCE TEMPLATE ROW
+        # =====================================================
+
+        template_row = await SchoolPlanningRepo.get_template_row11_for_school_row(
+            db,
+            template_id=plan.template_id,
+            direction_id=row.direction_id,
+            row_order=row.row_order,
+        )
+
+        # =====================================================
+        # 5. CURRENT SELECTED VALUES
+        # =====================================================
+
+        selected_roles = {
+            assignment.role.value
+            for assignment in (row.role_assignments or [])
+        }
+
+        selected_review_places = {
+            item.review_place.value
+            for item in (row.review_places or [])
+        }
+
+        selected_documents = {
+            item.document_type.value
+            for item in (row.required_documents or [])
+        }
+
+        # =====================================================
+        # 6. RESPONSIBLE ROLE OPTIONS
+        # =====================================================
+
+        responsible_role_options = [
+            SchoolPlanRow11OptionDTO(
+                value=role.value,
+                label=role.label_kz,
+                selected=role.value in selected_roles,
+            )
+            for role in ResponsibleRole.__members__.values()
+        ]
+
+        # =====================================================
+        # 7. REVIEW PLACE OPTIONS
+        # =====================================================
+
+        review_place_options = [
+            SchoolPlanRow11OptionDTO(
+                value=place.value,
+                label=place.label_kz,
+                selected=place.value in selected_review_places,
+            )
+            for place in ReviewPlace.__members__.values()
+        ]
+
+        # =====================================================
+        # 8. DOCUMENT OPTIONS
+        # =====================================================
+
+        document_options = [
+            SchoolPlanRow11OptionDTO(
+                value=document_type.value,
+                label=document_type.label_kz,
+                selected=document_type.value in selected_documents,
+            )
+            for document_type in DocumentType.__members__.values()
+        ]
+
+        # =====================================================
+        # 9. PERIOD
+        # =====================================================
+
+        period_type = (
+            row.period_type.value
+            if row.period_type is not None
+            else ""
+        )
+
+        month = (
+            row.period_value_int
+            if row.period_type == PlanPeriodType.MONTH
+            else None
+        )
+
+        period_values = (row.period_values or "").strip()
+
+        selected_months: list[int] = []
+
+        if period_values:
+            selected_months = normalize_months_text_to_list(
+                period_values
+            )
+
+        # =====================================================
+        # 10. TEMPLATE SAMPLES
+        # =====================================================
+
+        sample_period_text = (
+            (template_row.deadlines or "").strip()
+            if template_row is not None
+            else ""
+        ) or "—"
+
+        sample_responsibles_text = (
+            (template_row.responsibles or "").strip()
+            if template_row is not None
+            else ""
+        ) or "—"
+
+        sample_review_place_text = (
+            (template_row.review_place or "").strip()
+            if template_row is not None
+            else ""
+        ) or "—"
+
+        sample_document_text = (
+            (template_row.management_decision or "").strip()
+            if template_row is not None
+            else ""
+        ) or "—"
+        # =====================================================
+        # 11. PAGE DTO
+        # =====================================================
+
+        return SchoolPlanRow11EditPageDTO(
+            plan_id=plan.id,
+            academic_year=plan.academic_year,
+
+            direction_id=row.direction_id,
+            direction_name=direction.full_title,
+
+            row_id=row.id,
+            row_order=row.row_order,
+
+            topic=row.topic or "",
+            goal=row.goal or "",
+            control_object=row.control_object or "",
+            control_type=row.control_type or "",
+            methods=row.methods or "",
+
+            deadlines=row.deadlines or "",
+            second_control=row.second_control or "",
+
+            period_type=period_type,
+            month=month,
+            period_values=period_values,
+            selected_months=selected_months,
+            sample_period_text=sample_period_text,
+            sample_responsibles_text=sample_responsibles_text,
+            sample_review_place_text=sample_review_place_text,
+            sample_document_text=sample_document_text,
+
+            responsible_roles=responsible_role_options,
+            review_places=review_place_options,
+            required_documents=document_options,
+
+            is_custom=bool(row.is_custom),
+            is_archived=False,
         )
 
 
@@ -428,6 +886,21 @@ class SchoolRowsService:
         )
         if not plan:
             raise HTTPException(status_code=404, detail="План не найден")
+
+        status_value = (
+            plan.status.value
+            if hasattr(plan.status, "value")
+            else str(plan.status)
+        )
+
+        if status_value == PlanStatus.ARCHIVED.value:
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    "Мұрағатталған ВШК жоспарына "
+                    "жаңа жол қосуға болмайды."
+                ),
+            )
 
         row_order = await SchoolPlanningRepo.next_row_order_for(
             db, kind=kind, school_plan_id=school_plan_id, direction_id=direction_id
@@ -589,29 +1062,3 @@ class SchoolRowsService:
             raise HTTPException(status_code=404, detail="Строка не найдена после сохранения")
 
         return row2
-
-    # сохранение данных из модальных окон:
-    # - место рассмотрения
-    # - тип документа
-    @staticmethod
-    async def save_row11_requirements(
-            db: AsyncSession,
-            *,
-            row11_id: int,
-            document_types: list[str] | None = None,
-            review_places: list[str] | None = None,
-    ) -> None:
-
-        if document_types is not None:
-            await SchoolPlanningRepo.replace_row11_documents(
-                db,
-                row11_id=row11_id,
-                document_types=document_types,
-            )
-
-        if review_places is not None:
-            await SchoolPlanningRepo.replace_row11_review_places(
-                db,
-                row11_id=row11_id,
-                review_places=review_places,
-            )

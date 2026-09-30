@@ -90,6 +90,47 @@ class SchoolMonthlyPlanRepo:
             .values(status=status)
         )
 
+    @staticmethod
+    async def archive_month_plans_by_school_plan(
+            db: AsyncSession,
+            *,
+            school_plan_id: int,
+    ) -> int:
+        """
+        Архивирует все месячные планы
+        указанного годового плана.
+
+        ВАЖНО:
+        SchoolMonthPlanItem не изменяются.
+
+        Их фактические статусы:
+            TODO
+            IN_PROGRESS
+            DONE
+            REVIEWED
+            NOT_EXECUTED
+
+        должны сохраниться для истории и статистики.
+
+        Repository не выполняет commit / rollback.
+        """
+
+        result = await db.execute(
+            update(SchoolMonthPlan)
+            .where(
+                SchoolMonthPlan.school_plan_id
+                == school_plan_id,
+
+                SchoolMonthPlan.status
+                != PlanStatus.ARCHIVED,
+            )
+            .values(
+                status=PlanStatus.ARCHIVED,
+            )
+        )
+
+        return int(result.rowcount or 0)
+
     # -----------------------------------------------------
     # Items (school_month_plan_items)
     # -----------------------------------------------------
