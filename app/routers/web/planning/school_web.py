@@ -76,14 +76,25 @@ async def _get_plan_or_404(
     return plan
 
 
-def _pick_active_plan(plans) -> object | None:
-    # логика как была: сначала ACTIVE, если нет — DRAFT
-    for p in plans:
-        if p.status == PlanStatus.ACTIVE:
-            return p
-    for p in plans:
-        if p.status == PlanStatus.DRAFT:
-            return p
+def _pick_active_plan(
+        plans: list[SchoolPlan],
+) -> SchoolPlan | None:
+    """
+    Возвращает текущий рабочий план школы.
+
+    Приоритет:
+    1. ACTIVE
+    2. DRAFT
+    """
+
+    for plan in plans:
+        if plan.status == PlanStatus.ACTIVE:
+            return plan
+
+    for plan in plans:
+        if plan.status == PlanStatus.DRAFT:
+            return plan
+
     return None
 
 
@@ -117,13 +128,18 @@ async def school_dashboard(
             require_roles(UserRole.SCHOOL_ADMIN)
         ),
 ):
-    year = _normalize_academic_year(
-        academic_year
-    )
+    """
+    Главная страница годовых планов ВШК школы.
 
-    tab_val = _normalize_tab(
-        tab
-    )
+    Если academic_year передан в URL — показываем выбранный год.
+
+    Если academic_year не передан:
+    1. используем год ACTIVE-плана;
+    2. если ACTIVE нет — год DRAFT-плана;
+    3. если планов нет — fallback из _normalize_academic_year().
+    """
+
+    tab_val = _normalize_tab(tab)
 
     # =====================================================
     # SCHOOL
@@ -153,6 +169,37 @@ async def school_dashboard(
     )
 
     # =====================================================
+    # ACADEMIC YEAR
+    # =====================================================
+
+    requested_year = (academic_year or "").strip()
+
+    if requested_year:
+        # Пользователь явно выбрал учебный год.
+        year = requested_year
+
+    else:
+        # Получаем планы школы без ограничения по году.
+        school_plans = (
+            await SchoolPlanningRepo.list_school_plans(
+                db,
+                school_id=school_id,
+            )
+        )
+
+        # Сначала ACTIVE, затем DRAFT.
+        current_plan = _pick_active_plan(
+            school_plans
+        )
+
+        if current_plan is not None:
+            year = current_plan.academic_year
+        else:
+            # Только fallback для школы,
+            # у которой ещё вообще нет рабочего плана.
+            year = _normalize_academic_year(None)
+
+    # =====================================================
     # ALL PLANS FOR SELECTED ACADEMIC YEAR
     # =====================================================
 
@@ -180,8 +227,7 @@ async def school_dashboard(
     elif tab_val == "archive":
         status_filter = PlanStatus.ARCHIVED
 
-    # tab == "my"
-    # status_filter остаётся None:
+    # tab == "my":
     # показываем все планы выбранного учебного года.
 
     # =====================================================
@@ -190,6 +236,7 @@ async def school_dashboard(
 
     if status_filter is None:
         plans = all_plans
+
     else:
         plans = (
             await SchoolPlanningRepo.list_school_plans(
