@@ -1,0 +1,24 @@
+{# Student-facing only. No answer key is accepted or rendered.
+   Import render_true_false_input and pass an instance_key unique on the page.
+   The existing question heading/text remains outside this component. #}
+{% from "teacher/assessment/question_bank/_segments.html" import render_segments with context %}
+{% macro render_true_false_input(question, answer_data, instance_key) %}
+  {% set content = question.content or {} %}
+  {% set labels = content.get('labels', {}) %}
+  <div data-tf-student data-format="{{ 'statements' if 'statements' in content else 'legacy' }}">
+    {% if 'statements' in content %}
+      {% for statement in content.get('statements', []) %}
+        {% set value = answer_data.get('values', {}).get(statement.get('id')) %}
+        <fieldset data-tf-student-row data-statement-id="{{ statement.get('id') }}">
+          <legend>{{ loop.index }}. {{ render_segments(statement.get('segments', [])) }}</legend>
+          <label><input type="radio" name="tf-{{ instance_key }}-{{ loop.index }}" value="true" {% if value is sameas true %}checked{% endif %}>{{ labels.get('true', 'Дұрыс') }}</label>
+          <label><input type="radio" name="tf-{{ instance_key }}-{{ loop.index }}" value="false" {% if value is sameas false %}checked{% endif %}>{{ labels.get('false', 'Бұрыс') }}</label>
+        </fieldset>
+      {% endfor %}
+    {% else %}
+      {% set value = answer_data.get('value') %}
+      <label><input type="radio" name="tf-{{ instance_key }}-legacy" value="true" {% if value is sameas true %}checked{% endif %}>{{ labels.get('true', 'Дұрыс') }}</label>
+      <label><input type="radio" name="tf-{{ instance_key }}-legacy" value="false" {% if value is sameas false %}checked{% endif %}>{{ labels.get('false', 'Бұрыс') }}</label>
+    {% endif %}
+  </div>
+{% endmacro %}

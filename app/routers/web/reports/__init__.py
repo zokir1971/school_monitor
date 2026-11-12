@@ -19,3 +19,6 @@ router.include_router(lesson_observation_web)
 router.include_router(checking_notebooks_web)
 router.include_router(report_verify_web)
 router.include_router(staff_my_reports_web)
+
+from .assessment_reports_web import router as assessment_reports_web
+router.include_router(assessment_reports_web)

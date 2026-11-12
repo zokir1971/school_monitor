@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% block title %}{{ _('Регистрация сотрудника школы') }}{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', path='css/register.css') }}">
@@ -8,65 +9,187 @@
 <div class="auth-page">
   <div class="page-inner">
     <div class="card card--medium auth-card">
+
       <div class="auth-head">
-        <h2>Регистрация пед.персонала школы</h2>
-        <div class="sub">Регистрация доступна только педагогам, которые уже есть в базе школы</div>
+        <h2>{{ _('Регистрация сотрудника школы') }}</h2>
+        <div class="sub">
+          {{ _('Регистрация доступна сотрудникам, которые уже есть в базе школы') }}
+        </div>
       </div>
 
       {% if error %}
         <div class="alert alert-danger">
-          {{ error }}
+          {{ _(error) }}
         </div>
       {% endif %}
 
       <form method="post" class="auth-form">
+
+        <!-- ИИН -->
         <div class="form-row">
-          <label>ИИН</label>
-          <input id="iin" class="field__input" type="text" name="iin" required minlength="12" maxlength="12" pattern="\d{12}"
-                 inputmode="numeric" placeholder="123456789012" value="{{ form.get('iin', '') }}">
-          <div class="field__hint">12 цифр, без пробелов.</div>
+          <label for="iin">{{ _('ИИН') }}</label>
+
+          <input
+            id="iin"
+            class="field__input"
+            type="text"
+            name="iin"
+            required
+            minlength="12"
+            maxlength="12"
+            pattern="\d{12}"
+            inputmode="numeric"
+            placeholder="123456789012"
+            value="{{ form.get('iin', '') }}"
+          >
+
+          <div class="field__hint">
+            {{ _('12 цифр, без пробелов.') }}
+          </div>
         </div>
 
+        <!-- Роль -->
         <div class="form-row">
-          <label>Логин</label>
-          <input class="field__input" type="text" name="username"
-               required minlength="3" maxlength="32" autocomplete="username"
-               placeholder="например: admin_kz" value="{{ form.get('username', '') }}">
+          <label for="role">{{ _('Роль в системе') }}</label>
+
+          <select
+            id="role"
+            name="role"
+            class="field__input"
+            required
+          >
+            {% if form.get("role", "school_staff") == "school_staff" %}
+              <option value="school_staff" selected>
+                {{ _('Сотрудник школы') }}
+              </option>
+            {% else %}
+              <option value="school_staff">
+                {{ _('Сотрудник школы') }}
+              </option>
+            {% endif %}
+
+            {% if form.get("role") == "teacher" %}
+              <option value="teacher" selected>
+                {{ _('Учитель') }}
+              </option>
+            {% else %}
+              <option value="teacher">
+                {{ _('Учитель') }}
+             </option>
+            {% endif %}
+          </select>
+
+          <div class="field__hint">
+            {{ _('Выберите тип пользовательского кабинета.') }}
+          </div>
         </div>
 
+        <!-- Логин -->
         <div class="form-row">
-          <label>Email</label>
-          <input id="email" class="field__input" type="email" name="email" required maxlength="255"
-                 autocomplete="email" placeholder="name@mail.com" value="{{ form.get('email', '') }}">
+          <label for="username">{{ _('Логин') }}</label>
+
+          <input
+            id="username"
+            class="field__input"
+            type="text"
+            name="username"
+            required
+            minlength="3"
+            maxlength="32"
+            autocomplete="username"
+            placeholder="{{ _('например: teacher_kz') }}"
+            value="{{ form.get('username', '') }}"
+          >
         </div>
 
+        <!-- Email -->
         <div class="form-row">
-          <label>Телефон</label>
-          <input id="phone" class="field__input" type="text" name="phone"
-               required minlength="11" maxlength="11" pattern="7\d{10}" inputmode="numeric"
-               placeholder="87771112233" autocomplete="tel" value="{{ form.get('phone', '') }}">
-          <div class="field__hint">Формат: 7XXXXXXXXXX (11 цифр).</div>
+          <label for="email">Email</label>
+
+          <input
+            id="email"
+            class="field__input"
+            type="email"
+            name="email"
+            required
+            maxlength="255"
+            autocomplete="email"
+            placeholder="name@mail.com"
+            value="{{ form.get('email', '') }}"
+          >
         </div>
 
+        <!-- Телефон -->
         <div class="form-row">
-          <label>Пароль</label>
-          <input id="password" class="field__input" type="password" name="password"
-                 required minlength="6" autocomplete="new-password"
-                 placeholder="Минимум 8 символов">
+          <label for="phone">{{ _('Телефон') }}</label>
+
+          <input
+            id="phone"
+            class="field__input"
+            type="text"
+            name="phone"
+            required
+            minlength="11"
+            maxlength="11"
+            pattern="7\d{10}"
+            inputmode="numeric"
+            placeholder="77771112233"
+            autocomplete="tel"
+            value="{{ form.get('phone', '') }}"
+          >
+
+          <div class="field__hint">
+            {{ _('Формат: 7XXXXXXXXXX (11 цифр).') }}
+          </div>
         </div>
 
+        <!-- Пароль -->
         <div class="form-row">
-          <label>Повторите пароль</label>
-          <input id="password2" class="field__input" type="password" name="password2"
-                 required minlength="6" autocomplete="new-password"
-                 placeholder="Повторите пароль">
+          <label for="password">{{ _('Пароль') }}</label>
+
+          <input
+            id="password"
+            class="field__input"
+            type="password"
+            name="password"
+            required
+            minlength="8"
+            autocomplete="new-password"
+            placeholder="{{ _('Минимум 8 символов') }}"
+          >
+        </div>
+
+        <!-- Повтор пароля -->
+        <div class="form-row">
+          <label for="password2">{{ _('Повторите пароль') }}</label>
+
+          <input
+            id="password2"
+            class="field__input"
+            type="password"
+            name="password2"
+            required
+            minlength="8"
+            autocomplete="new-password"
+            placeholder="{{ _('Повторите пароль') }}"
+          >
         </div>
 
         <div class="actions">
-          <button type="submit" class="btn btn--primary">Зарегистрироваться</button>
-          <a href="/login" class="btn">Войти</a>
+          <button
+            type="submit"
+            class="btn btn--primary"
+           data-sm-action="primary">
+            {{ _('Зарегистрироваться') }}
+          </button>
+
+          <a href="/login" class="btn" data-sm-action="nav">
+            {{ _('Отмена') }}
+          </a>
         </div>
+
       </form>
+
     </div>
   </div>
 </div>

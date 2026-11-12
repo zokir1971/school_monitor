@@ -1,0 +1,194 @@
+{% macro sc_rich_editor() %}
+<div class="qb-rich-editor" data-rich-editor>
+  <div class="qb-rich-editor__toolbar">
+    <button type="button" data-rich-add-math data-sm-action="nav">{{ _('+ Формула') }}</button>
+    <button type="button" data-rich-edit-math disabled data-sm-action="edit">{{ _('Өңдеу / Редактировать') }}</button>
+    <button type="button" data-rich-copy-math disabled data-sm-action="nav">{{ _('Көшіру / Копировать') }}</button>
+    <button type="button" data-rich-paste-math disabled data-sm-action="nav">{{ _('Қою / Вставить') }}</button>
+    <button type="button" data-rich-delete-math disabled data-sm-action="danger">{{ _('Жою / Удалить') }}</button>
+  </div>
+  <div class="qb-rich-editor__content" contenteditable="true" role="textbox" aria-multiline="true" data-rich-content data-type-input></div>
+  <input type="hidden" data-rich-plain-value data-type-input>
+  <input type="hidden" data-rich-segments data-type-input>
+</div>
+{% endmacro %}
+<!-- =============================================
+     SINGLE CHOICE ANSWERS
+     ============================================= -->
+
+<div
+  id="single-choice-fields"
+  class="qb-answer-builder"
+  data-question-fields="single_choice"
+  data-sc-part-label="{{ _('Задание') }}"
+  data-sc-count-help="{{ _('Количество пунктов равно максимальному баллу. Каждый пункт — 1 балл и один правильный вариант из A–D.') }}"
+  data-sc-invalid="{{ _('Заполните условие, четыре варианта и правильный ответ каждого пункта. Максимальный балл — целое число от 1 до 100.') }}"
+>
+
+  <div class="qb-answer-builder__header">
+
+    <h3>
+      {{ _('Жауап нұсқалары') }}
+    </h3>
+
+    <p>
+      {{ _('Жауаптарды енгізіп, бір дұрыс жауапты таңдаңыз. Формуланы курсор тұрған жерге енгізуге болады.') }}
+    </p>
+
+  </div>
+
+
+  <div data-sc-legacy>
+  {% for value in ["A", "B", "C", "D"] %}
+
+    {% set suffix = value | lower %}
+
+    <div class="qb-answer-row">
+
+      <!-- CORRECT ANSWER -->
+
+      <label class="qb-answer-correct">
+
+        <input
+          type="radio"
+          name="correct_answer"
+          value="{{ value }}"
+          data-type-input
+        >
+
+        <span>
+          {{ value }}
+        </span>
+
+      </label>
+
+
+      <!-- RICH CONTENT -->
+
+      <div
+        class="qb-rich-editor"
+        data-rich-editor
+      >
+
+        <div class="qb-rich-editor__toolbar">
+
+  <!-- Добавить новую формулу -->
+  <button
+    type="button"
+    class="qb-rich-editor__formula-btn"
+    data-rich-add-math
+   data-sm-action="nav" data-sm-size="compact">
+    {{ _('+ Формула') }}
+  </button>
+
+
+  <!-- Редактировать выбранную формулу -->
+  <button
+    type="button"
+    class="qb-rich-editor__tool"
+    data-rich-edit-math
+    disabled
+   data-sm-action="edit" data-sm-size="compact">
+    {{ _('Өңдеу') }}
+  </button>
+
+
+  <!-- Копировать выбранную формулу -->
+  <button
+    type="button"
+    class="qb-rich-editor__tool"
+    data-rich-copy-math
+    disabled
+   data-sm-action="nav" data-sm-size="compact">
+    {{ _('Көшіру') }}
+  </button>
+
+
+  <!-- Вставить скопированную формулу -->
+  <button
+    type="button"
+    class="qb-rich-editor__tool"
+    data-rich-paste-math
+    disabled
+   data-sm-action="nav" data-sm-size="compact">
+    {{ _('Қою') }}
+  </button>
+
+
+  <!-- Удалить выбранную формулу -->
+  <button
+    type="button"
+    class="
+      qb-rich-editor__tool
+      qb-rich-editor__tool--danger
+    "
+    data-rich-delete-math
+    disabled
+   data-sm-action="danger" data-sm-size="compact">
+    {{ _('Жою') }}
+  </button>
+
+</div>
+
+        <div
+          class="qb-rich-editor__content"
+          contenteditable="true"
+          role="textbox"
+          aria-multiline="true"
+          data-placeholder="{{ value }} жауабы"
+          data-rich-content
+          data-type-input
+        ></div>
+
+
+        <!-- Fallback plain text.
+             Нужен для существующего web-helper. -->
+
+        <input
+          type="hidden"
+          name="option_{{ suffix }}"
+          data-rich-plain-value
+          data-type-input
+        >
+
+
+        <!-- Основной rich-content transport -->
+
+        <input
+          type="hidden"
+          name="option_{{ suffix }}_segments"
+          data-rich-segments
+          data-type-input
+        >
+
+      </div>
+
+    </div>
+
+  {% endfor %}
+
+  </div>
+  <p data-sc-status role="status"></p>
+  <div data-sc-parts></div>
+  <input type="hidden" name="single_choice_parts" data-sc-payload data-type-input disabled>
+  <template data-sc-part-template>
+    <section data-sc-part class="qb-sc-editor-part">
+      <h4 data-sc-label></h4>
+      <label>{{ _('Условие пункта') }}</label>
+      {{ sc_rich_editor() }}
+      {% for value in ['A','B','C','D'] %}
+        <div data-sc-option="{{ value }}" class="qb-sc-editor-option">
+          <strong>{{ value }}</strong>
+          {{ sc_rich_editor() }}
+        </div>
+      {% endfor %}
+      <label class="qb-sc-editor-answer">{{ _('Дұрыс жауап / Правильный ответ') }}
+        <select data-sc-answer data-type-input>
+          <option value="">{{ _('Таңдаңыз / Выберите') }}</option>
+          {% for value in ['A','B','C','D'] %}<option value="{{ value }}">{{ value }}</option>{% endfor %}
+        </select>
+      </label>
+    </section>
+  </template>
+</div>
+<script defer src="{{ url_for('static',path='js/teacher/assessment/question_bank/single_choice_parts_editor.js') }}?v=63"></script>

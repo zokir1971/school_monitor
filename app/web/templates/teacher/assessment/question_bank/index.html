@@ -1,0 +1,370 @@
+{% extends "base.html" %}
+
+{% block title %}
+{{ _('Тапсырмалар конструкторы') }}
+{% endblock %}
+
+
+{% block extra_css %}
+<style>
+  .question-bank-page {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 24px 16px 48px;
+  }
+
+  .question-bank-heading {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 20px 24px;
+    margin-bottom: 24px;
+  }
+  .question-bank-heading > h1 {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .question-bank-heading > p {
+    grid-column: 1 / -1;
+    margin: 0;
+    line-height: 1.5;
+  }
+.question-bank-heading h1 { margin: 0; }
+.question-bank-heading__back {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  justify-self: end;
+  text-align: center;
+  padding: 10px 18px;
+
+  background: #2563eb;
+  border: 1px solid #2563eb;
+  border-radius: 8px;
+
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.5;
+  text-decoration: none;
+}
+
+.question-bank-heading__back:hover {
+  background: #1d4ed8;
+  border-color: #1d4ed8;
+  color: #fff;
+  text-decoration: none;
+}
+
+.question-bank-heading__back:focus-visible {
+  outline: 3px solid #93c5fd;
+  outline-offset: 2px;
+}
+
+
+  .question-bank-section {
+    margin-bottom: 30px;
+  }
+
+  .question-bank-section__title {
+    margin: 0 0 14px;
+
+    color: #101828;
+    font-size: 18px;
+    font-weight: 700;
+  }
+
+  .question-bank-grid {
+    display: grid;
+    grid-template-columns: repeat(
+      3,
+      minmax(0, 1fr)
+    );
+    gap: 16px;
+  }
+
+  .question-bank-card {
+    display: block;
+
+    min-height: 180px;
+    padding: 20px;
+
+    background: #fff;
+
+    border: 1px solid #e4e7ec;
+    border-radius: 14px;
+
+    color: inherit;
+    text-decoration: none;
+
+    transition:
+      border-color 0.15s ease,
+      box-shadow 0.15s ease,
+      transform 0.15s ease;
+  }
+
+  .question-bank-card:not(.question-bank-card--disabled):hover {
+    border-color: #98a2b3;
+
+    box-shadow:
+      0 4px 14px
+      rgba(16, 24, 40, 0.08);
+
+    transform: translateY(-1px);
+  }
+
+  .question-bank-card__top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+
+    margin-bottom: 16px;
+  }
+
+  .question-bank-card__icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    width: 44px;
+    height: 44px;
+
+    border-radius: 10px;
+
+    background: #f2f4f7;
+
+    font-size: 22px;
+  }
+
+  .question-bank-card__arrow {
+    color: #98a2b3;
+    font-size: 20px;
+  }
+
+  .question-bank-card__title {
+    margin: 0 0 8px;
+
+    color: #101828;
+    font-size: 17px;
+    font-weight: 700;
+  }
+
+  .question-bank-card__description {
+    margin: 0;
+
+    color: #667085;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  .question-bank-card--disabled {
+    cursor: default;
+    opacity: 0.62;
+  }
+
+  .question-bank-card__status {
+    display: inline-flex;
+
+    margin-top: 14px;
+    padding: 4px 8px;
+
+    border-radius: 999px;
+
+    background: #f2f4f7;
+    color: #667085;
+
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .question-bank-info {
+    padding: 20px;
+
+    background: #f9fafb;
+
+    border: 1px solid #eaecf0;
+    border-radius: 14px;
+  }
+
+  .question-bank-info__title {
+    margin: 0 0 8px;
+
+    color: #344054;
+    font-size: 15px;
+    font-weight: 700;
+  }
+
+  .question-bank-info__text {
+    margin: 0;
+
+    color: #667085;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  @media (max-width: 960px) {
+    .question-bank-grid {
+      grid-template-columns: repeat(
+        2,
+        minmax(0, 1fr)
+      );
+    }
+  }
+
+  @media (max-width: 640px) {
+    .question-bank-heading {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 16px;
+    }
+    .question-bank-heading__back {
+      justify-self: start;
+      max-width: 100%;
+      box-sizing: border-box;
+    }
+
+    .question-bank-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+{% endblock %}
+
+
+{% block content %}
+
+<div class="question-bank-page">
+
+  <div class="question-bank-heading">
+    <h1>
+        {{ _('Тапсырмалар конструкторы') }}
+    </h1>
+    <a
+       href="{{ url_for('dashboard_teacher') }}"
+       class="question-bank-heading__back" data-sm-action="nav" data-sm-back="true">
+      {{ _('← Мұғалім панеліне қайту') }}
+    </a>
+
+    <p>
+      {{ _('Оқу мақсаттарына сәйкес тапсырмалар құру, оларды тексеру және Assessment кезінде қолдануға дайындау.') }}
+    </p>
+
+  </div>
+
+
+  <section class="question-bank-section">
+
+    <h2 class="question-bank-section__title">
+      {{ _('Тапсырмалармен жұмыс') }}
+    </h2>
+
+    <div class="question-bank-grid">
+
+      <a class="question-bank-card" href="{{ url_for('teacher_question_bank_item_create_page') }}">
+        <div class="question-bank-card__top">
+          <div class="question-bank-card__icon">
+            ✏️
+          </div>
+          <div class="question-bank-card__arrow">
+            →
+          </div>
+        </div>
+
+        <h3 class="question-bank-card__title">
+          {{ _('Жаңа тапсырма құру') }}
+        </h3>
+
+        <p class="question-bank-card__description">
+          {{ _('Оқу мақсатына сәйкес жаңа тапсырманы қолмен құру.') }}
+        </p>
+      </a>
+
+      <a class=" question-bank-card" href="{{ url_for('teacher_question_bank_ai_create_page') }}">
+        <div class="question-bank-card__top">
+
+          <div class="question-bank-card__icon">
+            ✨
+          </div>
+
+        </div>
+
+        <h3 class="question-bank-card__title">
+          {{ _('AI арқылы тапсырма құру') }}
+        </h3>
+
+        <p class="question-bank-card__description">
+          {{ _('Оқу мақсаты, қиындық деңгейі және тапсырма түрі бойынша AI көмегімен сұрақтар дайындау.') }}
+        </p>
+
+        <span class="question-bank-card__status">
+          {{ _('Келесі қадам') }}
+        </span>
+
+      </a>
+
+
+      <a class="question-bank-card"  href="{{ url_for('teacher_question_bank_items_page') }}">
+        <div class="question-bank-card__top">
+          <div class="question-bank-card__icon">
+            📚
+          </div>
+          <div class="question-bank-card__arrow">
+           →
+          </div>
+        </div>
+
+        <h3 class="question-bank-card__title">
+          {{ _('Тапсырмалар банкі') }}
+        </h3>
+
+        <p class="question-bank-card__description">
+          {{ _('Құрылған тапсырмаларды, олардың мәртебесін және тексеру нәтижелерін қарау.') }}
+        </p>
+      </a>
+
+      <a class="question-bank-card" href="{{ url_for('teacher_assessment_bank_page') }}">
+
+        <div class="question-bank-card__top">
+          <div class="question-bank-card__icon">
+            🧰
+          </div>
+        </div>
+
+      <h3 class="question-bank-card__title">
+        {{ _('Тапсырмалар банкін пайдаланып тапсырмалар құру') }}
+      </h3>
+
+      <p class="question-bank-card__description">
+        {{ _('Тапсырмалар банкіндегі дайын сұрақтарды таңдап, оларды біріктіру арқылы жаңа Assessment құру.') }}
+      </p>
+
+
+      </a>
+
+    </div>
+
+  </section>
+
+
+  <section class="question-bank-section">
+
+    <h2 class="question-bank-section__title">
+      {{ _('Тапсырманың жұмыс кезеңдері') }}
+    </h2>
+
+    <div class="question-bank-info">
+
+      <h3 class="question-bank-info__title">
+        DRAFT → REVIEW → READY
+      </h3>
+
+      <p class="question-bank-info__text">
+        {{ _('Жаңа тапсырма алдымен черновик ретінде сақталады. Тексеруге жіберілгеннен кейін тапсырма REVIEW мәртебесіне өтеді. Эксперт мақұлдаған тапсырмалар READY мәртебесіне өтіп, Assessment кезінде қолдануға дайын болады.') }}
+      </p>
+
+    </div>
+
+  </section>
+
+</div>
+
+{% endblock %}

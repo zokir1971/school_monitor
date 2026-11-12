@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+{% block title %}{{ 'Уведомление о задачах' if ui_language() == 'ru' else 'Тапсырмалар туралы хабарлама' }}{% endblock %}
+{% block content %}{% set ru = ui_language() == 'ru' %}
+<section class="dashboard-section">
+<a class="btn" data-sm-action="nav" href="{{ request.url_for('internal_notifications_inbox') }}">{{ '← К уведомлениям' if ru else '← Хабарламаларға' }}</a>
+<h2>{{ 'Задачи месячного плана' if ru else 'Айлық жоспар тапсырмалары' }} · {{ '%02d'|format(notice.month) }}.{{ notice.year }}</h2>
+<p>{{ notice.sent_at.strftime('%d.%m.%Y %H:%M') }} · {{ 'Версия' if ru else 'Нұсқа' }} {{ notice.revision }}</p>
+<p>{{ 'Это состав задач на момент отправки. Текущие сроки, состояние и принятие в работу доступны в разделе задач.' if ru else 'Бұл — хабарлама жіберілген кездегі тапсырмалар құрамы. Ағымдағы мерзімдер, мәртебе және жұмысқа қабылдау тапсырмалар бөлімінде қолжетімді.' }}</p>
+<div style="overflow-x:auto"><table class="table"><thead><tr><th>{{ 'Задача' if ru else 'Тапсырма' }}</th><th>{{ 'Роль' if ru else 'Рөл' }}</th><th>{{ 'Срок' if ru else 'Мерзім' }}</th></tr></thead><tbody>
+{% for task in notice.payload.tasks %}<tr><td>№{{ task.id }} · {{ task.title }}</td><td>{{ ('Ответственный' if task.kind == 'primary' else 'Соисполнитель') if ru else ('Жауапты' if task.kind == 'primary' else 'Бірлескен орындаушы') }}</td><td>{{ task.start_text }} — {{ task.end_text }}</td></tr>{% endfor %}
+</tbody></table></div>
+{% if not notice.read_at %}<form method="post" action="{{ request.url_for('internal_notification_read',notice_id=notice.id) }}"><button class="btn" data-sm-action="success" type="submit">{{ 'Отметить прочитанным' if ru else 'Оқылған деп белгілеу' }}</button></form>{% endif %}
+{% if user.role.value in ('school_staff','school_admin') %}<a class="btn" data-sm-action="primary" href="{{ request.url_for('staff_tasks_page') }}?month={{ notice.month }}">{{ 'Открыть мои задачи' if ru else 'Менің тапсырмаларымды ашу' }}</a>
+{% else %}<p>{{ 'Для выполнения задач откройте панель сотрудника.' if ru else 'Тапсырмаларды орындау үшін қызметкер панелін ашыңыз.' }}</p><a class="btn" data-sm-action="nav" href="{{ request.url_for('workspace_select') }}">{{ 'Сменить панель' if ru else 'Панельді ауыстыру' }}</a>{% endif %}
+</section>{% endblock %}

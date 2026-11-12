@@ -1,0 +1,10 @@
+[data-qb-objective-display] [hidden], [data-qb-objective-previews] [hidden] {display:none!important}
+.qb-objective-text {white-space:pre-wrap;line-height:1.7;overflow-wrap:anywhere}
+.qb-objective-math {display:inline-block;vertical-align:middle;border:0;background:transparent;font-size:1.1em;max-width:100%;pointer-events:none}
+.qb-objective-language-note {display:block;color:#8a5800;font-size:13px;line-height:1.5;margin-bottom:5px}
+[data-qb-objective-previews] {margin:12px 0;padding:12px;border:1px solid #d5dfed;border-radius:8px;background:#f8fafc;grid-column:1/-1}
+[data-qb-objective-previews]:not(:has(> :not([hidden]))) {display:none}
+
+.qb-objective-language-field { display:flex; flex-direction:column; gap:6px; margin-bottom:16px; font:500 14px/1.5 system-ui,-apple-system,"Segoe UI",Arial,sans-serif; color:#1e293b; }
+.qb-objective-language-field select { box-sizing:border-box; width:100%; min-width:0; padding:10px 12px; border:1px solid #cbd5e1; border-radius:8px; font:inherit; color:#1e293b; background:#fff; }
+.qb-objective-language-field select:focus { outline:2px solid #bfdbfe; border-color:#3b82f6; }

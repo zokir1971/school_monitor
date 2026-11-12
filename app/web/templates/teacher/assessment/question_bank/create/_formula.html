@@ -1,0 +1,78 @@
+<div id="formula-fields" data-question-fields="formula" hidden>
+  <div data-formula-legacy>
+  <div class="qb-form-field">
+    <label for="formula_answer" class="qb-form-label">{{ _('Дұрыс жауап — формула') }} <span class="qb-required">*</span></label>
+    <button type="button" class="qb-add-answer" data-formula-answer-open data-sm-action="edit">{{ _('Формула редакторын ашу') }}</button>
+    <textarea id="formula_answer" name="formula_answer" class="qb-form-control qb-form-textarea"
+              rows="2" data-type-input data-formula-answer-input
+              placeholder="{{ _('LaTeX формуласын енгізіңіз немесе редакторды ашыңыз') }}"></textarea>
+    <p class="qb-help-text">{{ _('Бұл — білім алушының эталондық жауабы. Тапсырма мәтініндегі формулалардан бөлек сақталады.') }}</p>
+    <div data-formula-answer-preview hidden>
+      <math-field class="qb-math-field" read-only tabindex="-1" data-formula-answer-field></math-field>
+    </div>
+  </div>
+  <div class="qb-form-field">
+    <label for="formula_target_variable" class="qb-form-label">{{ _('Өрнектелетін шама (қажет болса)') }}</label>
+    <input id="formula_target_variable" name="formula_target_variable" class="qb-form-control"
+           data-type-input maxlength="80" placeholder="{{ _('Мысалы: F') }}">
+    <p class="qb-help-text">{{ _('Тапсырмада белгілі бір шаманы өрнектеу талап етілсе, оның белгіленуін көрсетіңіз.') }}</p>
+  </div>
+  <h3 class="qb-section-title">{{ _('Белгіленулер мен шамалар') }}</h3>
+  <p class="qb-help-text">{{ _('Мысалы: F — күш, m — масса, a — үдеу. Формула дұрыс болғаннан кейін білім алушы әр белгіленуге сәйкес шаманы таңдайды.') }}</p>
+  <div data-formula-variables></div>
+  <button type="button" class="qb-add-answer" data-formula-variable-add data-sm-action="primary">{{ _('+ Белгілену қосу') }}</button>
+  <h3 class="qb-section-title">{{ _('Қосымша жауап нұсқалары') }}</h3>
+  <p class="qb-help-text">{{ _('Қажет болса, селекторға қате жауап нұсқаларын қосыңыз. Дұрыс шама атаулары автоматты қосылады.') }}</p>
+  <div data-formula-distractors></div>
+  <button type="button" class="qb-add-answer" data-formula-distractor-add data-sm-action="primary">{{ _('+ Нұсқа қосу') }}</button>
+  </div>
+  <div data-formula-parts></div>
+  <p data-formula-parts-status role="status" aria-live="polite"></p>
+  <input type="hidden" name="formula_parts_payload" data-formula-parts-payload data-type-input disabled>
+  <template data-formula-part-template>
+    <section data-formula-part style="border:1px solid #eaecf0;border-radius:8px;padding:16px;margin:12px 0;">
+      <h3 data-formula-part-heading></h3>
+      <p>{{ _('Тармақ шарты / Условие пункта') }}</p>
+      <div class="qb-rich-editor" data-rich-editor data-formula-prompt>
+        <div class="qb-rich-editor__toolbar"><button type="button" data-rich-add-math data-sm-action="nav">{{ _('+ Формула') }}</button></div>
+        <div class="qb-rich-editor__content" data-rich-content contenteditable="true" role="textbox" aria-label="{{ _('Условие пункта') }}" aria-multiline="true"></div>
+        <input type="hidden" data-rich-plain-value data-type-input><input type="hidden" data-rich-segments data-type-input>
+      </div>
+      <p>{{ _('Эталон формула / Правильная формула') }}</p>
+      <div class="qb-rich-editor" data-rich-editor data-formula-expression>
+        <div class="qb-rich-editor__toolbar"><button type="button" data-rich-add-math data-sm-action="nav">{{ _('+ Формула / символ') }}</button></div>
+        <div class="qb-rich-editor__content" data-rich-content contenteditable="true" role="textbox" aria-label="{{ _('Правильная формула') }}" aria-multiline="true"></div>
+        <input type="hidden" data-rich-plain-value data-type-input><input type="hidden" data-rich-segments data-type-input>
+      </div>
+      <p>{{ _('Белгіленулер мен шамалар / Обозначения и значения') }}</p>
+      <div data-part-meanings></div>
+      <button type="button" data-part-add-meaning data-sm-action="nav">{{ _('+ Белгілену / Обозначение') }}</button>
+      <label style="display:block;margin-top:12px;">{{ _('Өрнектелетін шама / Выразить переменную (необязательно)') }}
+        <math-field data-part-target class="qb-form-control" math-virtual-keyboard-policy="auto" aria-label="{{ _('Выразить переменную (необязательно)') }}" style="display:block;min-width:100px;"></math-field>
+      </label>
+      <label style="display:block;margin-top:12px;">{{ _('Қосымша шама нұсқалары / Отвлекающие значения: по одному на строку') }}
+        <textarea data-part-distractors data-type-input class="qb-form-control" rows="2"></textarea>
+      </label>
+    </section>
+  </template>
+  <template data-part-meaning-template>
+    <div data-part-meaning style="display:flex;gap:8px;margin:8px 0;flex-wrap:wrap;">
+      <div style="flex:1;min-width:180px;">
+        <math-field data-part-symbol class="qb-form-control" math-virtual-keyboard-policy="auto" aria-label="{{ _('Обозначение или математический символ') }}" style="display:block;min-width:100px;"></math-field>
+        <details style="margin-top:6px;"><summary>{{ _('Символдар / Символы') }}</summary>
+        <div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;" aria-label="{{ _('Математические символы') }}">
+          <button type="button" data-symbol-insert="\in" aria-label="{{ _('Принадлежит') }}" data-sm-action="nav">∈</button>
+          <button type="button" data-symbol-insert="\notin" aria-label="{{ _('Не принадлежит') }}" data-sm-action="nav">∉</button>
+          <button type="button" data-symbol-insert="\subset" aria-label="{{ _('Подмножество') }}" data-sm-action="nav">⊂</button>
+          <button type="button" data-symbol-insert="\subseteq" aria-label="{{ _('Подмножество или равно') }}" data-sm-action="nav">⊆</button>
+          <button type="button" data-symbol-insert="\cup" aria-label="{{ _('Объединение') }}" data-sm-action="nav">∪</button>
+          <button type="button" data-symbol-insert="\cap" aria-label="{{ _('Пересечение') }}" data-sm-action="nav">∩</button>
+          <button type="button" data-symbol-insert="\varnothing" aria-label="{{ _('Пустое множество') }}" data-sm-action="nav">∅</button>
+        </div></details>
+      </div>
+      <input type="text" data-part-meaning-label data-type-input maxlength="200" class="qb-form-control" aria-label="{{ _('Значение обозначения') }}" placeholder="{{ _('Күш / Сила') }}">
+      <button type="button" data-part-remove-meaning data-sm-action="danger">{{ _('Жою / Удалить') }}</button>
+    </div>
+  </template>
+</div>
+<script defer src="{{ url_for('static', path='js/teacher/assessment/question_bank/formula_parts_editor.js') }}?v=63"></script>

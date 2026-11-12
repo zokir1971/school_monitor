@@ -1,0 +1,30 @@
+{% from 'teacher/assessment/question_bank/components/grading_summary.html' import number_label with context %}
+{% macro render_multiple_choice_grading_summary(item) %}
+{% if item.grading_settings.get('element_score_policy') == 'weighted_elements_v2' %}
+{% from 'teacher/assessment/question_bank/components/weighted_grading_summary.html' import render_weighted_grading with context %}{{ render_weighted_grading(item) }}
+{% else %}
+  <div class="qb-grading-list">
+    <div class="qb-grading-row">
+      <span class="qb-grading-row__key">{{ _('Ең жоғары балл') }}</span>
+      <span class="qb-grading-row__value">{{ number_label(item.max_score) }}</span>
+    </div>
+    <div class="qb-grading-row">
+      <span class="qb-grading-row__key">{{ _('Количество правильных вариантов') }}</span>
+      <span class="qb-grading-row__value">{{ item.answer_key.get('values', [])|length }}</span>
+    </div>
+    <div class="qb-grading-row">
+      <span class="qb-grading-row__key">{{ _('За полный правильный набор') }}</span>
+      <span class="qb-grading-row__value">{{ number_label(item.max_score) }}</span>
+    </div>
+    <div class="qb-grading-row">
+      <span class="qb-grading-row__key">{{ _('За неполный набор или лишний вариант') }}</span>
+      <span class="qb-grading-row__value">{{ _('0 балл') }}</span>
+    </div>
+    <div class="qb-grading-row">
+      <span class="qb-grading-row__key">{{ _('Частичное оценивание') }}</span>
+      <span class="qb-grading-row__value">{{ _('Жоқ') }}</span>
+    </div>
+  </div>
+  <p class="qb-text qb-muted">{{ _('Выберите все правильные варианты без лишних. Только полный правильный набор даёт максимальный балл.') }}</p>
+{% endif %}
+{% endmacro %}

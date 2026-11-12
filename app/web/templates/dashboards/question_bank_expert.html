@@ -1,0 +1,233 @@
+{% from 'dashboards/components/ready_bank_card.html' import ready_bank_card with context %}
+{% extends "base.html" %}
+
+{% block title %}{{ _('Предметный эксперт') }}{% endblock %}
+
+{% block extra_css %}
+<style>
+  .qb-expert-page {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 28px 16px 48px;
+  }
+
+  .qb-expert-page,
+  .qb-expert-page * {
+    box-sizing: border-box;
+  }
+
+  .qb-expert-header {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    margin-bottom: 28px;
+  }
+
+  .qb-expert-icon {
+    display: grid;
+    place-items: center;
+    flex: 0 0 60px;
+    width: 60px;
+    height: 60px;
+    border: 1px solid #dbeafe;
+    border-radius: 16px;
+    background: #eff6ff;
+    color: #2563eb;
+  }
+
+  .qb-expert-icon svg {
+    width: 28px;
+    height: 28px;
+  }
+
+  .qb-expert-title {
+    margin: 0 0 6px;
+    color: #101828;
+    font-size: 28px;
+    font-weight: 700;
+    line-height: 1.25;
+  }
+
+  .qb-expert-subtitle {
+    margin: 0;
+    color: #667085;
+    font-size: 15px;
+    line-height: 1.6;
+  }
+
+  .qb-expert-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 32px;
+    padding: 28px;
+    border: 1px solid #eaecf0;
+    border-radius: 14px;
+    background: #fff;
+    box-shadow: 0 2px 6px rgb(16 24 40 / 4%);
+  }
+
+  .qb-expert-card__body {
+    min-width: 0;
+    max-width: 640px;
+  }
+
+  .qb-expert-card__label {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    margin-bottom: 14px;
+    padding: 5px 10px;
+    border-radius: 999px;
+    background: #ecfdf3;
+    color: #067647;
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .qb-expert-card__label svg {
+    width: 15px;
+    height: 15px;
+  }
+
+  .qb-expert-card__title {
+    margin: 0 0 10px;
+    color: #101828;
+    font-size: 21px;
+    font-weight: 650;
+    line-height: 1.4;
+  }
+
+  .qb-expert-card__text {
+    margin: 0;
+    color: #667085;
+    font-size: 15px;
+    line-height: 1.7;
+  }
+
+  .qb-expert-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    gap: 10px;
+    min-height: 46px;
+    padding: 12px 18px;
+    border: 1px solid #2563eb;
+    border-radius: 9px;
+    background: #2563eb;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.4;
+    text-decoration: none;
+    transition: background-color .15s ease, border-color .15s ease;
+  }
+
+  .qb-expert-action:hover {
+    border-color: #1d4ed8;
+    background: #1d4ed8;
+    color: #fff;
+    text-decoration: none;
+  }
+
+  .qb-expert-action:focus-visible {
+    outline: 3px solid #93c5fd;
+    outline-offset: 3px;
+  }
+
+  .qb-expert-action svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  @media (max-width: 700px) {
+    .qb-expert-page {
+      padding: 20px 12px 32px;
+    }
+
+    .qb-expert-header {
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 22px;
+    }
+
+    .qb-expert-icon {
+      flex-basis: 48px;
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+    }
+
+    .qb-expert-title {
+      font-size: 23px;
+    }
+
+    .qb-expert-card {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 22px;
+      padding: 22px 18px;
+    }
+
+    .qb-expert-card__title {
+      font-size: 19px;
+    }
+
+    .qb-expert-action {
+      width: 100%;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .qb-expert-action {
+      transition: none;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="qb-expert-page">
+
+  <header class="qb-expert-header">
+    <div class="qb-expert-icon" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M9 5H6a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-3"/>
+        <rect x="9" y="2" width="6" height="5" rx="1.5"/>
+        <path d="m8 14 3 3 5-6"/>
+      </svg>
+    </div>
+    <div>
+      <h1 class="qb-expert-title">{{ _('Предметный эксперт') }}</h1>
+      <p class="qb-expert-subtitle">{{ _('Рабочее пространство экспертизы банка заданий') }}</p>
+    </div>
+  </header>
+
+  {{ ready_bank_card('expert') }}
+
+  <section class="qb-expert-card" aria-labelledby="qb-expert-review-title">
+    <div class="qb-expert-card__body">
+      <span class="qb-expert-card__label">
+        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 3 4 6v6c0 5 8 9 8 9s8-4 8-9V6l-8-3Z"/>
+          <path d="m8 12 3 3 5-6"/>
+        </svg>
+        {{ _('Экспертная проверка') }}
+      </span>
+      <h2 id="qb-expert-review-title" class="qb-expert-card__title">{{ _('Экспертиза заданий') }}</h2>
+      <p class="qb-expert-card__text">
+        {{ _('Просмотрите отправленные на проверку задания и примите экспертное решение.') }}
+      </p>
+    </div>
+
+    <a href="{{ url_for('question_bank_expert_review_page') }}" class="qb-expert-action" data-sm-action="nav">
+      {{ _('Перейти к проверке') }}
+      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M5 12h14m-6-6 6 6-6 6"/>
+      </svg>
+    </a>
+  </section>
+
+</div>
+{% endblock %}

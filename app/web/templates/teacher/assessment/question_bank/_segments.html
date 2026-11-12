@@ -1,0 +1,67 @@
+{# =========================================================
+   Question Bank — read-only segment renderer
+
+   Question Contract:
+
+   [
+     {
+       "type": "text",
+       "text": "..."
+     },
+     {
+       "type": "latex",
+       "text": "..."
+     }
+   ]
+   ========================================================= #}
+
+{% macro render_segments(segments, fallback='—') %}
+
+  {% if segments %}
+
+    {% for segment in segments | part_statement_layout(none) %}
+
+      {% set segment_type = segment.get('type') %}
+      {% set segment_text = segment.get('text', '') %}
+
+      {% if segment_type == 'latex' %}
+
+        <span class="qb-math">
+          <math-field
+            class="qb-math-field"
+            read-only
+            tabindex="-1"
+          >{{ segment_text }}</math-field>
+        </span>
+
+      {% elif segment_type == 'image' %}
+        <img class="qb-segment-image"
+             src="{{ url_for('teacher_question_bank_media_view') }}?object_key={{ segment.get('object_key', '') | urlencode }}"
+             alt="{{ segment.get('alt', '') }}" loading="lazy"
+             style="max-width:100%;height:auto;display:block;margin:12px 0">
+      {% elif segment_type == 'text' %}
+
+        <span class="qb-segment-text">{{ segment_text }}</span>
+
+      {% else %}
+
+        {#
+          Не скрываем содержимое неизвестного сегмента.
+          Если Question Contract расширится, пользователь
+          хотя бы увидит его текст.
+        #}
+        <span class="qb-segment-text">{{ segment_text }}</span>
+
+      {% endif %}
+
+    {% endfor %}
+
+  {% elif fallback %}
+
+    <span class="qb-muted">
+      {{ fallback }}
+    </span>
+
+  {% endif %}
+
+{% endmacro %}

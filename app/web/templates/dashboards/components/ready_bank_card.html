@@ -1,0 +1,23 @@
+{% macro ready_bank_card(style='admin') -%}
+{% if style == 'teacher' %}
+<a class="teacher-card" href="{{ url_for('shared_question_bank_catalog') }}">
+  <div class="teacher-card__top"><div class="teacher-card__icon" aria-hidden="true">📚</div><div class="teacher-card__arrow" aria-hidden="true">→</div></div>
+  <h3 class="teacher-card__title">{{ _('Банк готовых к использованию заданий') }}</h3>
+  <p class="teacher-card__description">{{ _('Просмотр проверенных заданий по предмету, классу, четверти и учебной цели.') }}</p>
+</a>
+{% elif style == 'expert' %}
+<section class="qb-expert-card">
+ <div class="qb-expert-card__body"><h2 class="qb-expert-card__title">{{ _('Банк готовых к использованию заданий') }}</h2><p class="qb-expert-card__text">{{ _('Просмотр проверенных заданий по предмету, классу, четверти и учебной цели.') }}</p></div>
+ <a href="{{ url_for('shared_question_bank_catalog') }}" class="qb-expert-action" data-sm-action="nav">{{ _('Открыть') }} →</a>
+</section>
+{% else %}
+<a class="card" href="{{ url_for('shared_question_bank_catalog') }}">
+ <div class="card__inner">
+  <div class="card__top"><div class="card__icon" aria-hidden="true">📚</div></div>
+  <h3 class="card__title">{{ _('Банк готовых к использованию заданий') }}</h3>
+  <p class="card__desc">{{ _('Просмотр проверенных заданий по предмету, классу, четверти и учебной цели.') }}</p>
+  <div class="card__footer"><span>{{ _('Открыть') }}</span><span class="card__arrow" aria-hidden="true">→</span></div>
+ </div>
+</a>
+{% endif %}
+{%- endmacro %}

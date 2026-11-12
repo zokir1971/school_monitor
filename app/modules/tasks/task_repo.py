@@ -17,7 +17,7 @@ from app.modules.planning.models_month_plan import (
     SchoolMonthPlanItem,
     SchoolMonthPlanItemAssignee,
 )
-from app.modules.planning.models_school import SchoolPlan
+from app.modules.planning.models_school import SchoolPlan, SchoolPlanRow11
 from app.modules.staff.models_staff_school import SchoolStaffRole
 
 
@@ -106,7 +106,9 @@ class StaffTasksRepo:
 
             joinedload(
                 SchoolMonthPlanItem.source_row11
-            ),
+            ).selectinload(SchoolPlanRow11.review_places),
+
+            joinedload(SchoolMonthPlanItem.execution),
 
             selectinload(
                 SchoolMonthPlanItem.review_places

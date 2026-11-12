@@ -1,73 +1,268 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="{{ ui_language() }}">
 <head>
   <meta charset="UTF-8">
-  <title>{% block title %}School Monitor{% endblock %}</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="{{ url_for('static', path='css/base.css') }}">
-  {% block extra_css %}{% endblock %}
-</head>
-<body>
 
-<header class="header">
+  <title>
+    {% block title %}School Monitor{% endblock %}
+  </title>
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
+
+  <link
+    rel="stylesheet"
+    href="{{ url_for('static', path='css/base.css') }}"
+  >
+
+  <link rel="stylesheet" href="{{ url_for('static', path='css/ui_language.css') }}">
+  {% block extra_css %}{% endblock %}
+  <link rel="stylesheet" href="{{ url_for('static',path='css/teacher/assessment/question_bank/media_layout.css') }}?v=74">
+<script id="ui-i18n" type="application/json">{{ {'language': ui_language(), 'messages': ui_messages()} | tojson }}</script>
+<script src="{{ url_for('static', path='js/ui_i18n.js') }}?v=i18n3"></script>
+<script src="{{ url_for('static', path='js/ui_language_scroll.js') }}?v=1"></script>
+<link rel="stylesheet" href="{{ url_for('static',path='student_portal/ui_actions.css') }}?v=172">
+<script defer src="{{ url_for('static',path='student_portal/ui_actions.js') }}?v=167"></script>
+<link rel="stylesheet" href="{{ url_for('static', path='css/account_header.css') }}?v=192">
+<script defer src="{{ url_for('static', path='js/account_header.js') }}?v=193"></script>
+</head>
+
+<body data-sm-method="{{ request.method }}" data-sm-user="{{ user.id if user is defined and user else 'anonymous' }}" data-sm-workspace="{% if workspace_context is defined and workspace_context %}{% for item in workspace_context.items if item.is_active %}{{ item.code.value }}{% endfor %}{% endif %}">
+
+<header class="header sm-site-header">
+
+  <!-- =====================================================
+       LEFT
+       ===================================================== -->
+
   <div class="header__left">
+
     <a href="/dashboards" class="brand">
       <span class="brand__icon">🏫</span>
-      <span class="brand__text">School Monitor</span>
+      <span class="brand__text">
+        School Monitor
+      </span>
     </a>
 
-    {% if user is defined and user %}
-      {# role может быть Enum или строкой #}
-      {% set role = user.role %}
 
-      <a href="/dashboards" class="panel-title panel-title--btn">
-        {% if role in ["superuser", "SUPERUSER"] %}
-          Панель главного администратора
-        {% elif role in ["region_admin", "REGION_ADMIN"] %}
-          Панель администратора области
-        {% elif role in ["district_admin", "DISTRICT_ADMIN"] %}
-          Панель администратора района
-        {% elif role in ["school_admin", "SCHOOL_ADMIN"] %}
-          Панель администратора школы
+    {% if user is defined and user %}
+
+      {% if workspace_context is defined and workspace_context %}
+
+        <!-- ===============================================
+             WORKSPACE SWITCHER
+             =============================================== -->
+
+        {% if workspace_context.items | length > 1 %}
+
+          <details class="workspace-menu">
+
+            <summary class="workspace-menu__trigger">
+
+              {% for item in workspace_context.items %}
+                {% if item.is_active %}
+
+                  <span class="workspace-menu__current">
+                    {{ _(item.label) }}
+                  </span>
+
+                {% endif %}
+              {% endfor %}
+
+              <span
+                class="workspace-menu__arrow"
+                aria-hidden="true"
+              >
+                ▾
+              </span>
+
+            </summary>
+
+
+            <div class="workspace-menu__dropdown">
+
+              {% for item in workspace_context.items %}
+
+                {% if item.is_active %}
+
+                  <!-- ACTIVE WORKSPACE -->
+
+                  <div class="workspace-menu__active">
+
+                    <span>
+                      {{ _(item.label) }}
+                    </span>
+
+                    <span
+                      class="workspace-menu__check"
+                      aria-hidden="true"
+                    >
+                      ✓
+                    </span>
+
+                  </div>
+
+                {% else %}
+
+                  <!-- AVAILABLE WORKSPACE -->
+
+                  <form
+                    method="post"
+                    action="{{ url_for('workspace_switch') }}"
+                    class="workspace-menu__form"
+                  >
+
+                    <input
+                      type="hidden"
+                      name="workspace"
+                      value="{{ item.code.value }}"
+                    >
+
+                    <button
+                      type="submit"
+                      class="workspace-menu__item"
+                     data-sm-action="nav" data-sm-size="compact">
+                      {{ _(item.label) }}
+                    </button>
+
+                  </form>
+
+                {% endif %}
+
+              {% endfor %}
+
+            </div>
+
+          </details>
+
+
         {% else %}
-          Панель сотрудника школы
+
+          <!-- Только один workspace -->
+
+          {% for item in workspace_context.items %}
+
+            {% if item.is_active %}
+
+              <span class="panel-title">
+                {{ _(item.label) }}
+              </span>
+
+            {% endif %}
+
+          {% endfor %}
+
         {% endif %}
-      </a>
+
+
+      {% else %}
+
+        <!-- ===============================================
+             FALLBACK ДЛЯ СТАРЫХ СТРАНИЦ
+             =============================================== -->
+
+        <a href="{{ url_for('workspace_select') }}" class="panel-title panel-title--btn" data-sm-action="nav">{{ 'Сменить панель' if ui_language()=='ru' else 'Панельді ауыстыру' }}</a>
+
+      {% endif %}
 
     {% endif %}
+
   </div>
+
+
+  <!-- =====================================================
+       RIGHT
+       ===================================================== -->
 
   <div class="header__right">
-    {% if user is defined and user %}
-        <span class="user-info">Здравствуйте! {{ user.full_name or user.username }}</span>
+    <form method="post" action="{{ url_for('ui_language_switch') }}" class="ui-language"
+          aria-label="{{ _('Язык интерфейса') }}">
+      <input type="hidden" name="next" value="{{ language_return_url() }}">
+      {% for code, label in ui_languages %}
+        <button type="submit" name="language" value="{{ code }}" lang="{{ code }}"
+                class="ui-language__button{% if ui_language() == code %} is-active{% endif %}"
+                aria-pressed="{{ 'true' if ui_language() == code else 'false' }}" data-sm-action="nav" data-sm-size="compact">{{ label }}</button>
+      {% endfor %}
+    </form>
 
-      <form method="post" action="/logout">
-        <button type="submit" class="header-btn">Выйти</button>
-      </form>
-    {% else %}
-      {% if can_bootstrap_superuser %}
-        <a href="/setup/superuser" class="header-btn">Регистрация суперадмина (L0)</a>
-      {% else %}
-        <a href="/register-admin" class="header-btn">Регистрация админов (по коду)</a>
+    {% if user is defined and user %}
+
+      {% if user.school_id and user.staff_member_id %}
+      <a href="{{ url_for('internal_notifications_inbox') }}" class="header-btn" data-sm-action="nav" data-sm-size="compact" aria-label="{{ 'Уведомления' if ui_language() == 'ru' else 'Хабарламалар' }}" data-internal-notices data-count-url="{{ url_for('internal_notifications_count') }}">
+        <span aria-hidden="true">🔔</span> <span class="sm-header-notice-label">{{ 'Уведомления' if ui_language() == 'ru' else 'Хабарламалар' }}</span> <span data-notice-count hidden></span>
+      </a>
       {% endif %}
+
+      {% include 'components/user_menu.html' %}
+
+    {% else %}
+
+      {% if can_bootstrap_superuser %}
+
+        <a
+          href="/setup/superuser"
+          class="header-btn"
+         data-sm-action="nav" data-sm-size="compact">
+          {{ _('Регистрация суперадмина (L0)') }}
+        </a>
+
+      {% else %}
+
+        <a
+          href="/register-admin"
+          class="header-btn"
+         data-sm-action="nav" data-sm-size="compact">
+          {{ _('Регистрация админов (по коду)') }}
+        </a>
+
+      {% endif %}
+
     {% endif %}
+
   </div>
+
 </header>
 
+
+<!-- =======================================================
+     MAIN
+     ======================================================= -->
+
 <main class="app-main">
-  {# универсальный блок под сообщения, если захочешь передавать message / message_type #}
+  {% block page_navigation %}{% include 'components/page_navigation.html' %}{% endblock %}
+
   {% if message %}
+
     <div class="container">
-      <div class="alert {% if message_type %}alert--{{ message_type }}{% endif %}">
+
+      <div
+        class="
+          alert
+          {% if message_type %}
+            alert--{{ message_type }}
+          {% endif %}
+        "
+      >
         {{ message }}
       </div>
+
     </div>
+
   {% endif %}
 
+
   {% block content %}{% endblock %}
+
 </main>
 
+
 {% block extra_js %}{% endblock %}
+
 <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+
+<script src="{{ url_for('static', path='js/planning_page_state.js') }}?v=planning181" data-user="{{ user.id if user is defined and user else 'anonymous' }}"></script>
+<script src="{{ url_for('static', path='js/planning/internal_notice_badge.js') }}?v=182" defer></script>
 </body>
 </html>

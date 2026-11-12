@@ -1,0 +1,11 @@
+.my-reports-page{box-sizing:border-box;max-width:1240px;margin:24px auto;padding:0 16px;color:#17243b}
+.my-reports-page .month-filter{flex-wrap:wrap}
+.my-reports-page .month-filter select{box-sizing:border-box;min-width:200px;min-height:40px;padding:9px 12px;border:1px solid #cbd6e7;border-radius:8px;background:#fff;color:#17243b;font:inherit}
+.my-reports-page .btn{display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;min-height:40px;padding:10px 16px;border:1px solid #c9d8f2;border-radius:9px;background:#fff;color:#235ce0;text-decoration:none;font:600 14px/1.2 Arial,sans-serif;cursor:pointer;gap:6px}
+.my-reports-page .btn-primary{background:#2863ec;border-color:#2863ec;color:#fff}
+.my-reports-page .btn-primary:hover{background:#1f54d5;border-color:#1f54d5}
+.my-reports-page .btn:focus-visible,.my-reports-page select:focus-visible{outline:3px solid #9dbbff;outline-offset:2px}
+.my-reports-page .report-card{border-color:#dce4ef;border-radius:14px}
+@media(max-width:600px){.my-reports-page{padding:0 10px}.my-reports-page .report-card{padding:16px}.my-reports-page .month-filter select{flex:1;min-width:150px}}
+
+.my-reports-page .my-report-catalog{min-width:340px;text-align:left}.my-report-catalog__item{border:1px solid #dce5f0;border-radius:10px;padding:12px;margin:6px 0;background:#fff}.my-report-catalog__item strong{display:block;line-height:1.4;margin-bottom:4px}.my-report-catalog__status{display:inline-block;border-radius:20px;padding:4px 8px;font-size:12px;background:#eef3fb;margin:6px 0}.my-report-catalog__status--unassigned{background:#fff4dc;color:#875c00}.my-report-catalog__status--completed{background:#e8f7ef;color:#15653d}.my-report-catalog__status--waived{background:#f1f2f5;color:#536070}.my-report-catalog__actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}.my-report-catalog__actions:empty{display:none}.my-report-catalog__actions .btn{font-size:13px;min-height:34px;padding:8px 12px}

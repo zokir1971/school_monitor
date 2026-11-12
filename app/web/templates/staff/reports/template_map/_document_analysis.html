@@ -1,10 +1,3 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Title</title>
-</head>
-<body>
-
-</body>
-</html>
+{% set s=snapshot.summary %}<h2>{{ 'Проверка документов школы' if ru else 'Мектеп құжаттарын тексеру' }}</h2>
+<p>{{ 'Всего' if ru else 'Барлығы' }}: {{ s.total }} · {{ 'Есть' if ru else 'Бар' }}: {{ s.present }} · {{ 'Нет' if ru else 'Жоқ' }}: {{ s.missing }} · {{ 'Соответствуют' if ru else 'Сәйкес келеді' }}: {{ s.complies }} · {{ 'Не соответствуют' if ru else 'Сәйкес келмейді' }}: {{ s.non_compliant }} · {{ 'Не проверено' if ru else 'Тексерілмеген' }}: {{ s.pending }}</p>
+<table style="table-layout:fixed;width:100%"><colgroup><col style="width:26%"><col style="width:18%"><col style="width:16%"><col style="width:40%"></colgroup><thead><tr><th>{{ 'Документ / период' if ru else 'Құжат / кезең' }}</th><th>{{ 'Ответственный' if ru else 'Жауапты' }}</th><th>{{ 'Наличие / соответствие' if ru else 'Бар-жоғы / сәйкестігі' }}</th><th>{{ 'Замечание / основание' if ru else 'Ескертпе / негіздеме' }}</th></tr></thead><tbody>{% for row in entries %}<tr><td>{{ row.title }}<br><small style="font-size:.9em">{{ snapshot.categories[row.category][lang] }} · {{ row.period }}</small></td><td>{{ row.owner_name or '—' }}</td><td>{{ snapshot.states[row.presence][lang] }}<br>{{ snapshot.states[row.compliance][lang] }}</td><td style="white-space:pre-wrap;overflow-wrap:anywhere">{{ row.note }}{% if row.evidence %}<br>{{ row.evidence }}{% endif %}{% if row.source_document_id %}<br>{{ 'Документ системы' if ru else 'Жүйедегі құжат' }} №{{ row.source_document_id }}{% endif %}</td></tr>{% endfor %}</tbody></table>

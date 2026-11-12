@@ -16,6 +16,7 @@ from sqlalchemy import (
     UniqueConstraint,
     func,
 )
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -172,3 +173,21 @@ class SchoolMonthPlanNotification(Base):
         foreign_keys=[confirmed_by_user_id],
         lazy="selectin",
     )
+
+
+class SchoolMonthPlanInternalNotice(Base):
+    """Immutable internal delivery versions; WhatsApp state stays on the parent."""
+    __tablename__ = "school_month_plan_internal_notices"
+    __table_args__ = (
+        UniqueConstraint("notification_id", "revision", name="uq_month_internal_notice_revision"),
+        Index("ix_month_internal_notice_recipient", "recipient_user_id", "notification_id", "id"),
+    )
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    notification_id: Mapped[int] = mapped_column(ForeignKey("school_month_plan_notifications.id", ondelete="CASCADE"), nullable=False)
+    recipient_user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    revision: Mapped[int] = mapped_column(Integer, nullable=False)
+    digest: Mapped[str] = mapped_column(String(64), nullable=False)
+    payload: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    sent_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    sent_by_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    read_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

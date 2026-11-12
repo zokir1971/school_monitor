@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block title %}
+{{ _('Оқу мақсаттары бойынша аналитика') }}
+{% endblock %}
+
+{% block content %}
+
+<div style="
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 24px 16px;
+">
+
+  <h1>
+    {{ _('Оқу мақсаттары бойынша аналитика') }}
+  </h1>
+
+  <p>
+    Objectives: {{ dto.objective_count }}
+  </p>
+
+  <p>
+    {{ _('Assessment:') }} {{ dto.assessment_count }}
+  </p>
+
+  <p>
+    {{ _('Қатысқан:') }} {{ dto.participated_students }}
+  </p>
+
+  <p>
+    {{ _('Балл:') }}
+    {{ dto.score_sum_display }}
+    /
+    {{ dto.max_score_sum_display }}
+  </p>
+
+  <p>
+    {{ _('Меңгеру:') }}
+    {{ dto.mastery_percent_display }}
+  </p>
+
+  {% for item in dto.items %}
+
+    <div>
+      {{ item.objective_code }}
+      —
+      {{ item.objective_title }}
+      —
+      {{ item.mastery_percent_display }}
+    </div>
+
+  {% endfor %}
+
+</div>
+
+{% endblock %}

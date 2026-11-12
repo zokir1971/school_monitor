@@ -1,0 +1,25 @@
+{% set kk = ui_language() == 'kk' %}
+<section class="analytics-card">
+  <div class="analytics-table-wrap">
+    <table class="analytics-table">
+      <thead><tr><th>{{ 'Бағалау жұмысы' if kk else 'Оценочная работа' }}</th><th>{{ ('Мектеп' if kk else 'Школа') if all_work_scope == 'district' else ('Аудан' if kk else 'Район') if all_work_scope == 'region' else ('Сынып' if kk else 'Класс') }}</th><th>{{ 'Қатысу' if kk else 'Участие' }}</th><th>{{ 'Қатыспады' if kk else 'Не участвовали' }}</th><th>5</th><th>4</th><th>3</th><th>2</th><th>{{ 'Орташа балл' if kk else 'Средний балл' }}</th><th>{{ 'Орташа %' if kk else 'Средний %' }}</th><th>{{ 'Үлгерім %' if kk else 'Успеваемость %' }}</th><th>{{ 'Білім сапасы %' if kk else 'Качество %' }}</th>{% if all_work_scope == 'teacher' %}<th>{{ 'Әрекет' if kk else 'Действие' }}</th>{% endif %}</tr></thead>
+      <tbody>
+      {% for row in all_work_rows %}
+        <tr><td title="{{ row.full_work_title or row.work_title }}">{{ row.work_title }}</td><td>{{ row.entity_name }}</td><td>{{ row.participated_students }}/{{ row.total_students }}</td><td>{{ row.absent_students }}</td><td>{{ row.grade_5_count }}</td><td>{{ row.grade_4_count }}</td><td>{{ row.grade_3_count }}</td><td>{{ row.grade_2_count }}</td>
+        {% for metric in (row.average_score,row.average_percent,row.achievement_percent,row.quality_percent) %}<td>{{ ('%.2f'|format(metric)).replace('.', ',') if metric is not none else '—' }}</td>{% endfor %}
+        {% if all_work_scope == 'teacher' %}
+          <td><a data-sm-action="nav" data-sm-size="compact"
+            href="{{ url_for('teacher_assessment_class_assessments_page', school_class_id=row.entity_id) }}?academic_year_start={{ selected_academic_year or '' }}&amp;subject_id={{ selected_subject_id or '' }}"
+            >{{ 'Толық қарау' if kk else 'Подробный просмотр' }}</a></td>
+        {% endif %}</tr>
+      {% else %}<tr><td colspan="{{ 13 if all_work_scope == 'teacher' else 12 }}">{{ 'Деректер жоқ' if kk else 'Данные не найдены' }}</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+<nav aria-label="{{ 'Беттер' if kk else 'Страницы' }}" style="display:flex;justify-content:flex-end;align-items:center;gap:12px;flex-wrap:wrap;margin:16px 0;">
+  {% set query = '?work_key=all&academic_year_start=' ~ (selected_academic_year or '') ~ '&subject_id=' ~ (selected_subject_id or '') ~ '&grade_level=' ~ (selected_grade_level or '') ~ '&checkpoint=' ~ (work_selection.checkpoint|urlencode) %}
+  {% if work_page > 1 %}<a data-sm-action="nav" href="{{ query }}&work_page={{ work_page-1 }}">{{ 'Алдыңғы' if kk else 'Предыдущая' }}</a>{% endif %}
+  <span>{{ 'Бет' if kk else 'Страница' }} {{ work_page }}</span>
+  {% if all_work_next %}<a data-sm-action="nav" href="{{ query }}&work_page={{ work_page+1 }}">{{ 'Келесі' if kk else 'Следующая' }}</a>{% endif %}
+</nav>

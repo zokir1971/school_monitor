@@ -1,0 +1,19 @@
+{# Print-only answer key: references use visible labels, never internal IDs. #}
+{% from 'teacher/assessment/question_bank/_segments.html' import render_segments with context %}
+{% from 'teacher/assessment/question_bank/components/answer_key.html' import render_answer_key with context %}
+{% macro compact_answer(item) %}
+{% set kind=item.question_type.value %}{% set c=item.content or {} %}{% set a=item.answer_key or {} %}{% set g=item.grading_settings or {} %}
+<div class="document-compact-key">
+{% if kind=='single_choice' and c.get('parts') %}
+{% for part in c.parts %}<span><strong>{{ loop.index }})</strong> {{ a.get('values',{}).get(part.id,'—') }}</span>{% endfor %}
+{% elif kind in ['single_choice','image_choice'] %}<strong>{{ a.get('value','—') }}</strong>
+{% elif kind=='multiple_choice' %}<strong>{{ a.get('values',[])|join(', ') }}</strong>
+{% elif kind=='true_false' %}{% set labels=c.get('labels',{}) %}
+{% if c.get('statements') %}{% for statement in c.statements %}{% set v=a.get('values',{}).get(statement.id) %}<span><strong>{{ loop.index }})</strong> {{ labels.get('true',_('Дұрыс')) if v is sameas true else labels.get('false',_('Бұрыс')) if v is sameas false else '—' }}</span>{% endfor %}{% else %}{% set v=a.get('value') %}{{ labels.get('true',_('Дұрыс')) if v is sameas true else labels.get('false',_('Бұрыс')) if v is sameas false else '—' }}{% endif %}
+{% elif kind=='number' %}{% if c.get('parts') %}{% for part in c.parts %}<span><strong>{{ loop.index }})</strong> {{ a.get('values',{}).get(part.id,'—') }} {{ part.get('unit','') }} (±{{ g.get('tolerances',{}).get(part.id,0) }})</span>{% endfor %}{% else %}{{ a.get('value','—') }} {{ c.get('unit','') }} (±{{ g.get('tolerance',0) }}){% endif %}
+{% elif kind=='matching' %}{% for pair in a.get('pairs',[]) %}<span>{{ pair.left|matching_label(c.get('left',[]),'left') }}–{{ pair.right|matching_label(c.get('right',[]),'right') }}</span>{% endfor %}
+{% elif kind=='ordering' %}{% for value in a.get('order',[]) %}{% for option in c.get('items',[]) %}{% if option.value==value %}<span>{{ loop.index }}</span>{% endif %}{% endfor %}{% if not loop.last %} → {% endif %}{% endfor %}
+{% elif kind=='fill_gaps' %}{% set n=namespace(value=0) %}{% for segment in c.get('segments',[]) %}{% if segment.type=='gap' %}{% set n.value=n.value+1 %}<span><strong>{{ n.value }})</strong> {% for answer in a.get('gaps',{}).get(segment.gap_id,{}).get('accepted_answers',[]) %}{% if c.get('word_bank_format')=='rich_v1' %}{{ answer|matching_label(c.get('word_bank',[]),'right') }}{% else %}{{ answer }}{% endif %}{% if not loop.last %}; {% endif %}{% endfor %}</span>{% endif %}{% endfor %}
+{% else %}{{ render_answer_key(item) }}{% endif %}
+</div>
+{% endmacro %}

@@ -1,0 +1,291 @@
+.qb-render-options,
+.qb-answer-list {
+  display: grid;
+  gap: 10px;
+}
+
+.qb-render-option,
+.qb-answer-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+
+  padding: 12px 14px;
+
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+
+  background: #ffffff;
+}
+
+.qb-render-option__marker,
+.qb-answer-item__marker {
+  flex: 0 0 auto;
+
+  min-width: 30px;
+  height: 30px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 0 8px;
+
+  border-radius: 8px;
+
+  background: #f3f4f6;
+
+  font-weight: 700;
+}
+
+.qb-render-option__body,
+.qb-answer-item__body {
+  flex: 1;
+  min-width: 0;
+
+  line-height: 1.55;
+}
+
+.qb-answer-item--correct {
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+}
+
+.qb-render-empty,
+.qb-render-unknown,
+.qb-answer-note {
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.qb-render-response-placeholder,
+.qb-answer-manual {
+  padding: 14px 16px;
+
+  border: 1px dashed #d1d5db;
+  border-radius: 10px;
+
+  background: #f9fafb;
+  color: #4b5563;
+}
+
+.qb-render-unit {
+  margin-left: 8px;
+}
+
+.qb-render-subtitle {
+  margin-bottom: 10px;
+  font-weight: 700;
+}
+
+.qb-render-matching {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 18px;
+}
+
+.qb-render-matching__column {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+}
+
+.qb-answer-matching {
+  display: grid;
+  gap: 10px;
+}
+
+.qb-answer-pair {
+  display: grid;
+  grid-template-columns:
+    minmax(0, 1fr)
+    auto
+    minmax(0, 1fr);
+
+  align-items: center;
+  gap: 12px;
+
+  padding: 12px 14px;
+
+  border: 1px solid #bbf7d0;
+  border-radius: 10px;
+
+  background: #f0fdf4;
+}
+
+.qb-answer-pair__side {
+  min-width: 0;
+}
+
+.qb-answer-pair__arrow {
+  font-weight: 800;
+}
+
+.qb-render-fill-gaps__text {
+  line-height: 1.8;
+}
+
+.qb-render-gap {
+  display: inline-block;
+  min-width: 90px;
+
+  margin: 0 5px;
+
+  border-bottom: 2px solid #9ca3af;
+
+  text-align: center;
+}
+
+.qb-render-word-bank {
+  margin-top: 16px;
+}
+
+.qb-render-word-bank__items,
+.qb-answer-gap__values,
+.qb-render-variables {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+
+  margin-top: 8px;
+}
+
+.qb-render-word,
+.qb-answer-chip,
+.qb-render-variables code {
+  padding: 5px 9px;
+
+  border: 1px solid #d1d5db;
+  border-radius: 7px;
+
+  background: #f9fafb;
+}
+
+.qb-answer-gap {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+
+  padding: 10px 0;
+
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.qb-answer-gap:last-child {
+  border-bottom: 0;
+}
+
+.qb-answer-gap__id {
+  min-width: 60px;
+  font-weight: 700;
+}
+
+.qb-answer-value,
+.qb-answer-text,
+.qb-answer-formula {
+  padding: 12px 14px;
+
+  border: 1px solid #bbf7d0;
+  border-radius: 10px;
+
+  background: #f0fdf4;
+}
+
+.qb-render-images {
+  display: grid;
+  grid-template-columns:
+    repeat(auto-fit, minmax(180px, 1fr));
+  gap: 14px;
+}
+
+.qb-render-image-option,
+.qb-answer-image {
+  padding: 12px;
+
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+
+  background: #ffffff;
+}
+
+.qb-render-image-option__image,
+.qb-answer-image__image {
+  display: block;
+
+  width: 100%;
+  max-height: 260px;
+
+  margin-top: 10px;
+
+  object-fit: contain;
+
+  border-radius: 8px;
+}
+
+.qb-render-image-option__marker {
+  font-weight: 700;
+}
+
+.qb-render-image-option__alt,
+.qb-answer-image__alt {
+  margin-top: 8px;
+
+  color: #6b7280;
+  font-size: 13px;
+}
+
+@media (max-width: 760px) {
+  .qb-render-matching {
+    grid-template-columns: 1fr;
+  }
+
+  .qb-answer-pair {
+    grid-template-columns: 1fr;
+  }
+
+  .qb-answer-pair__arrow {
+    transform: rotate(90deg);
+    justify-self: center;
+  }
+}
+/* Shared compact read-only multipart choice cards. */
+.qb-sc-part {margin:10px 0;padding:12px;border:1px solid #e4e7ec;border-radius:8px}
+.qb-sc-part .qb-sc-part__heading {margin:0 0 8px;font-size:14px;line-height:1.4}
+.qb-sc-part .qb-render-options {margin:8px 0 0;gap:6px}
+.qb-sc-part .qb-render-option {padding:8px 10px;gap:10px}
+.qb-sc-part .qb-render-option__marker {min-width:28px;padding:4px 6px}
+.qb-language-page .qb-sc-part {margin:8px 0;padding:10px}
+.qb-language-page .qb-sc-part .qb-sc-part__heading {margin:0 0 6px;font-size:14px}
+.qb-language-page .qb-sc-part .qb-render-options {margin:8px 0 0}
+.qb-sc-part math-field[read-only] {border:0;background:transparent;padding:0;min-width:0}
+
+/* Matching shares one grid: each row grows to its taller item. */
+.qb-render-matching--rows {gap:10px 14px;align-items:stretch;min-width:0;font-size:14px}
+.qb-render-matching--rows > .qb-render-subtitle {margin:0 0 2px}
+.qb-render-matching--rows > .qb-render-option {margin:0;min-width:0;min-height:60px;box-sizing:border-box;align-items:center}
+.qb-render-matching--rows .qb-render-option__marker {min-width:32px;white-space:nowrap}
+.qb-render-matching--rows .qb-render-option__body {min-width:0;max-width:100%;overflow-x:auto}
+/* Narrow answer cards show the source above the target, never squeezing two formulas. */
+.qb-answer-pair.qb-answer-pair--stacked {grid-template-columns:minmax(0,1fr);gap:6px;min-width:0;max-width:100%;box-sizing:border-box;padding:10px 12px}
+.qb-answer-pair--stacked .qb-answer-pair__mapping {display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;color:#166534}
+.qb-answer-pair--stacked .qb-answer-pair__side {min-width:0;max-width:100%;overflow-x:auto}
+.qb-answer-pair--stacked .qb-answer-pair__arrow {transform:rotate(90deg);justify-self:center;line-height:1;padding:2px 0}
+.qb-answer-pair--stacked math-field[read-only],
+.qb-render-matching--rows math-field[read-only] {border:0;background:transparent;padding:0;max-width:none;overflow:visible;vertical-align:middle}
+@media(max-width:760px) {
+  /* Keep two separately labelled columns; individual formulas scroll when needed. */
+  .qb-render-matching.qb-render-matching--rows {grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
+  .qb-render-matching--rows > .qb-render-option {padding:8px;gap:6px}
+}
+
+.qb-fg-answers {min-width:0;font-size:14px;line-height:1.7}
+.qb-fg-answers h4 {font-size:14px;margin:14px 0 8px}
+.qb-fg-filled-readonly {white-space:pre-line;overflow-wrap:anywhere;min-width:0;max-width:100%;overflow-x:auto;padding:10px;border:1px solid #d0d5dd;border-radius:8px}
+.qb-fg-filled-answer {background:#dcfce7;border-radius:4px;padding:2px 4px}
+.qb-fg-bank-review {display:grid;grid-template-columns:28px minmax(0,1fr);gap:4px 8px;padding:8px 0;border-bottom:1px solid #eaecf0;min-width:0}
+.qb-fg-bank-review > div,.qb-fg-answers .qb-answer-chip {max-width:100%;min-width:0;overflow-x:auto}
+.qb-fg-bank-review small {grid-column:2;color:#475467}
+.qb-fg-answers math-field[read-only] {border:0;background:transparent;padding:0;max-width:none;overflow:visible;vertical-align:middle}
+
+.qb-fg-filled-answer {white-space:normal}
+.qb-fg-filled-answer .qb-math {display:inline-flex;vertical-align:middle;white-space:normal}

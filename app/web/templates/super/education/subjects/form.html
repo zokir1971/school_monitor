@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+{% block title %}{% if editing %}{{ _('Пәнді өзгерту') }}{% else %}{{ _('Пән қосу') }}{% endif %}{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{{ url_for('static', path='css/education/subject_reference.css') }}">{% endblock %}
+{% block content %}
+<div class="subject-reference sr-form-page">
+  <p><a class="sr-back" href="{{ url_for('super_subject_reference_list') }}" data-sm-action="nav" data-sm-back="true">{{ _('← Пәндер / Справочник предметов') }}</a></p>
+  <header class="sr-heading"><div><h1>{% if editing %}{{ _('Пәнді өзгерту / Редактировать предмет') }}{% else %}{{ _('Пән қосу / Добавить предмет') }}{% endif %}</h1><p>{{ _('* — міндетті өрістер / обязательные поля') }}</p></div></header>
+  {% if error %}<div class="sr-message sr-error" role="alert">{{ _(error) }}</div>{% endif %}
+  {% set target = url_for('super_subject_reference_update', subject_id=subject_id) if editing else url_for('super_subject_reference_create') %}
+  <form class="sr-panel" method="post" action="{{ target }}">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <div class="sr-grid">
+      <label>{{ _('Санат / Категория *') }}
+        <select name="category_id" required><option value="">{{ _('Выберите категорию') }}</option>
+        {% for category in categories %}<option value="{{ category.id }}"{% if form.get('category_id')|string == category.id|string %} selected{% endif %}>{{ category.name_kz }} / {{ category.name_ru }}</option>{% endfor %}
+        </select>
+      </label>
+      <label>{{ _('Оқыту ережелері / Правила преподавания *') }}
+        <select name="curriculum_role" required><option value="">{{ _('Требуется настройка') }}</option>
+        {% for code,label in policies.items() %}<option value="{{ code }}"{% if form.get('curriculum_role') == code %} selected{% endif %}>{{ _(label) }}</option>{% endfor %}
+        </select><span class="sr-hint">{{ _('Для математики, естественных, общественных и других неязыковых предметов — без специальных языковых ограничений. Классы задаются в типовом наборе.') }}</span>
+      </label>
+      <label>{{ _('Атауы KZ / Название KZ *') }}<input name="name_kz" required maxlength="255" placeholder="{{ _('Алгебра және анализ бастамалары') }}" value="{{ form.get('name_kz','') }}"></label>
+      <label>{{ _('Название RU') }}{% if not editing %} *{% endif %}
+        {% if editing %}<input name="name_ru" maxlength="255" placeholder="{{ _('Алгебра и начала анализа') }}" value="{{ form.get('name_ru','') }}">{% else %}<input id="subject-name-ru" name="name_ru" required maxlength="255" placeholder="{{ _('Алгебра и начала анализа') }}" value="{{ form.get('name_ru','') }}">{% endif %}
+      </label>
+      <label>{{ _('Код *') }}
+        {% if editing %}<input name="code" required maxlength="100" value="{{ form.get('code','') }}" readonly>{% else %}<input id="subject-code" name="code" maxlength="100" placeholder="{{ _('Формируется из названия RU') }}" value="" readonly>{% endif %}
+        <span class="sr-hint">{% if editing %}{{ _('Код остаётся неизменным: он используется в ключах программ.') }}{% else %}{{ _('Формируется автоматически из названия RU: Алгебра → algebra, Информатика → informatika. После сохранения не меняется.') }}{% endif %}</span>
+      </label>
+      <label>{{ _('Көрсету реті / Порядок отображения') }}<input name="sort_order" type="number" min="0" max="100000" step="1" required placeholder="100" value="{{ form.get('sort_order','100') }}"><span class="sr-hint">{{ _('Меньшее число — выше в списке.') }}</span></label>
+    </div>
+    <label class="sr-checkbox">
+      {% if form.get('is_active') == 'yes' %}<input type="checkbox" name="is_active" value="yes" checked>{% else %}<input type="checkbox" name="is_active" value="yes">{% endif %}
+      <span>{{ _('Белсенді / Активен') }}</span>
+    </label>
+    <p class="sr-hint">{{ _('Неактивный предмет недоступен для нового импорта учебных целей. Существующие данные и связи сохраняются. Для восстановления включите «Активен».') }}</p>
+    <p class="sr-hint">{{ _('Класс, язык обучения и направление ЕМН/ОГН указываются отдельно в программе.') }}</p>
+    {% if editing %}<label class="sr-checkbox"><input type="checkbox" name="apply_policy" value="yes"{% if form.get('apply_policy') == 'yes' %} checked{% endif %}><span>{{ _('Применить выбранные правила преподавания ко всем существующим правилам этого предмета') }}</span></label><p class="sr-hint">{{ _('Нужно только при изменении правил преподавания. Перед сохранением проверяются все классы и языки. После изменения обновите предметы существующих классов.') }}</p>{% endif %}
+    <div class="sr-actions"><button class="sr-button" type="submit" data-sm-action="primary">{{ _('Сақтау / Сохранить') }}</button><a class="sr-button sr-secondary" href="{{ url_for('super_subject_reference_list') }}" data-sm-action="nav">{{ _('Бас тарту / Отмена') }}</a></div>
+  </form>
+</div>
+  {% if not editing %}<script src="{{ url_for('static', path='js/education/subject_reference.js') }}?v=i18n5" defer></script>{% endif %}
+{% endblock %}

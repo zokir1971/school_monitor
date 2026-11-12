@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+{% block title %}{{ 'Уведомления' if ui_language() == 'ru' else 'Хабарламалар' }}{% endblock %}
+{% block content %}{% set ru = ui_language() == 'ru' %}
+<section class="dashboard-section">
+<h2>{{ 'Мои уведомления' if ru else 'Менің хабарламаларым' }}</h2>
+<p>{{ 'Последние версии уведомлений о включённых задачах. Прочтение не изменяет статус выполнения задач.' if ru else 'Жоспарға енгізілген тапсырмалар туралы хабарламалардың соңғы нұсқалары. Оқу тапсырмалардың орындалу мәртебесін өзгертпейді.' }}</p>
+<a class="btn" data-sm-action="nav" href="{{ request.url_for('internal_notifications_inbox') }}">{{ 'Обновить' if ru else 'Жаңарту' }}</a>
+{% for notice in notices %}
+<article class="card" style="padding:18px;margin:12px 0">
+<strong>{{ 'Задачи месячного плана' if ru else 'Айлық жоспар тапсырмалары' }} · {{ '%02d'|format(notice.month) }}.{{ notice.year }}</strong>
+<p>{{ notice.sent_at.strftime('%d.%m.%Y %H:%M') }} · {{ 'Версия' if ru else 'Нұсқа' }} {{ notice.revision }} · {{ ('Прочитано' if notice.read_at else 'Новое') if ru else ('Оқылды' if notice.read_at else 'Жаңа') }}</p>
+<form method="post" action="{{ request.url_for('internal_notification_read',notice_id=notice.id) }}"><button class="btn" data-sm-action="primary" type="submit">{{ 'Открыть уведомление' if ru else 'Хабарламаны ашу' }}</button></form>
+</article>
+{% else %}<p>{{ 'Уведомлений пока нет.' if ru else 'Әзірге хабарламалар жоқ.' }}</p>{% endfor %}
+{% if page > 1 %}<a class="btn" data-sm-action="nav" href="?page={{ page-1 }}">{{ 'Предыдущая страница' if ru else 'Алдыңғы бет' }}</a>{% endif %}
+{% if has_more %}<a class="btn" data-sm-action="nav" href="?page={{ page+1 }}">{{ 'Следующая страница' if ru else 'Келесі бет' }}</a>{% endif %}
+</section>{% endblock %}

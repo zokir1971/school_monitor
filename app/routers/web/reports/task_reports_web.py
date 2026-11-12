@@ -142,12 +142,8 @@ async def staff_report_templates_page(
         page_data.current_final_document
     )
 
-    final_locked = bool(
-        current_final_document
-        and current_final_document.status
-        == TaskDocumentStatus.SUBMITTED
-        and current_final_document.file_path
-    )
+    # A signed final PDF may be prepared before the explicit task-completion action.
+    final_locked = is_done
 
     # =========================================================
     # TEMPLATE

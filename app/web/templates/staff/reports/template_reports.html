@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Заполнение отчетов{% endblock %}
+{% block title %}{{ _('Заполнение отчетов') }}{% endblock %}
 
 {% block extra_css %}
 
@@ -542,6 +542,7 @@
   .btn-complete-task { width: 100%; }
 }
 
+.reports-table tr[id^="selected-report-"] { scroll-margin-top: 100px; }
 </style>
 {% endblock %}
 
@@ -564,6 +565,9 @@
     else false
   %}
 
+  {% if page_data.is_primary_executor %}
+  <p><a class="btn btn-primary" href="{{ url_for('analytical_reference_fill_page',month_item_id=page_data.month_item_id,selected_report_id=0) }}" data-sm-action="primary">{{ 'Аналитическая справка' if ui_language()=='ru' else 'Талдау анықтамасы' }}</a></p>
+  {% endif %}
   {% set reports_ready_for_completion =
     page_data.all_reports_resolved
     if (
@@ -586,17 +590,17 @@
 
   <div class="reports-header">
     <div class="reports-header-left">
-      <h2>Подготовка системных отчетов</h2>
+      <h2>{{ _('Подготовка системных отчетов') }}</h2>
 
       {% if task %}
         <div class="report-info-grid">
           <div>
-            Тема задачи:
+            {{ _('Тема задачи:') }}
             <strong>{{ task_topic or "—" }}</strong>
           </div>
 
           <div>
-            Запланированный месяц:
+            {{ _('Запланированный месяц:') }}
             <strong>{{ task_month or month or "—" }}</strong>
           </div>
         </div>
@@ -608,8 +612,8 @@
 
         {% if can_manage_assignments %}
           <a href="{{ url_for('staff_report_assignments_page', month_item_id=page_data.month_item_id) }}{% if month is not none %}?month={{ month }}{% endif %}"
-            class="btn btn-manage-assignments">
-            👥 Управление распределением
+            class="btn btn-manage-assignments" data-sm-action="nav">
+            {{ _('👥 Управление распределением') }}
           </a>
         {% endif %}
         <a
@@ -618,8 +622,8 @@
             month_item_id=page_data.month_item_id
           ) }}"
           class="btn btn-secondary"
-        >
-          ← Назад к задаче
+         data-sm-action="nav" data-sm-back="true">
+          {{ _('← Назад к задаче') }}
         </a>
 
       </div>
@@ -632,28 +636,28 @@
         <div class="flash-alert flash-alert--danger" role="alert" data-flash-alert>
           <span class="flash-alert__icon">!</span>
           <div class="flash-alert__content">
-            <span class="flash-alert__title">Действие не выполнено</span>
-            <div class="flash-alert__message">{{ error }}</div>
+            <span class="flash-alert__title">{{ _('Действие не выполнено') }}</span>
+            <div class="flash-alert__message">{{ reports_feedback(error) }}</div>
           </div>
-          <button type="button" class="flash-alert__close" aria-label="Закрыть сообщение" data-flash-close>×</button>
+          <button type="button" class="flash-alert__close" aria-label="{{ _('Закрыть сообщение') }}" data-flash-close data-sm-action="nav" data-sm-size="compact" data-sm-icon="true">×</button>
         </div>
       {% elif warning %}
         <div class="flash-alert flash-alert--warning" role="alert" data-flash-alert>
           <span class="flash-alert__icon">!</span>
           <div class="flash-alert__content">
-            <span class="flash-alert__title">Обратите внимание</span>
-            <div class="flash-alert__message">{{ warning }}</div>
+            <span class="flash-alert__title">{{ _('Обратите внимание') }}</span>
+            <div class="flash-alert__message">{{ reports_feedback(warning) }}</div>
           </div>
-          <button type="button" class="flash-alert__close" aria-label="Закрыть сообщение" data-flash-close>×</button>
+          <button type="button" class="flash-alert__close" aria-label="{{ _('Закрыть сообщение') }}" data-flash-close data-sm-action="nav" data-sm-size="compact" data-sm-icon="true">×</button>
         </div>
       {% elif success %}
         <div class="flash-alert flash-alert--success" role="status" data-flash-alert data-auto-hide="true">
           <span class="flash-alert__icon">✓</span>
           <div class="flash-alert__content">
-            <span class="flash-alert__title">Готово</span>
-            <div class="flash-alert__message">{{ success }}</div>
+            <span class="flash-alert__title">{{ _('Готово') }}</span>
+            <div class="flash-alert__message">{{ reports_feedback(success) }}</div>
           </div>
-          <button type="button" class="flash-alert__close" aria-label="Закрыть сообщение" data-flash-close>×</button>
+          <button type="button" class="flash-alert__close" aria-label="{{ _('Закрыть сообщение') }}" data-flash-close data-sm-action="nav" data-sm-size="compact" data-sm-icon="true">×</button>
         </div>
       {% endif %}
     </div>
@@ -663,15 +667,14 @@
     <div class="reports-card">
 
       <div class="reports-card-header">
-        <h3>Перечень отчетов для подготовки</h3>
+        <h3>{{ _('Перечень отчетов для подготовки') }}</h3>
 
         {% if reports %}
           <div class="reports-count">
             {{ reports
-              | selectattr("target_kind", "in", ["teacher", "teacher_subject_class", "class", "subject"])
               | list
               | length
-            }} шт.
+            }} {{ _('шт.') }}
           </div>
         {% endif %}
       </div>
@@ -683,17 +686,16 @@
         {% for item in reports %}
           {% set key = item.report_code %}
           {% if key not in ns.grouped %}
-            {% set _ = ns.grouped.update({ key: [] }) %}
+            {% set report_group_update = ns.grouped.update({ key: [] }) %}
           {% endif %}
-          {% set _ = ns.grouped[key].append(item) %}
+          {% set report_group_update = ns.grouped[key].append(item) %}
         {% endfor %}
 
         <div class="report-groups">
 
-          {% for report_code, items in ns.grouped.items() %}
+          {% for report_code, items in ns.grouped.items() if feature_report_available(report_code) %}
 
             {% set filtered_items = items
-              | selectattr("target_kind", "in", ["teacher", "teacher_subject_class", "class", "subject"])
               | list
             %}
 
@@ -703,13 +705,13 @@
                 <div class="reports-card-header">
                   <div>
                     <h4 style="margin:0;">
-                      {{ filtered_items[0].report_label or report_code }}
+                      {{ _(filtered_items[0].report_label or report_code) }}
                     </h4>
                     <div class="report-code">{{ report_code }}</div>
                   </div>
 
                   <div class="reports-count">
-                    {{ filtered_items|length }} шт.
+                    {{ filtered_items|length }} {{ _('шт.') }}
                   </div>
                 </div>
 
@@ -717,8 +719,7 @@
 
                   {% if is_simple_final_document %}
   <div class="alert alert-info">
-    Задача завершена итоговым документом.
-    Заполнение системных и пользовательских отчетов не требуется.
+    {{ _('Задача завершена итоговым документом. Заполнение системных и пользовательских отчетов не требуется.') }}
   </div>
 {% endif %}
 
@@ -726,32 +727,36 @@
                     <thead>
                       <tr>
                         <th>№</th>
-                        <th>Субъект/Объект</th>
-                        <th>Статус</th>
-                        <th>Встроенный шаблон</th>
-                        <th>Личный шаблон</th>
+                        <th>{{ _('Субъект/Объект') }}</th>
+                        <th>{{ _('Статус') }}</th>
+                        <th>{{ _('Встроенный шаблон') }}</th>
+                        <th>{{ _('Личный шаблон') }}</th>
                       </tr>
                     </thead>
 
                     <tbody>
                       {% for item in filtered_items %}
-                        <tr>
+                        <tr id="selected-report-{{ item.selected_report_id }}">
                           <td>{{ loop.index }}</td>
 
                           <td>
                             <span class="target-kind">
                               {% if item.target_kind == "teacher" %}
-                                Учитель
+                                {{ _('Учитель') }}
                               {% elif item.target_kind == "teacher_subject_class" %}
-                                Учитель / класс / предмет
+                                {{ _('Учитель / класс / предмет') }}
                               {% elif item.target_kind == "class" %}
-                                Класс
+                                {{ _('Класс') }}
+                              {% elif item.target_kind == "class_group" %}
+                                {{ 'Класс / группа' if ui_language()=='ru' else 'Сынып / топ' }}
+                              {% elif item.target_kind == "parallel_class" %}
+                                {{ 'Параллель' if ui_language()=='ru' else 'Сынып деңгейі' }}
                               {% elif item.target_kind == "subject" %}
-                                Предмет
+                                {{ _('Предмет') }}
                               {% elif item.target_kind == "documentation" %}
-                                Документация
+                                {{ _('Документация') }}
                               {% else %}
-                                Объект
+                                {{ _('Объект') }}
                               {% endif %}
                             </span>
 
@@ -772,11 +777,11 @@
                                 {% else %}
                                   status-draft
                                 {% endif %}">
-                                {{ status_text }}
+                                {{ _(status_text) }}
                               </span>
                             {% else %}
                               <span class="status-badge status-empty">
-                                Не заполнен
+                                {{ _('Не заполнен') }}
                               </span>
                             {% endif %}
                           </td>
@@ -787,34 +792,29 @@
 
 {% set report_type = item.report_code %}
 
-{% set report_fill_routes = {
-  "lesson_observation": "staff_user_lesson_observation_fill_page",
-  "checking_notebooks_table": "checking_notebooks_fill_page"
-} %}
-
-{% set system_fill_route = report_fill_routes.get(report_type) %}
+{% set system_fill_route = item.system_fill_route %}
 
 <td>
   {% if is_simple_final_document or item.is_simple_final_document %}
 
     <button class="btn btn-secondary"
             disabled
-            title="Задача завершена итоговым документом">
-      Не требуется
+            title="{{ _('Задача завершена итоговым документом') }}" data-sm-action="primary">
+      {{ _('Не требуется') }}
     </button>
 
   {% elif not item.target_valid %}
 
     <button class="btn btn-secondary"
             disabled
-            title="{{ item.target_error }}">
-      Недоступно
+            title="{{ reports_feedback(item.target_error) if item.target_error else '' }}" data-sm-action="primary">
+      {{ _('Недоступно') }}
     </button>
 
   {% elif is_user_template_used %}
 
-    <button class="btn btn-secondary" disabled>
-      Недоступно
+    <button class="btn btn-secondary" disabled data-sm-action="primary">
+      {{ _('Недоступно') }}
     </button>
 
   {% elif item.can_view_system_report and item.system_pdf_view_route and item.system_report_id %}
@@ -824,14 +824,17 @@
           report_id=item.system_report_id
         ) }}"
        class="btn btn-secondary"
-       target="_blank">
-      Просмотр отчета
+       target="_blank" data-sm-action="nav">
+      {{ _('Просмотр отчета') }}
     </a>
+
+  {% elif not item.can_fill_system_report %}
+    <span class="text-muted">{{ 'Заполнение доступно назначенному исполнителю' if ui_language()=='ru' else 'Толтыру тағайындалған орындаушыға қолжетімді' }}</span>
 
   {% elif not system_fill_route %}
 
-    <button class="btn btn-secondary" disabled>
-      Маршрут не настроен
+    <button class="btn btn-secondary" disabled data-sm-action="edit">
+      {{ _('Маршрут не настроен') }}
     </button>
 
   {% else %}
@@ -841,11 +844,11 @@
           month_item_id=page_data.month_item_id,
           selected_report_id=item.selected_report_id
         ) }}"
-       class="btn {% if is_system_used or item.has_draft %}btn-secondary{% else %}btn-primary{% endif %}">
+       class="btn {% if is_system_used or item.has_draft %}btn-secondary{% else %}btn-primary{% endif %}" data-sm-action="primary">
       {% if is_system_used or item.has_draft %}
-        Продолжить черновик
+        {{ _('Продолжить черновик') }}
       {% else %}
-        Заполнить
+        {{ _('Заполнить') }}
       {% endif %}
     </a>
 
@@ -853,25 +856,30 @@
 </td>
 
 <td>
-  {% if is_simple_final_document or item.is_simple_final_document %}
+  {% if item.system_fill_route and not item.user_fill_route %}
+    <span class="text-muted">{{ 'Только системный отчёт' if ui_language()=='ru' else 'Тек жүйелік есеп' }}</span>
+  {% elif is_simple_final_document or item.is_simple_final_document %}
 
     <button class="btn btn-secondary"
             disabled
-            title="Задача завершена итоговым документом">
-      Не требуется
+            title="{{ _('Задача завершена итоговым документом') }}" data-sm-action="primary">
+      {{ _('Не требуется') }}
     </button>
 
   {% elif not item.target_valid %}
 
-    <span class="text-muted" title="{{ item.target_error }}">
-      {{ item.target_error or "Недоступно для выбранного объекта" }}
+    <span class="text-muted" title="{{ reports_feedback(item.target_error) if item.target_error else '' }}">
+      {{ reports_feedback(item.target_error) if item.target_error else _("Недоступно для выбранного объекта") }}
     </span>
 
   {% elif is_system_used %}
 
-    <button class="btn btn-secondary" disabled>
-      Недоступно
+    <button class="btn btn-secondary" disabled data-sm-action="primary">
+      {{ _('Недоступно') }}
     </button>
+
+  {% elif not item.can_fill_user_report and not item.can_view_user_report %}
+    <span class="text-muted">{{ 'Заполнение доступно назначенному исполнителю' if ui_language()=='ru' else 'Толтыру тағайындалған орындаушыға қолжетімді' }}</span>
 
   {% elif is_user_template_used %}
 
@@ -882,8 +890,8 @@
             report_id=item.user_report_id
           ) }}"
          class="btn btn-secondary"
-         target="_blank">
-        Просмотр отчета
+         target="_blank" data-sm-action="nav">
+        {{ _('Просмотр отчета') }}
       </a>
 
     {% elif item.has_draft and item.user_fill_route %}
@@ -893,8 +901,8 @@
             month_item_id=page_data.month_item_id,
             selected_report_id=item.selected_report_id
           ) }}"
-         class="btn btn-primary">
-        Продолжить черновик
+         class="btn btn-primary" data-sm-action="primary">
+        {{ _('Продолжить черновик') }}
       </a>
 
     {% elif item.user_fill_route %}
@@ -904,14 +912,14 @@
             month_item_id=page_data.month_item_id,
             selected_report_id=item.selected_report_id
           ) }}"
-         class="btn btn-primary">
-        Заполнить мой шаблон
+         class="btn btn-primary" data-sm-action="primary">
+        {{ _('Заполнить мой шаблон') }}
       </a>
 
     {% else %}
 
       <span class="text-muted">
-        Маршрут не настроен
+        {{ _('Маршрут не настроен') }}
       </span>
 
     {% endif %}
@@ -923,8 +931,8 @@
           month_item_id=page_data.month_item_id,
           selected_report_id=item.selected_report_id
         ) }}"
-       class="btn btn-outline-primary">
-      Выбрать мой шаблон
+       class="btn btn-outline-primary" data-sm-action="primary">
+      {{ _('Выбрать мой шаблон') }}
     </a>
 
   {% endif %}
@@ -944,7 +952,7 @@
 
       {% else %}
         <div class="empty-box">
-          Для этой задачи системные отчеты не выбраны.
+          {{ _('Для этой задачи системные отчеты не выбраны.') }}
         </div>
       {% endif %}
 
@@ -976,45 +984,39 @@
             !
           {% endif %}
         </span>
-        <h3>Завершение задачи</h3>
+        <h3>{{ _('Завершение задачи') }}</h3>
       </div>
 
       <div class="report-code">
-        Выполнено отчётов:
+        {{ _('Выполнено отчётов:') }}
         <strong>{{ completed_reports_count }}</strong>
-        из
+        {{ _('из') }}
         <strong>{{ required_reports_count }}</strong>
       </div>
 
       <div class="report-code" style="margin-top:4px;">
-        Ожидают выполнения:
+        {{ _('Ожидают выполнения:') }}
         <strong>{{ page_data.pending_reports_count }}</strong>
-        · Освобождено:
+        {{ _('· Освобождено:') }}
         <strong>{{ page_data.waived_reports_count }}</strong>
       </div>
 
       <div class="report-code" style="margin-top:4px;">
-        Статус задачи:
+        {{ _('Статус задачи:') }}
         <strong>
-          {{ task_status.label_kz if task_status else "—" }}
+          {{ _(task_status.label_kz if task_status else "—") }}
         </strong>
       </div>
     </div>
   </div>
 
   {# ================= ЗАДАЧА УЖЕ ЗАВЕРШЕНА ================= #}
-  {% set final_locked =
-    current_final_document
-    and current_final_document.status
-    and current_final_document.status.value == "submitted"
-    and current_final_document.file_path
-  %}
+  {% set final_locked = is_done %}
 
   {% if is_done or final_locked %}
 
     <div class="alert alert-success">
-      Задача уже завершена.
-      Повторная загрузка итогового документа недоступна.
+      {{ _('Задача уже завершена. Повторная загрузка итогового документа недоступна.') }}
     </div>
 
     <div class="action-panel report-actions" style="margin-top: 14px;">
@@ -1023,8 +1025,8 @@
              disabled
              class="form-control">
 
-      <button class="btn btn-secondary" disabled>
-        Задача отправлена на рассмотрения
+      <button class="btn btn-secondary" disabled data-sm-action="success">
+        {{ _('Задача отправлена на рассмотрения') }}
       </button>
 
     </div>
@@ -1034,11 +1036,10 @@
   {% elif reports_ready_for_completion %}
 
     <div class="alert alert-success">
-      Все обязательства по системным отчётам закрыты:
-      отчёты либо выполнены, либо официально освобождены от выполнения.
-      Можно выбрать итоговый документ и завершить задачу.
+      {{ _('Все обязательства по системным отчётам закрыты: отчёты либо выполнены, либо официально освобождены от выполнения. Можно выбрать итоговый документ и завершить задачу.') }}
     </div>
 
+    {% if current_final_document and current_final_document.file_path %}<p class="alert alert-success">{{ 'Итоговый документ уже сохранён. Можно отправить задачу на рассмотрение без повторной загрузки файла.' if ui_language()=='ru' else 'Қорытынды құжат сақталған. Файлды қайта жүктемей, тапсырманы қарауға жіберуге болады.' }}</p>{% endif %}
     <form method="post"
           action="{{ url_for('staff_report_templates_complete_post', month_item_id=page_data.month_item_id) }}{% if month is not none %}?month={{ month }}{% endif %}"
           enctype="multipart/form-data">
@@ -1047,13 +1048,13 @@
 
         <div class="form-field form-field--full final-document-field">
           <label for="final_document">
-            Итоговый документ
+            {{ _('Итоговый документ') }}
           </label>
 
           <input type="file"
                  id="final_document"
                  name="final_document"
-                 required
+                 {% if not current_final_document or not current_final_document.file_path %}required{% endif %}
                  accept=".pdf,.doc,.docx,.xls,.xlsx">
         </div>
 
@@ -1064,10 +1065,10 @@
         <button
           type="submit"
           class="btn btn-complete-task"
-          onclick="return confirm('Завершить задачу и отправить её на рассмотрение?')"
-        >
+          data-confirm="{{ _('Завершить задачу и отправить её на рассмотрение?') }}" onclick="return confirm(this.dataset.confirm);"
+         data-sm-action="success">
           <span aria-hidden="true">✓</span>
-          <span>Завершить задачу и отправить на рассмотрение</span>
+          <span>{{ _('Завершить задачу и отправить на рассмотрение') }}</span>
         </button>
 
       </div>
@@ -1079,9 +1080,7 @@
   {% else %}
 
     <div class="alert alert-warning">
-      Есть системные отчёты, которые ещё ожидают выполнения.
-      Ответственный может дождаться их завершения, переназначить исполнителя
-      или официально освободить конкретный отчёт от выполнения с указанием причины.
+      {{ _('Есть системные отчёты, которые ещё ожидают выполнения. Ответственный может дождаться их завершения, переназначить исполнителя или официально освободить конкретный отчёт от выполнения с указанием причины.') }}
     </div>
 
     <div class="action-panel report-actions" style="margin-top: 14px;">
@@ -1089,20 +1088,19 @@
       {% if can_manage_assignments %}
         <a href="{{ url_for('staff_report_assignments_page', month_item_id=page_data.month_item_id) }}{% if month is not none %}?month={{ month }}{% endif %}"
           class="btn btn-manage-assignments"
-        >
-          👥 Управление распределением
+         data-sm-action="nav">
+          {{ _('👥 Управление распределением') }}
         </a>
       {% endif %}
 
-      <button class="btn btn-secondary btn-complete-disabled" disabled>
-        Завершение пока недоступно
+      <button class="btn btn-secondary btn-complete-disabled" disabled data-sm-action="success">
+        {{ _('Завершение пока недоступно') }}
       </button>
 
     </div>
 
     <div class="completion-note">
-      Для перехода к итоговому документу не должно оставаться назначений
-      со статусом PENDING.
+      {{ _('Для перехода к итоговому документу не должно оставаться назначений со статусом PENDING.') }}
     </div>
 
   {% endif %}
@@ -1116,14 +1114,14 @@
 
 <div class="card report-card">
   <div class="section-header">
-    <h3 class="section-title">Итоговые документы</h3>
+    <h3 class="section-title">{{ _('Итоговые документы') }}</h3>
   </div>
 
   {% set final_documents = final_documents or [] %}
 
   {% if has_final_document %}
     <div class="alert alert-success" style="margin-bottom:12px;">
-      <strong>Итоговый документ загружен.</strong>
+      <strong>{{ _('Итоговый документ загружен.') }}</strong>
     </div>
   {% endif %}
 
@@ -1136,28 +1134,28 @@
             <div class="report-document-info">
 
               <div class="report-document-title">
-                <strong>{{ doc.original_file_name or doc.title or "Без названия" }}</strong>
+                <strong>{{ doc.original_file_name or doc.title or _("Без названия") }}</strong>
               </div>
 
               <div class="report-document-meta">
 
                 <div class="meta-row">
-                  <span class="meta-label">Статус:</span>
+                  <span class="meta-label">{{ _('Статус:') }}</span>
                   <span class="meta-value">
-                    <strong>{{ doc.status.label_kz if doc.status else "—" }}</strong>
+                    <strong>{{ _(doc.status.label_kz if doc.status else "—") }}</strong>
                   </span>
                 </div>
 
                 {% if current_final_document %}
                   <div class="meta-row">
-                    <span class="meta-label">Қарауға жіберілген құжаттар:</span>
+                    <span class="meta-label">{{ _('Қарауға жіберілген құжаттар:') }}</span>
                     <span class="meta-value">
                       <strong>{{ review_reports_text or "—" }}</strong>
                     </span>
                   </div>
 
                   <div class="meta-row">
-                    <span class="meta-label">Қаралатын орны:</span>
+                    <span class="meta-label">{{ _('Қаралатын орны:') }}</span>
                     <span class="meta-value">
                       <strong>{{ review_place_text or "—" }}</strong>
                     </span>
@@ -1165,14 +1163,14 @@
                 {% endif %}
 
                 <div class="meta-row">
-                  <span class="meta-label">Тип:</span>
+                  <span class="meta-label">{{ _('Тип:') }}</span>
                   <span class="meta-value">
-                    {{ doc.document_type.label_kz if doc.document_type else "—" }}
+                    {{ _(doc.document_type.label_kz if doc.document_type else "—") }}
                   </span>
                 </div>
 
                 <div class="meta-row">
-                  <span class="meta-label">Файл:</span>
+                  <span class="meta-label">{{ _('Файл:') }}</span>
                   <span class="meta-value">
                     {{ doc.original_file_name or "—" }}
                   </span>
@@ -1186,18 +1184,18 @@
             <div class="card action-panel report-actions">
               <a href="{{ url_for('staff_report_document_view', document_id=doc.id) }}"
                  class="btn btn-secondary"
-                 target="_blank">
-                Просмотреть
+                 target="_blank" data-sm-action="nav">
+                {{ _('Просмотреть') }}
               </a>
 
               <a href="{{ url_for('staff_report_document_download', document_id=doc.id) }}"
-                 class="btn btn-primary">
-                Скачать
+                 class="btn btn-primary" data-sm-action="nav">
+                {{ _('Скачать') }}
               </a>
             </div>
           {% else %}
             <div class="empty-box">
-              Файл отсутствует
+              {{ _('Файл отсутствует') }}
             </div>
           {% endif %}
 
@@ -1206,7 +1204,7 @@
     </div>
   {% else %}
     <div class="empty-box">
-      Итоговые документы пока не загружены
+      {{ _('Итоговые документы пока не загружены') }}
     </div>
   {% endif %}
 </div>

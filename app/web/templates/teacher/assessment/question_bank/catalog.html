@@ -1,0 +1,1118 @@
+{% from 'teacher/assessment/question_bank/components/objective_picker.html' import objective_picker with context %}
+{% from 'teacher/assessment/question_bank/components/objective_preview.html' import objective_preview, objective_language_select, objective_options, objective_choice_previews with context %}
+{% extends "base.html" %}
+
+{% block title %}
+{{ _('Тапсырмалар банкі') }}
+{% endblock %}
+
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static',path='css/assessment/navigation.css') }}?v=99">
+<script defer src="{{ url_for('static',path='js/assessment/navigation.js') }}?v=99"></script>
+<link rel="stylesheet" href="{{ url_for('static',path='css/teacher/assessment/question_bank/catalog_table.css') }}?v=81">
+<link rel="stylesheet" href="{{ url_for('static',path='css/teacher/assessment/question_bank/question_bank_objective_picker.css') }}?v=78">
+<link rel="stylesheet" href="{{ url_for('static',path='css/teacher/assessment/question_bank/question_bank_objective_preview.css') }}">
+
+<link rel="stylesheet" href="{{ url_for('static', path='css/teacher/assessment/question_bank/question_bank_renderer.css') }}?v=61">
+<style>
+
+  /* ==================================================
+     PAGE
+     ================================================== */
+
+  .qb-catalog {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 24px;
+  }
+
+  .qb-catalog__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 20px;
+
+    margin-bottom: 24px;
+  }
+
+  .qb-catalog__title {
+    margin: 0;
+
+    font-size: 28px;
+    font-weight: 700;
+    line-height: 1.25;
+
+    color: #101828;
+  }
+
+  .qb-catalog__subtitle {
+    margin: 6px 0 0;
+
+    color: #667085;
+
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+
+  /* ==================================================
+     FILTERS
+     ================================================== */
+
+  .qb-catalog-filter {
+    margin-bottom: 24px;
+    padding: 20px;
+
+    border: 1px solid #eaecf0;
+    border-radius: 12px;
+
+    background: #ffffff;
+  }
+
+  .qb-catalog-filter__title {
+    margin: 0 0 16px;
+
+    font-size: 16px;
+    font-weight: 700;
+
+    color: #101828;
+  }
+
+  .qb-catalog-filter__grid {
+    display: grid;
+
+    grid-template-columns:
+      repeat(4, minmax(0, 1fr));
+
+    gap: 14px;
+  }
+
+  .qb-catalog-filter__field {
+    min-width: 0;
+  }
+
+  .qb-catalog-filter__label {
+    display: block;
+
+    margin-bottom: 6px;
+
+    color: #344054;
+
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  .qb-catalog-filter__select {
+    width: 100%;
+    min-height: 42px;
+
+    padding: 8px 10px;
+
+    border: 1px solid #d0d5dd;
+    border-radius: 8px;
+
+    background: #ffffff;
+    color: #101828;
+
+    font: inherit;
+    font-size: 14px;
+
+    outline: none;
+  }
+
+  .qb-catalog-filter__select:focus {
+    border-color: #84adff;
+
+    box-shadow:
+      0 0 0 3px
+      rgba(47, 128, 237, .10);
+  }
+
+  .qb-catalog-filter__select:disabled {
+    background: #f9fafb;
+    color: #98a2b3;
+
+    cursor: not-allowed;
+  }
+
+  .qb-catalog-filter__actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+
+    margin-top: 16px;
+  }
+
+
+  /* ==================================================
+     BUTTONS
+     ================================================== */
+
+  .qb-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    min-height: 40px;
+
+    padding: 8px 14px;
+
+    border: 1px solid transparent;
+    border-radius: 8px;
+
+    font: inherit;
+    font-size: 14px;
+    font-weight: 600;
+
+    text-decoration: none;
+
+    cursor: pointer;
+  }
+
+  .qb-btn--primary {
+    border-color: #1570ef;
+
+    background: #1570ef;
+    color: #ffffff;
+  }
+
+  .qb-btn--primary:hover {
+    background: #175cd3;
+  }
+
+  .qb-btn--secondary {
+    border-color: #d0d5dd;
+
+    background: #ffffff;
+    color: #344054;
+  }
+
+  .qb-btn--secondary:hover {
+    background: #f9fafb;
+  }
+
+
+  /* ==================================================
+     RESULT HEADER
+     ================================================== */
+
+  .qb-catalog-results {
+    margin-top: 24px;
+  }
+
+  .qb-catalog-results__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+
+    margin-bottom: 14px;
+  }
+
+  .qb-catalog-results__title {
+    margin: 0;
+
+    color: #101828;
+
+    font-size: 18px;
+    font-weight: 700;
+  }
+
+  .qb-catalog-results__count {
+    color: #667085;
+
+    font-size: 13px;
+  }
+
+
+  /* ==================================================
+     QUESTION CARD
+     ================================================== */
+
+  .qb-catalog-list {
+    display: grid;
+    gap: 14px;
+  }
+
+  .qb-question-card {
+    padding: 18px;
+
+    border: 1px solid #eaecf0;
+    border-radius: 12px;
+
+    background: #ffffff;
+  }
+
+  .qb-question-card__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+
+    margin-bottom: 14px;
+  }
+
+  .qb-question-card__number {
+    color: #667085;
+
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  .qb-question-card__badges {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+
+    gap: 6px;
+  }
+
+  .qb-badge {
+    display: inline-flex;
+    align-items: center;
+
+    min-height: 24px;
+
+    padding: 3px 8px;
+
+    border-radius: 999px;
+
+    background: #f2f4f7;
+    color: #344054;
+
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .qb-badge--own {
+    background: #ecfdf3;
+    color: #027a48;
+  }
+
+  .qb-question-card__title {
+    margin: 0 0 10px;
+
+    color: #101828;
+
+    font-size: 16px;
+    font-weight: 700;
+  }
+
+  .qb-question-card__text {
+    color: #101828;
+
+    font-size: 15px;
+    line-height: 1.65;
+
+    overflow-wrap: anywhere;
+  }
+
+  .qb-question-card__instruction {
+    margin-top: 10px;
+
+    color: #475467;
+
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+
+  /* ==================================================
+     OPTIONS
+     ================================================== */
+
+  .qb-question-options {
+    display: grid;
+    gap: 8px;
+
+    margin-top: 16px;
+  }
+
+  .qb-question-option {
+    display: flex;
+    align-items: flex-start;
+
+    gap: 10px;
+
+    padding: 10px 12px;
+
+    border: 1px solid #eaecf0;
+    border-radius: 8px;
+
+    background: #f9fafb;
+  }
+
+  .qb-question-option__value {
+    flex: 0 0 auto;
+
+    min-width: 24px;
+
+    color: #344054;
+
+    font-weight: 700;
+  }
+
+  .qb-question-option__content {
+    min-width: 0;
+
+    color: #101828;
+
+    overflow-wrap: anywhere;
+  }
+
+
+  /* ==================================================
+     META
+     ================================================== */
+
+  .qb-question-card__meta {
+    display: flex;
+    flex-wrap: wrap;
+
+    gap: 8px 18px;
+
+    margin-top: 16px;
+    padding-top: 14px;
+
+    border-top: 1px solid #eaecf0;
+
+    color: #667085;
+
+    font-size: 12px;
+  }
+
+  .qb-question-card__meta strong {
+    color: #344054;
+  }
+
+
+  /* ==================================================
+     ANSWER KEY
+     ================================================== */
+
+  .qb-question-answer {
+    margin-top: 14px;
+    padding: 10px 12px;
+
+    border-radius: 8px;
+
+    background: #f0f9ff;
+
+    color: #026aa2;
+
+    font-size: 13px;
+  }
+
+
+  /* ==================================================
+     EMPTY STATE
+     ================================================== */
+
+  .qb-catalog-empty {
+    padding: 36px 20px;
+
+    border: 1px dashed #d0d5dd;
+    border-radius: 12px;
+
+    background: #ffffff;
+
+    text-align: center;
+  }
+
+  .qb-catalog-empty__title {
+    margin: 0;
+
+    color: #344054;
+
+    font-size: 16px;
+    font-weight: 700;
+  }
+
+  .qb-catalog-empty__text {
+    margin: 7px 0 0;
+
+    color: #667085;
+
+    font-size: 14px;
+  }
+
+
+  /* ==================================================
+     LATEX
+     ================================================== */
+
+  .qb-inline-math {
+    display: inline-block;
+    width: auto;
+    min-width: 0;
+    margin: 0 3px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    font-size: 17px;
+    vertical-align: middle;
+    pointer-events: none;
+  }
+
+
+  /* ==================================================
+     MOBILE
+     ================================================== */
+
+  @media (max-width: 900px) {
+
+    .qb-catalog-filter__grid {
+      grid-template-columns:
+        repeat(2, minmax(0, 1fr));
+    }
+
+  }
+
+
+  @media (max-width: 600px) {
+
+    .qb-catalog {
+      padding: 14px;
+    }
+
+    .qb-catalog__header {
+      flex-direction: column;
+    }
+
+    .qb-catalog-filter {
+      padding: 14px;
+    }
+
+    .qb-catalog-filter__grid {
+      grid-template-columns:
+        minmax(0, 1fr);
+    }
+
+    .qb-catalog-filter__actions {
+      flex-direction: column;
+    }
+
+    .qb-btn {
+      width: 100%;
+    }
+
+    .qb-question-card {
+      padding: 14px;
+    }
+
+    .qb-question-card__header {
+      flex-direction: column;
+    }
+
+    .qb-question-card__badges {
+      justify-content: flex-start;
+    }
+
+  }
+
+.qb-catalog { font-family:system-ui,-apple-system,"Segoe UI",Arial,sans-serif; }
+.qb-catalog-text { white-space:pre-wrap; }
+.qb-catalog-image { display:block; max-width:100%; max-height:280px; height:auto; object-fit:contain; margin:10px 0; }
+.qb-question-options--images { grid-template-columns:repeat(2,minmax(0,1fr)); }
+.qb-catalog-columns { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; margin-top:16px; }
+.qb-catalog-columns .qb-question-option { margin-bottom:8px; }
+.qb-catalog-content { margin-top:16px; line-height:1.7; }
+.qb-catalog-gap { display:inline-block; padding:0 12px; border-bottom:1px solid #667085; }
+.qb-catalog-criterion { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:8px; padding:12px 0; border-bottom:1px solid #d0e7f5; }
+.qb-catalog-criterion > div { grid-column:1/-1; white-space:pre-wrap; }
+@media(max-width:600px) { .qb-question-options--images,.qb-catalog-columns { grid-template-columns:minmax(0,1fr); } }
+
+.qb-catalog-objectives {
+  margin-top: 12px;
+  white-space: normal;
+}
+
+.qb-catalog-objective {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  align-items: baseline;
+  gap: 8px;
+  margin-top: 8px;
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.qb-catalog-objective__code {
+  margin: 0;
+  color: #2563eb;
+  font: inherit;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.qb-catalog-objective__text {
+  min-width: 0;
+  margin: 0;
+  color: #344054;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.qb-catalog-objective__text [data-qb-objective-display],
+.qb-catalog-objective__text [data-objective-display-language],
+.qb-catalog-objective__text .qb-objective-text {
+  display: inline;
+  white-space: normal;
+  font: inherit;
+}
+
+.qb-catalog-objective__text [hidden] {
+  display: none !important;
+}
+</style>
+<link rel="stylesheet" href="{{ url_for('static',path='css/teacher/assessment/question_bank/catalog_filters.css') }}?v=167">
+{% endblock %}
+
+
+{% block content %}
+<link rel="stylesheet" href="{{ url_for('static',path='css/question_bank_objective_preview.css') }}">
+{% macro catalog_segments(segments, fallback='') %}
+  {% for segment in segments or [] %}
+    {% if segment.get('type') == 'image' %}
+      <img class="qb-catalog-image" src="{{ url_for('teacher_question_bank_media_view') }}?object_key={{ segment.get('object_key', '') | urlencode }}" alt="{{ segment.get('alt', '') }}" loading="lazy">
+    {% elif segment.get('type') == 'latex' %}
+      <math-field class="qb-inline-math" read-only tabindex="-1">{{ segment.get('text', '') }}</math-field>
+    {% elif segment.get('type') == 'gap' %}
+      <span class="qb-catalog-gap">[{{ segment.get('id', segment.get('gap_id', '')) }}]</span>
+    {% else %}<span class="qb-catalog-text">{{ segment.get('text', '') }}</span>{% endif %}
+  {% else %}<span class="qb-catalog-text">{{ fallback }}</span>{% endfor %}
+{% endmacro %}
+
+{% macro catalog_named(options, value) %}
+  {% set ns = namespace(found=false) %}
+  {% for option in options %}
+    {% if option.get('value') == value %}
+      {% set ns.found = true %}
+      {{ catalog_segments(option.get('segments', []), option.get('text', option.get('label', value))) }}
+    {% endif %}
+  {% endfor %}
+  {% if not ns.found %}{{ value }}{% endif %}
+{% endmacro %}
+
+{% macro catalog_contract(item) %}
+  {% set kind = item.question_type.value %}
+  {% set c = item.content or {} %}
+  {% set a = item.answer_key or {} %}
+  {% set g = item.grading_settings or {} %}
+  {% if kind in ['single_choice', 'multiple_choice', 'image_choice'] %}
+    <div class="qb-question-options{% if kind == 'image_choice' %} qb-question-options--images{% endif %}">
+      {% for option in c.get('options', []) %}
+        <div class="qb-question-option">
+          <strong class="qb-question-option__value">{{ option.get('value', '') }}.</strong>
+          <div class="qb-question-option__content">
+            {% if kind == 'image_choice' %}
+              {% if option.get('object_key') %}
+                <img class="qb-catalog-image" src="{{ url_for('teacher_question_bank_media_view') }}?object_key={{ option.get('object_key') | urlencode }}" alt="{{ option.get('alt', '') }}" loading="lazy">
+              {% endif %}
+              {% if option.get('alt') %}<div>{{ option.get('alt') }}</div>{% endif %}
+            {% else %}{{ catalog_segments(option.get('segments', []), option.get('text', '')) }}{% endif %}
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+    <div class="qb-question-answer"><strong>{{ _('Дұрыс жауап:') }}</strong>
+      {% if kind == 'multiple_choice' %}{{ a.get('values', []) | join(', ') }}{% else %}{{ a.get('value', '—') }}{% endif %}
+    </div>
+  {% elif kind == 'true_false' %}
+    {% if 'statements' in c %}
+      <ol>{% for statement in c.get('statements', []) %}
+        {% set value = a.get('values', {}).get(statement.get('id')) %}
+        <li>{{ catalog_segments(statement.get('segments', [])) }} —
+          {% if value is sameas true %}{{ c.get('labels', {}).get('true', _('Дұрыс')) }}
+          {% elif value is sameas false %}{{ c.get('labels', {}).get('false', _('Бұрыс')) }}{% else %}—{% endif %}
+        </li>
+      {% endfor %}</ol>
+    {% else %}
+      <div class="qb-question-answer"><strong>{{ _('Дұрыс жауап:') }}</strong>
+        {% if a.get('value') is sameas true %}{{ c.get('labels', {}).get('true', _('Дұрыс')) }}
+        {% elif a.get('value') is sameas false %}{{ c.get('labels', {}).get('false', _('Бұрыс')) }}{% else %}—{% endif %}
+      </div>
+    {% endif %}
+  {% elif kind == 'short_text' %}
+    <div class="qb-question-answer"><strong>{{ _('Қабылданатын жауаптар:') }}</strong>
+      <ul>{% for answer in a.get('accepted_answers', []) %}<li>{{ answer }}</li>{% endfor %}</ul>
+      {% if g.get('case_sensitive') %}<p>{{ _('Бас әріп пен кіші әріп ескеріледі.') }}</p>{% endif %}
+    </div>
+  {% elif kind == 'number' %}
+    {% if 'parts' in c %}
+      <ol>{% for part in c.get('parts', []) %}
+        <li>{{ catalog_segments(part.get('segments', [])) }} —
+          <strong>{{ a.get('values', {}).get(part.get('id'), '—') }}</strong> {{ part.get('unit', '') }}
+          {{ _('(Допуск: ±') }}{{ g.get('tolerances', {}).get(part.get('id'), 0) }})
+        </li>
+      {% endfor %}</ol>
+    {% else %}
+
+    <div class="qb-question-answer"><strong>{{ _('Дұрыс жауап:') }}</strong> {{ a.get('value', '—') }} {{ c.get('unit', '') }}
+      {% if g.get('tolerance') is not none %}<p>{{ _('Рұқсат етілген ауытқу: ±') }}{{ g.get('tolerance') }}</p>{% endif %}
+    </div>
+    {% endif %}
+  {% elif kind == 'matching' %}
+    <div class="qb-catalog-columns">
+      {% for side, title in [('left', 'Сол жақ'), ('right', 'Оң жақ')] %}
+        <div><h4>{{ title }}</h4>{% for option in c.get(side, []) %}<div class="qb-question-option"><strong>{{ option.get('value') }}.</strong><div>{{ catalog_segments(option.get('segments', []), option.get('text', '')) }}</div></div>{% endfor %}</div>
+      {% endfor %}
+    </div>
+    <div class="qb-question-answer"><strong>{{ _('Дұрыс сәйкестіктер:') }}</strong>
+      {% for pair in a.get('pairs', []) %}<div>{{ pair.get('left') }}: {{ catalog_named(c.get('left', []), pair.get('left')) }} → {{ pair.get('right') }}: {{ catalog_named(c.get('right', []), pair.get('right')) }}</div>{% endfor %}
+    </div>
+    {% if g.get('element_score_policy') != 'weighted_elements_v2' and g.get('matching_score_policy') == 'per_pair_v1' %}
+      <p>{{ _('Әр дұрыс сәйкестік үшін — 1 балл. Қате немесе жауапсыз жұп үшін — 0 балл.') }}</p>
+    {% endif %}
+  {% elif kind == 'ordering' %}
+    <div class="qb-question-options">{% for option in c.get('items', []) %}<div class="qb-question-option"><strong>{{ option.get('value') }}.</strong><div>{{ catalog_segments(option.get('segments', []), option.get('text', '')) }}</div></div>{% endfor %}</div>
+    <div class="qb-question-answer"><strong>{{ _('Дұрыс реті:') }}</strong><ol>{% for value in a.get('order', []) %}<li>{{ catalog_named(c.get('items', []), value) }}</li>{% endfor %}</ol></div>
+    {% if g.get('element_score_policy') != 'weighted_elements_v2' and g.get('ordering_score_policy') == 'per_position_v1' %}
+      <p>{{ _('Дұрыс орнындағы әр элемент үшін — 1 балл. Қате немесе бос орын үшін — 0 балл.') }}</p>
+    {% endif %}
+  {% elif kind == 'fill_gaps' %}
+    {% from 'teacher/assessment/question_bank/components/question_content.html' import render_question_content with context %}
+    {% from 'teacher/assessment/question_bank/components/fill_gaps_answers.html' import render_fill_gaps_answers with context %}
+    {{ render_question_content(item, show_bank=false) }}
+    {{ render_fill_gaps_answers(item) }}
+    {% if g.get('element_score_policy') != 'weighted_elements_v2' and g.get('fill_gaps_score_policy') == 'per_gap_v1' %}
+      <p>{{ _('Әр дұрыс толтырылған бос орын үшін — 1 балл. Қате немесе жауапсыз бос орын үшін — 0 балл.') }}</p>
+    {% endif %}
+  {% elif kind == 'formula' %}
+    {% if c.get('parts') %}
+      {% from 'teacher/assessment/question_bank/components/formula_parts.html' import render_formula_parts, render_formula_grading_summary with context %}
+      {{ render_formula_parts(item, answers=true) }}
+      {% if g.get('element_score_policy') != 'weighted_elements_v2' %}{{ render_formula_grading_summary(item) }}{% endif %}
+    {% else %}
+    <div class="qb-question-answer"><strong>{{ _('Эталон формула:') }}</strong>
+      <math-field class="qb-inline-math" read-only tabindex="-1">{{ a.get('expression', '') }}</math-field>
+      {% if c.get('target_variable') %}<p>{{ _('Өрнектелетін шама:') }} <strong>{{ c.get('target_variable') }}</strong></p>{% endif %}
+      {% if c.get('meaning_options') %}<p><strong>{{ _('Шамалардың мағыналары:') }}</strong></p><ul>{% for option in c.get('meaning_options', []) %}<li>{{ option.get('value') }} — {{ option.get('label', '') }}</li>{% endfor %}</ul>{% endif %}
+      {% if a.get('variable_meanings') %}<p><strong>{{ _('Белгіленулердің дұрыс сәйкестігі:') }}</strong></p>
+        {% for symbol, value in a.get('variable_meanings').items() %}<div><math-field class="qb-inline-math" read-only tabindex="-1">{{ symbol }}</math-field> — {{ catalog_named(c.get('meaning_options', []), value) }}</div>{% endfor %}
+      {% endif %}
+    </div>
+    {% endif %}
+  {% elif kind == 'manual_review' %}
+    <div class="qb-question-answer"><strong>{{ _('Бағалау критерийлері') }}</strong><p>{{ _('Жауап қолмен бағаланады.') }}</p>
+      {% for criterion in g.get('criteria', []) %}<div class="qb-catalog-criterion"><strong>{{ criterion.get('id', '') }}. {{ criterion.get('title', '') }}</strong><span>{{ criterion.get('max_score', 0) }} {{ _('балл') }}</span><div>{{ criterion.get('description', '') }}</div></div>
+      {% else %}<p>{{ _('Бағалау критерийлері көрсетілмеген.') }}</p>{% endfor %}
+      <p><strong>{{ _('Жалпы максималды балл:') }}</strong> {{ item.max_score }}</p>
+    </div>
+  {% endif %}
+  {% if g.get('element_score_policy') == 'weighted_elements_v2' %}{% from 'teacher/assessment/question_bank/components/weighted_grading_summary.html' import render_weighted_grading with context %}{{ render_weighted_grading(item) }}{% endif %}
+  {% if item.explanation %}<div class="qb-question-answer"><strong>{{ _('Жауаптың түсіндірмесі:') }}</strong><div class="qb-catalog-text"><span data-readable-math-prose style="white-space:pre-line;overflow-wrap:anywhere;font-size:14px;line-height:1.7;">{{ item.explanation | default('', true) | explanation_layout(item) }}</span></div></div>{% endif %}
+{% endmacro %}
+
+
+<div class="qb-catalog assessment-workflow" data-assessment-ui data-user="{{ user.id }}">
+{% include 'assessment/components/navigation.html' %}
+
+  <!-- ==================================================
+       HEADER
+       ================================================== -->
+
+  <header class="qb-catalog__header">
+
+    <div>
+
+      <h1 class="qb-catalog__title">
+        {{ _('Тапсырмалар банкі') }}
+      </h1>
+
+      <p class="qb-catalog__subtitle">
+        {{ _('Пән, сынып, тоқсан және оқу мақсаты бойынша дайын тапсырмаларды таңдаңыз.') }}
+      </p>
+
+    </div>
+
+    <div class="assessment-heading-actions"><a href="{{ url_for('assessment_work_plan_index') }}" class="qb-btn qb-btn--secondary" data-assessment-list data-sm-action="nav">{{ 'Комплекты оценивания' if ui_language()=='ru' else 'Бағалау жинақтары' }}</a><a href="{{ url_for('assessment_work_plan_new').include_query_params(subject_id=page.filters.subject_id or '',curriculum_grade=page.filters.grade_level or '',quarter=page.filters.quarter or '',education_track=education_track or '') }}" class="qb-btn qb-btn--primary" data-sm-action="primary">{{ 'Создать комплект' if ui_language()=='ru' else 'Жинақ құру' }}</a></div>
+    {% if not shared_ready|default(false) %}
+    <a
+      href="{{ url_for('teacher_question_bank_item_create_page') }}"
+      class="qb-btn qb-btn--secondary"
+     data-sm-action="nav">
+      {{ _('+ Жаңа тапсырма') }}
+    </a>
+    {% endif %}
+
+  </header>
+
+
+  <!-- ==================================================
+       FILTER
+       ================================================== -->
+
+  <section class="qb-catalog-filter">
+
+    <h2 class="qb-catalog-filter__title">
+      {{ _('Тапсырмаларды сүзу') }}
+    </h2>
+
+
+    <form
+      method="get"
+      action="{{ url_for(catalog_route|default('teacher_question_bank_catalog_page')) }}"
+    >
+
+      <div class="qb-catalog-filter__grid">
+
+
+        <div class="qb-catalog-filter__field">
+          <label for="catalog-subject" class="qb-catalog-filter__label">{{ _('Предмет') }}</label>
+          <select id="catalog-subject" name="subject_id" class="qb-catalog-filter__select">
+            <option value="">{{ _('Таңдаңыз') }}</option>
+            {% for scope in page.teaching_scope|unique(attribute='subject_id') %}
+            <option value="{{ scope.subject_id }}" {% if page.filters.subject_id==scope.subject_id %}selected{% endif %}>{{ qb_subject_name(scope) }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="qb-catalog-filter__field">
+          <label for="catalog-grade" class="qb-catalog-filter__label">{{ _('Класс') }}</label>
+          <select id="catalog-grade" name="grade_level" class="qb-catalog-filter__select" {% if page.filters.subject_id is none %}disabled{% endif %}>
+            <option value="">{{ _('Таңдаңыз') }}</option>
+            {% for scope in page.teaching_scope if scope.subject_id==page.filters.subject_id %}
+            <option value="{{ scope.grade_level }}" {% if page.filters.grade_level==scope.grade_level %}selected{% endif %}>{{ scope.grade_level }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="qb-catalog-filter__field" {% if page.filters.grade_level not in [10,11] %}hidden{% endif %}>
+          <label for="catalog-track" class="qb-catalog-filter__label">{{ _('Направление') }}</label>
+          <select id="catalog-track" name="education_track" class="qb-catalog-filter__select" {% if page.filters.grade_level not in [10,11] %}disabled{% endif %}>
+            <option value="">{{ _('Все') }}</option>
+            {% for code,label in [('general','Общее (без направления)'),('emn','Естественно-математическое направление (ЕМН)'),('ogn','Общественно-гуманитарное направление (ОГН)')] %}
+            <option value="{{ code }}" {% if education_track==code %}selected{% endif %}>{{ _(label) }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <!-- =============================================
+             QUARTER
+             ============================================= -->
+
+        <div class="qb-catalog-filter__field">
+
+          <label
+            for="catalog-quarter"
+            class="qb-catalog-filter__label"
+          >
+            {{ _('Тоқсан') }}
+          </label>
+
+          <select
+            id="catalog-quarter"
+            name="quarter"
+            class="qb-catalog-filter__select"
+
+            {% if
+              page.filters.subject_id is none
+              or
+              page.filters.grade_level is none
+            %}
+              disabled
+            {% endif %}
+          >
+
+            <option value="">
+              {{ _('Все') }}
+            </option>
+
+            {% for quarter_value in [1, 2, 3, 4] %}
+
+              <option
+                value="{{ quarter_value }}"
+
+                {% if
+                  page.filters.quarter == quarter_value
+                %}
+                  selected
+                {% endif %}
+              >
+                {{ quarter_value }} {{ _('тоқсан') }}
+              </option>
+
+            {% endfor %}
+
+          </select>
+
+        </div>
+
+
+        <!-- =============================================
+             LEARNING OBJECTIVE
+             ============================================= -->
+
+        <div
+          class="qb-catalog-filter__field"
+          style="grid-column: 1 / -1;"
+        >
+
+          {{ objective_picker(page.learning_objectives, page.filters.objective_id, ui_language(), id='catalog-objective', required=false, empty_label=_('Все'), disabled=not page.learning_objectives) }}
+
+        </div>
+
+      </div>
+
+
+      <div class="qb-catalog-filter__actions">
+
+        <a
+          href="{{ url_for(catalog_route|default('teacher_question_bank_catalog_page')) }}"
+          class="qb-btn qb-btn--secondary"
+         data-sm-action="nav">
+          {{ _('Тазалау') }}
+        </a>
+
+        <button
+          type="submit"
+          class="qb-btn qb-btn--primary"
+         data-sm-action="nav">
+          {{ _('Көрсету') }}
+        </button>
+
+      </div>
+
+    </form>
+
+  </section>
+
+
+  <!-- ==================================================
+       RESULTS
+       ================================================== -->
+
+  <section class="qb-catalog-results">
+
+    <div class="qb-catalog-results__header">
+
+      <h2 class="qb-catalog-results__title">
+        {{ _('Тапсырмалар') }}
+      </h2>
+
+      {% if page.filters.subject_id is not none and page.filters.grade_level is not none %}
+
+        <div class="qb-catalog-results__count">
+          {{ _('На странице:') }} {{ page.items | length }}
+        </div>
+
+      {% endif %}
+
+    </div>
+
+
+    {% if page.filters.subject_id is none or page.filters.grade_level is none %}
+
+      <div class="qb-catalog-empty">
+
+        <h3 class="qb-catalog-empty__title">
+          {{ _('Выберите предмет и класс') }}
+        </h3>
+
+        <p class="qb-catalog-empty__text">
+          {{ _('Остальные фильтры можно оставить в положении «Все».') }}
+        </p>
+
+      </div>
+
+
+    {% elif not page.items %}
+
+      <div class="qb-catalog-empty">
+
+        <h3 class="qb-catalog-empty__title">
+          {{ _('Тапсырмалар табылмады') }}
+        </h3>
+
+        <p class="qb-catalog-empty__text">
+          {{ _('По выбранным фильтрам готовых заданий пока нет.') }}
+        </p>
+
+      </div>
+
+
+    {% else %}
+
+      <div class="qb-bank-table-wrap">
+        <table class="qb-bank-table">
+          <thead><tr><th>ID</th><th>{{ _('Тапсырма') }}</th><th>{{ _('Оқу мақсаты') }}</th><th>{{ _('Түрі') }}</th><th>{{ _('Тоқсан') }}</th><th>{{ _('Күрделілік') }}</th><th>{{ _('Исходный язык') }}</th><th class="qb-bank-languages-heading">{{ _('Языковые версии') }}</th><th>{{ _('Балл') }}</th><th>{{ _('Автор:') }}</th><th>{{ _('Просмотр') }}</th></tr></thead>
+          <tbody>
+          {% for item in page.items %}
+          <tr>
+            <td>{{ item.item_id }}</td>
+            <td class="qb-bank-table__question"><button type="button" class="qb-bank-cell" data-bank-preview="qb-preview-{{ item.item_id }}" aria-haspopup="dialog"><strong>{{ item.title or ('#' ~ item.item_id) }}</strong><span class="qb-bank-cell__snippet">{{ item.text }}</span></button></td>
+            <td><button type="button" class="qb-bank-cell qb-bank-cell--codes" data-bank-preview="qb-goals-{{ item.item_id }}" aria-haspopup="dialog">{% for objective in item.objectives %}{{ objective.code }}{% if not loop.last %}, {% endif %}{% else %}—{% endfor %}</button></td>
+            <td>{{ _(item.question_type.label_kz) }}</td>
+            <td>{{ item.quarter }}</td>
+            <td>{{ _(item.difficulty.label_kz) }}</td>
+            <td>{{ _(item.language.label_kz) }}</td>
+            <td class="qb-bank-languages">{% for lang, label in [('kk', 'ҚАЗ'), ('ru', 'РУС')] %}<span class="qb-bank-language {% if lang in item.available_languages %}is-present{% else %}is-missing{% endif %}" title="{{ _('Версия сохранена') if lang in item.available_languages else _('Версия отсутствует') }}">{{ label }} {{ '✓' if lang in item.available_languages else '—' }}</span>{% endfor %}</td>
+            <td>{{ item.max_score }}</td>
+            <td class="qb-bank-table__author"><span title="{{ item.author_name or '—' }}">{{ item.author_name or '—' }}</span></td>
+            <td><button type="button" class="qb-btn qb-btn--primary" data-bank-preview="qb-preview-{{ item.item_id }}" aria-haspopup="dialog" data-sm-action="nav">{{ _('Просмотр') }}</button></td>
+          </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% for item in page.items %}
+      <template id="qb-preview-{{ item.item_id }}">
+          <article
+            class="qb-question-card"
+            data-question-id="{{ item.item_id }}"
+          >
+
+            <!-- HEADER -->
+
+            <div class="qb-question-card__header">
+
+              <div class="qb-question-card__number">
+                #{{ item.item_id }}
+              </div>
+
+
+              <div class="qb-question-card__badges">
+
+                <span class="qb-badge">
+                  {{ _(item.question_type.label_kz) }}
+                </span>
+
+                <span class="qb-badge">
+                  {{ _(item.difficulty.label_kz) }}
+                </span>
+
+                <span class="qb-badge">
+                  {{ item.max_score }} {{ _('балл') }}
+                </span>
+
+                {% if item.is_own %}
+                  <span class="qb-badge qb-badge--own">
+                    {{ _('Менің тапсырмам') }}
+                  </span>
+                {% endif %}
+
+              </div>
+
+            </div>
+
+
+            <!-- TITLE -->
+
+            {% if item.title %}
+
+              <h3 class="qb-question-card__title">
+                {{ item.title }}
+              </h3>
+
+            {% endif %}
+
+
+            <!-- QUESTION TEXT -->
+
+            <div class="qb-question-card__text">
+              <strong>{{ _('Тапсырма мәтіні:') }}</strong>
+              <div>{{ catalog_segments(item.text_segments, item.text) }}</div>
+            </div>
+
+            <!-- INSTRUCTION -->
+
+            {% if item.instruction %}
+
+              <div class="qb-question-card__instruction">
+                {{ ([{'type':'text','text':question_instruction(item.instruction, item.language)}] | part_statement_layout(none,item.text_segments or [{'type':'text','text':item.text}]))[0].text }}
+              </div>
+
+            {% endif %}
+
+
+            {{ catalog_contract(item) }}
+
+            {% if item.objectives %}
+  <div class="qb-catalog-objectives">
+    <strong>{{ _('Оқу мақсаты:') }}</strong>
+
+    {% for objective in item.objectives %}
+      <div class="qb-catalog-objective">
+        <strong class="qb-catalog-objective__code">
+          {{ objective.code }}
+        </strong>
+        <div class="qb-catalog-objective__text">{{ objective_preview(objective, item.language) }}</div>
+      </div>
+    {% endfor %}
+  </div>
+{% endif %}
+
+            <!-- META -->
+
+            <div class="qb-question-card__meta">
+
+              <span>
+                <strong>{{ _('Пән:') }}</strong>
+                {{ item.subject_name }}
+              </span>
+
+              <span>
+                <strong>{{ _('Тоқсан:') }}</strong> {{ item.quarter }}
+              </span>
+              <span>
+                <strong>{{ _('Сынып:') }}</strong>
+                {{ item.grade_level }}
+              </span>
+
+              <span>
+                <strong>{{ _('Автор:') }}</strong>
+                {{ item.author_name or "—" }}
+              </span>
+
+              <span>
+                <strong>{{ _('Тіл:') }}</strong>
+                {{ _(item.language.label_kz) }}
+              </span>
+
+            </div>
+
+          </article>
+      </template>
+      <template id="qb-goals-{{ item.item_id }}"><h3>{{ _('Оқу мақсаты') }}</h3>{% for objective in item.objectives %}<div class="qb-catalog-objective"><strong class="qb-catalog-objective__code">{{ objective.code }}</strong><div>{{ objective_preview(objective, item.language) }}</div></div>{% endfor %}</template>
+      {% endfor %}
+
+    {% endif %}
+
+    {% if page.filters.subject_id is not none and page.filters.grade_level is not none %}
+    <nav class="qb-bank-pages" aria-label="{{ _('Страницы каталога') }}">
+      {% if page.offset %}<a class="qb-btn qb-btn--secondary" href="{{ request.url.include_query_params(offset=[page.offset-20,0]|max) }}" data-sm-action="nav">{{ _('Назад') }}</a>{% endif %}
+      <span>{{ _('Страница') }} {{ page.offset // 20 + 1 }} · {{ _('На странице:') }} {{ page.items|length }}</span>
+      {% if page.has_next %}<a class="qb-btn qb-btn--primary" href="{{ request.url.include_query_params(offset=page.offset+20) }}" data-sm-action="primary">{{ _('Далее') }}</a>{% endif %}
+    </nav>
+    {% endif %}
+  </section>
+
+</div>
+<div class="qb-bank-hover qb-catalog" id="qb-bank-hover" role="tooltip" hidden></div>
+<dialog class="qb-bank-dialog" id="qb-bank-dialog" aria-labelledby="qb-bank-dialog-title">
+ <div class="qb-bank-dialog__header"><h2 id="qb-bank-dialog-title">{{ _('Просмотр задания') }}</h2><button type="button" class="qb-btn qb-btn--secondary" data-bank-close data-sm-action="nav">{{ _('Закрыть') }}</button></div>
+ <div class="qb-catalog qb-bank-preview-content" data-bank-dialog-body></div>
+</dialog>
+
+<!-- ==================================================
+     FILTER BEHAVIOUR
+     ================================================== -->
+
+
+<script defer src="{{ url_for('static',path='js/teacher/assessment/question_bank/catalog_filters.js') }}?v=99"></script>
+
+<!-- ==================================================
+     MATHLIVE
+     Статическое отображение LaTeX в каталоге
+     ================================================== -->
+
+<script
+  data-readable-prose-loader
+  defer
+  src="https://cdn.jsdelivr.net/npm/mathlive"
+></script>
+<script defer src="{{ url_for('static', path='js/teacher/assessment/question_bank/readable_math_prose.js') }}?v=144"></script>
+
+<script src="{{ url_for('static',path='js/teacher/assessment/question_bank/question_bank_objective_preview.js') }}" defer></script>
+<script defer src="{{ url_for('static',path='js/teacher/assessment/question_bank/question_bank_objective_picker.js') }}?v=78"></script>
+<script defer src="{{ url_for('static',path='js/teacher/assessment/question_bank/catalog_table.js') }}?v=79"></script>
+{% endblock %}

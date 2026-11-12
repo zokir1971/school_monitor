@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+{% block title %}{{ _('Оқу мақсатын өзгерту') }}{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{{ url_for('static', path='css/learning_objective_rich.css') }}"><link rel="stylesheet" href="{{ url_for('static', path='css/learning_objective_reference.css') }}">{% endblock %}
+{% block content %}
+<div class="lor">
+<p><a href="{{ url_for('super_learning_objective_reference_list') }}" data-sm-action="nav" data-sm-back="true">{{ _('← Оқу мақсаттары / Учебные цели') }}</a></p>
+<h1>{{ _('Оқу мақсатын өзгерту / Редактирование цели') }}</h1>
+{% if error %}<p class="lor-error" role="alert">{{ _(error) }}</p>{% endif %}
+<div class="lor-panel"><strong>{{ row.code }}</strong><p>{{ row.subject_name }} {{ _('· Сынып / Класс:') }} {{ row.grade_level }} {{ _('· Тоқсандар / Четверти:') }} {{ row.quarters|join(', ') }}{% if row.education_track %} · {{ row.education_track|upper }}{% endif %}</p>
+<p>{{ _('Бағдарлама / Программа:') }} {{ row.program_title or '—' }} (ID: {{ row.program_id or '—' }})</p><p class="lor-hint">{{ _('Предмет, код, класс, направление и четверти сохраняются. Изменения текста применяются к существующей цели и будут видны там, где отображается её актуальный текст.') }}</p></div>
+<form id="lo-reference-form" method="post" action="{{ url_for('super_learning_objective_reference_save', objective_id=row.id) }}">
+<input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="version" value="{{ row.version }}"><input type="hidden" name="objective_json" id="lo-objective-json">
+<div class="lor-texts">
+{% for lang in ['kz','ru'] %}
+<section data-objective-language="{{ lang }}" class="lor-panel"><h2>{% if lang == 'kz' %}{{ _('Оқу мақсаты KZ *') }}{% else %}{{ _('Учебная цель RU') }}{% endif %}</h2>
+{% set segments = values.get('title_segments_'+lang, []) %}
+<div data-rich-editor data-language="{{ lang }}" data-initial-segments="{{ segments|tojson|forceescape }}">
+<div class="lo-rich-tools"><button type="button" data-rich-add-math data-sm-action="nav">{{ _('+ Формула') }}</button><button type="button" data-rich-edit-math disabled data-sm-action="edit">{{ _('Өзгерту / Изменить') }}</button><button type="button" data-rich-copy-math disabled data-sm-action="nav">{{ _('Көшіру / Копировать') }}</button><button type="button" data-rich-paste-math data-sm-action="nav">{{ _('Қою / Вставить') }}</button><button type="button" data-rich-delete-math disabled data-sm-action="danger">{{ _('Жою / Удалить') }}</button></div>
+<div class="qb-rich-editor__content" data-rich-content contenteditable="true" role="textbox" aria-multiline="true" aria-label="{{ lang|upper }}"></div>
+<input type="hidden" data-rich-segments value="{{ segments|tojson|forceescape }}"><input type="hidden" data-rich-plain-value>
+</div>
+<label class="lor-check">{% if values.get('has_formula_'+lang) %}<input type="checkbox" data-has-formula checked>{% else %}<input type="checkbox" data-has-formula>{% endif %}{{ _('Формула бар / Содержит формулы') }}</label>
+<label class="lor-check">{% if values.get('formula_reviewed_'+lang) %}<input type="checkbox" data-formula-reviewed checked>{% else %}<input type="checkbox" data-formula-reviewed>{% endif %}{{ _('Формулалар түпнұсқамен тексерілді / Формулы сверены с оригиналом') }}</label>
+</section>
+{% endfor %}
+</div>
+<div class="lor-panel"><label class="lor-check">{% if values.get('is_active') %}<input type="checkbox" id="lo-active" checked>{% else %}<input type="checkbox" id="lo-active">{% endif %}{{ _('Белсенді / Активна') }}</label>
+<p class="lor-hint">{{ _('Существующие связи с заданиями сохраняются при отключении цели. После изменения формул повторно подтвердите сверку с оригиналом.') }}</p>
+<p id="lo-edit-error" class="lor-error" role="alert" hidden></p><button class="lor-button" type="submit" data-sm-action="primary">{{ _('Сақтау / Сохранить') }}</button></div>
+</form>
+</div>
+{% include 'super/assessment/components/learning_objective_math_dialog.html' %}
+<script src="https://cdn.jsdelivr.net/npm/mathlive" defer></script>
+<script src="{{ url_for('static',path='js/learning_objective_math_editor.js') }}?v=i18n5" defer></script>
+<script src="{{ url_for('static',path='js/learning_objective_reference_edit.js') }}?v=i18n5" defer></script>
+{% endblock %}

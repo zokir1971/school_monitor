@@ -1,7 +1,7 @@
 # app/modules/users/pero.py
 from __future__ import annotations
 
-from sqlalchemy import select, exists, or_
+from sqlalchemy import select, exists, or_, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.users.models import User, RegistrationCode, RegistrationCodeUse
@@ -13,6 +13,13 @@ class UserRepo:
     async def get_by_id(db: AsyncSession, user_id: int) -> User | None:
         res = await db.execute(select(User).where(User.id == user_id))
         return res.scalar_one_or_none()
+
+    @staticmethod
+    async def set_ui_language(db: AsyncSession, user_id: int, language: str) -> bool:
+        table=User.__table__
+        result=await db.execute(update(table).where(table.c.id==user_id,table.c.is_active.is_(True),
+            table.c.ui_language.is_distinct_from(language)).values(ui_language=language).returning(table.c.id))
+        return result.scalar_one_or_none() is not None
 
     @staticmethod
     async def get_by_username(db: AsyncSession, username: str) -> User | None:

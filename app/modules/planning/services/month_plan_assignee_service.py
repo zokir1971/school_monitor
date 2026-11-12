@@ -3,8 +3,13 @@
 from __future__ import annotations
 
 from collections import defaultdict
+from app.modules.planning.repositories.month_correction_repo import MonthCorrectionRepo
+from app.modules.planning.services.month_correction_service import MonthCorrectionService, value as enum_value
+from app.modules.planning.schemas.month_plan_inputs import MonthItemUpdate
+from app.utils.calendar_weeks import month_weeks_grid
+from starlette.datastructures import FormData
 
-from fastapi import HTTPException, status
+from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.planning.enums import AssignmentKind, ResponsibleRole, PlanStatus
@@ -162,16 +167,20 @@ class SchoolMonthPlanAssigneeService:
                     getattr(month_plan, "status", None)) or cls._is_archived(getattr(school_plan, "status", None))
                 )
 
-        has_deadline = (
-                week_of_month is not None
-                and planned_start is not None
-                and planned_end is not None
-        )
-
         direction = getattr(row11, "direction", None)
+
+        snapshot = await MonthCorrectionRepo.snapshot(db, school_id=school_id, month_plan_id=item.month_plan_id)
+
+        if snapshot is None:
+            return None
 
         return MonthItemAssigneePageDTO(
             month_item_id=item.id,
+            year=month_plan.year,
+            plan_revision=MonthCorrectionService.revision(snapshot),
+            month=getattr(month_plan, "month", None),
+            school_plan_id=getattr(month_plan, "school_plan_id", None),
+            is_active_plan=(getattr(month_plan, "status", None) == PlanStatus.ACTIVE),
             row11_id=getattr(row11, "id", None),
             direction_name=(
                     getattr(direction, "short_title", None)
@@ -186,8 +195,6 @@ class SchoolMonthPlanAssigneeService:
             is_included=is_included,
             can_assign=(
                     not is_archived
-                    and is_included
-                    and has_deadline
                     and bool(planned_staff_roles)
             ),
             primary_groups=primary_groups,
@@ -204,222 +211,57 @@ class SchoolMonthPlanAssigneeService:
 
     @classmethod
     async def save_assignments(
-            cls,
-            db: AsyncSession,
-            *,
-            school_id: int,
-            month_item_id: int,
-            primary_staff_role_id: int | None,
-            co_executor_staff_role_ids: list[int] | None,
-            assigned_by_user_id: int | None,
+        cls, db: AsyncSession, *, school_id: int, month_item_id: int,
+        primary_staff_role_id: int | None, co_executor_staff_role_ids: list[int] | None,
+        assigned_by_user_id: int | None, correction_reason: str | None = None,
+        plan_revision: str, schedule_week: str = "", audit_out: list | None = None,
+        include_in_plan: bool | None = None,
     ) -> tuple[int, int]:
-        """
-        Сохранить основного исполнителя и соисполнителей.
-
-        Возвращает:
-            tuple[int, int]:
-            - номер месяца;
-            - id годового плана.
-
-        Эти данные используются маршрутом для возврата
-        на страницу месячного плана.
-        """
-
-        item = (
-            await SchoolMonthPlanAssigneeRepo
-            .get_month_item_for_school_with_row11(
-                db,
-                month_item_id=month_item_id,
-                school_id=school_id,
-            )
-        )
-
+        # Resolve the school boundary before any mutation. The correction service
+        # locks and checks the revision again in the same request transaction.
+        item = await SchoolMonthPlanAssigneeRepo.get_month_item_for_school_with_row11(
+            db, school_id=school_id, month_item_id=month_item_id)
         if item is None or item.source_row11 is None:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Задача месячного плана не найдена.",
-            )
-
-        month = item.month_plan.month
-        school_plan_id = item.month_plan.school_plan_id
-
-        cls._validate_plan_not_archived(
-            item
-        )
-
-        cls._validate_item_can_be_assigned(
-            item
-        )
-
-        row11 = item.source_row11
-
-        role_assignments = list(
-            getattr(row11, "role_assignments", None) or []
-        )
-
-        allowed_primary_roles = cls._unique_responsible_roles(
-            assignment.role
-            for assignment in role_assignments
-            if getattr(assignment, "role", None) is not None
-        )
-
-        if not allowed_primary_roles:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=(
-                    "Для задачи не определены ответственные роли "
-                    "в годовом плане."
-                ),
-            )
-
-        primary_candidates = (
-            await SchoolMonthPlanAssigneeRepo
-            .list_staff_roles_for_row11_roles(
-                db,
-                school_id=school_id,
-                roles=allowed_primary_roles,
-            )
-        )
-
-        primary_candidate_map = {
-            staff_role.id: staff_role
-            for staff_role in primary_candidates
-        }
-
+            raise HTTPException(404, "Задача не найдена / Тапсырма табылмады")
+        data = await MonthCorrectionRepo.snapshot(
+            db, school_id=school_id, month_plan_id=item.month_plan_id, lock=True)
+        if data is None:
+            raise HTTPException(404, "План не найден / Жоспар табылмады")
+        record = next((row for row in data['items'] if row['id'] == month_item_id), None)
+        if record is None:
+            raise HTTPException(404, "Задача не найдена / Тапсырма табылмады")
+        weeks = {w.week: w for w in month_weeks_grid(data['plan']['year'], data['plan']['month'])}
+        try:
+            week = int(schedule_week) if schedule_week else None
+        except (ValueError, TypeError):
+            raise HTTPException(400, "Выберите неделю / Аптаны таңдаңыз")
+        if week is not None and week not in weeks:
+            raise HTTPException(400, "Неделя не входит в месяц / Апта айға кірмейді")
         if primary_staff_role_id is None:
-            if len(primary_candidates) == 1:
-                primary_staff_role_id = primary_candidates[0].id
+            planned = {enum_value(r['role']) for r in data['planned'] if r['item_id'] == month_item_id}
+            eligible = [r['id'] for r in data['roles'] if enum_value(r['role']) in planned]
+            if len(eligible) == 1:
+                primary_staff_role_id = eligible[0]
             else:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Необходимо выбрать основного исполнителя.",
-                )
-
-        primary_staff_role = primary_candidate_map.get(
-            primary_staff_role_id
-        )
-
-        if primary_staff_role is None:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=(
-                    "Основной исполнитель должен соответствовать "
-                    "ответственной роли годового плана и быть "
-                    "активным сотрудником этой школы."
-                ),
-            )
-
-        normalized_co_executor_ids = cls._normalize_ids(
-            co_executor_staff_role_ids or []
-        )
-
-        normalized_co_executor_ids.discard(
-            primary_staff_role_id
-        )
-
-        selected_role_ids = {
-            primary_staff_role_id,
-            *normalized_co_executor_ids,
-        }
-
-        selected_staff_roles = (
-            await SchoolMonthPlanAssigneeRepo
-            .list_active_staff_roles_by_ids(
-                db,
-                school_id=school_id,
-                staff_role_ids=sorted(selected_role_ids),
-            )
-        )
-
-        selected_role_map = {
-            staff_role.id: staff_role
-            for staff_role in selected_staff_roles
-        }
-
-        missing_role_ids = (
-                selected_role_ids
-                - set(selected_role_map)
-        )
-
-        if missing_role_ids:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=(
-                    "Один или несколько выбранных сотрудников "
-                    "не найдены, неактивны или не принадлежат школе."
-                ),
-            )
-
-        primary_staff_member_id = (
-            primary_staff_role.staff_member_id
-        )
-
-        unique_co_executor_ids: list[int] = []
-
-        seen_staff_member_ids: set[int] = {
-            primary_staff_member_id
-        }
-
-        for staff_role_id in sorted(
-                normalized_co_executor_ids
-        ):
-            staff_role = selected_role_map[staff_role_id]
-            staff_member_id = staff_role.staff_member_id
-
-            if staff_member_id in seen_staff_member_ids:
-                continue
-
-            seen_staff_member_ids.add(staff_member_id)
-            unique_co_executor_ids.append(staff_role_id)
-
-        assignments: list[
-            tuple[int, AssignmentKind]
-        ] = [
-            (
-                primary_staff_role_id,
-                AssignmentKind.PRIMARY,
-            )
-        ]
-
-        assignments.extend(
-            (
-                staff_role_id,
-                AssignmentKind.CO_EXECUTOR,
-            )
-            for staff_role_id in unique_co_executor_ids
-        )
-
-        await (
-            SchoolMonthPlanAssigneeRepo
-            .replace_month_item_assignees(
-                db,
-                month_item_id=month_item_id,
-                assignees=assignments,
-                assigned_by_user_id=assigned_by_user_id,
-            )
-        )
-
-        responsible_user_id = (
-            await SchoolMonthPlanAssigneeRepo
-            .get_user_id_by_staff_member_id(
-                db,
-                staff_member_id=primary_staff_member_id,
-            )
-        )
-
-        await (
-            SchoolMonthPlanAssigneeRepo
-            .set_month_item_responsible(
-                db,
-                month_item_id=month_item_id,
-                responsible_role=primary_staff_role.role,
-                responsible_user_id=responsible_user_id,
-            )
-        )
-
-        await db.flush()
-
-        return month, school_plan_id
+                raise HTTPException(400, "Выберите основного исполнителя / Негізгі орындаушыны таңдаңыз")
+        prefix = f'item_{month_item_id}_'
+        form = FormData([
+            ('plan_revision', plan_revision), ('correction_reason', correction_reason or ''),
+            (prefix+'primary', str(primary_staff_role_id)),
+            *((prefix+'co', str(rid)) for rid in (co_executor_staff_role_ids or [])),
+        ])
+        selected = weeks.get(week)
+        update = MonthItemUpdate(
+            item_id=month_item_id, is_included=(record['is_included'] if include_in_plan is None else include_in_plan), notes=record['notes'],
+            week_of_month=week, planned_start=selected.start if selected else None,
+            planned_end=selected.end if selected else None)
+        audit = await MonthCorrectionService.save(
+            db, school_id=school_id, month_plan_id=item.month_plan_id,
+            school_plan_id=data['plan']['school_plan_id'], month=data['plan']['month'],
+            updates=[update], form=form, actor_id=assigned_by_user_id, target_item_id=month_item_id)
+        if audit_out is not None:
+            audit_out.append(audit)
+        return data['plan']['month'], data['plan']['school_plan_id']
 
     @staticmethod
     def _is_archived(value) -> bool:
@@ -432,87 +274,6 @@ class SchoolMonthPlanAssigneeService:
         )
 
         return status_value == PlanStatus.ARCHIVED.value
-
-    @classmethod
-    def _validate_plan_not_archived(
-            cls,
-            item,
-    ) -> None:
-        """
-        Запрещает изменение назначений исполнителей
-        архивного месячного или годового плана.
-        """
-
-        month_plan = getattr(
-            item,
-            "month_plan",
-            None,
-        )
-
-        if month_plan is None:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Месячный план не найден.",
-            )
-
-        if cls._is_archived(
-                getattr(month_plan, "status", None)
-        ):
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail=(
-                    "Мұрағатталған айлық жоспардың "
-                    "орындаушыларын өзгертуге болмайды."
-                ),
-            )
-
-        school_plan = getattr(
-            month_plan,
-            "school_plan",
-            None,
-        )
-
-        if school_plan is None:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Годовой план не найден.",
-            )
-
-        if cls._is_archived(
-                getattr(school_plan, "status", None)
-        ):
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail=(
-                    "Мұрағатталған оқу жылының "
-                    "тапсырма орындаушыларын "
-                    "өзгертуге болмайды."
-                ),
-            )
-
-    @staticmethod
-    def _validate_item_can_be_assigned(item) -> None:
-        if not bool(getattr(item, "is_included", False)):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=(
-                    "Нельзя назначить исполнителей задаче, "
-                    "которая не включена в месячный план."
-                ),
-            )
-
-        if (
-                getattr(item, "week_of_month", None) is None
-                or getattr(item, "planned_start", None) is None
-                or getattr(item, "planned_end", None) is None
-        ):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=(
-                    "Перед назначением исполнителей необходимо "
-                    "определить неделю и сроки выполнения задачи."
-                ),
-            )
 
     @classmethod
     def _build_groups(
@@ -546,7 +307,7 @@ class SchoolMonthPlanAssigneeService:
                     or ""
             ).strip()
 
-            group_key = (role_code, role_context)
+            group_key = (role_code, role_context if allow_primary else "")
             group_labels[group_key] = role_label
 
             grouped[group_key].append(
@@ -688,21 +449,6 @@ class SchoolMonthPlanAssigneeService:
             for assignment in assignments
             if getattr(assignment, "assignment_kind", None) == AssignmentKind.CO_EXECUTOR
         }
-
-    @staticmethod
-    def _normalize_ids(values: list[int]) -> set[int]:
-        normalized: set[int] = set()
-
-        for value in values:
-            try:
-                staff_role_id = int(value)
-            except (TypeError, ValueError):
-                continue
-
-            if staff_role_id > 0:
-                normalized.add(staff_role_id)
-
-        return normalized
 
     @staticmethod
     def _unique_responsible_roles(roles) -> list[ResponsibleRole]:

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from app.modules.planning.repositories.review_place_sync_repo import ReviewPlaceSyncRepo
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -33,6 +34,10 @@ class MonthPlanBuilder:
             raise ValueError(
                 f"Недопустимый месяц учебного года: {month}"
             )
+
+        locked_plan = await ReviewPlaceSyncRepo.lock_plan(db, school_plan_id=school_plan_id)
+        if not locked_plan or str(getattr(locked_plan["status"], "value", locked_plan["status"])) == "archived":
+            raise ValueError("Нельзя создавать задачи архивного годового плана")
 
         rows = await SchoolMonthlyPlanRepo.list_source_rows11_for_school_plan(
             db,
@@ -152,6 +157,8 @@ class MonthPlanBuilder:
                 db,
                 rows=review_place_rows,
             )
+
+        await ReviewPlaceSyncRepo.sync(db, school_plan_id=school_plan_id, month_plan_id=month_plan_id, locked=True)
 
         await db.flush()
 

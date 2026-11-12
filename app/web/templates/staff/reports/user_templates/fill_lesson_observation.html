@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Лист наблюдения урока{% endblock %}
+{% block title %}{{ _('Лист наблюдения урока') }}{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', path='css/template_report.css') }}">
@@ -10,10 +10,10 @@
 
 <div class="page-header">
     <div>
-        <h2>{{ document.report_label if document else "Сабақты бақылау парағы" }}</h2>
+        <h2>{{ _(document.report_label if document else "Сабақты бақылау парағы") }}</h2>
 
         <div class="muted">
-            Заполнение отчета
+            {{ _('Заполнение отчета') }}
         </div>
     </div>
 
@@ -21,13 +21,13 @@
         'staff_report_templates_page',
         month_item_id=month_item_id
     ) }}{% if request.query_params.get('month') %}?month={{ request.query_params.get('month') }}{% endif %}"
-       class="btn btn-secondary">
-        Назад к отчетам
+       class="btn btn-secondary" data-sm-action="nav" data-sm-back="true">
+        {{ _('Назад к отчетам') }}
     </a>
 </div>
 
 {% if error %}
-  <div class="alert alert-danger">{{ error }}</div>
+  <div class="alert alert-danger">{{ reports_feedback(error) }}</div>
 {% endif %}
 
 {% set readonly = report is not none and report.submitted_at is not none %}
@@ -42,15 +42,30 @@
       action="{{ lesson_post_url }}{% if template_id %}?template_id={{ template_id }}{% if request.query_params.get('month') %}&month={{ request.query_params.get('month') }}{% endif %}{% elif request.query_params.get('month') %}?month={{ request.query_params.get('month') }}{% endif %}">
   <input type="hidden" name="staff_member_id" value="{{ report.staff_member_id if report else '' }}">
 
+  {% set saved_document_language = (report.criteria_scores or {}).get('document_language') if report else none %}
+  {% set selected_document_language = saved_document_language if saved_document_language in ['ru','kk'] else ui_language() %}
+  <div class="card report-card">
+    {% if readonly and saved_document_language not in ['ru','kk'] %}
+      <p>{{ _('Язык документа') }}: {{ _('Язык ранее подписанного PDF не сохранён; файл открывается в исходном виде.') }}</p>
+    {% else %}
+    <label for="document-language">{{ _('Язык документа') }}</label>
+    <select id="document-language" name="document_language" required {% if readonly %}disabled{% endif %}>
+      <option value="kk" {% if selected_document_language == 'kk' %}selected{% endif %}>Қазақша</option>
+      <option value="ru" {% if selected_document_language == 'ru' %}selected{% endif %}>Русский</option>
+    </select>
+    {% endif %}
+    <p class="muted">{{ _('Язык PDF сохраняется с отчётом. Авторский текст не переводится автоматически.') }}</p>
+  </div>
+
   <!-- 1. Общая информация -->
   <div class="card report-card">
     <div class="card-title-row">
-      <h3>1. Общая информация об уроке</h3>
+      <h3>{{ _('1. Общая информация об уроке') }}</h3>
     </div>
 
     {% if readonly %}
       <div class="alert alert-success">
-        Отчет подписан. Редактирование запрещено.
+        {{ _('Отчет подписан. Редактирование запрещено.') }}
       </div>
     {% endif %}
 
@@ -58,7 +73,7 @@
       <table class="lesson-info-table">
         <tbody>
           <tr>
-            <th>Педагогтің ТАӘ<br><span>(бар болса)</span></th>
+            <th>{{ _('Педагогтің ТАӘ') }}<br><span>{{ _('(бар болса)') }}</span></th>
             <td>
               <input type="text"
                      name="info_teacher_full_name"
@@ -66,7 +81,7 @@
                      {% if readonly %}disabled{% endif %}>
             </td>
 
-            <th>Бақылаушының ТАӘ<br><span>(бар болса)</span></th>
+            <th>{{ _('Бақылаушының ТАӘ') }}<br><span>{{ _('(бар болса)') }}</span></th>
             <td>
               <input type="text"
                      name="info_observer_full_name"
@@ -76,7 +91,7 @@
           </tr>
 
           <tr>
-            <th>Лауазымы, біліктілік санаты</th>
+            <th>{{ _('Лауазымы, біліктілік санаты') }}</th>
             <td>
               <input type="text"
                      name="info_teacher_position"
@@ -84,7 +99,7 @@
                      {% if readonly %}disabled{% endif %}>
             </td>
 
-            <th>Лауазымы</th>
+            <th>{{ _('Лауазымы') }}</th>
             <td>
               <input type="text"
                      name="info_observer_position"
@@ -94,7 +109,7 @@
           </tr>
 
           <tr>
-            <th>Пән <span>(ұйымдастырылған қызмет)</span></th>
+            <th>{{ _('Пән') }} <span>{{ _('(ұйымдастырылған қызмет)') }}</span></th>
             <td colspan="3">
               <input type="text"
                      name="info_teacher_subject"
@@ -104,7 +119,7 @@
           </tr>
 
           <tr>
-            <th>Білім беру ұйымы</th>
+            <th>{{ _('Білім беру ұйымы') }}</th>
             <td>
               <input type="text"
                      name="info_school_name"
@@ -112,7 +127,7 @@
                      {% if readonly %}disabled{% endif %}>
             </td>
 
-            <th>Бақылау күні</th>
+            <th>{{ _('Бақылау күні') }}</th>
             <td>
               <input type="datetime-local"
                      name="info_lesson_datetime"
@@ -124,7 +139,7 @@
           </tr>
 
           <tr>
-            <th>Сынып (топ)</th>
+            <th>{{ _('Сынып (топ)') }}</th>
             <td>
               <input type="text"
                      name="info_class_name"
@@ -134,12 +149,12 @@
                      {% if readonly %}disabled{% endif %}>
             </td>
 
-            <th>Топ</th>
+            <th>{{ _('Топ') }}</th>
             <td>
               <input type="text"
                      name="info_group_name"
                      value="{{ saved_info.get('group_name', report.group_name if report else '') }}"
-                     placeholder="1 топ"
+                     placeholder="{{ _('1 топ') }}"
                      {% if readonly %}disabled{% endif %}>
             </td>
           </tr>
@@ -151,14 +166,14 @@
   <!-- 2. Цели урока -->
   <div class="card report-card">
     <div class="card-title-row">
-      <h3>2. Цели урока</h3>
+      <h3>{{ _('2. Цели урока') }}</h3>
     </div>
 
     <div class="table-wrap">
       <table class="form-table">
         <tbody>
           <tr>
-          <th>Сабақтың тақырыбы:</th>
+          <th>{{ _('Сабақтың тақырыбы:') }}</th>
           <td>
             <input type="text"
                    name="info_theme"
@@ -169,7 +184,7 @@
           </td>
           </tr>
           <tr>
-            <th>Оқу мақсаты:</th>
+            <th>{{ _('Оқу мақсаты:') }}</th>
             <td>
               <input type="text"
                      name="info_learning_objectives"
@@ -181,7 +196,7 @@
           </tr>
 
           <tr>
-            <th>Сабақ мақсаты 1:</th>
+            <th>{{ _('Сабақ мақсаты 1:') }}</th>
             <td>
               <input type="text"
                      name="info_lesson_objectives_1"
@@ -193,7 +208,7 @@
           </tr>
 
           <tr>
-            <th>Сабақ мақсаты 2:</th>
+            <th>{{ _('Сабақ мақсаты 2:') }}</th>
             <td>
               <input type="text"
                      name="info_lesson_objectives_2"
@@ -205,7 +220,7 @@
           </tr>
 
           <tr>
-            <th>Сабақ мақсаты 3:</th>
+            <th>{{ _('Сабақ мақсаты 3:') }}</th>
             <td>
               <input type="text"
                      name="info_lesson_objectives_3"
@@ -226,13 +241,13 @@
 
   {% for section in sections %}
     {% set section_index = loop.index0 %}
-    {% set section_title = section.get("title") or ("Раздел " ~ loop.index) %}
+    {% set section_title = section.get("title") or (_("Раздел ") ~ loop.index) %}
     {% set subsections = section.get("subsections") or [] %}
     {% set direct_criteria = section.get("criteria") or [] %}
 
     <div class="card report-card section-score-card">
       <div class="card-title-row">
-        <h3>{{ loop.index + 2 }}. {{ section_title }}</h3>
+        <h3>{{ loop.index + 2 }}. {{ report_form_label(section_title) }}</h3>
       </div>
 
       <div class="table-wrap">
@@ -240,7 +255,7 @@
           <thead>
             <tr>
               <th class="col-number">№</th>
-              <th>Критерий</th>
+              <th>{{ _('Критерий') }}</th>
               {% for value in score_scale %}
                 <th class="col-score">{{ value }}</th>
               {% endfor %}
@@ -263,7 +278,7 @@
                     colspan="{{ score_scale|length + 1 }}"
                   >
                     {% if subsection_title %}
-                      <strong>{{ subsection_title }}</strong>
+                      <strong>{{ report_form_label(subsection_title) }}</strong>
                     {% endif %}
                   </td>
                 </tr>
@@ -294,7 +309,7 @@
 
                   <tr class="criterion-row-table">
                     <td class="cell-number"></td>
-                    <td class="cell-criterion">{{ criterion_text }}</td>
+                    <td class="cell-criterion">{{ report_form_label(criterion_text) }}</td>
 
                     {% for value in score_scale %}
                       <td class="cell-score">
@@ -338,7 +353,7 @@
 
                 <tr class="criterion-row-table">
                   <td class="cell-number">{{ loop.index }}</td>
-                  <td class="cell-criterion">{{ criterion_text }}</td>
+                  <td class="cell-criterion">{{ report_form_label(criterion_text) }}</td>
 
                   {% for value in score_scale %}
                     <td class="cell-score">
@@ -366,12 +381,12 @@
   {% if schema.get('show_total_score', true) %}
     <div class="card report-card total-card">
       <div class="card-title-row">
-        <h3>Итог</h3>
+        <h3>{{ _('Итог') }}</h3>
       </div>
 
       <div class="total-grid">
         <div class="form-field">
-          <label>Общий балл</label>
+          <label>{{ _('Общий балл') }}</label>
           <input type="text"
                  id="total_score"
                  name="total_score"
@@ -380,7 +395,7 @@
         </div>
 
         <div class="form-field">
-          <label>Максимальный балл</label>
+          <label>{{ _('Максимальный балл') }}</label>
           <input type="text"
                  value="{{ schema.get('max_score', 0) or 0 }}"
                  readonly>
@@ -392,18 +407,18 @@
   <!-- Рекомендации -->
   <div class="card report-card">
     <div class="card-title-row">
-      <h3>Рекомендации и обратная связь</h3>
+      <h3>{{ _('Рекомендации и обратная связь') }}</h3>
     </div>
 
     <div class="form-field form-field--full">
-      <label>Кері байланыс / Обратная связь</label>
+      <label>{{ _('Кері байланыс / Обратная связь') }}</label>
       <textarea name="info_feedback"
                 rows="3"
                 {% if readonly %}disabled{% endif %}>{{ saved_info.get("feedback", report.feedback if report else '') }}</textarea>
     </div>
 
     <div class="form-field form-field--full">
-      <label>Ұсыныс / Рекомендации</label>
+      <label>{{ _('Ұсыныс / Рекомендации') }}</label>
       <textarea name="info_suggestion_control"
                 rows="3"
                 {% if readonly %}disabled{% endif %}>{{ saved_info.get("suggestion_control", report.suggestion_control if report else '') }}</textarea>
@@ -413,37 +428,37 @@
   <!-- Кнопки -->
   <div class="card action-panel report-actions">
     {% if not readonly %}
-      <button type="submit" name="action" value="save" class="btn btn-primary">
-        Сохранить черновик
+      <button type="submit" name="action" value="save" class="btn btn-primary" data-sm-action="primary">
+        {{ _('Сохранить черновик') }}
       </button>
 
       <button type="submit"
           name="action"
           value="complete"
           class="btn btn-success"
-          onclick="return confirm('После подписания отчет нельзя будет редактировать. Подписать и сохранить?')">
-        Сохранить и подписать
+          data-confirm="{{ _('После подписания отчет нельзя будет редактировать. Подписать и сохранить?') }}" onclick="return confirm(this.dataset.confirm);" data-sm-action="success">
+        {{ _('Сохранить и подписать') }}
       </button>
 
       <a href="{{ url_for('staff_report_templates_page', month_item_id=month_item_id) }}{% if request.query_params.get('month') %}?month={{ request.query_params.get('month') }}{% endif %}"
-          class="btn btn-secondary">
-        Отмена
+          class="btn btn-secondary" data-sm-action="nav">
+        {{ _('Отмена') }}
       </a>
     {% else %}
       <a href="{{ url_for('lesson_observation_pdf_view', report_id=report.id) }}"
          class="btn btn-secondary"
-         target="_blank">
-        Просмотреть PDF
+         target="_blank" data-sm-action="nav">
+        {{ _('Просмотреть PDF') }}
       </a>
 
       <a href="{{ url_for('lesson_observation_pdf_download', report_id=report.id) }}"
-         class="btn btn-primary">
-        Скачать PDF
+         class="btn btn-primary" data-sm-action="nav">
+        {{ _('Скачать PDF') }}
       </a>
 
       <a href="{{ url_for('staff_report_templates_page', month_item_id=month_item_id) }}{% if request.query_params.get('month') %}?month={{ request.query_params.get('month') }}{% endif %}"
-       class="btn btn-secondary">
-      Назад к отчетам
+       class="btn btn-secondary" data-sm-action="nav" data-sm-back="true">
+      {{ _('Назад к отчетам') }}
       </a>
     {% endif %}
   </div>

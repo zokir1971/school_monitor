@@ -1,0 +1,20 @@
+{% set kk = ui_language() == 'kk' %}
+<div class="analytics-filter-field">
+  <label for="quality-checkpoint">{{ 'Бақылау нүктесі' if kk else 'Контрольная точка' }}</label>
+  <select id="quality-checkpoint" name="checkpoint" class="analytics-filter-select">
+    {% for option in work_selection.checkpoints %}
+      <option value="{{ option.key }}" {% if option.key == work_selection.checkpoint %}selected{% endif %}>{{ option.label }}</option>
+    {% endfor %}
+  </select>
+</div>
+
+<div class="analytics-filter-field analytics-filter-field--work">
+  <label for="quality-work">{{ 'Бағалау жұмысы' if kk else 'Оценочная работа' }}</label>
+  <select title="{{ work_selection.selected.label if work_selection.selected else '' }}" id="quality-work" name="work_key" class="analytics-filter-select" style="width:100%;max-width:100%;">
+    <option value="">{{ '— Жұмысты таңдаңыз —' if kk else '— Выберите работу —' }}</option>
+    <option value="all" {% if work_selection.work_key == 'all' %}selected{% endif %}>{{ 'Барлық жұмыстар' if kk else 'Все работы' }}</option>
+    {% for option in work_selection.choices %}
+      <option value="{{ option.key }}" {% if option.key == work_selection.work_key %}selected{% endif %}>{{ option.label }}</option>
+    {% endfor %}
+  </select>
+</div>

@@ -28,6 +28,8 @@ class MonthPlanNotificationAssignmentRowDTO:
     task_title: str
     planned_start: date | None
     planned_end: date | None
+    user_id: int | None = None
+    is_account_active: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -75,6 +77,7 @@ class MonthPlanNotificationRecipientDTO:
     is_registered: bool
 
     phone: str | None = None
+    user_id: int | None = None
 
     primary_tasks: list[MonthPlanNotificationTaskDTO] = field(
         default_factory=list

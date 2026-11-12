@@ -1,5 +1,7 @@
 # app/routers/web/setup/superuser.py
 
+from app.core.i18n import resolve_language
+
 from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -84,6 +86,7 @@ async def setup_superuser_submit(
             email=email,
             phone=phone,
             password_hash=password_hash,
+            ui_language=resolve_language(request),
         )
 
     except ValueError as e:

@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import HTMLResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.i18n import resolve_language, translate
 from app.db.session import get_db
 from app.modules.monitoring.monitoring_service import StaffMonitoringService
 from app.modules.statistics.school_statistics_service import (
@@ -55,7 +56,7 @@ async def staff_monitoring_rating_page(
     if school_plan is None:
         raise HTTPException(
             status_code=404,
-            detail="Активный план школы не найден",
+            detail=translate("Активный план школы не найден", resolve_language(request, user)),
         )
 
     page_data = await StaffMonitoringService.get_page_data(

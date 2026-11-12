@@ -1,5 +1,7 @@
 # app/routers/web/auth/register_admin_by_code.py
 
+from app.core.i18n import resolve_language
+
 from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy import select
@@ -14,6 +16,30 @@ from app.routers.web.web_common import templates
 from app.routers.web.helpers.render import render, render_error
 
 router = APIRouter()
+
+
+async def _context_after_error(db, ctx):
+    """Restore role/scope selectors after an error, without consuming the invite."""
+    result = dict(ctx)
+    try:
+        code = await RegistrationCodeService.preview_code(db, invite_code=ctx["invite_code"])
+    except ValueError:
+        result["step"] = 1
+        return result
+    result["role"] = code.target_role
+    if code.target_role == UserRole.REGION_ADMIN:
+        query = select(Region).order_by(Region.name)
+        if code.region_id:
+            query = query.where(Region.id == code.region_id)
+        result["regions"] = (await db.execute(query)).scalars().all()
+    elif code.target_role == UserRole.DISTRICT_ADMIN and code.district_id:
+        result["district"] = await db.get(District, code.district_id)
+    elif code.target_role == UserRole.SCHOOL_ADMIN and code.school_id:
+        school = await db.get(School, code.school_id)
+        if school:
+            result["school"] = school
+            result["district"] = await db.get(District, school.district_id) if school.district_id else None
+    return result
 
 
 # Регистрация админа по коду
@@ -141,7 +167,7 @@ async def register_admin_action(
             templates,
             request,
             "auth/register_admin.html",
-            ctx,
+            await _context_after_error(db, ctx),
             error="Пароли не совпадают",
             status_code=400,
         )
@@ -155,8 +181,7 @@ async def register_admin_action(
             iin=iin,
             password=password,
             selected_region_id=region_id,
-            selected_district_id=district_id,
-            selected_school_id=school_id,
+            ui_language=resolve_language(request),
             email=email,
             phone=phone,
         )
@@ -165,7 +190,7 @@ async def register_admin_action(
             templates,
             request,
             "auth/register_admin.html",
-            ctx,
+            await _context_after_error(db, ctx),
             error=str(e),
             status_code=400,
         )

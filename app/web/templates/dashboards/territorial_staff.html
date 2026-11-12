@@ -1,0 +1,10 @@
+{% from 'dashboards/components/assessment_section.html' import assessment_section with context %}
+{% extends 'base.html' %}
+{% block title %}{{ _(panel_title) }}{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static',path='css/assessment/navigation.css') }}?v=99">
+<script defer src="{{ url_for('static',path='js/assessment/navigation.js') }}?v=99"></script><link rel="stylesheet" href="{{ url_for('static',path='css/admin.css') }}">{% endblock %}
+{% block content %}
+<div class="dashboard"><h1 class="section-title">{{ _(panel_title) }}</h1>{{ assessment_section() }}</div>
+{% endblock %}
+

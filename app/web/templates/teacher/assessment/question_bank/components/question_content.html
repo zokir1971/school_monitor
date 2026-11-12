@@ -1,0 +1,447 @@
+{#
+    Универсальный renderer student-visible content задания.
+
+    Используется:
+        - карточкой собственного задания учителя;
+        - Human Review эксперта;
+        - общим Question Bank / каталогом.
+
+    ВАЖНО:
+        Здесь никогда не отображается answer_key.
+#}
+
+{% from "teacher/assessment/question_bank/_segments.html"
+   import render_segments with context %}
+
+
+{% macro render_question_content(item, show_bank=true) %}
+
+  {% set question_type = (
+      item.question_type.value
+      if item.question_type.value is defined
+      else item.question_type
+  ) %}
+
+  {% set content = item.content or {} %}
+
+
+  {# =========================================================
+     SINGLE CHOICE
+     ========================================================= #}
+
+  {% if question_type == "single_choice" %}
+    {% if 'parts' in content %}
+      {% from 'teacher/assessment/question_bank/components/single_choice_parts.html' import render_single_choice_parts with context %}
+      {{ render_single_choice_parts(item, show_answers=false) }}
+    {% else %}
+
+
+    {% set options = content.get("options", []) %}
+
+    {% if options %}
+
+      <div class="qb-render-options">
+
+        {% for option in options %}
+
+          <div class="qb-render-option">
+
+            <div class="qb-render-option__marker">
+              {{ option.get("value", "—") }}
+            </div>
+
+            <div class="qb-render-option__body">
+              {{ render_segments(
+                  option.get("segments", [])
+              ) }}
+            </div>
+
+          </div>
+
+        {% endfor %}
+
+      </div>
+
+    {% else %}
+      <div class="qb-render-empty">
+        {{ _('Жауап нұсқалары көрсетілмеген.') }}
+      </div>
+    {% endif %}
+
+
+  {# =========================================================
+     MULTIPLE CHOICE
+     ========================================================= #}
+
+    {% endif %}
+  {% elif question_type == "multiple_choice" %}
+
+    {% set options = content.get("options", []) %}
+
+    {% if options %}
+
+      <div class="qb-render-options">
+
+        {% for option in options %}
+
+          <div class="qb-render-option">
+
+            <div class="qb-render-option__marker">
+              {{ option.get("value", "—") }}
+            </div>
+
+            <div class="qb-render-option__body">
+              {{ render_segments(
+                  option.get("segments", [])
+              ) }}
+            </div>
+
+          </div>
+
+        {% endfor %}
+
+      </div>
+
+    {% else %}
+      <div class="qb-render-empty">
+        {{ _('Жауап нұсқалары көрсетілмеген.') }}
+      </div>
+    {% endif %}
+
+
+  {# =========================================================
+     TRUE / FALSE
+     ========================================================= #}
+
+  {% elif question_type == "true_false" %}
+    {% set labels = content.get("labels", {}) %}
+    {% if "statements" in content %}
+      <div class="qb-render-options">
+        {% for statement in content.get("statements", []) %}
+          <div class="qb-render-option">
+            <div class="qb-render-option__marker">{{ loop.index }}</div>
+            <div class="qb-render-option__body">{{ render_segments(statement.get("segments", [])) }}</div>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="qb-render-options">
+        <div class="qb-render-option">{{ labels.get("true", _('Дұрыс')) }}</div>
+        <div class="qb-render-option">{{ labels.get("false", _('Бұрыс')) }}</div>
+      </div>
+    {% endif %}
+
+  {% elif question_type == "short_text" %}
+
+    <div class="qb-render-response-placeholder">
+      {{ _('Қысқа мәтіндік жауап енгізіледі.') }}
+    </div>
+
+
+  {# =========================================================
+     NUMBER
+     ========================================================= #}
+
+  {% elif question_type == "number" %}
+    {% if 'parts' in content %}
+      <div class="qb-render-options">{% for part in content.get('parts', []) %}
+        <div class="qb-render-option">
+          <div class="qb-render-option__marker">{{ loop.index }}</div>
+          <div class="qb-render-option__body">{{ render_segments(part.get('segments', [])) }}
+            {% if part.get('unit') %}<span class="qb-render-unit">({{ part.get('unit') }})</span>{% endif %}
+          </div>
+        </div>
+      {% endfor %}</div>
+    {% else %}
+
+    <div class="qb-render-response-placeholder">
+
+      {{ _('Сандық жауап енгізіледі.') }}
+
+      {% if content.get("unit") %}
+        <span class="qb-render-unit">
+          {{ _('Өлшем бірлігі:') }}
+          <strong>{{ content.get("unit") }}</strong>
+        </span>
+      {% endif %}
+
+    </div>
+
+
+  {# =========================================================
+     MATCHING
+     ========================================================= #}
+
+    {% endif %}
+
+  {% elif question_type == "matching" %}
+
+    {% set left_items = content.get("left", []) %}
+    {% set right_items = content.get("right", []) %}
+
+    <div class="qb-render-matching qb-render-matching--rows">
+      <div class="qb-render-subtitle">{{ _('Сол жақ') }}</div>
+      <div class="qb-render-subtitle">{{ _('Оң жақ') }}</div>
+      {% for index in range([left_items|length, right_items|length]|max) %}
+        {% for options in [left_items, right_items] %}
+          {% if index < options|length %}
+            {% set option = options[index] %}
+            <div class="qb-render-option">
+              <div class="qb-render-option__marker">{{ option.get('value') | matching_label(options, 'left' if options is sameas left_items else 'right') }}</div>
+              <div class="qb-render-option__body">{{ render_segments(option.get('segments', [])) }}</div>
+            </div>
+          {% else %}
+            <div class="qb-matching-placeholder" aria-hidden="true"></div>
+          {% endif %}
+        {% endfor %}
+      {% else %}
+        <div class="qb-render-empty">{{ _('Элементтер жоқ.') }}</div>
+      {% endfor %}
+    </div>
+
+
+  {# =========================================================
+     ORDERING
+     ========================================================= #}
+
+  {% elif question_type == "ordering" %}
+
+    {% set ordering_items = content.get("items", []) %}
+
+    {% if ordering_items %}
+
+      <div class="qb-render-options">
+
+        {% for option in ordering_items %}
+
+          <div class="qb-render-option">
+
+            <div class="qb-render-option__marker">
+              {{ loop.index }}
+            </div>
+
+            <div class="qb-render-option__body">
+              {{ render_segments(
+                  option.get("segments", [])
+              ) }}
+            </div>
+
+          </div>
+
+        {% endfor %}
+
+      </div>
+
+    {% else %}
+
+      <div class="qb-render-empty">
+        {{ _('Реттелетін элементтер көрсетілмеген.') }}
+      </div>
+
+    {% endif %}
+
+
+  {# =========================================================
+     FILL GAPS
+     ========================================================= #}
+
+  {% elif question_type == "fill_gaps" %}
+
+    {% set segments = content.get("segments", []) %}
+
+    <div class="qb-render-fill-gaps">
+
+      <div class="qb-render-fill-gaps__text">
+
+        {% set gap_number = namespace(value=0) %}
+        {% for segment in segments %}
+
+          {% if segment.get("type") == "text" %}
+
+            <span style="white-space: pre-line;">{{ segment.get("text", "") }}</span>
+
+          {% elif segment.get("type") == "gap" %}
+
+            {% set gap_number.value = gap_number.value + 1 %}
+            <span class="qb-render-gap">
+              {{ gap_number.value }}) ________
+            </span>
+
+          {% endif %}
+
+        {% endfor %}
+
+      </div>
+
+
+      {% if show_bank and content.get("input_mode") == "word_bank" %}
+
+        {% set word_bank = content.get("word_bank", []) %}
+
+        <div class="qb-render-word-bank">
+
+          <div class="qb-render-subtitle">
+            {{ _('Банк ответов') }}
+          </div>
+
+          <div class="qb-render-word-bank__items">
+
+            {% for word in word_bank %}
+              <span class="qb-render-word"><strong>{{ loop.index0 | matching_letter }}</strong> · 
+                {% if content.get('word_bank_format') == 'rich_v1' %}
+                  {{ render_segments(word.get('segments', [])) }}
+                {% else %}{{ word }}{% endif %}
+              </span>
+            {% endfor %}
+
+          </div>
+
+        </div>
+
+      {% endif %}
+
+    </div>
+
+
+  {# =========================================================
+     FORMULA
+     ========================================================= #}
+
+  {% elif question_type == "formula" %}
+    {% if content.get('parts') %}
+      {% from 'teacher/assessment/question_bank/components/formula_parts.html' import render_formula_parts with context %}
+      {{ render_formula_parts(item, answers=false) }}
+    {% else %}
+
+    {% set variables = content.get("variables", []) %}
+
+    <div class="qb-render-response-placeholder">
+
+      {{ _('Формула түрінде жауап енгізіледі.') }}
+
+      {% if variables %}
+
+        <div class="qb-render-variables">
+
+          <span>
+            {{ _('Айнымалылар:') }}
+          </span>
+
+          {% for variable in variables %}
+            <code>{{ variable }}</code>
+          {% endfor %}
+
+        </div>
+
+      {% endif %}
+
+    </div>
+
+
+    {% if content.get('meaning_options') %}
+      <div class="qb-render-subtitle">{{ _('Формуладан кейін белгіленулерді шамалармен сәйкестендіру') }}</div>
+      {% for variable in variables %}
+        <div class="qb-render-option">
+          <div class="qb-render-option__marker"><math-field class="qb-math-field" read-only tabindex="-1">{{ variable }}</math-field></div>
+          <div class="qb-render-option__body">
+            <select disabled aria-label="{{ _('Шаманы таңдау') }}">
+              <option selected>{{ _('Шаманы таңдаңыз') }}</option>
+              {% for option in content.get('meaning_options', []) %}<option>{{ option.get('label', '') }}</option>{% endfor %}
+            </select>
+          </div>
+        </div>
+      {% endfor %}
+    {% endif %}
+
+    {% endif %}
+
+  {# =========================================================
+     IMAGE CHOICE
+     ========================================================= #}
+
+  {% elif question_type == "image_choice" %}
+
+    {% set options = content.get("options", []) %}
+
+    {% if options %}
+
+      <div class="qb-render-images">
+
+        {% for option in options %}
+
+          <div class="qb-render-image-option">
+
+            <div class="qb-render-image-option__marker">
+              {{ option.get("value", "—") }}
+            </div>
+
+            <img
+              src="{{ url_for('teacher_question_bank_media_view') }}?object_key={{ option.get('object_key', '') | urlencode }}"
+              alt="{{ option.get('alt', '') }}"
+              class="qb-render-image-option__image"
+              style="display:block;max-width:100%;max-height:240px;object-fit:contain"
+              loading="lazy"
+            >
+
+            {% if option.get("alt") %}
+
+              <div class="qb-render-image-option__alt">
+                {{ option.get("alt") }}
+              </div>
+
+            {% endif %}
+
+          </div>
+
+        {% endfor %}
+
+      </div>
+
+    {% else %}
+
+      <div class="qb-render-empty">
+        {{ _('Сурет нұсқалары көрсетілмеген.') }}
+      </div>
+
+    {% endif %}
+
+
+  {# =========================================================
+     MANUAL REVIEW
+     ========================================================= #}
+
+  {% elif question_type == "manual_review" %}
+
+    <div class="qb-render-response-placeholder">
+      {{ _('Білім алушының жауабы қолмен тексеріледі.') }}
+    </div>
+    {% set criteria = (item.grading_settings or {}).get('criteria', []) %}
+    {% if criteria %}
+      <div class="qb-render-subtitle">{{ _('Бағалау критерийлері') }}</div>
+      {% for criterion in criteria %}
+        <div class="qb-render-option">
+          <div class="qb-render-option__marker">{{ criterion.get('id', '') }}</div>
+          <div class="qb-render-option__body">
+            <strong>{{ criterion.get('title', '') }}</strong>
+            <div>{{ criterion.get('description', '') }}</div>
+            <div>{{ _('Максималды балл:') }} {{ criterion.get('max_score', '') }}</div>
+          </div>
+        </div>
+      {% endfor %}
+    {% endif %}
+
+
+
+  {# =========================================================
+     UNKNOWN / FUTURE TYPE
+     ========================================================= #}
+
+  {% else %}
+
+    <div class="qb-render-unknown">
+      {{ _('Бұл тапсырма түрінің көрінісі әлі қолдау таппаған.') }}
+    </div>
+
+  {% endif %}
+
+{% endmacro %}

@@ -1,0 +1,11 @@
+{% extends 'assessment/work_plans/base.html' %}
+{% block extra_css %}{{ super() }}<link rel="stylesheet" href="{{ url_for('static',path='css/assessment/work_plan_catalog.css') }}?v=103">{% endblock %}
+{% block bank_content %}{% set ru=ui_language()=='ru' %}
+<header class="bank-heading"><h1>{{ 'Удаление черновика комплекта' if ru else 'Жинақ жобасын жою' }}</h1><a class="bank-button bank-button--secondary" href="{{ list_url }}" data-sm-action="nav">{{ 'К списку комплектов' if ru else 'Жинақтар тізіміне' }}</a></header>
+<section class="bank-panel catalog-delete-review"><h2>№{{ plan.id }} · {{ plan.display_title }}</h2>
+<p>{{ 'Вариантов:' if ru else 'Нұсқалар:' }} <strong>{{ plan.variant_count }}</strong> · {{ 'Карточек в вариантах:' if ru else 'Нұсқалардағы карточкалар:' }} <strong>{{ card_count }}</strong> · {{ 'Разных заданий банка:' if ru else 'Банктегі әртүрлі тапсырмалар:' }} <strong>{{ source_count }}</strong></p>
+<p>{{ 'Будет удалён весь черновик вместе с его составом по вариантам. Задания в банке сохранятся. Восстановить комплект через интерфейс нельзя.' if ru else 'Жоба нұсқалар бойынша құрамымен бірге толық жойылады. Банктегі тапсырмалар сақталады. Жинақты интерфейс арқылы қалпына келтіру мүмкін емес.' }}</p>
+<form method="post" action="{{ url_for('assessment_work_plan_delete_confirm',plan_id=plan.id) }}">
+<input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="revision" value="{{ revision }}"><input type="hidden" name="return_query" value="{{ return_query }}">
+<div class="bank-actions"><a class="bank-button bank-button--secondary" href="{{ list_url }}" data-sm-action="nav">{{ 'Отмена' if ru else 'Бас тарту' }}</a><button class="bank-button catalog-delete-confirm" type="submit" data-sm-action="danger">{{ 'Удалить черновик №' if ru else 'Жобаны жою, №' }}{{ plan.id }}</button></div></form>
+</section>{% endblock %}

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from app.modules.reports.assessment_report_types import REPORT_TYPES
+
 from copy import deepcopy
 from typing import Any
 
@@ -91,6 +93,8 @@ class ReportTemplateResolver:
             )
 
         if normalized_mode == ReportTemplateMode.CUSTOM:
+            if normalized_code in REPORT_TYPES:
+                raise ValueError("Для этого отчёта доступен только системный шаблон. / Бұл есеп үшін тек жүйелік үлгі қолжетімді.")
             return await cls._resolve_user(
                 db,
                 report_code=normalized_code,

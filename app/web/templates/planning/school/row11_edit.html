@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 
 {% block title %}
-Тапсырманы өңдеу — {{ page.academic_year }}
+{{ _('Тапсырманы өңдеу —') }} {{ page.academic_year }}
 {% endblock %}
 
 {% block content %}
@@ -162,14 +162,17 @@
   }
 
   .row11-textarea {
-    min-height: 92px;
+    min-height: 43px;
+    box-sizing: border-box;
+    height: auto;
+    max-height: none;
     padding: 10px 11px;
     resize: vertical;
     line-height: 1.5;
   }
 
   .row11-textarea--large {
-    min-height: 125px;
+    min-height: 43px;
   }
 
   .row11-input:focus,
@@ -429,11 +432,11 @@
 
       <div>
         <div class="row11-eyebrow">
-          Мектепішілік бақылау
+          {{ _('Мектепішілік бақылау') }}
         </div>
 
         <h1 class="row11-title">
-          Тапсырманы өңдеу
+          {{ _('Тапсырманы өңдеу') }}
         </h1>
 
         <p class="row11-subtitle">
@@ -474,11 +477,11 @@
 
       <div class="row11-card__header">
         <h2 class="row11-card__title">
-          Негізгі мәліметтер
+          {{ _('Негізгі мәліметтер') }}
         </h2>
 
         <p class="row11-card__hint">
-          Бақылау тапсырмасының мазмұны мен мақсатын көрсетіңіз.
+          {{ _('Бақылау тапсырмасының мазмұны мен мақсатын көрсетіңіз.') }}
         </p>
       </div>
 
@@ -488,7 +491,7 @@
 
           <div class="row11-field--full">
             <label class="row11-label" for="topic">
-              Тақырып
+              {{ _('Тақырып') }}
               <span class="row11-required">*</span>
             </label>
 
@@ -496,6 +499,7 @@
               id="topic"
               name="topic"
               class="row11-textarea"
+              rows="1"
               required
             >{{ page.topic }}</textarea>
           </div>
@@ -503,56 +507,56 @@
 
           <div class="row11-field--full">
             <label class="row11-label" for="goal">
-              Мақсаты
+              {{ _('Мақсаты') }}
             </label>
 
             <textarea
               id="goal"
               name="goal"
               class="row11-textarea"
+              rows="1"
             >{{ page.goal }}</textarea>
           </div>
 
 
           <div>
             <label class="row11-label" for="control_object">
-              Бақылау нысаны
+              {{ _('Бақылау нысаны') }}
             </label>
 
-            <input
+            <textarea
               id="control_object"
               name="control_object"
-              type="text"
-              class="row11-input"
-              value="{{ page.control_object }}"
-            >
+              class="row11-textarea"
+              rows="1"
+            >{{ page.control_object }}</textarea>
           </div>
 
 
           <div>
             <label class="row11-label" for="control_type">
-              Бақылау түрі
+              {{ _('Бақылау түрі') }}
             </label>
 
-            <input
+            <textarea
               id="control_type"
               name="control_type"
-              type="text"
-              class="row11-input"
-              value="{{ page.control_type }}"
-            >
+              class="row11-textarea"
+              rows="1"
+            >{{ page.control_type }}</textarea>
           </div>
 
 
           <div class="row11-field--full">
             <label class="row11-label" for="methods">
-              Бақылау әдістері
+              {{ _('Бақылау әдістері') }}
             </label>
 
             <textarea
               id="methods"
               name="methods"
               class="row11-textarea"
+              rows="1"
             >{{ page.methods }}</textarea>
           </div>
 
@@ -571,11 +575,11 @@
 
   <div class="row11-card__header">
     <h2 class="row11-card__title">
-      Орындау кезеңі
+      {{ _('Орындау кезеңі') }}
     </h2>
 
     <p class="row11-card__hint">
-      Тапсырманың орындалу мерзімін таңдаңыз.
+      {{ _('Тапсырманың орындалу мерзімін таңдаңыз.') }}
     </p>
   </div>
 
@@ -584,7 +588,7 @@
     <!-- Образец из годового плана -->
     <div class="row11-period-sample">
       <div class="row11-period-sample__label">
-        Үлгі
+        {{ _('Үлгі') }}
       </div>
 
       <div class="row11-period-sample__value">
@@ -598,7 +602,7 @@
       <!-- Тип периода -->
       <div>
         <label class="row11-label" for="period_type">
-          Кезең түрі
+          {{ _('Кезең түрі') }}
           <span class="row11-required">*</span>
         </label>
 
@@ -609,37 +613,37 @@
           required
         >
           <option value="">
-            Кезеңді таңдаңыз
+            {{ _('Кезеңді таңдаңыз') }}
           </option>
 
           {% if page.period_type == "all_year" %}
-            <option value="all_year" selected>Оқу жылы бойы</option>
+            <option value="all_year" selected>{{ _('Оқу жылы бойы') }}</option>
           {% else %}
-            <option value="all_year">Оқу жылы бойы</option>
+            <option value="all_year">{{ _('Оқу жылы бойы') }}</option>
           {% endif %}
 
           {% if page.period_type == "monthly" %}
-            <option value="monthly" selected>Ай сайын</option>
+            <option value="monthly" selected>{{ _('Ай сайын') }}</option>
           {% else %}
-            <option value="monthly">Ай сайын</option>
+            <option value="monthly">{{ _('Ай сайын') }}</option>
           {% endif %}
 
           {% if page.period_type == "quarter" %}
-            <option value="quarter" selected>Тоқсан сайын</option>
+            <option value="quarter" selected>{{ _('Тоқсан сайын') }}</option>
           {% else %}
-            <option value="quarter">Тоқсан сайын</option>
+            <option value="quarter">{{ _('Тоқсан сайын') }}</option>
           {% endif %}
 
           {% if page.period_type == "month" %}
-            <option value="month" selected>Бір ай</option>
+            <option value="month" selected>{{ _('Бір ай') }}</option>
           {% else %}
-            <option value="month">Бір ай</option>
+            <option value="month">{{ _('Бір ай') }}</option>
           {% endif %}
 
           {% if page.period_type == "months" %}
-            <option value="months" selected>Бірнеше ай</option>
+            <option value="months" selected>{{ _('Бірнеше ай') }}</option>
           {% else %}
-            <option value="months">Бірнеше ай</option>
+            <option value="months">{{ _('Бірнеше ай') }}</option>
           {% endif %}
         </select>
       </div>
@@ -651,7 +655,7 @@
         class="row11-period-extra"
       >
         <label class="row11-label" for="month">
-          Ай
+          {{ _('Ай') }}
         </label>
 
         <select
@@ -660,7 +664,7 @@
           class="row11-select"
         >
           <option value="">
-            Айды таңдаңыз
+            {{ _('Айды таңдаңыз') }}
           </option>
 
           {% for month_number, month_name in MONTH_NAMES.items() %}
@@ -668,7 +672,7 @@
               value="{{ month_number }}"
               {% if page.month == month_number %}selected{% endif %}
             >
-              {{ month_name }}
+              {{ _(month_name) }}
             </option>
           {% endfor %}
         </select>
@@ -683,7 +687,7 @@
       class="row11-period-extra row11-months-field"
     >
       <div class="row11-label">
-        Айларды таңдаңыз
+        {{ _('Айларды таңдаңыз') }}
       </div>
 
       <div class="row11-month-grid">
@@ -700,7 +704,7 @@
             >
 
             <span class="row11-month-option__text">
-              {{ month_name }}
+              {{ _(month_name) }}
             </span>
 
           </label>
@@ -734,16 +738,16 @@
 
       <div class="row11-card__header">
         <h2 class="row11-card__title">
-          Жауаптылар
+          {{ _('Жауаптылар') }}
         </h2>
 
         <p class="row11-card__hint">
-          Тапсырманың орындалуына жауапты лауазымдарды таңдаңыз.
+          {{ _('Тапсырманың орындалуына жауапты лауазымдарды таңдаңыз.') }}
         </p>
 
         <div class="row11-sample">
           <div class="row11-sample__label">
-            Үлгі
+            {{ _('Үлгі') }}
           </div>
 
           <div class="row11-sample__value">
@@ -769,7 +773,7 @@
               >
 
               <span class="row11-option__label">
-                {{ option.label }}
+                {{ _(option.label) }}
               </span>
 
             </label>
@@ -791,16 +795,16 @@
 
       <div class="row11-card__header">
         <h2 class="row11-card__title">
-          Қарау орны
+          {{ _('Қарау орны') }}
         </h2>
 
         <p class="row11-card__hint">
-          Нәтиже қаралатын алқалы органды таңдаңыз.
+          {{ _('Нәтиже қаралатын алқалы органды таңдаңыз.') }}
         </p>
 
         <div class="row11-sample">
           <div class="row11-sample__label">
-            Үлгі
+            {{ _('Үлгі') }}
           </div>
 
           <div class="row11-sample__value">
@@ -826,7 +830,7 @@
               >
 
               <span class="row11-option__label">
-                {{ option.label }}
+                {{ _(option.label) }}
               </span>
 
             </label>
@@ -848,16 +852,16 @@
 
       <div class="row11-card__header">
         <h2 class="row11-card__title">
-          Қорытынды құжаттар
+          {{ _('Қорытынды құжаттар') }}
         </h2>
 
         <p class="row11-card__hint">
-          Тапсырма нәтижесі бойынша дайындалатын құжаттарды таңдаңыз.
+          {{ _('Тапсырма нәтижесі бойынша дайындалатын құжаттарды таңдаңыз.') }}
         </p>
 
         <div class="row11-sample">
           <div class="row11-sample__label">
-            Үлгі
+            {{ _('Үлгі') }}
           </div>
 
           <div class="row11-sample__value">
@@ -884,7 +888,7 @@
               >
 
               <span class="row11-option__label">
-                {{ option.label }}
+                {{ _(option.label) }}
               </span>
 
             </label>
@@ -906,7 +910,7 @@
 
       <div class="row11-card__header">
         <h2 class="row11-card__title">
-          Қосымша мәліметтер
+          {{ _('Қосымша мәліметтер') }}
         </h2>
       </div>
 
@@ -916,31 +920,29 @@
 
           <div>
             <label class="row11-label" for="deadlines">
-              Мерзімі
+              {{ _('Мерзімі') }}
             </label>
 
-            <input
+            <textarea
               id="deadlines"
               name="deadlines"
-              type="text"
-              class="row11-input"
-              value="{{ page.deadlines }}"
-            >
+              class="row11-textarea"
+              rows="1"
+            >{{ page.deadlines }}</textarea>
           </div>
 
 
           <div>
             <label class="row11-label" for="second_control">
-              Екінші бақылау
+              {{ _('Екінші бақылау') }}
             </label>
 
-            <input
+            <textarea
               id="second_control"
               name="second_control"
-              type="text"
-              class="row11-input"
-              value="{{ page.second_control }}"
-            >
+              class="row11-textarea"
+              rows="1"
+            >{{ page.second_control }}</textarea>
           </div>
 
         </div>
@@ -963,15 +965,15 @@
           direction_id=page.direction_id
         ) }}#row11-{{ page.row_id }}"
         class="row11-btn row11-btn--secondary"
-      >
-        Болдырмау
+       data-sm-action="edit">
+        {{ _('Болдырмау') }}
       </a>
 
       <button
         type="submit"
         class="row11-btn row11-btn--primary"
-      >
-        Өзгерістерді сақтау
+       data-sm-action="primary">
+        {{ _('Өзгерістерді сақтау') }}
       </button>
 
     </div>
@@ -1046,5 +1048,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 });
 </script>
+
+<script defer src="{{ url_for('static', path='js/planning/row11_autosize.js') }}?v=178"></script>
 
 {% endblock %}

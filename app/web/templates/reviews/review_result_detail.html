@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 
 {% block title %}
-Результат рассмотрения задачи
+{{ _('Результат рассмотрения задачи') }}
 {% endblock %}
 
 {% block extra_css %}
@@ -460,6 +460,7 @@
 {% endblock %}
 
 {% block content %}
+{% if detail is defined and detail %}<div style="margin:12px 0"><a class="btn btn--secondary" href="{{ request.url_for('task_document_correction_page', month_item_id=detail.month_item_id) }}" data-sm-action="nav">Заменить загруженные документы / Жүктелген құжаттарды ауыстыру</a></div>{% endif %}
 
 {% set detail = detail | default(None) %}
 {% set selected_place = selected_review_place | default(None) %}
@@ -501,7 +502,7 @@
 
   {% if error %}
     <div class="alert alert-error">
-      {{ error }}
+      {{ review_result_error(error) }}
     </div>
   {% endif %}
 
@@ -519,18 +520,18 @@
 
         <div class="page-header__content">
           <h1 class="page-title">
-            {{ detail.task_name | default('Результат рассмотрения', true) }}
+            {{ detail.task_name | default(_('Результат рассмотрения'), true) }}
           </h1>
 
           <p class="page-description">
-            Информация о задаче и история её рассмотрения.
+            {{ _('Информация о задаче и история её рассмотрения.') }}
           </p>
         </div>
 
         <div class="page-actions">
           <a class="btn btn-secondary review-back-btn"
-             href="{{ back_url }}">
-            ← Назад к списку
+             href="{{ back_url }}" data-sm-action="nav" data-sm-back="true">
+            {{ _('← Назад к списку') }}
           </a>
         </div>
 
@@ -539,25 +540,25 @@
 
     <section class="review-card">
       <h2 class="card-title">
-        Сведения о задаче
+        {{ _('Сведения о задаче') }}
       </h2>
 
       <div class="task-info-grid">
 
         <div class="task-info-item task-info-item--full">
           <div class="task-info-label">
-            Наименование задачи
+            {{ _('Наименование задачи') }}
           </div>
 
           <div class="task-info-value">
-            {{ detail.task_name | default('Не указано', true) }}
+            {{ detail.task_name | default(_('Не указано'), true) }}
           </div>
         </div>
 
         {% if detail.task_goal %}
           <div class="task-info-item task-info-item--full">
             <div class="task-info-label">
-              Цель
+              {{ _('Цель') }}
             </div>
 
             <div class="task-info-value">
@@ -568,43 +569,43 @@
 
         <div class="task-info-item">
           <div class="task-info-label">
-            Ответственный
+            {{ _('Ответственный') }}
           </div>
 
           <div class="task-info-value">
-            {{ detail.responsible_name | default('Не указан', true) }}
+            {{ detail.responsible_name | default(_('Не указан'), true) }}
           </div>
         </div>
 
         <div class="task-info-item">
           <div class="task-info-label">
-            Плановый период
+            {{ _('Плановый период') }}
           </div>
 
           <div class="task-info-value">
-            {{ detail.planned_period_text | default('Не указан', true) }}
+            {{ detail.planned_period_text | default(_('Не указан'), true) }}
           </div>
         </div>
 
         <div class="task-info-item">
           <div class="task-info-label">
-            Статус выполнения
+            {{ _('Статус выполнения') }}
           </div>
 
           <div class="task-info-value">
             <span class="status-badge {{ status_class }}">
-              {{ detail.task_status_label | default('Не определён', true) }}
+              {{ review_result_label(detail.task_status_label | default(_('Не определён'), true)) }}
             </span>
           </div>
         </div>
 
         <div class="task-info-item">
           <div class="task-info-label">
-            Участие пользователя
+            {{ _('Участие пользователя') }}
           </div>
 
           <div class="task-info-value">
-            {{ detail.participation_label | default('Просмотр', true) }}
+            {{ review_result_label(detail.participation_label | default(_('Просмотр'), true)) }}
           </div>
         </div>
 
@@ -612,18 +613,17 @@
     </section>
 
     <!-- Документы выполнения -->
-    <!-- Документы выполнения -->
 <section class="review-card">
 
   <h2 class="card-title">
-    Документы выполнения
+    {{ _('Документы выполнения') }}
   </h2>
 
   <!-- Итоговый документ -->
   <div class="document-block">
 
     <div class="document-block__title">
-      Итоговый документ
+      {{ _('Итоговый документ') }}
     </div>
 
     {% if detail.final_document %}
@@ -646,13 +646,13 @@
           <a href="{{ detail.final_document.view_url }}"
              class="btn btn-outline"
              target="_blank"
-             rel="noopener noreferrer">
-            Просмотреть
+             rel="noopener noreferrer" data-sm-action="nav">
+            {{ _('Просмотреть') }}
           </a>
 
           <a href="{{ detail.final_document.download_url }}"
-             class="btn btn-primary">
-            Скачать
+             class="btn btn-primary" data-sm-action="nav">
+            {{ _('Скачать') }}
           </a>
         </div>
 
@@ -661,7 +661,7 @@
     {% else %}
 
       <div class="empty-block">
-        Итоговый документ отсутствует.
+        {{ _('Итоговый документ отсутствует.') }}
       </div>
 
     {% endif %}
@@ -674,7 +674,7 @@
     <div class="document-block">
 
       <div class="document-block__title">
-        Материалы, на основании которых подготовлен итоговый документ
+        {{ _('Материалы, на основании которых подготовлен итоговый документ') }}
       </div>
 
       <div class="document-list">
@@ -699,13 +699,13 @@
               <a href="{{ report.view_url }}"
                  class="btn btn-outline"
                  target="_blank"
-                 rel="noopener noreferrer">
-                Просмотреть
+                 rel="noopener noreferrer" data-sm-action="nav">
+                {{ _('Просмотреть') }}
               </a>
 
               <a href="{{ report.download_url }}"
-                 class="btn btn-primary">
-                Скачать
+                 class="btn btn-primary" data-sm-action="nav">
+                {{ _('Скачать') }}
               </a>
             </div>
 
@@ -720,8 +720,7 @@
   {% else %}
 
     <div class="document-note">
-      Задача завершена только итоговым документом.
-      Отдельные отчёты исполнителей отсутствуют.
+      {{ _('Задача завершена только итоговым документом. Отдельные отчёты исполнителей отсутствуют.') }}
     </div>
 
   {% endif %}
@@ -730,20 +729,18 @@
     <section class="review-card">
 
       <h2 class="card-title">
-        История рассмотрения
+        {{ _('История рассмотрения') }}
       </h2>
 
       {% if current_place %}
         <div class="review-place-summary">
           <span>
-            Место рассмотрения:
+            {{ _('Место рассмотрения:') }}
           </span>
 
           <strong>
-            {{
-              detail.review_place_label
-              | default(current_place, true)
-            }}
+            {{ review_result_label(detail.review_place_label
+              | default(current_place, true)) }}
           </strong>
         </div>
       {% endif %}
@@ -758,11 +755,11 @@
 
                 <div>
                   <h3 class="history-item__title">
-                    Рассмотрение № {{ loop.revindex }}
+                    {{ _('Рассмотрение №') }} {{ loop.revindex }}
 
                     {% if loop.first %}
                       <span class="latest-badge">
-                        Последнее
+                        {{ _('Последнее') }}
                       </span>
                     {% endif %}
                   </h3>
@@ -771,7 +768,7 @@
                     {% if result.reviewed_at %}
                       {{ result.reviewed_at.strftime('%d.%m.%Y %H:%M') }}
                     {% else %}
-                      Дата не указана
+                      {{ _('Дата не указана') }}
                     {% endif %}
 
                     {% if result.reviewed_by_name %}
@@ -790,34 +787,30 @@
 
                 <div class="history-field">
                   <div class="history-field__label">
-                    Место рассмотрения
+                    {{ _('Место рассмотрения') }}
                   </div>
 
                   <div class="history-field__value">
-                    {{
-                      result.review_place_label
-                      | default('Не указано', true)
-                    }}
+                    {{ review_result_label(result.review_place_label
+                      | default(_('Не указано'), true)) }}
                   </div>
                 </div>
 
                 <div class="history-field">
                   <div class="history-field__label">
-                    Результат
+                    {{ _('Результат') }}
                   </div>
 
                   <div class="history-field__value">
-                    {{
-                      result.status_label
-                      | default('Не указан', true)
-                    }}
+                    {{ review_result_label(result.status_label
+                      | default(_('Не указан'), true)) }}
                   </div>
                 </div>
 
                 <div class="history-field history-field--full">
 
   <div class="history-field__label">
-    Протокол рассмотрения
+    {{ _('Протокол рассмотрения') }}
   </div>
 
   <div class="history-field__value">
@@ -827,14 +820,14 @@
       <div class="protocol-header">
 
         <strong>
-          Протокол
+          {{ _('Протокол') }}
 
           {% if result.protocol_number %}
             №{{ result.protocol_number }}
           {% endif %}
 
           {% if result.protocol_date %}
-            от {{ result.protocol_date.strftime("%d.%m.%Y") }}
+            {{ _('от') }} {{ result.protocol_date.strftime("%d.%m.%Y") }}
           {% endif %}
 
         </strong>
@@ -866,13 +859,13 @@
           <a href="{{ result.protocol_document.view_url }}"
              class="btn btn-outline"
              target="_blank"
-             rel="noopener noreferrer">
-            Просмотреть
+             rel="noopener noreferrer" data-sm-action="nav">
+            {{ _('Просмотреть') }}
           </a>
 
           <a href="{{ result.protocol_document.download_url }}"
-             class="btn btn-primary">
-            Скачать
+             class="btn btn-primary" data-sm-action="nav">
+            {{ _('Скачать') }}
           </a>
 
         </div>
@@ -882,7 +875,7 @@
     {% else %}
 
       <div class="document-note">
-        Протокол не прикреплён.
+        {{ _('Протокол не прикреплён.') }}
       </div>
 
     {% endif %}
@@ -893,7 +886,7 @@
                 {% if result.comment %}
                   <div class="history-field history-field--full">
                     <div class="history-field__label">
-                      Комментарий
+                      {{ _('Комментарий') }}
                     </div>
 
                     <div class="history-field__value">
@@ -911,12 +904,11 @@
       {% else %}
         <div class="empty-state">
           <h3 class="empty-state__title">
-            Результаты рассмотрения отсутствуют
+            {{ _('Результаты рассмотрения отсутствуют') }}
           </h3>
 
           <p class="empty-state__text">
-            Для этой задачи пока не сохранено ни одного
-            результата рассмотрения.
+            {{ _('Для этой задачи пока не сохранено ни одного результата рассмотрения.') }}
           </p>
         </div>
       {% endif %}
@@ -928,11 +920,11 @@
     <section class="review-card">
       <div class="empty-state">
         <h2 class="empty-state__title">
-          Задача не найдена
+          {{ _('Задача не найдена') }}
         </h2>
 
         <p class="empty-state__text">
-          Не удалось получить сведения о выбранной задаче.
+          {{ _('Не удалось получить сведения о выбранной задаче.') }}
         </p>
       </div>
     </section>

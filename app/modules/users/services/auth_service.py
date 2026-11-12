@@ -5,10 +5,9 @@ from __future__ import annotations
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.common.time import utcnow
 from app.core.security import verify_password
 from app.modules.users.models import User
-from app.modules.users.repo import UserRepo
-from app.common.time import utcnow
 
 
 class UserAuthService:

@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+{% block title %}{{ _('Оқу мақсаттары') }}{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{{ url_for('static',path='css/learning_objective_reference.css') }}">{% endblock %}
+{% block content %}
+<div class="lor"><h1>{{ _('Оқу мақсаттары / Учебные цели') }}</h1><p>{{ _('Сохранённые цели: поиск и редактирование текста и формул.') }}</p>
+<p><a href="{{ request.url_for('super_learning_objective_delete_page') }}" data-sm-action="danger">{{ _('Удаление целей предмета / параллели') }}</a></p>
+{% if saved %}<p class="lor-success">{{ _('Өзгерістер сақталды / Изменения сохранены.') }}</p>{% endif %}
+<form method="get" class="lor-panel lor-filters">
+<label>{{ _('Пән / Предмет') }}<select name="subject_id"><option value="">{{ _('Все предметы') }}</option>{% for subject in subjects %}{% if page.filters.subject_id == subject.id %}<option value="{{ subject.id }}" selected>{{ assessment_subject_name(subject) }}</option>{% else %}<option value="{{ subject.id }}">{{ assessment_subject_name(subject) }}</option>{% endif %}{% endfor %}</select></label>
+<label>{{ _('Сынып / Класс') }}<select name="grade"><option value="">{{ _('Все классы') }}</option>{% for grade in range(1,13) %}{% if page.filters.grade == grade %}<option value="{{ grade }}" selected>{{ grade }}</option>{% else %}<option value="{{ grade }}">{{ grade }}</option>{% endif %}{% endfor %}</select></label>
+<label>{{ _('Тоқсан / Четверть') }}<select name="quarter"><option value="">{{ _('Все четверти') }}</option>{% for quarter in range(1,5) %}{% if page.filters.quarter == quarter %}<option value="{{ quarter }}" selected>{{ quarter }}</option>{% else %}<option value="{{ quarter }}">{{ quarter }}</option>{% endif %}{% endfor %}</select></label>
+<label>{{ _('Бағыт / Направление') }}<select name="track">{% for value,label in [('', 'Все'),('emn','ЕМН'),('ogn','ОГН')] %}{% if page.filters.track == value %}<option value="{{ value }}" selected>{{ _(label) }}</option>{% else %}<option value="{{ value }}">{{ _(label) }}</option>{% endif %}{% endfor %}</select></label>
+<label>{{ _('Күй / Статус') }}<select name="state">{% for value,label in [('all','Все'),('active','Активные'),('inactive','Неактивные')] %}{% if page.filters.state == value %}<option value="{{ value }}" selected>{{ _(label) }}</option>{% else %}<option value="{{ value }}">{{ _(label) }}</option>{% endif %}{% endfor %}</select></label>
+<label>{{ _('Іздеу / Поиск') }}<input name="q" maxlength="200" placeholder="{{ _('Код или текст цели KZ/RU') }}" value="{{ page.filters.query }}"></label><button class="lor-button" type="submit" data-sm-action="primary">{{ _('Іздеу') }}</button>
+</form>
+<p>{{ _('Всего:') }} {{ page.total }} {{ _('· Страница') }} {{ page.page }} / {{ page.pages }}</p>
+<div class="lor-table"><table><thead><tr><th>{{ _('Код / Класс') }}</th><th>{{ _('Пән / Предмет') }}</th><th>{{ _('Оқу мақсаты / Учебная цель') }}</th><th>{{ _('Күй') }}</th><th></th></tr></thead><tbody>
+{% for row in page.rows %}<tr><td><strong>{{ row.code }}</strong><br>{{ row.grade_level }}{% if row.education_track %} · {{ row.education_track|upper }}{% endif %}<br>{{ _('Программа ID:') }} {{ row.program_id or '—' }}</td><td>{{ row.subject_name }}</td><td><p>{{ row.title_kz }}</p>{% if row.title_ru %}<p>{{ row.title_ru }}</p>{% endif %}</td><td>{% if row.is_active %}{{ _('Белсенді') }}{% else %}{{ _('Белсенді емес') }}{% endif %}</td><td><a href="{{ url_for('super_learning_objective_reference_edit', objective_id=row.id) }}" data-sm-action="edit">{{ _('Өзгерту / Изменить') }}</a></td></tr>{% else %}<tr><td colspan="5">{{ _('Цели не найдены.') }}</td></tr>{% endfor %}
+</tbody></table></div>
+<div class="lor-pages">{% if page.page > 1 %}<a href="{{ request.url.include_query_params(page=page.page-1) }}" data-sm-action="nav">{{ _('← Назад') }}</a>{% endif %}{% if page.page < page.pages %}<a href="{{ request.url.include_query_params(page=page.page+1) }}" data-sm-action="nav">{{ _('Далее →') }}</a>{% endif %}</div></div>
+{% endblock %}

@@ -3,18 +3,18 @@
 from __future__ import annotations
 
 from datetime import date
-from typing import Any, cast
+from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.modules.reports.repositories.report_assignment_repo import (
-    ReportAssignmentRepo,
-)
+from app.modules.reports.repositories.my_report_catalog_repo import MyReportCatalogRepo
 from app.modules.reports.schemas.staff_my_reports_dto import (
     StaffMyReportTaskDTO,
+    StaffMyReportItemDTO,
     StaffMyReportsPageDTO,
 )
 from app.modules.users.models import User
+from app.modules.reports.services.base_report_service import BaseReportService
 
 
 class StaffMyReportsService:
@@ -22,8 +22,7 @@ class StaffMyReportsService:
     Сервис быстрого входа сотрудника в назначенные ему отчеты.
 
     Назначение:
-    - показать задачи выбранного месяца, в которых сотруднику
-      назначен хотя бы один конкретный отчет;
+    - показать выбранные отчёты задач ответственного и назначения сотрудника;
     - подготовить DTO для страницы выбора задачи;
     - проверить доступ к выбранной задаче перед переходом
       на страницу подготовки отчетов.
@@ -103,32 +102,7 @@ class StaffMyReportsService:
             or status
         )
 
-    @staticmethod
-    def _require_user_context(
-        user: User,
-    ) -> tuple[int, int]:
-        """
-        Получить школьный контекст текущего пользователя.
-
-        Для быстрого входа в отчеты обязательно должны быть известны:
-        - school_id;
-        - staff_member_id.
-        """
-
-        if user.school_id is None:
-            raise ValueError(
-                "У пользователя не определена школа."
-            )
-
-        if user.staff_member_id is None:
-            raise ValueError(
-                "Для пользователя не найден сотрудник школы."
-            )
-
-        return (
-            cast(int, user.school_id),
-            cast(int, user.staff_member_id),
-        )
+    _require_user_context = staticmethod(BaseReportService.require_user_context)
 
     @staticmethod
     def _validate_month(month: int) -> None:
@@ -152,9 +126,8 @@ class StaffMyReportsService:
         """
         Получить страницу быстрого доступа к отчетам сотрудника.
 
-        Возвращаются только те задачи выбранного месяца,
-        в которых текущему сотруднику назначен хотя бы один отчет
-        через TaskSelectedReportAssignment.
+        Ответственный видит выбранные отчёты своих задач, включая нераспределённые.
+        Остальные сотрудники видят свои назначения. Данные загружаются пакетно.
         """
 
         cls._validate_month(month)
@@ -163,58 +136,35 @@ class StaffMyReportsService:
             cls._require_user_context(user)
         )
 
-        rows = await (
-            ReportAssignmentRepo
-            .list_report_tasks_for_staff(
-                db,
-                school_id=school_id,
-                staff_member_id=staff_member_id,
-                month=month,
-            )
-        )
-
-        tasks: list[StaffMyReportTaskDTO] = []
-
+        rows=await MyReportCatalogRepo.list_reports(db,school_id=school_id,staff_member_id=staff_member_id,month=month)
+        grouped={}
         for row in rows:
-            planned_start = row.get("planned_start")
-            planned_end = row.get("planned_end")
-            task_status = row.get("task_status")
-
-            tasks.append(
-                StaffMyReportTaskDTO(
-                    month_item_id=int(
-                        row["month_item_id"]
-                    ),
-                    topic=str(
-                        row.get("topic")
-                        or "—"
-                    ),
-                    planned_start=planned_start,
-                    planned_end=planned_end,
-                    period_text=cls._build_period_text(
-                        planned_start,
-                        planned_end,
-                    ),
-                    assigned_reports_count=int(
-                        row.get(
-                            "assigned_reports_count",
-                            0,
-                        )
-                        or 0
-                    ),
-                    task_status=cls._status_value(
-                        task_status
-                    ),
-                    task_status_label=cls._status_label(
-                        task_status
-                    ),
-                )
-            )
-
-        return StaffMyReportsPageDTO(
-            month=month,
-            tasks=tasks,
-        )
+            task_id=int(row['month_item_id'])
+            if task_id not in grouped:
+                grouped[task_id]=StaffMyReportTaskDTO(month_item_id=task_id,topic=str(row.get('topic') or '—'),
+                    planned_start=row['planned_start'],planned_end=row['planned_end'],
+                    period_text=cls._build_period_text(row['planned_start'],row['planned_end']),
+                    task_status=cls._status_value(row['task_status']),task_status_label=cls._status_label(row['task_status']),
+                    is_primary=bool(row['is_primary']))
+            task=grouped[task_id]
+            mine=row['assigned_staff_id']==staff_member_id
+            state=cls._status_value(row['assignment_status'])
+            doc_status=cls._status_value(row['document_status'])
+            finished=doc_status in ('submitted','approved','accepted') or state=='completed'
+            if row['assigned_staff_id'] is None:state='unassigned'
+            elif state!='waived' and finished:state='completed'
+            elif state!='waived' and row['document_id']:state='draft'
+            elif not state:state='pending'
+            not_archived=all(cls._status_value(row[k])!='archived' for k in ('monthly_status','annual_status'))
+            # This catalog only displays status. Source choice and editing belong
+            # to the existing task preparation page and its assignment service.
+            task.reports.append(StaffMyReportItemDTO(selected_report_id=int(row['selected_report_id']),report_code=row['report_code'],
+                title_ru=row['name_ru'] or row['name_kz'] or row['report_code'],title_kk=row['name_kz'] or row['name_ru'] or row['report_code'],
+                target_label=row['target_label'] or '',status=state,assigned_to=row['assigned_to'] or '',
+                is_my_report=mine,can_assign=bool(row['is_primary']) and not_archived and not row['completed_at'],
+                has_draft=bool(row['document_id']) and not finished))
+            if mine:task.assigned_reports_count+=1
+        return StaffMyReportsPageDTO(month=month,tasks=list(grouped.values()))
 
     # =========================================================
     # ACCESS TO SELECTED TASK
@@ -233,7 +183,7 @@ class StaffMyReportsService:
 
         Доступ разрешается только если:
         - задача принадлежит школе пользователя;
-        - текущему сотруднику назначен хотя бы один отчет задачи.
+        - текущему сотруднику назначен отчёт либо он ответственный за задачу.
 
         Метод специально ничего не возвращает:
         отсутствие исключения означает разрешенный переход.
@@ -249,8 +199,8 @@ class StaffMyReportsService:
         )
 
         has_access = await (
-            ReportAssignmentRepo
-            .has_report_assignment_for_task(
+            MyReportCatalogRepo
+            .has_task_access(
                 db,
                 school_id=school_id,
                 staff_member_id=staff_member_id,
@@ -260,5 +210,5 @@ class StaffMyReportsService:
 
         if not has_access:
             raise ValueError(
-                "Для выбранной задачи вам не назначены отчеты."
+                "Нет доступа к отчётам выбранной задачи."
             )

@@ -1,0 +1,31 @@
+{% macro creation_plan(ai=false, initial=none) -%}
+<div class="qb-plan" data-creation-plan data-rules="{{ question_parameter_rules()|tojson|forceescape }}" data-labels="{{ dict(cards=_('Количество карточек'), elements=_('Элементов в одной карточке'), points=_('Баллов за правильный элемент'), total=_('Всего баллов'), criteria=_('Баллы критериев через запятую'), correct=_('Правильных вариантов из четырёх'), budget=_('Для AI допустимо не более 32 элементов в одном запросе. Уменьшите набор.'))|tojson|forceescape }}" data-limit="10" data-ai="{{ '1' if ai else '0' }}">
+  <h3>{{ _('Состав набора заданий') }}</h3>
+  <p>{{ _('Количество карточек, элементов и баллы задаются отдельно. Короткий ответ и несколько правильных ответов: один вопрос в карточке; количество карточек задаётся отдельно.') }}</p>
+  <input type="hidden" name="creation_plan" data-plan-value value="{{ initial or '' }}">
+  <div data-plan-rows></div>
+  <button type="button" class="qb-plan-button" data-plan-add data-sm-action="primary">{{ _('Добавить тип задания') }}</button>
+  <p data-plan-total role="status" data-count-label="{{ _('Заданий') }}" data-score-label="{{ _('Всего баллов') }}"></p>
+  <p data-plan-error role="alert" hidden>{{ _('Проверьте состав набора: от 1 до 10 заданий, балл за каждое от 0.01 до 100; соблюдайте правила выбранного типа.') }}</p>
+  <template data-plan-template>
+    <div class="qb-plan-row">
+      <label>{{ _('Тапсырма түрі') }}<select data-plan-type required>
+        {% for kind, label in [('single_choice','Бір дұрыс жауап / Один правильный ответ'),('multiple_choice','Бірнеше дұрыс жауап / Несколько правильных ответов'),('true_false','Дұрыс / Бұрыс'),('short_text','Қысқа жауап'),('number','Сандық жауап'),('matching','Сәйкестендіру'),('ordering','Реттілікті анықтау'),('fill_gaps','Бос орындарды толтыру'),('formula','Формула'),('manual_review','Қолмен тексеру'),('image_choice','Сурет арқылы таңдау')] %}
+        {% if true %}<option value="{{ kind }}">{{ _(label) }}</option>{% endif %}
+        {% endfor %}
+      </select></label>
+      <label>{{ _('Күрделілік') }}<select data-plan-difficulty required>
+        <option value="basic">{{ _('Базовый') }}</option><option value="medium">{{ _('Средний') }}</option><option value="advanced">{{ _('Продвинутый') }}</option>
+      </select></label>
+      <label>{{ _('Количество карточек') }}<input data-plan-count type="number" min="1" max="10" step="1" value="1" required></label>
+      <label>{{ _('Элементов в одной карточке') }}<input data-plan-elements type="number" min="1" max="100" step="1" value="1" required></label>
+      <label>{{ _('Баллов за правильный элемент') }}<input data-plan-points type="number" min="1" max="100" step="1" value="1" required></label>
+      <label hidden>{{ _('Правильных вариантов из четырёх') }}<input data-plan-correct type="number" min="2" max="3" step="1" value="2"></label>
+      <label hidden>{{ _('Баллы критериев через запятую') }}<input data-plan-criteria value="1"></label>
+      <label>{{ _('Максимальный балл карточки') }}<input data-plan-score type="number" min="0.01" max="10000" step="1" value="1" readonly></label>
+      <button type="button" class="qb-plan-button" data-plan-remove data-sm-action="danger">{{ _('Удалить') }}</button>
+      <p data-plan-row-summary style="grid-column:1/-1;margin:0;color:#344054;font-size:14px;overflow-wrap:anywhere;"></p>
+    </div>
+  </template>
+</div>
+{%- endmacro %}

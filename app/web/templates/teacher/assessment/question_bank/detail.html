@@ -1,0 +1,1374 @@
+{% from 'teacher/assessment/question_bank/components/objective_preview.html' import objective_preview, objective_language_select, objective_options, objective_choice_previews with context %}
+{% extends "base.html" %}
+
+{% from "teacher/assessment/question_bank/_segments.html"
+   import render_segments with context %}
+
+{% from "teacher/assessment/question_bank/components/question_content.html"
+   import render_question_content with context %}
+
+{% from "teacher/assessment/question_bank/components/answer_key.html"
+   import render_answer_key with context %}
+
+
+{% block title %}
+{{ _('Тапсырманы қарау') }}
+{% endblock %}
+
+
+{% block extra_css %}
+
+<link
+  rel="stylesheet"
+  href="{{ url_for(
+    'static',
+    path='css/teacher/assessment/question_bank/question_bank_renderer.css'
+  ) }}?v=61"
+>
+
+<style>
+
+  /* =====================================================
+     PAGE
+     ===================================================== */
+
+  .qb-detail-page {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 24px 16px 48px;
+  }
+
+
+  /* =====================================================
+     BACK
+     ===================================================== */
+
+  .qb-detail-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+
+    margin-bottom: 16px;
+
+    color: #475467;
+    text-decoration: none;
+
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  .qb-detail-back:hover {
+    color: #101828;
+  }
+
+
+  /* =====================================================
+     HEADER
+     ===================================================== */
+
+  .qb-detail-header {
+    margin-bottom: 20px;
+    padding: 22px;
+
+    background: #fff;
+
+    border: 1px solid #e4e7ec;
+    border-radius: 14px;
+  }
+
+  .qb-detail-header__top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 20px;
+  }
+
+  .qb-detail-header__content {
+    min-width: 0;
+  }
+
+  .qb-detail-header h1 {
+    margin: 0 0 10px;
+
+    color: #101828;
+
+    font-size: 26px;
+    font-weight: 700;
+  }
+
+  .qb-detail-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+
+    margin-top: 14px;
+  }
+
+
+  /* =====================================================
+     BADGES
+     ===================================================== */
+
+  .qb-badge {
+    display: inline-flex;
+    align-items: center;
+
+    padding: 5px 9px;
+
+    border-radius: 999px;
+
+    background: #f2f4f7;
+    color: #344054;
+
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .qb-badge--draft {
+    background: #f2f4f7;
+    color: #344054;
+  }
+
+  .qb-badge--review {
+    background: #fffaeb;
+    color: #b54708;
+  }
+
+  .qb-badge--ready {
+    background: #ecfdf3;
+    color: #027a48;
+  }
+
+  .qb-badge--rejected {
+    background: #fef3f2;
+    color: #b42318;
+  }
+
+  .qb-badge--archived {
+    background: #f2f4f7;
+    color: #667085;
+  }
+
+
+  /* =====================================================
+     DRAFT ACTION
+     ===================================================== */
+
+  .qb-detail-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+
+    margin-bottom: 20px;
+    padding: 16px 18px;
+
+    background: #fff;
+
+    border: 1px solid #e4e7ec;
+    border-radius: 14px;
+  }
+
+  .qb-detail-actions__text {
+    min-width: 0;
+  }
+
+  .qb-detail-actions__title {
+    margin: 0 0 4px;
+
+    color: #101828;
+
+    font-size: 14px;
+    font-weight: 700;
+  }
+
+  .qb-detail-actions__hint {
+    margin: 0;
+
+    color: #667085;
+
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  .qb-detail-actions__form {
+    flex-shrink: 0;
+    margin: 0;
+  }
+
+  .qb-submit-review-btn {
+    min-height: 38px;
+    padding: 8px 16px;
+
+    border: 0;
+    border-radius: 8px;
+
+    background: #1570ef;
+    color: #fff;
+
+    font: inherit;
+    font-size: 14px;
+    font-weight: 600;
+
+    cursor: pointer;
+  }
+
+  .qb-submit-review-btn:hover {
+    background: #175cd3;
+  }
+
+
+  /* =====================================================
+     LAYOUT
+     ===================================================== */
+
+  .qb-detail-grid {
+    display: grid;
+    grid-template-columns:
+      minmax(0, 2fr)
+      minmax(280px, 1fr);
+
+    gap: 20px;
+    align-items: start;
+  }
+
+  .qb-detail-main,
+  .qb-detail-side {
+    display: grid;
+    gap: 18px;
+    /* Long math must not impose its min-content width on a grid column. */
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .qb-detail-grid > * {
+    min-width: 0;
+  }
+
+  .qb-detail-page .qb-card {
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  .qb-detail-page .qb-render-options,
+  .qb-detail-page .qb-answer-list {
+    min-width: 0;
+    gap: 6px;
+  }
+
+  .qb-detail-page .qb-render-option,
+  .qb-detail-page .qb-answer-item {
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+    padding: 8px 10px;
+    gap: 10px;
+  }
+
+  .qb-detail-page .qb-render-option__body,
+  .qb-detail-page .qb-answer-item__body,
+  .qb-detail-page .qb-render-statement {
+    min-width: 0;
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-wrap: anywhere;
+  }
+
+  /* Scroll the outer block, never an inline formula: overflow:auto on an
+     inline-block changes its baseline to the bottom edge of the box. */
+  .qb-detail-page .qb-math {
+    min-width: 0;
+    max-width: none;
+    overflow: visible;
+    vertical-align: middle;
+  }
+
+  .qb-detail-page math-field[read-only] {
+    max-width: none;
+    overflow: visible;
+    vertical-align: middle;
+  }
+
+  .qb-detail-page .qb-answer-value {
+    min-width: 0;
+    max-width: 100%;
+    overflow-x: auto;
+  }
+
+  .qb-detail-page .qb-info-row__value,
+  .qb-detail-page .qb-grading-row__value {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+
+  /* =====================================================
+     CARD
+     ===================================================== */
+
+  .qb-card {
+    padding: 20px;
+
+    background: #fff;
+
+    border: 1px solid #e4e7ec;
+    border-radius: 14px;
+  }
+
+  .qb-card__title {
+    margin: 0 0 16px;
+
+    color: #101828;
+
+    font-size: 17px;
+    font-weight: 700;
+  }
+
+  .qb-card__subtitle {
+    margin: 18px 0 8px;
+
+    color: #344054;
+
+    font-size: 14px;
+    font-weight: 700;
+  }
+
+  .qb-text {
+    margin: 0;
+
+    color: #344054;
+
+    font-size: 15px;
+    line-height: 1.65;
+
+    white-space: pre-wrap;
+  }
+
+  .qb-muted {
+    color: #667085;
+  }
+
+
+  /* =====================================================
+   OBJECTIVES
+   ===================================================== */
+
+/* Two columns: blue code and objective wording. */
+.qb-detail-page .qb-objectives {
+  display: grid;
+  gap: 10px;
+}
+
+.qb-detail-page .qb-objectives > .qb-objective {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  align-items: start;
+  gap: 8px;
+  padding: 12px;
+  background: #fff;
+  border: 1px solid #eaecf0;
+  border-radius: 8px;
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.qb-detail-page .qb-objective > .qb-objective__code {
+  width: auto;
+  margin: 0;
+  padding: 0;
+  color: #2563eb;
+  font: inherit;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.qb-detail-page .qb-objective > .qb-objective__title {
+  min-width: 0;
+  width: auto;
+  margin: 0;
+  padding: 0;
+  color: #344054;
+  font: inherit;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+/* Do not preserve formatting newlines emitted by the preview macro. */
+.qb-detail-page .qb-objective__title [data-qb-objective-display],
+.qb-detail-page .qb-objective__title [data-objective-display-language],
+.qb-detail-page .qb-objective__title .qb-objective-text {
+  display: inline;
+  white-space: normal;
+  color: inherit;
+  font: inherit;
+}
+
+.qb-detail-page .qb-objective__title [hidden] {
+  display: none !important;
+}
+
+.qb-detail-page .qb-objectives > .qb-objective {
+  align-items: baseline;
+}
+
+.qb-detail-page .qb-objective__code,
+.qb-detail-page .qb-objective__title {
+  margin: 0;
+  padding: 0;
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+  /* =====================================================
+     QUESTION TEXT
+     ===================================================== */
+
+  .qb-instruction {
+    margin-bottom: 16px;
+    padding: 12px 14px;
+
+    background: #f9fafb;
+
+    border-radius: 9px;
+
+    color: #475467;
+
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  .qb-question-text {
+  display: block;
+  margin-bottom: 18px;
+  color: #101828;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.7;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.qb-question-text .qb-segment-text {
+  display: inline;
+  white-space: pre-wrap;
+}
+
+.qb-question-text .qb-math {
+  display: inline-flex;
+  align-items: center;
+  vertical-align: middle;
+  overflow: visible;
+}
+
+
+  /* =====================================================
+     MATHLIVE READ-ONLY
+     ===================================================== */
+
+  .qb-math {
+    display: inline-flex;
+    align-items: center;
+
+    vertical-align: middle;
+  }
+
+  .qb-math-field {
+    display: inline-block;
+
+    width: auto;
+    min-width: 0;
+    min-height: 0;
+
+    margin: 0;
+    padding: 0;
+
+    border: 0;
+    outline: 0;
+
+    background: transparent;
+
+    font-size: 1.08em;
+
+    pointer-events: none;
+  }
+
+
+  /* =====================================================
+     INFO LIST
+     ===================================================== */
+
+  .qb-info-list {
+    display: grid;
+  }
+
+  .qb-info-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+
+    padding: 10px 0;
+
+    border-bottom: 1px solid #eaecf0;
+  }
+
+  .qb-info-row:first-child {
+    padding-top: 0;
+  }
+
+  .qb-info-row:last-child {
+    padding-bottom: 0;
+    border-bottom: 0;
+  }
+
+  .qb-info-row__label {
+    color: #667085;
+
+    font-size: 13px;
+  }
+
+  .qb-info-row__value {
+    color: #344054;
+
+    text-align: right;
+
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+
+  /* =====================================================
+     REVIEW HISTORY
+     ===================================================== */
+
+  .qb-reviews {
+    display: grid;
+    gap: 12px;
+  }
+
+  .qb-review {
+    padding: 14px;
+
+    background: #f9fafb;
+
+    border: 1px solid #eaecf0;
+    border-radius: 10px;
+  }
+
+  .qb-review__top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+
+    margin-bottom: 8px;
+  }
+
+  .qb-review__reviewer {
+    color: #344054;
+
+    font-size: 14px;
+    font-weight: 700;
+  }
+
+  .qb-review__date {
+    margin-top: 3px;
+
+    color: #667085;
+
+    font-size: 12px;
+  }
+
+  .qb-review__comment {
+    margin-top: 10px;
+
+    color: #475467;
+
+    font-size: 14px;
+    line-height: 1.55;
+
+    white-space: pre-wrap;
+  }
+
+
+  /* =====================================================
+     GRADING SETTINGS
+     ===================================================== */
+
+  .qb-grading-list {
+    display: grid;
+    gap: 8px;
+  }
+
+  .qb-grading-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 14px;
+
+    padding: 8px 0;
+
+    border-bottom: 1px solid #eaecf0;
+  }
+
+  .qb-grading-row:last-child {
+    border-bottom: 0;
+  }
+
+  .qb-grading-row__key {
+    color: #667085;
+
+    font-size: 13px;
+  }
+
+  .qb-grading-row__value {
+    color: #344054;
+
+    text-align: right;
+
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+
+  /* =====================================================
+     RESPONSIVE
+     ===================================================== */
+
+  @media (max-width: 900px) {
+
+    .qb-detail-grid {
+      grid-template-columns: 1fr;
+    }
+
+  }
+
+  @media (max-width: 640px) {
+
+    .qb-detail-header__top {
+      flex-direction: column;
+    }
+
+    .qb-detail-actions {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .qb-detail-actions__form {
+      width: 100%;
+    }
+
+    .qb-submit-review-btn {
+      width: 100%;
+    }
+
+    .qb-info-row,
+    .qb-grading-row {
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .qb-info-row__value,
+    .qb-grading-row__value {
+      text-align: left;
+    }
+
+    .qb-review__top {
+      flex-direction: column;
+    }
+
+  }
+
+</style>
+<link rel="stylesheet" href="{{ url_for('static', path='css/teacher/assessment/question_bank/bilingual_workspace.css') }}">
+{% endblock %}
+
+
+{% block content %}
+<link rel="stylesheet" href="{{ url_for('static',path='css/question_bank_objective_preview.css') }}">
+
+<div class="qb-detail-page">
+  <header class="qb-detail-header">
+
+    <div class="qb-detail-header__top">
+
+      <div class="qb-detail-header__content">
+
+        <h1>
+          {% if item.title %}
+            {{ item.title }}
+          {% else %}
+            {{ _('Тапсырма #') }}{{ item.item_id }}
+          {% endif %}
+        </h1>
+
+        <div class="qb-detail-meta">
+
+          <span class="qb-badge">
+            {{ item.subject_name }}
+          </span>
+
+          <span class="qb-badge">
+            {{ item.grade_level }} {{ _('сынып') }}
+          </span>
+
+          <span class="qb-badge">
+            {{ _(item.question_type.label_kz) }}
+          </span>
+
+          <span class="qb-badge">
+            {{ _(item.difficulty.label_kz) }}
+          </span>
+
+          <span class="qb-badge">
+            {{ _(item.language.label_kz) }}
+          </span>
+
+          <span class="qb-badge">
+            {{ _(item.origin.label_kz) }}
+          </span>
+
+        </div>
+
+      </div>
+
+
+      <div class="qb-detail-header__controls">
+        <nav class="qb-workspace-actions">
+          {% set edit_status = item.status.value if item.status.value is defined else item.status %}
+          {% if edit_status in ['draft','rejected'] %}
+          <a class="qb-workspace-button" href="{{ url_for('teacher_question_bank_item_edit_page',item_id=item.item_id) }}" data-sm-action="edit">{{ _('Өңдеу / Редактировать') }}</a>
+          {% endif %}
+          <a class="qb-workspace-button" href="{{ url_for('teacher_question_bank_items_page') }}" data-sm-action="nav" data-sm-back="true">{{ _('← Тапсырмалар банкіне қайту') }}</a>
+          {% if item.language.value in ['ru','kk'] %}
+          <a class="qb-workspace-button" href="{{ url_for('teacher_question_languages',item_id=item.item_id) }}" data-sm-action="nav">{{ _('Русская и казахская версии') }}</a>
+          {% endif %}
+        </nav>
+        <span class="
+          qb-badge
+
+          {% if item.status.value == 'draft' %}
+            qb-badge--draft
+
+          {% elif item.status.value == 'review' %}
+            qb-badge--review
+
+          {% elif item.status.value == 'ready' %}
+            qb-badge--ready
+
+          {% elif item.status.value == 'rejected' %}
+            qb-badge--rejected
+
+          {% elif item.status.value == 'archived' %}
+            qb-badge--archived
+          {% endif %}
+        ">
+          {{ _(item.status.label_kz) }}
+        </span>
+
+      </div>
+
+    </div>
+
+    {% if item.language.value in ['ru','kk'] %}
+    <p class="qb-detail-bilingual-note">{{ _('Для нового задания перед проверкой нужны обе языковые версии.') }}</p>
+    {% endif %}
+  </header>
+
+
+  <!-- ===================================================
+       DRAFT ACTION
+       =================================================== -->
+
+  {% if item.status.value == 'draft' %}
+
+    <section class="qb-detail-actions">
+
+      <div class="qb-detail-actions__text">
+
+        <p class="qb-detail-actions__title">
+          {{ _('Тапсырма тексеруге дайын ба?') }}
+        </p>
+
+        <p class="qb-detail-actions__hint">
+          {{ _('Жіберілгеннен кейін тапсырма эксперттік тексеруге өтеді.') }}
+        </p>
+
+      </div>
+
+
+      <form
+        class="qb-detail-actions__form"
+        method="post"
+        action="{{ url_for(
+          'teacher_question_bank_item_submit_review',
+          item_id=item.item_id
+        ) }}"
+        onsubmit="return confirm(
+          'Тапсырманы тексеруге жібересіз бе?'
+        );"
+      >
+
+        <button
+          type="submit"
+          class="qb-submit-review-btn"
+         data-sm-action="primary">
+          {{ _('Тексеруге жіберу') }}
+        </button>
+
+      </form>
+
+    </section>
+
+  {% endif %}
+
+
+  <!-- ===================================================
+       LAYOUT
+       =================================================== -->
+
+  <div class="qb-detail-grid">
+
+
+    <!-- =================================================
+         MAIN
+         ================================================= -->
+
+    <main class="qb-detail-main">
+
+
+      <!-- ===============================================
+           OBJECTIVES
+           =============================================== -->
+
+      <section class="qb-card">
+
+        <h2 class="qb-card__title">
+          {{ _('1. Оқу мақсаттары') }}
+        </h2>
+
+
+        {% if item.objectives %}
+
+          <div class="qb-objectives">
+
+            {% for objective in item.objectives %}
+
+              <div class="qb-objective">
+
+                <div class="qb-objective__code">
+                  {{ objective.code }}
+                </div>
+
+                <div class="qb-objective__title">{{ objective_preview(objective, item.language) }}</div>
+
+              </div>
+
+            {% endfor %}
+
+          </div>
+
+        {% else %}
+
+          <p class="qb-text qb-muted">
+            {{ _('Оқу мақсаттары көрсетілмеген.') }}
+          </p>
+
+        {% endif %}
+
+      </section>
+
+
+      <!-- ===============================================
+           QUESTION
+           =============================================== -->
+
+      <section class="qb-card">
+
+        <h2 class="qb-card__title">
+          {{ _('2. Тапсырма') }}
+        </h2>
+
+
+        {% if item.instruction %}
+
+          <div class="qb-instruction">
+            {{ ([{'type':'text','text':question_instruction(item.instruction, item.language)}] | part_statement_layout(none,item.text_segments or [{'type':'text','text':item.text}]))[0].text }}
+          </div>
+
+        {% endif %}
+
+
+        <!-- QUESTION TEXT -->
+
+        <div class="qb-question-text">
+
+          {% if item.text_segments %}
+
+            {{ render_segments(
+              item.text_segments,
+              fallback=''
+            ) }}
+
+          {% else %}
+
+            <span class="qb-segment-text">{{ item.text }}</span>
+
+          {% endif %}
+
+        </div>
+
+
+        <!--
+          Универсальный renderer структуры задания.
+
+          Здесь больше НЕ должно быть отдельных
+          if/elif для single_choice, ordering,
+          matching и остальных типов.
+        -->
+
+        {{ render_question_content(item, show_bank=false) }}
+
+      </section>
+
+
+      <!-- ===============================================
+           EXPLANATION
+           =============================================== -->
+
+      <section class="qb-card">
+
+        <h2 class="qb-card__title">
+          {{ _('3. Түсіндірме') }}
+        </h2>
+
+
+        {% if item.explanation %}
+
+          <div class="qb-text" data-readable-math-prose style="white-space:pre-line;overflow-wrap:anywhere;font-size:14px;line-height:1.7;">{{ item.explanation | default('', true) | explanation_layout(item) }}</div>
+
+        {% else %}
+
+          <p class="qb-text qb-muted">
+            {{ _('Түсіндірме көрсетілмеген.') }}
+          </p>
+
+        {% endif %}
+
+
+        {% if item.author_comment %}
+
+          <h3 class="qb-card__subtitle">
+            {{ _('Автордың түсініктемесі') }}
+          </h3>
+
+          <p class="qb-text">
+            {{ item.author_comment }}
+          </p>
+
+        {% endif %}
+
+      </section>
+
+
+      <!-- ===============================================
+           HUMAN REVIEW HISTORY
+           =============================================== -->
+
+      <section class="qb-card">
+
+        <h2 class="qb-card__title">
+          {{ _('4. Эксперттік тексеру тарихы') }}
+        </h2>
+
+
+        {% if item.reviews %}
+
+          <div class="qb-reviews">
+
+            {% for review in item.reviews %}
+
+              <div class="qb-review">
+
+                <div class="qb-review__top">
+
+                  <div>
+
+                    <div class="qb-review__reviewer">
+
+                      {% if review.reviewer_name %}
+
+                        {{ review.reviewer_name }}
+
+                      {% else %}
+
+                        {{ _('Жүйеде жоқ пайдаланушы') }}
+
+                      {% endif %}
+
+                    </div>
+
+
+                    <div class="qb-review__date">
+
+                      {{ review.created_at.strftime(
+                        '%d.%m.%Y %H:%M'
+                      ) }}
+
+                    </div>
+
+                  </div>
+
+
+                  <div>
+
+                    {% if review.decision.value == 'approved' %}
+
+                      <span class="qb-badge qb-badge--ready">
+                        {{ _('Мақұлданды') }}
+                      </span>
+
+                    {% elif review.decision.value == 'rejected' %}
+
+                      <span class="qb-badge qb-badge--rejected">
+                        {{ _('Қайтарылды') }}
+                      </span>
+
+                    {% else %}
+
+                      <span class="qb-badge">
+                        {{ review.decision.value }}
+                      </span>
+
+                    {% endif %}
+
+                  </div>
+
+                </div>
+
+
+                {% if review.comment %}
+
+                  <div class="qb-review__comment">
+                    {{ review.comment }}
+                  </div>
+
+                {% else %}
+
+                  <div class="qb-review__comment qb-muted">
+                    {{ _('Түсініктеме берілмеген.') }}
+                  </div>
+
+                {% endif %}
+
+              </div>
+
+            {% endfor %}
+
+          </div>
+
+        {% else %}
+
+          <p class="qb-text qb-muted">
+            {{ _('Эксперттік тексеру тарихы жоқ.') }}
+          </p>
+
+        {% endif %}
+
+      </section>
+
+    </main>
+
+
+    <!-- =================================================
+         SIDEBAR
+         ================================================= -->
+
+    <aside class="qb-detail-side">
+
+
+      <!-- ===============================================
+           BASIC INFO
+           =============================================== -->
+
+      <section class="qb-card">
+
+        <h2 class="qb-card__title">
+          {{ _('Тапсырма туралы') }}
+        </h2>
+
+
+        <div class="qb-info-list">
+
+          <div class="qb-info-row">
+
+            <span class="qb-info-row__label">
+              ID
+            </span>
+
+            <span class="qb-info-row__value">
+              {{ item.item_id }}
+            </span>
+
+          </div>
+
+
+          <div class="qb-info-row">
+
+            <span class="qb-info-row__label">
+              {{ _('Пән') }}
+            </span>
+
+            <span class="qb-info-row__value">
+              {{ item.subject_name }}
+            </span>
+
+          </div>
+
+
+          <div class="qb-info-row">
+
+            <span class="qb-info-row__label">
+              {{ _('Сынып') }}
+            </span>
+
+            <span class="qb-info-row__value">
+              {{ item.grade_level }}
+            </span>
+
+          </div>
+
+
+          <div class="qb-info-row">
+
+            <span class="qb-info-row__label">
+              {{ _('Түрі') }}
+            </span>
+
+            <span class="qb-info-row__value">
+              {{ _(item.question_type.label_kz) }}
+            </span>
+
+          </div>
+
+
+          <div class="qb-info-row">
+
+            <span class="qb-info-row__label">
+              {{ _('Қиындық') }}
+            </span>
+
+            <span class="qb-info-row__value">
+              {{ _(item.difficulty.label_kz) }}
+            </span>
+
+          </div>
+
+
+          <div class="qb-info-row">
+
+            <span class="qb-info-row__label">
+              {{ _('Тілі') }}
+            </span>
+
+            <span class="qb-info-row__value">
+              {{ _(item.language.label_kz) }}
+            </span>
+
+          </div>
+
+
+          <div class="qb-info-row">
+
+            <span class="qb-info-row__label">
+              {{ _('Максималды балл') }}
+            </span>
+
+            <span class="qb-info-row__value">
+              {{ item.max_score }}
+            </span>
+
+          </div>
+
+
+          <div class="qb-info-row">
+
+            <span class="qb-info-row__label">
+              {{ _('Жасалу тәсілі') }}
+            </span>
+
+            <span class="qb-info-row__value">
+              {{ _(item.origin.label_kz) }}
+            </span>
+
+          </div>
+
+
+          <div class="qb-info-row">
+
+            <span class="qb-info-row__label">
+              {{ _('Құрылды') }}
+            </span>
+
+            <span class="qb-info-row__value">
+
+              {{ item.created_at.strftime(
+                '%d.%m.%Y %H:%M'
+              ) }}
+
+            </span>
+
+          </div>
+
+
+          <div class="qb-info-row">
+
+            <span class="qb-info-row__label">
+              {{ _('Жаңартылды') }}
+            </span>
+
+            <span class="qb-info-row__value">
+
+              {{ item.updated_at.strftime(
+                '%d.%m.%Y %H:%M'
+              ) }}
+
+            </span>
+
+          </div>
+
+        </div>
+
+      </section>
+
+
+      <!-- ===============================================
+           ANSWER KEY
+           =============================================== -->
+
+      <section class="qb-card">
+
+        <h2 class="qb-card__title">
+          {{ _('Дұрыс жауап') }}
+        </h2>
+
+        <!--
+          Универсальный renderer answer_key.
+
+          Для ordering он восстановит реальный текст
+          элементов по order.
+
+          Для matching покажет реальные пары.
+
+          Для manual_review сообщит, что автоматического
+          эталонного ответа нет.
+        -->
+
+        {{ render_answer_key(item) }}
+
+      </section>
+
+
+      <!-- ===============================================
+           GRADING SETTINGS
+           =============================================== -->
+
+      {% set matching_grading_kind = item.question_type.value if item.question_type.value is defined else item.question_type %}
+      {% if item.grading_settings.get('element_score_policy') == 'weighted_elements_v2' and matching_grading_kind != 'manual_review' %}{% from 'teacher/assessment/question_bank/components/weighted_grading_summary.html' import render_weighted_grading with context %}<section class="qb-card">{{ render_weighted_grading(item) }}</section>{% elif matching_grading_kind == 'manual_review' %}
+        {% from 'teacher/assessment/question_bank/components/manual_review_grading_summary.html' import render_manual_review_grading_summary with context %}
+        <section class="qb-card"><h2 class="qb-card__title">{{ _('Бағалау параметрлері') }}</h2>{{ render_manual_review_grading_summary(item) }}</section>
+      {% elif matching_grading_kind == 'formula' %}
+        {% from 'teacher/assessment/question_bank/components/formula_parts.html' import render_formula_grading_summary with context %}
+        <section class="qb-card"><h2>{{ _('Бағалау параметрлері') }}</h2>{{ render_formula_grading_summary(item) }}</section>
+      {% elif matching_grading_kind == 'fill_gaps' %}
+        {% from 'teacher/assessment/question_bank/components/fill_gaps_grading_summary.html' import render_fill_gaps_grading_summary with context %}
+        <section class="qb-card"><h2 class="qb-card__title">{{ _('Бағалау параметрлері') }}</h2>{{ render_fill_gaps_grading_summary(item) }}</section>
+      {% elif matching_grading_kind == 'ordering' %}
+        {% from 'teacher/assessment/question_bank/components/ordering_grading_summary.html' import render_ordering_grading_summary with context %}
+        <section class="qb-card"><h3 class="qb-card__title">{{ _('Бағалау параметрлері') }}</h3>{{ render_ordering_grading_summary(item) }}</section>
+      {% elif matching_grading_kind == 'matching' %}
+        {% from 'teacher/assessment/question_bank/components/matching_grading_summary.html' import render_matching_grading_summary with context %}
+        <section class="qb-card"><h2 class="qb-card__title">{{ _('Бағалау параметрлері') }}</h2>{{ render_matching_grading_summary(item) }}</section>
+      {% else %}
+      {% set grading_kind = item.question_type.value if item.question_type.value is defined else item.question_type %}
+      {% if grading_kind == 'multiple_choice' %}
+        {% from 'teacher/assessment/question_bank/components/multiple_choice_grading_summary.html' import render_multiple_choice_grading_summary with context %}
+        <section class="qb-card"><h2 class="qb-card__title">{{ _('Бағалау параметрлері') }}</h2>{{ render_multiple_choice_grading_summary(item) }}</section>
+      {% elif grading_kind in ['single_choice', 'number', 'true_false'] %}
+        {% from 'teacher/assessment/question_bank/components/grading_summary.html' import render_grading_summary with context %}
+        <section class="qb-card">
+          <h2 class="qb-card__title">{{ _('Бағалау параметрлері') }}</h2>
+          {{ render_grading_summary(item) }}
+        </section>
+      {% else %}
+      {% if item.grading_settings %}
+
+        <section class="qb-card">
+
+          <h2 class="qb-card__title">
+            {{ _('Бағалау параметрлері') }}
+          </h2>
+
+          <div class="qb-grading-list">
+
+            {% for key, value in item.grading_settings.items() %}
+
+              <div class="qb-grading-row">
+
+                <span class="qb-grading-row__key">
+                  {{ key }}
+                </span>
+
+                <span class="qb-grading-row__value">
+
+                  {% if value is sameas true %}
+                    {{ _('Иә') }}
+
+                  {% elif value is sameas false %}
+                    {{ _('Жоқ') }}
+
+                  {% elif value is none %}
+                    —
+
+                  {% else %}
+                    {{ value }}
+                  {% endif %}
+
+                </span>
+
+              </div>
+
+            {% endfor %}
+
+          </div>
+
+        </section>
+
+      {% endif %}
+      {% endif %}
+
+      {% endif %}
+
+    </aside>
+
+  </div>
+
+</div>
+
+{% endblock %}
+
+
+{% block extra_js %}
+
+<script
+  data-readable-prose-loader
+  defer
+  src="https://cdn.jsdelivr.net/npm/mathlive"
+></script>
+<script defer src="{{ url_for('static', path='js/teacher/assessment/question_bank/readable_math_prose.js') }}?v=144"></script>
+
+<script src="{{ url_for('static',path='js/teacher/assessment/question_bank/question_bank_objective_preview.js') }}" defer></script>
+<script src="{{ url_for('static',path='js/teacher/assessment/question_bank/question_bank_readonly_formulas.js') }}" defer></script>
+{% endblock %}

@@ -1,0 +1,6 @@
+{% from 'teacher/assessment/question_bank/_segments.html' import render_segments with context %}
+{% macro open_parts(item,audience) %}
+{% for part in item.content.get('parts',[]) %}<div class="document-open-part"><strong>{{ loop.index }})</strong> {{ render_segments(part.get('segments',[])|part_statement_layout(loop.index)) }} <small>({{ item.grading_settings.get('points_per_element',1) }} {{ _('балл.') }})</small>{% if audience=='student' %}<div class="document-answer-space">{{ _('Ответ') }}: ______________________________________________</div>{% endif %}</div>{% endfor %}
+{% endmacro %}
+{% macro correct_option(options,answer) %}{% for option in options %}{% if option.get('value')==answer %}{{ render_segments(option.get('segments',[])) }}{% endif %}{% endfor %}{% endmacro %}
+{% macro open_answers(item) %}<div class="document-open-key">{% if item.content.get('parts') %}{% for part in item.content.parts %}<div><strong>{{ loop.index }})</strong> {{ correct_option(part.get('options',[]),item.answer_key.get('values',{}).get(part.id)) }}</div>{% endfor %}{% else %}{{ correct_option(item.content.get('options',[]),item.answer_key.get('value')) }}{% endif %}</div>{% endmacro %}

@@ -1,0 +1,637 @@
+{% extends "base.html" %}
+
+{% block title %}
+  {{ _('Пәндік сарапшылар') }}
+{% endblock %}
+
+{% block extra_css %}
+<link
+  rel="stylesheet"
+  href="{{ url_for(
+    'static',
+    path='css/region/question_bank_experts/list.css'
+  ) }}"
+>
+{% endblock %}
+
+{% block content %}
+<p><a href="{{ url_for('region_expert_policy_page') }}" data-sm-action="nav">{{ _('Правила доступа экспертов по специальностям') }}</a></p>
+
+
+<div class="container py-4 qb-experts-page">
+
+  <!-- =====================================================
+       PAGE HEADER
+       ===================================================== -->
+
+  <header class="qb-page-header">
+
+    <div class="qb-page-header__main">
+
+      <h1 class="qb-page-title">
+        {{ _('Пәндік сарапшылар қауымдастығы') }}
+      </h1>
+
+      <p class="qb-page-subtitle">
+        {{ _('Тапсырмалар банкі үшін дайындалға тапсырмаларды тексеретін пәндік сарапшылардың өңірлік реестрі.') }}
+      </p>
+
+    </div>
+
+
+    <div class="qb-page-actions">
+
+      <a
+        href="{{ url_for('region_question_bank_expert_create_page') }}"
+        class="btn btn-primary"
+       data-sm-action="primary">
+        {{ _('+ Сарапшы қосу') }}
+      </a>
+
+    </div>
+
+  </header>
+
+
+  <!-- =====================================================
+       FILTERS
+       ===================================================== -->
+
+  <section class="qb-filter-card">
+
+    <div class="qb-filter-title">
+      {{ _('Сарапшыларды сүзу') }}
+    </div>
+
+    <form
+      method="get"
+      action="{{ url_for('region_question_bank_expert_list') }}"
+    >
+
+      <div class="qb-filter-grid">
+
+        <!-- =============================================
+             DISTRICT
+             ============================================= -->
+
+        <div>
+
+          <label
+            for="district_id"
+            class="form-label"
+          >
+            {{ _('Аудан / қала') }}
+          </label>
+
+          <select
+            id="district_id"
+            name="district_id"
+            class="form-select"
+          >
+
+            <option value="">
+              {{ _('Барлық аудандар') }}
+            </option>
+
+            {% for district in page.districts %}
+
+              {% if district_id == district.district_id %}
+
+                <option
+                  value="{{ district.district_id }}"
+                  selected
+                >
+                  {{ district.district_name }}
+                </option>
+
+              {% else %}
+
+                <option value="{{ district.district_id }}">
+                  {{ district.district_name }}
+                </option>
+
+              {% endif %}
+
+            {% endfor %}
+
+          </select>
+
+        </div>
+
+
+        <!-- =============================================
+             SUBJECT
+             ============================================= -->
+
+        <div>
+
+          <label
+            for="subject_id"
+            class="form-label"
+          >
+            {{ _('Предмет в полномочиях') }}
+          </label>
+
+          <select
+            id="subject_id"
+            name="subject_id"
+            class="form-select"
+          >
+
+            <option value="">
+              {{ _('Барлық пәндер') }}
+            </option>
+
+            {% for subject in page.subjects %}
+
+              {% if subject_id == subject.subject_id %}
+
+                <option
+                  value="{{ subject.subject_id }}"
+                  selected
+                >
+                  {{ subject.name }}
+                </option>
+
+              {% else %}
+
+                <option value="{{ subject.subject_id }}">
+                  {{ subject.name }}
+                </option>
+
+              {% endif %}
+
+            {% endfor %}
+
+          </select>
+
+        </div>
+
+
+        <!-- =============================================
+             STATUS
+             ============================================= -->
+
+        <div>
+
+          <label
+            for="status"
+            class="form-label"
+          >
+            {{ _('Мәртебе') }}
+          </label>
+
+          <select
+            id="status"
+            name="status"
+            class="form-select"
+          >
+
+            {% if status == "" %}
+
+              <option
+                value=""
+                selected
+              >
+                {{ _('Барлығы') }}
+              </option>
+
+            {% else %}
+
+              <option value="">
+                {{ _('Барлығы') }}
+              </option>
+
+            {% endif %}
+
+
+            {% if status == "active" %}
+
+              <option
+                value="active"
+                selected
+              >
+                {{ _('Белсенді') }}
+              </option>
+
+            {% else %}
+
+              <option value="active">
+                {{ _('Белсенді') }}
+              </option>
+
+            {% endif %}
+
+
+            {% if status == "inactive" %}
+
+              <option
+                value="inactive"
+                selected
+              >
+                {{ _('Белсенді емес') }}
+              </option>
+
+            {% else %}
+
+              <option value="inactive">
+                {{ _('Белсенді емес') }}
+              </option>
+
+            {% endif %}
+
+          </select>
+
+        </div>
+
+
+        <!-- =============================================
+             FILTER ACTIONS
+             ============================================= -->
+
+        <div class="qb-filter-actions">
+
+          <button
+            type="submit"
+            class="btn btn-primary"
+           data-sm-action="primary">
+            {{ _('Сүзу') }}
+          </button>
+
+
+          {% if district_id is not none %}
+
+            <a
+              href="{{ url_for('region_question_bank_expert_list') }}"
+              class="btn btn-outline-secondary"
+             data-sm-action="nav">
+              {{ _('Тазарту') }}
+            </a>
+
+          {% elif subject_id is not none %}
+
+            <a
+              href="{{ url_for('region_question_bank_expert_list') }}"
+              class="btn btn-outline-secondary"
+             data-sm-action="nav">
+              {{ _('Тазарту') }}
+            </a>
+
+          {% elif status %}
+
+            <a
+              href="{{ url_for('region_question_bank_expert_list') }}"
+              class="btn btn-outline-secondary"
+             data-sm-action="nav">
+              {{ _('Тазарту') }}
+            </a>
+
+          {% endif %}
+
+        </div>
+
+      </div>
+
+    </form>
+
+  </section>
+
+
+  <!-- =====================================================
+       EXPERT TABLE
+       ===================================================== -->
+
+  <section class="qb-table-card">
+
+    <!-- TABLE HEADER -->
+
+    <div class="qb-table-header">
+
+      <h2 class="qb-table-title">
+        {{ _('Сарапшылар реестрі') }}
+      </h2>
+
+      <div class="qb-table-count">
+        {{ _('Барлығы:') }}
+        <strong>{{ page.experts | length }}</strong>
+      </div>
+
+    </div>
+
+
+    <!-- TABLE -->
+
+    <div class="qb-table-wrap">
+
+      <table class="qb-table">
+
+        <thead>
+
+          <tr>
+
+            <th>
+              {{ _('Сарапшы') }}
+            </th>
+
+            <th>
+              {{ _('Аудан / қала') }}
+            </th>
+
+            <th>
+              {{ _('Білім беру ұйымы') }}
+            </th>
+
+            <th>
+              {{ _('Мамандық') }}
+            </th>
+
+            <th>
+              {{ _('Санат') }}
+            </th>
+
+            <th>
+              {{ _('Өтілі') }}
+            </th>
+
+            <th>
+              {{ _('Аккаунт') }}
+            </th>
+
+            <th>
+              {{ _('Мәртебе') }}
+            </th>
+
+            <th class="qb-table__actions">
+              {{ _('Әрекет') }}
+            </th>
+
+          </tr>
+
+        </thead>
+
+
+        <tbody>
+
+          {% for expert in page.experts %}
+
+            <tr>
+
+              <!-- =======================================
+                   EXPERT
+                   ======================================= -->
+
+              <td class="qb-table__name">
+
+                <div>
+                  {{ expert.full_name }}
+                </div>
+
+                <div class="qb-muted qb-mono mt-1">
+                  {{ _('ЖСН:') }} {{ expert.iin }}
+                </div>
+
+              </td>
+
+
+              <!-- =======================================
+                   DISTRICT
+                   ======================================= -->
+
+              <td class="qb-table__district">
+                {{ expert.district_name }}
+              </td>
+
+
+              <!-- =======================================
+                   SCHOOL
+                   ======================================= -->
+
+              <td class="qb-table__school">
+                {{ expert.school_name }}
+              </td>
+
+
+              <!-- =======================================
+                   SUBJECT
+                   ======================================= -->
+
+              <td class="qb-table__subject">
+                {{ expert_specialty_name(expert) }}
+              </td>
+
+
+              <!-- =======================================
+                   CATEGORY
+                   ======================================= -->
+
+              <td>
+
+                {% if expert.qualification_category_text %}
+
+                  {{ expert_standard_label(expert.qualification_category_text) }}
+
+                {% else %}
+
+                  <span class="qb-muted">
+                    —
+                  </span>
+
+                {% endif %}
+
+              </td>
+
+
+              <!-- =======================================
+                   EXPERIENCE
+                   ======================================= -->
+
+              <td class="qb-nowrap">
+
+                {% if expert.ped_experience_years is not none %}
+
+                  {{ expert.ped_experience_years }} {{ _('жыл') }}
+
+                {% else %}
+
+                  <span class="qb-muted">
+                    —
+                  </span>
+
+                {% endif %}
+
+              </td>
+
+
+              <!-- =======================================
+                   ACCOUNT
+                   ======================================= -->
+
+              <td>
+
+                {% if expert.has_account %}
+
+                  <span class="qb-badge qb-badge--primary">
+
+                    <span class="qb-badge__dot"></span>
+
+                    {{ _('Байланыстырылған') }}
+
+                  </span>
+
+                {% else %}
+
+                  <span class="qb-badge qb-badge--neutral">
+
+                    {{ _('Аккаунт жоқ') }}
+
+                  </span>
+
+                {% endif %}
+
+              </td>
+
+
+              <!-- =======================================
+                   STATUS
+                   ======================================= -->
+
+              <td>
+
+                {% if expert.is_active %}
+
+                  <span class="qb-badge qb-badge--success">
+
+                    <span class="qb-badge__dot"></span>
+
+                    {{ _('Белсенді') }}
+
+                  </span>
+
+                {% else %}
+
+                  <span class="qb-badge qb-badge--inactive">
+
+                    <span class="qb-badge__dot"></span>
+
+                    {{ _('Белсенді емес') }}
+
+                  </span>
+
+                {% endif %}
+
+              </td>
+
+
+              <!-- =======================================
+                   ACTION
+                   ======================================= -->
+
+              <td class="qb-table__actions">
+
+                <a
+                  href="{{
+                    url_for(
+                      'region_question_bank_expert_detail',
+                      expert_id=expert.expert_id
+                    )
+                  }}"
+                  class="btn btn-sm btn-outline-primary"
+                 data-sm-action="nav" data-sm-size="compact">
+                  {{ _('Ашу') }}
+                </a>
+
+              </td>
+
+            </tr>
+
+
+          {% else %}
+
+            <tr>
+
+              <td colspan="9">
+
+                <div class="qb-empty">
+
+                  <div class="qb-empty__icon">
+                    ?
+                  </div>
+
+                  <h3 class="qb-empty__title">
+                    {{ _('Сарапшылар табылмады') }}
+                  </h3>
+
+
+                  {% if district_id is not none %}
+
+                    <p class="qb-empty__text mb-3">
+                      {{ _('Таңдалған сүзгі бойынша сарапшылар жоқ.') }}
+                    </p>
+
+                    <a
+                      href="{{ url_for('region_question_bank_expert_list') }}"
+                      class="btn btn-outline-secondary"
+                     data-sm-action="nav">
+                      {{ _('Сүзгіні тазарту') }}
+                    </a>
+
+                  {% elif subject_id is not none %}
+
+                    <p class="qb-empty__text mb-3">
+                      {{ _('Таңдалған сүзгі бойынша сарапшылар жоқ.') }}
+                    </p>
+
+                    <a
+                      href="{{ url_for('region_question_bank_expert_list') }}"
+                      class="btn btn-outline-secondary"
+                     data-sm-action="nav">
+                      {{ _('Сүзгіні тазарту') }}
+                    </a>
+
+                  {% elif status %}
+
+                    <p class="qb-empty__text mb-3">
+                      {{ _('Таңдалған сүзгі бойынша сарапшылар жоқ.') }}
+                    </p>
+
+                    <a
+                      href="{{ url_for('region_question_bank_expert_list') }}"
+                      class="btn btn-outline-secondary"
+                     data-sm-action="nav">
+                      {{ _('Сүзгіні тазарту') }}
+                    </a>
+
+                  {% else %}
+
+                    <p class="qb-empty__text mb-3">
+                      {{ _('Өңірлік реестрге әлі сарапшы қосылмаған.') }}
+                    </p>
+
+                    <a
+                      href="{{ url_for('region_question_bank_expert_create_page') }}"
+                      class="btn btn-primary"
+                     data-sm-action="primary">
+                      {{ _('+ Сарапшы қосу') }}
+                    </a>
+
+                  {% endif %}
+
+                </div>
+
+              </td>
+
+            </tr>
+
+          {% endfor %}
+
+        </tbody>
+
+      </table>
+
+    </div>
+
+  </section>
+
+</div>
+
+{% endblock %}

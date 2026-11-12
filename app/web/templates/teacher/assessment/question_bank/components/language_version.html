@@ -1,0 +1,19 @@
+{% with _=question_gettext(bilingual_item.language) %}
+{% set qb_label_language = bilingual_item.language.value %}
+{% from "teacher/assessment/question_bank/_segments.html" import render_segments with context %}
+{% from "teacher/assessment/question_bank/components/question_content.html" import render_question_content with context %}
+{% from "teacher/assessment/question_bank/components/answer_key.html" import render_answer_key with context %}
+<section class="qb-card qb-language-version" style="padding:16px;border:1px solid #d0d5dd;border-radius:10px;margin:12px 0;">
+  <h3>{{ 'Қазақша' if bilingual_item.language.value == 'kk' else 'Русский' }}</h3>
+  {% if bilingual_item.title %}<h4>{{ bilingual_item.title }}</h4>{% endif %}
+  {% if bilingual_item.instruction %}<p>{{ question_instruction(bilingual_item.instruction, bilingual_item.language) }}</p>{% endif %}
+  {{ render_segments(bilingual_item.text_segments or [], fallback=bilingual_item.text) }}
+  {{ render_question_content(bilingual_item, show_bank=false) }}
+  <h4>{{ 'Правильный ответ' if bilingual_item.language.value == 'ru' else 'Дұрыс жауап' }}</h4>
+  {{ render_answer_key(bilingual_item) }}
+  {% if bilingual_item.grading_settings.get('element_score_policy') == 'weighted_elements_v2' %}{% from 'teacher/assessment/question_bank/components/weighted_grading_summary.html' import render_weighted_grading with context %}{{ render_weighted_grading(bilingual_item) }}{% endif %}
+  {% if bilingual_item.explanation %}<p data-readable-math-prose style="white-space:pre-line;overflow-wrap:anywhere;font-size:14px;line-height:1.7;">{{ bilingual_item.explanation | explanation_layout(bilingual_item) }}</p>{% endif %}
+  <p>{{ 'Максимальный балл' if bilingual_item.language.value == 'ru' else 'Ең жоғары балл' }}: {{ bilingual_item.max_score }}</p>
+</section>
+
+{% endwith %}

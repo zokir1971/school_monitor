@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 
 {% block title %}
-Настройка методических объединений
+{{ _('Настройка методических объединений') }}
 {% endblock %}
 
 
@@ -348,12 +348,11 @@
 
   <header class="page-header">
     <h1 class="page-title">
-      Методикалық бірлестіктер
+      {{ _('Методикалық бірлестіктер') }}
     </h1>
 
     <p class="page-description">
-      Мектепте жұмыс істейтін әдістемелік бірлестіктерді таңдаңыз.
-      Белгіленген бірлестіктер тапсырмаларды қарау кезінде қолжетімді болады.
+      {{ _('Мектепте жұмыс істейтін әдістемелік бірлестіктерді таңдаңыз. Белгіленген бірлестіктер тапсырмаларды қарау кезінде қолжетімді болады.') }}
     </p>
   </header>
 
@@ -362,7 +361,7 @@
     <div
       class="alert alert-success"
       role="status">
-      Методикалық бірлестіктер тізімі сәтті сақталды.
+      {{ _('Методикалық бірлестіктер тізімі сәтті сақталды.') }}
     </div>
   {% endif %}
 
@@ -371,7 +370,7 @@
     <div
       class="alert alert-error"
       role="alert">
-      {{ error }}
+      {{ method_association_error(error) }}
     </div>
   {% endif %}
 
@@ -389,12 +388,11 @@
 
         <div>
           <h2 class="settings-card__title">
-            Мектептің әдістемелік бірлестіктері
+            {{ _('Мектептің әдістемелік бірлестіктері') }}
           </h2>
 
           <p class="settings-card__subtitle">
-            Қажетті бірлестіктерді белгілеп,
-            өзгерістерді сақтаңыз.
+            {{ _('Қажетті бірлестіктерді белгілеп, өзгерістерді сақтаңыз.') }}
           </p>
         </div>
 
@@ -402,7 +400,7 @@
           id="selection-counter"
           class="selection-counter"
           aria-live="polite">
-          Таңдалды: 0
+          {{ _('Таңдалды: 0') }}
         </div>
 
       </div>
@@ -415,15 +413,15 @@
           <button
             type="button"
             id="select-all-button"
-            class="toolbar-button">
-            Барлығын таңдау
+            class="toolbar-button" data-sm-action="nav" data-sm-size="compact">
+            {{ _('Барлығын таңдау') }}
           </button>
 
           <button
             type="button"
             id="clear-all-button"
-            class="toolbar-button">
-            Таңдауды алып тастау
+            class="toolbar-button" data-sm-action="nav" data-sm-size="compact">
+            {{ _('Таңдауды алып тастау') }}
           </button>
 
         </div>
@@ -456,7 +454,7 @@
                 <span class="association-content">
 
                   <span class="association-name">
-                    {{ option.name }}
+                    {{ method_association_name(option.name) }}
                   </span>
 
                   <span class="association-code">
@@ -476,7 +474,7 @@
       {% else %}
 
         <div class="empty-state">
-          Методикалық бірлестіктер тізімі табылмады.
+          {{ _('Методикалық бірлестіктер тізімі табылмады.') }}
         </div>
 
       {% endif %}
@@ -486,16 +484,16 @@
 
         <a
           href="{{ request.url_for('school_admin_dashboard') }}"
-          class="btn btn-secondary">
-          Артқа
+          class="btn btn-secondary" data-sm-action="nav" data-sm-back="true">
+          {{ _('Артқа') }}
         </a>
 
         <button
           type="submit"
           id="save-button"
           class="btn btn-primary"
-          {% if not options %}disabled{% endif %}>
-          Өзгерістерді сақтау
+          {% if not options %}disabled{% endif %} data-sm-action="primary">
+          {{ _('Өзгерістерді сақтау') }}
         </button>
 
       </div>
@@ -550,7 +548,7 @@
       ).length;
 
       selectionCounter.textContent =
-        "Таңдалды: " + selectedCount;
+        {{ _('Таңдалды: ')|tojson }} + selectedCount;
     }
 
 
@@ -596,7 +594,7 @@
       }
 
       saveButton.disabled = true;
-      saveButton.textContent = "Сақталуда...";
+      saveButton.textContent = {{ _('Сақталуда...')|tojson }};
     });
 
 

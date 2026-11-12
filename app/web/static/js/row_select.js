@@ -53,7 +53,7 @@
       const rowId = selected[kind];
       if (!rowId) return;
 
-      if (!confirm("Удалить выбранную строку?")) return;
+      if (!confirm(window.SchoolMonitorI18n.t("pl_712f1e371b66"))) return;
 
       const planId = root.dataset.planId;
       const directionId = root.dataset.directionId;

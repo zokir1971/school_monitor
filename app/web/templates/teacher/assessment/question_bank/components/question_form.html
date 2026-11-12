@@ -1,0 +1,491 @@
+{#
+  Общий Question Builder.
+
+  Используется:
+      - create.html
+      - edit.html
+
+  item:
+      None -> создание
+      DTO  -> редактирование
+
+  Важно:
+  CSS-классы и существующая структура Question Builder
+  сохранены. Jinja используется для вычисления значений
+  до HTML, без дублирования элементов с одинаковыми id.
+#}
+
+{% set is_edit = item is defined and item %}
+
+{% if is_edit %}
+  {% set current_question_type = item.question_type.value if item.question_type.value is defined else item.question_type %}
+  {% set current_difficulty = item.difficulty.value if item.difficulty.value is defined else item.difficulty %}
+  {% set current_language = item.language.value if item.language.value is defined else item.language %}
+  {% set title_value = item.title or "" %}
+  {% set instruction_value = item.instruction or "" %}
+  {% set max_score_value = item.max_score %}
+  {% set explanation_value = item.explanation or "" %}
+  {% set author_comment_value = item.author_comment or "" %}
+  {% set initial_segments = (item.text_segments or [{"type": "text", "text": item.text}]) | tojson %}
+{% else %}
+  {% set current_question_type = creation_slot.question_type if creation_slot else "single_choice" %}
+  {% set current_difficulty = creation_slot.difficulty if creation_slot else "basic" %}
+  {% set current_language = qb_selected_language|default('kk') %}
+  {% set title_value = "" %}
+  {% set instruction_value = "" %}
+  {% set max_score_value = creation_slot.max_score if creation_slot else 1 %}
+  {% set explanation_value = "" %}
+  {% set author_comment_value = "" %}
+  {% set initial_segments = "[]" %}
+{% endif %}
+
+
+<!-- =============================================
+     QUESTION TYPE
+     ============================================= -->
+
+<div class="qb-form-field">
+
+  <label
+    for="question_type"
+    class="qb-form-label"
+  >
+    {{ _('Тапсырма түрі / Тип задания') }}
+  </label>
+
+  <select
+    id="question_type"
+    name="question_type"
+    class="qb-form-control"
+    required
+  >
+
+    {% if current_question_type == "single_choice" %}
+      <option value="single_choice" selected>{{ _('Бір дұрыс жауап / Один правильный ответ') }}</option>
+    {% else %}
+      <option value="single_choice">{{ _('Бір дұрыс жауап / Один правильный ответ') }}</option>
+    {% endif %}
+
+    {% if current_question_type == "multiple_choice" %}
+      <option value="multiple_choice" selected>{{ _('Бірнеше дұрыс жауап / Несколько правильных ответов') }}</option>
+    {% else %}
+      <option value="multiple_choice">{{ _('Бірнеше дұрыс жауап / Несколько правильных ответов') }}</option>
+    {% endif %}
+
+    {% if current_question_type == "true_false" %}
+      <option value="true_false" selected>{{ _('Дұрыс / бұрыс / Верно / неверно') }}</option>
+    {% else %}
+      <option value="true_false">{{ _('Дұрыс / бұрыс / Верно / неверно') }}</option>
+    {% endif %}
+
+    {% if current_question_type == "short_text" %}
+      <option value="short_text" selected>{{ _('Қысқа жауап / Краткий ответ') }}</option>
+    {% else %}
+      <option value="short_text">{{ _('Қысқа жауап / Краткий ответ') }}</option>
+    {% endif %}
+
+    {% if current_question_type == "number" %}
+      <option value="number" selected>{{ _('Сандық жауап / Числовой ответ') }}</option>
+    {% else %}
+      <option value="number">{{ _('Сандық жауап / Числовой ответ') }}</option>
+    {% endif %}
+
+    {% if current_question_type == "matching" %}
+      <option value="matching" selected>{{ _('Сәйкестендіру / Соответствие') }}</option>
+    {% else %}
+      <option value="matching">{{ _('Сәйкестендіру / Соответствие') }}</option>
+    {% endif %}
+
+    {% if current_question_type == "ordering" %}
+      <option value="ordering" selected>{{ _('Ретін анықтау / Порядок') }}</option>
+    {% else %}
+      <option value="ordering">{{ _('Ретін анықтау / Порядок') }}</option>
+    {% endif %}
+
+    {% if current_question_type == "fill_gaps" %}
+      <option value="fill_gaps" selected>{{ _('Бос орындарды толтыру / Заполнение пропусков') }}</option>
+    {% else %}
+      <option value="fill_gaps">{{ _('Бос орындарды толтыру / Заполнение пропусков') }}</option>
+    {% endif %}
+
+    {% if current_question_type == "manual_review" %}
+      <option value="manual_review" selected>{{ _('Қолмен тексеру / Ручная проверка') }}</option>
+    {% else %}
+      <option value="manual_review">{{ _('Қолмен тексеру / Ручная проверка') }}</option>
+    {% endif %}
+    {% if current_question_type == "image_choice" %}
+      <option value="image_choice" selected>{{ _('Сурет бойынша таңдау / Выбор изображения') }}</option>
+    {% else %}
+      <option value="image_choice">{{ _('Сурет бойынша таңдау / Выбор изображения') }}</option>
+    {% endif %}
+    {% if current_question_type == "formula" %}
+      <option value="formula" selected>{{ _('Формула') }}</option>
+    {% else %}
+      <option value="formula">{{ _('Формула') }}</option>
+    {% endif %}
+  </select>
+
+</div>
+
+
+<!-- =============================================
+     DIFFICULTY
+     ============================================= -->
+
+<div class="qb-form-field">
+
+  <label
+    for="difficulty"
+    class="qb-form-label"
+  >
+    {{ _('Күрделілік деңгейі / Сложность') }}
+  </label>
+
+  <select
+    id="difficulty"
+    name="difficulty"
+    class="qb-form-control"
+    required
+  >
+
+    {% if current_difficulty == "basic" %}
+      <option value="basic" selected>{{ _('Базалық / Базовый') }}</option>
+    {% else %}
+      <option value="basic">{{ _('Базалық / Базовый') }}</option>
+    {% endif %}
+
+    {% if current_difficulty == "medium" %}
+      <option value="medium" selected>{{ _('Орташа / Средний') }}</option>
+    {% else %}
+      <option value="medium">{{ _('Орташа / Средний') }}</option>
+    {% endif %}
+
+    {% if current_difficulty == "advanced" %}
+      <option value="advanced" selected>{{ _('Жоғары / Высокий') }}</option>
+    {% else %}
+      <option value="advanced">{{ _('Жоғары / Высокий') }}</option>
+    {% endif %}
+
+  </select>
+
+</div>
+
+
+<!-- =============================================
+     LANGUAGE
+     ============================================= -->
+
+{% if qb_language_locked|default(false) and not is_edit %}
+<input type="hidden" name="language" data-qb-objective-language-value value="{{ current_language }}">
+
+{% else %}
+<div class="qb-form-field">
+
+  <label
+    for="language"
+    class="qb-form-label"
+  >
+    {{ _('Тапсырма тілі / Язык задания') }}
+  </label>
+
+  <select
+    id="language"
+    name="language"
+    class="qb-form-control"
+    data-qb-objective-language
+    required
+  >
+
+    {% if current_language == "kk" %}
+      <option value="kk" selected>{{ _('Қазақ тілі / Казахский') }}</option>
+    {% else %}
+      <option value="kk">{{ _('Қазақ тілі / Казахский') }}</option>
+    {% endif %}
+
+    {% if current_language == "ru" %}
+      <option value="ru" selected>{{ _('Орыс тілі / Русский') }}</option>
+    {% else %}
+      <option value="ru">{{ _('Орыс тілі / Русский') }}</option>
+    {% endif %}
+
+    {% if current_language == "en" %}
+      <option value="en" selected>{{ _('Ағылшын тілі / Английский') }}</option>
+    {% else %}
+      <option value="en">{{ _('Ағылшын тілі / Английский') }}</option>
+    {% endif %}
+
+  </select>
+
+</div>
+{% endif %}
+
+
+<!-- =============================================
+     TITLE
+     ============================================= -->
+
+<div class="qb-form-field">
+
+  <label
+    for="title"
+    class="qb-form-label"
+  >
+    {{ _('Тақырып / Тема') }}
+  </label>
+
+  <input
+    id="title"
+    type="text"
+    name="title"
+    class="qb-form-control"
+    value="{{ title_value }}"
+    placeholder="{{ _('Тапсырманың қысқаша атауы') }}"
+  >
+
+</div>
+
+
+<!-- =============================================
+     QUESTION TEXT
+     ============================================= -->
+
+<div class="qb-form-field">
+
+  <label
+    for="question_text_editor"
+    class="qb-form-label"
+  >
+    {{ _('Тапсырма мәтіні / Условие задания') }}
+    <span class="qb-required">*</span>
+  </label>
+
+  <div
+    class="qb-rich-editor"
+    data-rich-editor
+    data-media-upload-url="{{ url_for('teacher_question_bank_media_upload') }}"
+    data-media-view-url="{{ url_for('teacher_question_bank_media_view') }}"
+    data-initial-segments='{{ initial_segments | forceescape }}'
+  >
+
+    <div class="qb-rich-editor__toolbar">
+
+      <button
+        type="button"
+        class="qb-rich-editor__formula-btn"
+        data-rich-add-math
+       data-sm-action="nav" data-sm-size="compact">
+        {{ _('+ Формула') }}
+      </button>
+
+      <button type="button" class="qb-rich-editor__formula-btn" data-rich-edit-math disabled data-sm-action="edit" data-sm-size="compact">{{ _('Өңдеу / Редактировать') }}</button>
+      <button type="button" class="qb-rich-editor__formula-btn" data-rich-copy-math disabled data-sm-action="nav" data-sm-size="compact">{{ _('Көшіру / Копировать') }}</button>
+      <button type="button" class="qb-rich-editor__formula-btn" data-rich-paste-math disabled data-sm-action="nav" data-sm-size="compact">{{ _('Қою / Вставить') }}</button>
+      <button type="button" class="qb-rich-editor__formula-btn" data-rich-delete-math disabled data-sm-action="danger" data-sm-size="compact">{{ _('Жою / Удалить') }}</button>
+      <button type="button" class="qb-rich-editor__formula-btn" data-rich-add-image data-sm-action="nav" data-sm-size="compact">{{ _('+ Сурет / + Изображение') }}</button>
+      <input type="file" accept="image/png,image/jpeg,image/webp" data-rich-image-file hidden>
+      <span data-rich-media-status role="status" aria-live="polite"></span>
+    </div>
+
+    <div
+      id="question_text_editor"
+      class="qb-rich-editor__content"
+      contenteditable="true"
+      role="textbox"
+      aria-multiline="true"
+      data-rich-content
+      data-placeholder="{{ _('Тапсырманың мәтінін енгізіңіз') }}"
+    ></div>
+
+    <input
+      type="hidden"
+      name="text"
+      data-rich-plain-value
+    >
+
+    <input
+      type="hidden"
+      name="question_text_segments"
+      data-rich-segments
+    >
+
+  </div>
+
+</div>
+
+
+<!-- =============================================
+     INSTRUCTION
+     ============================================= -->
+
+<div class="qb-form-field">
+
+  <label
+    for="instruction"
+    class="qb-form-label"
+  >
+    {{ _('Нұсқаулық / Инструкция') }}
+  </label>
+
+  <textarea
+    id="instruction"
+    name="instruction"
+    class="qb-form-control qb-form-textarea"
+    rows="2"
+    placeholder="{{ _('Мысалы: Бір дұрыс жауапты таңдаңыз') }}"
+  >{{ instruction_value }}</textarea>
+
+</div>
+
+
+<!-- =============================================
+     QUESTION TYPE FIELDS
+     ============================================= -->
+
+{% include "teacher/assessment/question_bank/create/_single_choice.html" %}
+{% include "teacher/assessment/question_bank/create/_multiple_choice.html" %}
+{% include "teacher/assessment/question_bank/create/_true_false.html" %}
+{% include "teacher/assessment/question_bank/create/_short_text.html" %}
+{% include "teacher/assessment/question_bank/create/_number.html" %}
+{% include "teacher/assessment/question_bank/create/_matching.html" %}
+{% include "teacher/assessment/question_bank/create/_ordering.html" %}
+{% include "teacher/assessment/question_bank/create/_fill_gaps.html" %}
+{% include "teacher/assessment/question_bank/create/_manual_review.html" %}
+{% include "teacher/assessment/question_bank/create/_formula.html" %}
+{% include "teacher/assessment/question_bank/create/_image_choice.html" %}
+
+
+<!-- =============================================
+     MAX SCORE
+     ============================================= -->
+
+{% include 'teacher/assessment/question_bank/components/element_scoring.html' %}
+<div class="qb-form-field qb-form-field--small">
+
+  <label
+    for="max_score"
+    class="qb-form-label"
+  >
+    {{ _('Максималды балл / Максимальный балл') }}
+  </label>
+
+  <input
+    id="max_score"
+    type="number"
+    name="max_score"
+    class="qb-form-control"
+    value="{{ max_score_value }}"
+    min="0.01"
+    step="0.01"
+    required
+  >
+
+</div>
+
+
+<!-- =============================================
+     EXPLANATION
+     ============================================= -->
+
+<div class="qb-form-field">
+
+  <label
+    for="explanation"
+    class="qb-form-label"
+  >
+    {{ _('Жауап түсіндірмесі') }}
+  </label>
+
+  <textarea
+    id="explanation"
+    name="explanation"
+    class="qb-form-control qb-form-textarea"
+    rows="5"
+    placeholder="{{ _('Дұрыс жауаптың түсіндірмесін енгізіңіз') }}"
+  >{{ explanation_value | default('', true) }}</textarea>
+
+<p class="qb-muted">{{ 'Решение: формула → шаги → ответ. Для отдельных задач используйте «Задача 1», «Задача 2». Формулы: \\(x=1\\). Буквы вариантов могут перемешиваться.' if ui_language()=='ru' else 'Шешуі: формула → қадамдар → жауап. Жеке есептерді «Есеп 1», «Есеп 2» деп атаңыз. Формулалар: \\(x=1\\). Жауап нұсқаларының әріптері ауысуы мүмкін.' }}</p>
+<script defer src="{{ url_for('static', path='js/teacher/assessment/question_bank/readable_math_prose.js') }}?v=144"></script>
+
+</div>
+
+
+<!-- =============================================
+     AUTHOR COMMENT
+     ============================================= -->
+
+<div class="qb-form-field">
+
+  <label
+    for="author_comment"
+    class="qb-form-label"
+  >
+    {{ _('Автор түсіндірмесі / Комментарий автора') }}
+  </label>
+
+  <textarea
+    id="author_comment"
+    name="author_comment"
+    class="qb-form-control qb-form-textarea"
+    rows="2"
+    placeholder="{{ _('Қажет болса, ішкі түсіндірме қалдырыңыз') }}"
+  >{{ author_comment_value }}</textarea>
+
+</div>
+
+
+<!-- =============================================
+     ACTIONS
+     ============================================= -->
+
+<div class="qb-create-actions">
+  <button type="submit" class="qb-create-submit" name="after_save" value="translate" data-sm-action="primary">{{ _('Сохранить и перейти к переводу') }}</button>
+
+
+  <button
+    type="submit"
+    class="qb-create-submit"
+   data-sm-action="primary">
+    {% if is_edit %}
+      {{ _('Өзгерістерді сақтау') }}
+    {% else %}
+      {{ _('Сақтау және тағы тапсырма қосу') }}
+    {% endif %}
+  </button>
+
+  <a
+    href="{{ url_for('teacher_question_bank_items_page') }}"
+    class="qb-create-finish"
+   data-sm-action="edit">
+    {% if is_edit %}
+      {{ _('Болдырмау') }}
+    {% else %}
+      {{ _('Дайын') }}
+    {% endif %}
+  </a>
+
+</div>
+
+{% if is_edit %}
+{% set initial_item = {
+  "question_type": current_question_type,
+  "content": item.content or {},
+  "answer_key": item.answer_key or {},
+  "grading_settings": item.grading_settings or {}
+} %}
+<div id="qb-initial-item" hidden data-initial-item="{{ initial_item | tojson | forceescape }}"></div>
+<input type="hidden" name="initial_question_type" value="{{ current_question_type }}">
+<input type="hidden" name="initial_grading_settings" id="qb-initial-grading">
+<input type="hidden" name="initial_content" id="qb-initial-content">
+{% endif %}
+
+{% if creation_slot %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  for (const name of ['question_type','difficulty']) {
+    const control=document.querySelector(`[name="${name}"]`);
+    if(control){const hidden=document.createElement('input');hidden.type='hidden';hidden.name=name;hidden.value=control.value;control.form.append(hidden);control.disabled=true;}
+  }
+  const score=document.querySelector('[name="max_score"]');if(score)score.readOnly=true;
+});
+</script>
+{% endif %}

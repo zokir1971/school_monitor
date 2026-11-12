@@ -1,7 +1,5 @@
 # app/modules/staff/staff_repo.py
 
-# app/modules/staff/staff_repo.py
-
 from __future__ import annotations
 
 from sqlalchemy import delete, select, update
@@ -51,29 +49,57 @@ class SchoolStaffRepo:
     # ---------------------------
     # 🔹 Получить сотрудника по id
     # ---------------------------
+
     @staticmethod
     async def get_member(
-        db: AsyncSession,
-        *,
-        school_id: int,
-        member_id: int,
+            db: AsyncSession,
+            *,
+            school_id: int,
+            member_id: int,
+            include_inactive: bool = True,
     ) -> SchoolStaffMember | None:
         """
-        Возвращает сотрудника по id внутри школы.
+        Получить сотрудника по id
+        строго внутри указанной школы.
 
-        Подгружает роли.
+        По умолчанию возвращает также
+        неактивного сотрудника.
+
+        include_inactive=False:
+            вернуть только активного сотрудника.
+
+        Роли подгружаются через selectinload.
         """
+
         stmt = (
-            select(SchoolStaffMember)
-            .where(
-                SchoolStaffMember.school_id == school_id,
-                SchoolStaffMember.id == member_id,
+            select(
+                SchoolStaffMember
             )
-            .options(selectinload(SchoolStaffMember.roles))
+            .where(
+                SchoolStaffMember.school_id
+                == school_id,
+
+                SchoolStaffMember.id
+                == member_id,
+            )
+            .options(
+                selectinload(
+                    SchoolStaffMember.roles
+                )
+            )
         )
 
-        result = await db.execute(stmt)
-        return result.scalars().first()
+        if not include_inactive:
+            stmt = stmt.where(
+                SchoolStaffMember.is_active
+                .is_(True)
+            )
+
+        result = await db.execute(
+            stmt
+        )
+
+        return result.scalar_one_or_none()
 
     # ---------------------------
     # 🔹 Быстрый метод для задач (ОЧЕНЬ ВАЖНЫЙ)

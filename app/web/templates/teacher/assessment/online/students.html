@@ -1,0 +1,809 @@
+{% extends "base.html" %}
+
+{% block title %}
+{{ _('ONLINE Assessment — Оқушылар') }}
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  .online-students-page {
+    max-width: 1500px;
+    margin: 0 auto;
+    padding: 24px;
+  }
+
+  /* =====================================================
+     HEADER
+     ===================================================== */
+
+  .page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 20px;
+    margin-bottom: 24px;
+  }
+
+  .page-header__content {
+    min-width: 0;
+  }
+
+  .page-title {
+    margin: 0;
+    font-size: 28px;
+    font-weight: 800;
+    line-height: 1.2;
+  }
+
+  .page-subtitle {
+    margin-top: 8px;
+    color: #6b7280;
+    font-size: 14px;
+  }
+
+  .page-header__actions {
+    flex: 0 0 auto;
+  }
+
+  .back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 9px 14px;
+    border: 1px solid #d1d5db;
+    border-radius: 9px;
+    color: inherit;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 600;
+    background: #fff;
+  }
+
+  .back-link:hover {
+    background: #f9fafb;
+  }
+
+  /* =====================================================
+     ERROR
+     ===================================================== */
+
+  .error-alert {
+    margin-bottom: 20px;
+    padding: 14px 16px;
+    border: 1px solid #fecaca;
+    border-radius: 10px;
+    background: #fef2f2;
+    color: #991b1b;
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  /* =====================================================
+     SUMMARY
+     ===================================================== */
+
+  .summary-grid {
+    display: grid;
+    grid-template-columns:
+      repeat(auto-fit, minmax(155px, 1fr));
+    gap: 14px;
+    margin-bottom: 22px;
+  }
+
+  .summary-card {
+    padding: 16px;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    background: #fff;
+  }
+
+  .summary-card__label {
+    margin-bottom: 8px;
+    color: #6b7280;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+
+  .summary-card__value {
+    font-size: 26px;
+    line-height: 1;
+    font-weight: 800;
+  }
+
+  /* =====================================================
+     REVIEW ALERT
+     ===================================================== */
+
+  .review-alert {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 22px;
+    padding: 14px 16px;
+    border: 1px solid #fde68a;
+    border-radius: 12px;
+    background: #fffbeb;
+  }
+
+  .review-alert__title {
+    margin-bottom: 3px;
+    font-size: 14px;
+    font-weight: 800;
+  }
+
+  .review-alert__text {
+    color: #92400e;
+    font-size: 13px;
+  }
+
+  .review-alert__count {
+    flex: 0 0 auto;
+    min-width: 42px;
+    padding: 7px 10px;
+    border-radius: 999px;
+    background: #fef3c7;
+    color: #92400e;
+    text-align: center;
+    font-weight: 800;
+  }
+
+  /* =====================================================
+     TABLE
+     ===================================================== */
+
+  .students-card {
+    overflow: hidden;
+    border: 1px solid #e5e7eb;
+    border-radius: 14px;
+    background: #fff;
+  }
+
+  .table-wrap {
+    overflow-x: auto;
+  }
+
+  .students-table {
+    width: 100%;
+    min-width: 1320px;
+    border-collapse: collapse;
+  }
+
+  .students-table th,
+  .students-table td {
+    padding: 13px 14px;
+    border-bottom: 1px solid #e5e7eb;
+    text-align: left;
+    vertical-align: middle;
+  }
+
+  .students-table th {
+    background: #f9fafb;
+    color: #4b5563;
+    font-size: 12px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+    white-space: nowrap;
+  }
+
+  .students-table tbody tr:last-child td {
+    border-bottom: 0;
+  }
+
+  .students-table tbody tr:hover {
+    background: #fafafa;
+  }
+
+  .student-name {
+    font-weight: 750;
+  }
+
+  .student-id {
+    margin-top: 4px;
+    color: #9ca3af;
+    font-size: 12px;
+  }
+
+  /* =====================================================
+   RESULT
+   ===================================================== */
+
+  .result-value {
+    font-size: 13px;
+    font-weight: 750;
+    white-space: nowrap;
+  }
+
+  .result-percent {
+    font-size: 13px;
+    font-weight: 750;
+    white-space: nowrap;
+  }
+
+  .result-grade {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 34px;
+    padding: 5px 9px;
+    border-radius: 8px;
+    background: #f3f4f6;
+    font-size: 13px;
+    font-weight: 800;
+  }
+
+  .result-empty {
+    color: #9ca3af;
+  }
+
+  /* =====================================================
+     STATUS
+     ===================================================== */
+
+  .status-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 5px 9px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 750;
+    white-space: nowrap;
+  }
+
+  .status-badge--assigned {
+    background: #f3f4f6;
+    color: #4b5563;
+  }
+
+  .status-badge--in_progress {
+    background: #dbeafe;
+    color: #1d4ed8;
+  }
+
+  .status-badge--submitted {
+    background: #fef3c7;
+    color: #92400e;
+  }
+
+  .status-badge--completed {
+    background: #dcfce7;
+    color: #166534;
+  }
+
+  .status-badge--absent {
+    background: #fee2e2;
+    color: #991b1b;
+  }
+
+  .status-badge--excused {
+    background: #ede9fe;
+    color: #5b21b6;
+  }
+
+  .status-badge--not_completed {
+    background: #fee2e2;
+    color: #991b1b;
+  }
+
+  /* =====================================================
+     REVIEW
+     ===================================================== */
+
+  .review-state {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  .review-state--pending {
+    color: #b45309;
+  }
+
+  .review-state--done {
+    color: #15803d;
+  }
+
+  .review-state--none {
+    color: #9ca3af;
+  }
+
+  /* =====================================================
+     DATE
+     ===================================================== */
+
+  .date-value {
+    font-size: 13px;
+    white-space: nowrap;
+  }
+
+  .date-empty {
+    color: #9ca3af;
+  }
+
+  /* =====================================================
+     ACTION
+     ===================================================== */
+
+  .action-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 105px;
+    padding: 8px 11px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 750;
+    white-space: nowrap;
+  }
+
+  .action-link--review {
+    background: #f59e0b;
+    color: #fff;
+  }
+
+  .action-link--review:hover {
+    background: #d97706;
+  }
+
+  .action-link--view {
+    border: 1px solid #d1d5db;
+    background: #fff;
+    color: #374151;
+  }
+
+  .action-link--view:hover {
+    background: #f9fafb;
+  }
+
+  .action-empty {
+    color: #9ca3af;
+  }
+
+  /* =====================================================
+     EMPTY STATE
+     ===================================================== */
+
+  .empty-state {
+    padding: 50px 20px;
+    text-align: center;
+  }
+
+  .empty-state__icon {
+    margin-bottom: 12px;
+    font-size: 34px;
+  }
+
+  .empty-state__title {
+    margin-bottom: 6px;
+    font-size: 17px;
+    font-weight: 800;
+  }
+
+  .empty-state__text {
+    color: #6b7280;
+    font-size: 14px;
+  }
+
+  @media (max-width: 760px) {
+    .online-students-page {
+      padding: 16px;
+    }
+
+    .page-header {
+      flex-direction: column;
+    }
+
+    .page-title {
+      font-size: 23px;
+    }
+
+    .review-alert {
+      align-items: flex-start;
+    }
+  }
+</style>
+{% endblock %}
+
+
+{% block content %}
+
+<div class="online-students-page">
+
+  <!-- ===================================================
+       HEADER
+       =================================================== -->
+
+  <div class="page-header">
+
+    <div class="page-header__content">
+      <h1 class="page-title">
+        {{ _('ONLINE Assessment — Оқушылар') }}
+      </h1>
+
+      <div class="page-subtitle">
+        {{ _('Топтағы оқушылардың орындау және тексеру жағдайы') }}
+      </div>
+    </div>
+
+    {% if assessment_id %}
+      <div class="page-header__actions">
+        <a
+          class="back-link"
+          href="{{
+            url_for(
+              'teacher_online_assessment_groups_page',
+              assessment_id=assessment_id
+            )
+          }}"
+         data-sm-action="nav" data-sm-back="true">
+          {{ _('← Топтарға оралу') }}
+        </a>
+      </div>
+    {% endif %}
+
+  </div>
+
+
+  <!-- ===================================================
+       ERROR
+       =================================================== -->
+
+  {% if error %}
+    <div class="error-alert">
+      {{ assessment_error(error) }}
+    </div>
+  {% endif %}
+
+
+  {% if assessment_id %}
+
+    <!-- =================================================
+         SUMMARY
+         ================================================= -->
+
+    <div class="summary-grid">
+
+      <div class="summary-card">
+        <div class="summary-card__label">
+          {{ _('Барлық оқушы') }}
+        </div>
+        <div class="summary-card__value">
+          {{ total_students }}
+        </div>
+      </div>
+
+      <div class="summary-card">
+        <div class="summary-card__label">
+          {{ _('Тағайындалды') }}
+        </div>
+        <div class="summary-card__value">
+          {{ assigned_count }}
+        </div>
+      </div>
+
+      <div class="summary-card">
+        <div class="summary-card__label">
+          {{ _('Орындалуда') }}
+        </div>
+        <div class="summary-card__value">
+          {{ in_progress_count }}
+        </div>
+      </div>
+
+      <div class="summary-card">
+        <div class="summary-card__label">
+          {{ _('Тексеруді күтуде') }}
+        </div>
+        <div class="summary-card__value">
+          {{ pending_review_count }}
+        </div>
+      </div>
+
+      <div class="summary-card">
+        <div class="summary-card__label">
+          {{ _('Орындалды') }}
+        </div>
+        <div class="summary-card__value">
+          {{ completed_count }}
+        </div>
+      </div>
+
+    </div>
+
+
+    <!-- =================================================
+         PENDING REVIEW ALERT
+         ================================================= -->
+
+    {% if has_pending_review %}
+
+      <div class="review-alert">
+
+        <div>
+          <div class="review-alert__title">
+            {{ _('Қолмен тексеруді қажет ететін жұмыстар бар') }}
+          </div>
+
+          <div class="review-alert__text">
+            {{ _('Жауаптарды ашып, қолмен тексеруді аяқтаңыз.') }}
+          </div>
+        </div>
+
+        <div class="review-alert__count">
+          {{ pending_review_count }}
+        </div>
+
+      </div>
+
+    {% endif %}
+
+
+    <!-- =================================================
+         STUDENTS
+         ================================================= -->
+
+    {% if items %}
+
+      <div class="students-card">
+
+        <div class="table-wrap">
+
+          <table class="students-table">
+
+            <thead>
+              <tr>
+                <th>№</th>
+                <th>{{ _('Оқушы') }}</th>
+                <th>{{ _('Күйі') }}</th>
+
+                <th>{{ _('Балл') }}</th>
+                <th>{{ _('Нәтиже') }}</th>
+                <th>{{ _('Баға') }}</th>
+
+                <th>{{ _('Тағайындалды') }}</th>
+                <th>{{ _('Басталды') }}</th>
+                <th>{{ _('Аяқталды') }}</th>
+
+                <th>{{ _('Тексеру') }}</th>
+                <th>{{ _('Әрекет') }}</th>
+              </tr>
+            </thead>
+
+            <tbody>
+
+              {% for item in items %}
+
+                <tr>
+
+                  <!-- № -->
+                  <td>
+                    {{ loop.index }}
+                  </td>
+
+
+                  <!-- STUDENT -->
+                  <td>
+                    <div class="student-name">
+                      {{ item.student_name_display }}
+                    </div>
+
+                    <div class="student-id">
+                      ID: {{ item.student_id }}
+                    </div>
+                  </td>
+
+
+                  <!-- STATUS -->
+                  <td>
+                    <span
+                      class="
+                        status-badge
+                        status-badge--{{ item.participation_status.value }}
+                      "
+                    >
+                      {{ _(item.participation_status_display) }}
+                    </span>
+                  </td>
+
+                  <!-- SCORE -->
+                  <td>
+                    {% if item.has_result %}
+                      <span class="result-value">
+                        {{ item.score_display }}
+                      </span>
+                    {% else %}
+                      <span class="result-empty">
+                        —
+                     </span>
+                    {% endif %}
+                  </td>
+
+
+                  <!-- PERCENT -->
+                  <td>
+                    {% if item.has_result %}
+                     <span class="result-percent">
+                        {{ item.percent_display }}
+                      </span>
+                    {% else %}
+                      <span class="result-empty">
+                        —
+                      </span>
+                    {% endif %}
+                  </td>
+
+
+                  <!-- GRADE -->
+                  <td>
+                    {% if item.has_result %}
+                      <span class="result-grade">
+                        {{ item.grade_display }}
+                      </span>
+                    {% else %}
+                      <span class="result-empty">
+                       —
+                      </span>
+                    {% endif %}
+                  </td>
+
+
+                  <!-- ASSIGNED -->
+                  <td>
+                    {% if item.assigned_at %}
+                      <span class="date-value">
+                        {{ item.assigned_at.strftime("%d.%m.%Y %H:%M") }}
+                      </span>
+                    {% else %}
+                      <span class="date-empty">
+                        —
+                      </span>
+                    {% endif %}
+                  </td>
+
+
+                  <!-- STARTED -->
+                  <td>
+                    {% if item.started_at %}
+                      <span class="date-value">
+                        {{ item.started_at.strftime("%d.%m.%Y %H:%M") }}
+                      </span>
+                    {% else %}
+                      <span class="date-empty">
+                        —
+                      </span>
+                    {% endif %}
+                  </td>
+
+
+                  <!-- COMPLETED -->
+                  <td>
+                    {% if item.completed_at %}
+                      <span class="date-value">
+                        {{ item.completed_at.strftime("%d.%m.%Y %H:%M") }}
+                      </span>
+                    {% else %}
+                      <span class="date-empty">
+                        —
+                      </span>
+                    {% endif %}
+                  </td>
+
+
+                  <!-- REVIEW -->
+                  <td>
+
+                    {% if item.requires_review %}
+
+                      <span class="review-state review-state--pending">
+                        {{ _('● Тексеруді күтуде') }}
+                      </span>
+
+                    {% elif item.participation_status.value == "completed" %}
+
+                      <span class="review-state review-state--done">
+                        {{ _('✓ Тексерілді') }}
+                      </span>
+
+                    {% else %}
+
+                      <span class="review-state review-state--none">
+                        —
+                      </span>
+
+                    {% endif %}
+
+                  </td>
+
+
+                  <!-- ACTION -->
+                  <td>
+
+                    {% if item.requires_review %}
+
+                      <a
+                        class="action-link action-link--review"
+                        href="{{
+                          url_for(
+                            'teacher_online_assessment_student_review_page',
+                            assessment_student_id=item.assessment_student_id
+                          )
+                        }}"
+                       data-sm-action="nav">
+                        {{ _('Тексеру') }}
+                      </a>
+
+                    {% elif item.can_view_answers %}
+
+                      <a
+                        class="action-link action-link--view"
+                        href="{{
+                          url_for(
+                            'teacher_online_assessment_student_review_page',
+                            assessment_student_id=item.assessment_student_id
+                          )
+                        }}"
+                       data-sm-action="nav">
+                        {{ _('Жауаптар') }}
+                      </a>
+
+                    {% else %}
+
+                      <span class="action-empty">
+                        —
+                      </span>
+
+                    {% endif %}
+
+                  </td>
+
+                </tr>
+
+              {% endfor %}
+
+            </tbody>
+
+          </table>
+
+        </div>
+
+      </div>
+
+    {% else %}
+
+      <!-- ===============================================
+           EMPTY GROUP
+           =============================================== -->
+
+      <div class="students-card">
+
+        <div class="empty-state">
+
+          <div class="empty-state__icon">
+            👥
+          </div>
+
+          <div class="empty-state__title">
+            {{ _('Топта оқушылар жоқ') }}
+          </div>
+
+          <div class="empty-state__text">
+            {{ _('Бұл ONLINE Assessment тобына оқушылар әлі тағайындалмаған.') }}
+          </div>
+
+        </div>
+
+      </div>
+
+    {% endif %}
+
+  {% endif %}
+
+</div>
+
+{% endblock %}

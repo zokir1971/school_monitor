@@ -1,0 +1,80 @@
+{% extends 'base.html' %}
+{% block title %}{{ _('Полученные задания AI') }}{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static',path='css/teacher/assessment/question_bank/ai_recovery.css') }}?v=167">
+{% endblock %}
+{% block content %}
+<main class="qb-recovery">
+  <header class="qb-recovery__heading">
+    <h1>{{ _('Полученные задания AI') }}</h1>
+    <a class="qb-recovery__button" href="{{ url_for('teacher_question_bank_page') }}" data-sm-action="nav">{{ _('Тапсырмалар банкі') }}</a>
+  </header>
+  <p>{{ _('Повторный запрос к AI не выполняется. Исправления сохраняются при проверке. В банк попадают только задания, прошедшие проверку.') }}</p>
+  <p>{{ _('Техническая проверка не подтверждает правильность вычислений. Проверьте условие, ответы и объяснение перед сохранением.') }}</p>
+  <nav class="qb-recovery__tabs" aria-label="{{ _('Задания') }}">
+    {% for entry in cards %}
+      <a href="{{ url_for('teacher_ai_recovery_page',token=run.token) }}?index={{ entry.index }}" {% if entry.index == card.index %}aria-current="page"{% endif %} data-sm-action="primary">
+        {{ _('Задание') }} {{ entry.index + 1 }} · {{ _('Сохранено') if entry.saved else _('Требует исправления') if entry.error else _('Проверьте содержание') }}
+      </a>
+    {% endfor %}
+  </nav>
+  <h2>{{ _('Задание') }} {{ card.index + 1 }}</h2>
+  {% if card.saved %}
+    <p>{{ _('Задание уже сохранено в черновики.') }}</p>
+    <a class="qb-recovery__button" href="{{ url_for('teacher_question_languages',item_id=card.saved) }}" data-sm-action="nav">{{ _('Открыть задание') }} #{{ card.saved }}</a>
+  {% elif card.editor %}
+    {% if card.error %}<div class="qb-recovery__error" role="alert">{{ _('Ошибка проверки') }}: {{ card.error }}</div>
+    {% else %}<p class="qb-recovery__notice">{{ _('Структура прошла проверку. Проверьте содержание на обоих языках.') }}</p>{% endif %}
+    <p>{{ _('Слева — исходное задание, справа — перевод текстов. Формулы и ключи ответов общие. Удалите из перевода ошибочно добавленные поля формул; недостающие переводы заполните.') }}</p>
+    <section class="qb-recovery__preview" aria-label="{{ _('Исходное задание') }}">
+      <h3>{{ _('Исходное задание') }} · {{ 'Қазақша' if run.proposal.input.language == 'kk' else 'Русский' }}</h3>
+      <div id="qb-recovery-preview"></div>
+    </section>
+    <form method="post" action="{{ url_for('teacher_ai_recovery_submit',token=run.token) }}" id="qb-recovery-form">
+      <input type="hidden" name="index" value="{{ card.index }}">
+      <input type="hidden" name="revision" value="{{ run.proposal.revision }}">
+      <div id="qb-recovery-editor"></div>
+      <details><summary>{{ _('Расширенное редактирование структуры') }}</summary>
+        <p>{{ _('JSON предназначен для сложных изменений структуры. После изменения нажмите «Применить структуру».') }}</p>
+        <textarea name="editor_json" id="qb-recovery-json" rows="18" spellcheck="false">{{ card.editor|tojson(indent=2) }}</textarea>
+        <button type="button" id="qb-recovery-apply" data-sm-action="primary">{{ _('Применить структуру') }}</button>
+        <p id="qb-recovery-json-error" role="alert"></p>
+      </details>
+      <div class="qb-recovery__actions">
+        <button class="qb-recovery__button" name="action" value="check" data-sm-action="primary">{{ _('Сохранить исправления и проверить') }}</button>
+        <button class="qb-recovery__button" name="action" value="save" data-sm-action="primary">{{ _('Проверить и сохранить в черновики') }}</button>
+      </div>
+    </form>
+    <script id="qb-recovery-data" type="application/json">{{ card.editor|tojson }}</script>
+    <script id="qb-recovery-labels" type="application/json">{{ {
+      'source':_('Исходное задание'), 'translation':_('Перевод текстов'),
+      'title':_('Тақырып:'), 'text':_('Тапсырма мәтіні:'), 'text_segments':_('Условие задания'),
+      'instruction':_('Инструкция'), 'content':_('Содержание'), 'options':_('Варианты ответов'),
+      'answer_key':_('Правильные ответы'), 'grading_settings':_('Параметры оценивания'),
+      'explanation':_('Объяснение'), 'author_comment':_('Комментарий автора'),
+      'left':_('Левый список'), 'right':_('Правый список'), 'segments':_('Текст и формулы'),
+      'parts':_('Части задания'), 'statements':_('Утверждения'), 'pairs':_('Пары'),
+      'items':_('Элементы'), 'gaps':_('Пропуски'), 'values':_('Ответы'),
+      'value':_('Идентификатор варианта'), 'id':_('Идентификатор'),
+      'type':_('Тип сегмента'), 'expression':_('Эталонная формула'),
+      'variables':_('Переменные'), 'meaning_options':_('Значения переменных'),
+      'variable_meanings':_('Правильные соответствия переменных'),
+      'accepted_answers':_('Допустимые ответы'), 'word_bank':_('Банк ответов'),
+      'criteria':_('Критерии'), 'description':_('Описание'),
+      'question_type':_('Тип задания'), 'difficulty':_('Уровень'),
+      'max_score':_('Максимальный балл'), 'learning_objective_ids':_('Учебные цели'),
+      'add':_('Добавить элемент'), 'remove':_('Удалить'), 'yes':_('Да'), 'no':_('Нет'),
+      'invalid':_('Некорректная структура JSON.'), 'empty':_('Пустое значение')
+    }|tojson }}</script>
+    <script src="{{ url_for('static',path='js/teacher/assessment/question_bank/ai_recovery.js') }}?v=2" defer></script>
+  {% else %}
+    <p>{{ _('Структура этого задания повреждена. Остальные задания доступны в списке выше.') }}</p>
+    {% if card.error %}<p>{{ card.error }}</p>{% endif %}
+  {% endif %}
+</main>
+{% endblock %}
+
+{% block extra_js %}
+<script defer src="https://cdn.jsdelivr.net/npm/mathlive"></script>
+<script src="{{ url_for('static',path='js/teacher/assessment/question_bank/question_bank_readonly_formulas.js') }}" defer></script>
+{% endblock %}

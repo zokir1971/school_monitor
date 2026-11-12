@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Редактирование направления{% endblock %}
+{% block title %}{{ _('Редактирование направления') }}{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', path='css/planning_edit.css') }}">
@@ -379,9 +379,11 @@
   }
 
 </style>
+<link rel="stylesheet" href="{{ url_for('static', path='css/planning/direction_workspace.css') }}?v=177">
 {% endblock %}
 
 {% block content %}
+{% set kk = ui_language() == 'kk' %}
 
 <div
   id="pageRoot"
@@ -402,16 +404,15 @@
       <div class="planning-hero__content">
 
         <div class="planning-hero__eyebrow">
-          Мектепішілік бақылау
+          {{ _('Мектепішілік бақылау') }}
         </div>
 
         <h1 class="planning-hero__title">
-          Бағытты жоспарлау
+          {{ _('Бағытты жоспарлау') }}
         </h1>
 
         <p class="planning-hero__description">
-          Жылдық МІБ жоспарының таңдалған бағыты бойынша
-          бақылау нысандары мен міндеттерін толтырыңыз.
+          {{ _('Жылдық МІБ жоспарының таңдалған бағыты бойынша бақылау нысандары мен міндеттерін толтырыңыз.') }}
         </p>
 
       </div>
@@ -425,8 +426,8 @@
           )
         }}"
         class="planning-back-btn"
-      >
-        ← Жоспарға қайту
+       data-sm-action="nav" data-sm-back="true">
+        {{ _('← Жоспарға қайту') }}
       </a>
 
     </section>
@@ -441,7 +442,7 @@
       <div class="planning-context__item">
 
         <div class="planning-context__label">
-          Оқу жылы
+          {{ _('Оқу жылы') }}
         </div>
 
         <div class="planning-context__value">
@@ -454,7 +455,7 @@
       <div class="planning-context__item planning-context__item--wide">
 
         <div class="planning-context__label">
-          Бақылау бағыты
+          {{ _('Бақылау бағыты') }}
         </div>
 
         <div class="planning-context__value">
@@ -477,9 +478,9 @@
       </div>
 
       <div>
-        Ұяшықты басу — өңдеу ·
-        <strong>Enter</strong> — сақтау ·
-        <strong>Esc</strong> — болдырмау
+        {{ _('Ұяшықты басу — өңдеу ·') }}
+        <strong>Enter</strong> {{ _('— сақтау ·') }}
+        <strong>Esc</strong> {{ _('— болдырмау') }}
       </div>
 
     </div>
@@ -492,13 +493,15 @@
     >
 
     </div>
-  </div>
+
 <!-- ===================== TABLE 4 ===================== -->
+<details class="direction-description" id="directionDescription">
+  <summary>{{ 'Бағыттың сипаттамасы және ұсынымдар' if kk else 'Описание направления и рекомендации' }}</summary>
 <div class="card card--section">
   <div class="card__header">
     <div>
-      <h3 class="card__title">Бақылау нысандары</h3>
-      <div class="card__hint">(Жолдарды қосу/жою, ұяшықтарды басу арқылы өңдеу)</div>
+      <h3 class="card__title">{{ _('Бақылау нысандары') }}</h3>
+      <div class="card__hint">{{ _('(Жолдарды қосу/жою, ұяшықтарды басу арқылы өңдеу)') }}</div>
     </div>
   </div>
 
@@ -507,9 +510,9 @@
       <thead>
         <tr>
           <th class="col--num">№</th>
-          <th class="col--wide">Бақылау нысаны</th>
-          <th class="col--wide">Мәселелер, тәуекелдер</th>
-          <th class="col--wide">Басшылық шешімі / Тапсырма</th>
+          <th class="col--wide">{{ _('Бақылау нысаны') }}</th>
+          <th class="col--wide">{{ _('Мәселелер, тәуекелдер') }}</th>
+          <th class="col--wide">{{ _('Басшылық шешімі / Тапсырма') }}</th>
         </tr>
       </thead>
 
@@ -537,18 +540,18 @@
     </table>
 
     <div class="table-footer-actions">
-      <span class="table-hint-badge">ℹ️ Жою үшін жол нөмірін басыңыз</span>
+      <span class="table-hint-badge">{{ _('ℹ️ Жою үшін жол нөмірін басыңыз') }}</span>
       <form method="post"
         action="/planning/school/{{ plan.id }}/direction/{{ direction_id }}/rows4/add"
         style="display:inline;">
-        <button class="btn btn--primary" type="submit">+ Қатар қосу</button>
+        <button class="btn btn--primary" type="submit" data-sm-action="primary">{{ _('+ Қатар қосу') }}</button>
       </form>
 
         <button id="btnDelete-row4"
           class="btn btn--danger"
           type="button"
-          disabled>
-          🗑 Қатарды жою
+          disabled data-sm-action="danger">
+          {{ _('🗑 Қатарды жою') }}
         </button>
     </div>
     <form id="deleteForm-row4" method="post" style="display:none;"></form>
@@ -556,35 +559,29 @@
 </div>
 
 
+</details>
+
 <!-- ===================== TABLE 11 ===================== -->
 <div class="card card--section">
   <div class="card__header">
     <div>
-      <h3 class="card__title">Бақылау міндеттері</h3>
-      <div class="card__hint">(Жолдарды қосу/жою, ұяшықтарды басу арқылы өңдеу)</div>
+      <h3 class="card__title">{{ _('Бақылау міндеттері') }}</h3>
+      <div class="card__hint">{{ _('(Жолдарды қосу/жою, ұяшықтарды басу арқылы өңдеу)') }}</div>
     </div>
 
     <div class="card__actions">
+  <form method="post"
+        action="/planning/school/{{ plan.id }}/direction/{{ direction_id }}/rows11/add"
+        style="display:inline;">
+    <button class="btn btn--primary" type="submit" data-sm-action="primary">{{ _('+ Қатар қосу') }}</button>
+  </form>
     </div>
   </div>
 
   <div class="table-wrap">
     <table class="grid" id="grid11">
-      <thead>
-        <tr>
-          <th class="col--num">№</th>
-          <th class="col--topic">Тақырып</th>
-          <th class="col--topic">Мақсаты</th>
-          <th class="col--wide">Бақылау нысаны</th>
-          <th class="col--sm">Бақылау түрі</th>
-          <th class="col--wide">Әдістер</th>
-          <th class="col--mid">Мерзімі</th>
-          <th class="col--mid">Жауаптылар</th>
-          <th class="col--sm">Қарау орны</th>
-          <th class="col--xl">Басшылық шешімі</th>
-          <th class="col--sm">Екінші бақылау</th>
-        </tr>
-      </thead>
+      <colgroup><col class="direction-col-number"><col><col class="direction-col-period"><col class="direction-col-roles"><col class="direction-col-place"><col class="direction-col-actions"></colgroup>
+      <thead><tr><th>№</th><th>{{ _('Тақырып') }}</th><th>{{ _('Мерзімі') }}</th><th>{{ _('Жауаптылар') }}</th><th>{{ _('Қарау орны') }}</th><th>{{ 'Әрекет' if kk else 'Действия' }}</th></tr></thead>
 
       <tbody>
         {% for r in rows11 %}
@@ -607,71 +604,44 @@
       {{ loop.index }}
     </div>
 
-    <a
-      href="{{ request.url_for(
-        'school_row11_edit',
-        plan_id=plan.id,
-        direction_id=direction_id,
-        row11_id=r.id
-      ) }}"
-      class="row-edit-link"
-      title="Тапсырманы өңдеу"
-      onclick="event.stopPropagation();"
-    >
-      Өңдеу
-    </a>
+    
 
   </div>
 </td>
-
-            <td class="cell" data-kind="row11" data-row-id="{{ r.id }}" data-field="topic">
+<td class="cell" data-kind="row11" data-row-id="{{ r.id }}" data-field="topic">
               <div class="cell__text">{{ r.topic or "" }}</div>
             </td>
-            <td class="cell" data-kind="row11" data-row-id="{{ r.id }}" data-field="goal">
-              <div class="cell__text">{{ r.goal or "" }}</div>
-            </td>
-            <td class="cell" data-kind="row11" data-row-id="{{ r.id }}" data-field="control_object">
-              <div class="cell__text">{{ r.control_object or "" }}</div>
-            </td>
-            <td class="cell" data-kind="row11" data-row-id="{{ r.id }}" data-field="control_type">
-              <div class="cell__text">{{ r.control_type or "" }}</div>
-            </td>
-            <td class="cell" data-kind="row11" data-row-id="{{ r.id }}" data-field="methods">
-              <div class="cell__text">{{ r.methods or "" }}</div>
-            </td>
-
-            <!-- ===================== МЕРЗІМІ ===================== -->
-            <td class="meta">
+<td class="meta">
               <div class="cell-vertical">
 
                 <div class="js-period-view" id="periodView_{{ r.id }}">
                   {% if r.period_type and r.period_type.value == 'all_year' %}
-                    <span class="badge">Жыл бойы</span>
+                    <span class="badge">{{ _('Жыл бойы') }}</span>
                   {% elif r.period_type and r.period_type.value == 'monthly' %}
-                    <span class="badge">Ай сайын</span>
+                    <span class="badge">{{ _('Ай сайын') }}</span>
                   {% elif r.period_type and r.period_type.value == 'month' %}
                     <span class="badge">
-                      {{ MONTH_NAMES[r.period_value_int] if r.period_value_int else '-' }}
+                      {{ _(MONTH_NAMES[r.period_value_int]) if r.period_value_int else '-' }}
                     </span>
                   {% elif r.period_type and r.period_type.value == 'months' %}
                     {% if months_selected %}
                       <div class="months-list">
                         {% for m in months_selected %}
-                          <span class="badge badge--month">{{ MONTH_NAMES[m] }}</span>
+                          <span class="badge badge--month">{{ _(MONTH_NAMES[m]) }}</span>
                         {% endfor %}
                       </div>
                     {% else %}
-                      <span class="badge">-</span>
+                      <span class="badge direction-empty">{{ 'Көрсетілмеген' if kk else 'Не указан' }}</span>
                     {% endif %}
                   {% elif r.period_type and r.period_type.value == 'quarter' %}
-                    <span class="badge">Тоқсан сайын</span>
+                    <span class="badge">{{ _('Тоқсан сайын') }}</span>
                   {% else %}
-                    <span class="badge">-</span>
+                    <span class="badge direction-empty">{{ 'Көрсетілмеген' if kk else 'Не указан' }}</span>
                   {% endif %}
                 </div>
 
                 <div class="meta-hint">
-                  Үлгі:
+                  {{ _('Үлгі:') }}
                   <span class="badge badge--muted">{{ r.deadlines or '-' }}</span>
                 </div>
 
@@ -679,30 +649,27 @@
 
               </div>
             </td>
-
-            <!-- ===================== ЖАУАПТЫЛАР ===================== -->
-            <td class="meta">
+<td class="meta">
   <div class="cell-vertical">
 
     <!-- ТУТ показываем выбранные роли -->
     <div class="js-role-view roles-pills" id="roleView_{{ r.id }}" data-row-id="{{ r.id }}">
       {% if r.role_assignments and r.role_assignments|length %}
         {% for ra in r.role_assignments %}
-          <span class="badge">{{ ra.role.label_kz }}</span>
+          <span class="badge">{{ _(ra.role.label_kz) }}</span>
         {% endfor %}
       {% else %}
-        <span class="badge">-</span>
+        <span class="badge direction-empty">{{ 'Көрсетілмеген' if kk else 'Не указан' }}</span>
       {% endif %}
     </div>
 
     <div class="meta-hint">
-      Үлгі:
+      {{ _('Үлгі:') }}
       <span class="badge badge--muted">{{ r.responsibles or '-' }}</span>
     </div>
 
   </div>
 </td>
-            <!-- ===================== МЕСТО РАССМОТРЕНИЕ ===================== -->
 <td class="meta">
   <div class="cell-vertical">
 
@@ -711,16 +678,16 @@
       {% if places %}
         {% for p in review_places %}
           {% if p.value in places %}
-            <span class="badge">{{ p.label_kz }}</span>
+            <span class="badge">{{ _(p.label_kz) }}</span>
           {% endif %}
         {% endfor %}
       {% else %}
-        <span class="badge">-</span>
+        <span class="badge direction-empty">{{ 'Көрсетілмеген' if kk else 'Не указан' }}</span>
       {% endif %}
     </div>
 
     <div class="meta-hint">
-      Үлгі:
+      {{ _('Үлгі:') }}
       <span class="badge badge--muted">{{ r.review_place or '-' }}</span>
     </div>
 
@@ -728,10 +695,42 @@
 
   </div>
 </td>
-
-
-<!-- ===================== ТИП ДОКУМЕНТА ===================== -->
-<td class="meta">
+            <td class="direction-task-actions"><div>
+              <button type="button" data-sm-action="nav" data-sm-size="compact" data-task-toggle
+                aria-expanded="false" aria-controls="task-details-{{ r.id }}"
+                data-open-label="{{ 'Толығырақ' if kk else 'Подробнее' }}"
+                data-close-label="{{ 'Жасыру' if kk else 'Скрыть' }}">{{ 'Толығырақ' if kk else 'Подробнее' }}</button>
+<a
+      href="{{ request.url_for(
+        'school_row11_edit',
+        plan_id=plan.id,
+        direction_id=direction_id,
+        row11_id=r.id
+      ) }}"
+      class="row-edit-link"
+      title="{{ _('Тапсырманы өңдеу') }}"
+      onclick="event.stopPropagation();"
+     data-sm-action="edit">
+      {{ _('Өңдеу') }}
+    </a>
+            </div></td>
+          </tr>
+          <tr id="task-details-{{ r.id }}" class="direction-task-details" hidden>
+            <td colspan="6">
+              <div class="direction-task-panels">
+<section class="direction-task-field"><h4>{{ 'Мақсаты' if kk else 'Цель контроля' }}</h4><div class="cell" data-kind="row11" data-row-id="{{ r.id }}" data-field="goal">
+              <div class="cell__text">{{ r.goal or "" }}</div>
+            </div></section>
+                <section class="direction-task-field"><h4>{{ 'Бақылау параметрлері' if kk else 'Параметры контроля' }}</h4>
+<div class="direction-task-subfield"><strong>{{ 'Бақылау нысаны' if kk else 'Форма / объект контроля' }}</strong><div class="cell" data-kind="row11" data-row-id="{{ r.id }}" data-field="control_object">
+              <div class="cell__text">{{ r.control_object or "" }}</div>
+            </div></div><div class="direction-task-subfield"><strong>{{ 'Бақылау түрі' if kk else 'Вид контроля' }}</strong><div class="cell" data-kind="row11" data-row-id="{{ r.id }}" data-field="control_type">
+              <div class="cell__text">{{ r.control_type or "" }}</div>
+            </div></div><div class="direction-task-subfield"><strong>{{ 'Әдістер' if kk else 'Методы' }}</strong><div class="cell" data-kind="row11" data-row-id="{{ r.id }}" data-field="methods">
+              <div class="cell__text">{{ r.methods or "" }}</div>
+            </div></div>
+                </section>
+<section class="direction-task-field"><h4>{{ 'Басшылық шешімі және құжаттар' if kk else 'Управленческое решение и документы' }}</h4><div class="meta">
   <div class="cell-vertical">
 
     <div class="roles-pills" id="docView_{{ r.id }}">
@@ -739,44 +738,42 @@
       {% if docs %}
         {% for d in document_types %}
           {% if d.value in docs %}
-            <span class="badge">{{ d.label_kz }}</span>
+            <span class="badge">{{ _(d.label_kz) }}</span>
           {% endif %}
         {% endfor %}
       {% else %}
-        <span class="badge">-</span>
+        <span class="badge direction-empty">{{ 'Көрсетілмеген' if kk else 'Не указан' }}</span>
       {% endif %}
     </div>
 
     <div class="meta-hint">
-      Үлгі:
+      {{ _('Үлгі:') }}
       <span class="badge badge--muted">{{ r.management_decision or '-' }}</span>
     </div>
 
 
 
   </div>
-</td>
-            <td class="cell" data-kind="row11" data-row-id="{{ r.id }}" data-field="second_control">
+</div></section><section class="direction-task-field"><h4>{{ 'Екінші бақылау' if kk else 'Повторный контроль' }}</h4><div class="cell" data-kind="row11" data-row-id="{{ r.id }}" data-field="second_control">
               <div class="cell__text">{{ r.second_control or "" }}</div>
+            </div></section>
+              </div>
             </td>
           </tr>
         {% endfor %}
       </tbody>
 
     </table>
-    <div class="table-footer-actions">
-      <span class="table-hint-badge">ℹ️ Жою үшін жол нөмірін басыңыз</span>
-  <form method="post"
-        action="/planning/school/{{ plan.id }}/direction/{{ direction_id }}/rows11/add"
-        style="display:inline;">
-    <button class="btn btn--primary" type="submit">+ Қатар қосу</button>
-  </form>
+    <div class="table-footer-actions direction-task-footer">
+      <span class="direction-save-hint">{{ 'Ұяшық өзгерістері автоматты сақталады. Барлық параметрлер үшін «Өңдеу» түймесін басыңыз.' if kk else 'Изменения ячеек сохраняются автоматически. Для всех параметров нажмите «Редактировать».' }}</span>
+      <span class="table-hint-badge">{{ _('ℹ️ Жою үшін жол нөмірін басыңыз') }}</span>
+
 
   <button id="btnDelete-row11"
           class="btn btn--danger"
           type="button"
-          disabled>
-    🗑 Қатарды жою
+          disabled data-sm-action="danger">
+    {{ _('🗑 Қатарды жою') }}
   </button>
 </div>
 
@@ -784,10 +781,13 @@
   </div>
 </div>
 
+  </div>
+
 <!-- scripts -->
 <script src="{{ url_for('static', path='js/cell_edit.js') }}"></script>
-<script src="{{ url_for('static', path='js/row_select.js') }}"></script>
+<script src="{{ url_for('static', path='js/row_select.js') }}?v=i18n8"></script>
 
+<script defer src="{{ url_for('static', path='js/planning/direction_workspace.js') }}?v=176"></script>
 </div>
 
 {% endblock %}

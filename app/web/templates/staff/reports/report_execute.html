@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Исполнение задачи{% endblock %}
+{% block title %}{{ _('Исполнение задачи') }}{% endblock %}
 
 {% block extra_css %}
   <link rel="stylesheet" href="{{ url_for('static', path='css/staff_task.css') }}">
@@ -328,38 +328,87 @@
   font-size: 14px;
   line-height: 1.45;
 }
+
+    .page-head__actions {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+    .page-head__actions .btn {
+      box-sizing: border-box;
+      width: auto;
+      max-width: 100%;
+      min-height: 36px;
+      padding: 8px 12px;
+      border: 1px solid #d5deeb;
+      border-radius: 9px;
+      font-size: 14px;
+      line-height: 1.3;
+      text-align: center;
+      text-decoration: none;
+    }
+    .page-head__actions .execution-replace-button {
+      background: #eff5ff;
+      border-color: #b9cbed;
+      color: #2458b8;
+    }
+    .page-head__actions .execution-replace-button:hover {
+      background: #e2edff;
+      border-color: #7da3e0;
+    }
+    .page-head__actions .btn:focus-visible {
+      outline: 3px solid #94b9fb;
+      outline-offset: 3px;
+    }
+    @media (max-width: 860px) {
+      .page-head__actions { justify-content: flex-start; }
+    }
+    @media (max-width: 600px) {
+      .page-head__actions .btn { flex: 1 1 220px; }
+    }
   </style>
 {% endblock %}
 
 {% block content %}
+
 <div class="page">
 
   <div class="page-head">
     <div class="page-head__title">
-      <h1>Исполнение задачи</h1>
-      <p>Загрузка итогового документа и завершение задачи</p>
+      <h1>{{ _('Исполнение задачи') }}</h1>
+      <p>{{ _('Загрузка итогового документа и завершение задачи') }}</p>
     </div>
 
-    <a href="/staff/tasks" class="btn btn-light">
-      Назад к задачам
+    <div class="page-head__actions">
+      {% if task is defined and task %}
+      <a class="btn btn-secondary execution-replace-button"
+         href="{{ request.url_for('task_document_correction_page', month_item_id=task.id) }}" data-sm-action="nav">
+        {% if ui_language is defined and ui_language() == 'kk' %}Жүктелген құжаттарды ауыстыру{% else %}Заменить загруженные документы{% endif %}
+      </a>
+      {% endif %}
+    <a href="/staff/tasks" class="btn btn-light" data-sm-action="nav" data-sm-back="true">
+      {{ _('Назад к задачам') }}
     </a>
+    </div>
   </div>
 
   {% if success %}
     <div class="alert alert-success">
-      {{ success }}
+      {{ completion_feedback(success) }}
     </div>
   {% endif %}
 
   {% if warning %}
     <div class="alert alert-warning">
-      {{ warning }}
+      {{ completion_feedback(warning) }}
     </div>
   {% endif %}
 
   {% if error %}
     <div class="alert alert-error">
-      {{ error }}
+      {{ completion_feedback(error) }}
     </div>
   {% endif %}
 
@@ -368,25 +417,25 @@
     <!-- ИНФОРМАЦИЯ -->
     <div class="card">
 
-      <h2>Сведения о задаче</h2>
+      <h2>{{ _('Сведения о задаче') }}</h2>
 
       <div class="task-grid">
 
         <div class="task-field">
           <div class="task-field__label">
-            Статус
+            {{ _('Статус') }}
           </div>
 
           <div class="task-field__value">
             <span class="status-badge">
-              {{ task.status.label_kz if task.status else "—" }}
+              {{ assessment_enum_label(task.status) if task.status else "—" }}
             </span>
           </div>
         </div>
 
         <div class="task-field">
           <div class="task-field__label">
-            Период
+            {{ _('Период') }}
           </div>
 
           <div class="task-field__value">
@@ -402,7 +451,7 @@
 
         <div class="task-field task-field--full">
           <div class="task-field__label">
-            Тема
+            {{ _('Тема') }}
           </div>
 
           <div class="task-field__value">
@@ -412,7 +461,7 @@
 
         <div class="task-field task-field--full">
           <div class="task-field__label">
-            Цель
+            {{ _('Цель') }}
           </div>
 
           <div class="task-field__value">
@@ -422,11 +471,11 @@
 
         <div class="task-field">
           <div class="task-field__label">
-            Место рассмотрения
+            {{ _('Место рассмотрения') }}
           </div>
 
           <div class="task-field__value">
-            {{ review_place_text or "—" }}
+            {{ completion_review_places(review_place_text) }}
           </div>
         </div>
 
@@ -440,9 +489,9 @@
       <div class="action-panel">
 
         <a href="{{ url_for('staff_tasks_execute_page') }}?selected_task_id={{ task.id }}{% if month %}&month={{ month }}{% endif %}"
-           class="btn btn-secondary {% if is_done %}disabled{% endif %}">
+           class="btn btn-secondary {% if is_done %}disabled{% endif %}" data-sm-action="edit">
 
-          Редактировать параметры
+          {{ _('Редактировать параметры') }}
 
         </a>
 
@@ -474,16 +523,16 @@
 
       <div class="card">
 
-        <h3>Завершение задачи</h3>
+        <h3>{{ _('Завершение задачи') }}</h3>
 
         {% if is_done %}
           <div class="alert alert-success">
             <strong>
-              Задача завершена.
+              {{ _('Задача завершена.') }}
             </strong>
 
             <div style="margin-top:8px;">
-              Документ отправлен на рассмотрение.
+              {{ _('Документ отправлен на рассмотрение.') }}
             </div>
           </div>
         {% endif %}
@@ -492,7 +541,7 @@
         <div class="form-field">
 
           <label>
-            Вариант завершения
+            {{ _('Вариант завершения') }}
           </label>
 
           <div class="radio-group-horizontal">
@@ -511,18 +560,18 @@
                 <div class="radio-card-content">
 
                   <div class="radio-title">
-                    {{ mode.label_kz }}
+                    {{ assessment_enum_label(mode) }}
                   </div>
 
                   {% if mode.value == "simple_final_document" %}
                     <div class="radio-desc">
-                      Только итоговый документ
+                      {{ _('Только итоговый документ') }}
                     </div>
                   {% endif %}
 
                   {% if mode.value == "final_with_system_reports" %}
                     <div class="radio-desc">
-                      Итоговый документ после заполнения системных отчетов
+                      {{ _('Итоговый документ после заполнения системных отчетов') }}
                     </div>
                   {% endif %}
 
@@ -543,7 +592,7 @@
           <div class="form-field">
 
             <label for="reference_file">
-              Итоговый документ
+              {{ _('Итоговый документ') }}
             </label>
 
             <input type="file"
@@ -552,7 +601,7 @@
                    {% if is_done %}disabled{% endif %}>
 
             <div class="hint">
-              Загрузите итоговый документ.
+              {{ _('Загрузите итоговый документ.') }}
             </div>
 
           </div>
@@ -560,13 +609,13 @@
           <div class="form-field">
 
             <label for="review_result">
-              Комментарий
+              {{ _('Комментарий') }}
             </label>
 
             <textarea id="review_result"
                       name="review_result"
                       rows="4"
-                      placeholder="Комментарий"
+                      placeholder="{{ _('Комментарий') }}"
                       {% if is_done %}readonly{% endif %}>{{ execution.review_result if execution else '' }}</textarea>
 
           </div>
@@ -583,9 +632,9 @@
                   name="action"
                   value="upload_final"
                   class="btn btn-primary"
-                  {% if is_done %}disabled{% endif %}>
+                  {% if is_done %}disabled{% endif %} data-sm-action="primary">
 
-            Загрузить документ
+            {{ _('Загрузить документ') }}
 
           </button>
 
@@ -594,9 +643,9 @@
                   name="action"
                   value="done"
                   class="btn btn-success"
-                  {% if is_done %}disabled{% endif %}>
+                  {% if is_done %}disabled{% endif %} data-sm-action="success">
 
-            Завершить и отправить
+            {{ _('Завершить и отправить') }}
 
           </button>
 
@@ -607,8 +656,8 @@
   value="continue_with_reports"
   class="btn btn-secondary"
   {% if is_done %}disabled{% endif %}
->
-  Перейти к построению алгоритма
+ data-sm-action="nav">
+  {{ _('Перейти к построению алгоритма') }}
 </button>
 
         </div>
@@ -620,7 +669,7 @@
     <!-- ДОКУМЕНТЫ -->
     <div class="card">
 
-      <h3>Итоговые документы</h3>
+      <h3>{{ _('Итоговые документы') }}</h3>
 
       {% if final_documents %}
 
@@ -631,19 +680,19 @@
             <div class="doc-item">
 
               <div class="doc-item__title">
-                {{ doc.original_file_name or "Без названия" }}
+                {{ doc.original_file_name or _("Без названия") }}
               </div>
 
               <div class="doc-item__meta">
 
                 <div>
-                  <strong>Статус:</strong>
-                  {{ doc.status.label_kz if doc.status else "—" }}
+                  <strong>{{ _('Статус:') }}</strong>
+                  {{ assessment_enum_label(doc.status) if doc.status else "—" }}
                 </div>
 
                 <div>
-                  <strong>Тип:</strong>
-                  {{ doc.document_type.label_kz if doc.document_type else "—" }}
+                  <strong>{{ _('Тип:') }}</strong>
+                  {{ assessment_enum_label(doc.document_type) if doc.document_type else "—" }}
                 </div>
 
               </div>
@@ -654,16 +703,16 @@
 
                   <a href="{{ url_for('staff_report_document_view', document_id=doc.id) }}"
                      class="btn btn-secondary"
-                     target="_blank">
+                     target="_blank" data-sm-action="nav">
 
-                    Просмотреть
+                    {{ _('Просмотреть') }}
 
                   </a>
 
                   <a href="{{ url_for('staff_report_document_download', document_id=doc.id) }}"
-                     class="btn btn-primary">
+                     class="btn btn-primary" data-sm-action="nav">
 
-                    Скачать
+                    {{ _('Скачать') }}
 
                   </a>
 
@@ -680,7 +729,7 @@
       {% else %}
 
         <div class="empty-box">
-          Итоговые документы пока не загружены.
+          {{ _('Итоговые документы пока не загружены.') }}
         </div>
 
       {% endif %}

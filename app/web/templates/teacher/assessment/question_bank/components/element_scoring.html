@@ -1,0 +1,12 @@
+{% set params = question_form_parameters(item|default(none), creation_slot|default(none)) %}
+{% if params %}
+<div data-element-scoring data-locked="{{ '1' if creation_slot|default(none) else '0' }}" data-rules="{{ question_parameter_rules() | tojson | forceescape }}" data-count-help="{{ _('Максимальный балл рассчитывается автоматически. Количество элементов не зависит от баллов.') }}" data-error="{{ _('Проверьте количество элементов и баллы за ответ.') }}" class="qb-form-field">
+  <input type="hidden" name="element_score_policy" value="weighted_elements_v2">
+  <label>{{ _('Элементов в одной карточке') }}<input class="qb-form-control" type="number" name="element_count" min="1" max="100" step="1" value="{{ params.element_count }}" required></label>
+  <label>{{ _('Баллов за правильный элемент') }}<input class="qb-form-control" type="number" name="points_per_element" min="1" max="100" step="1" value="{{ params.points_per_element }}" required></label>
+  <label data-correct-count>{{ _('Правильных вариантов из четырёх') }}<input class="qb-form-control" type="number" name="correct_option_count" min="2" max="3" step="1" value="{{ params.get('correct_option_count',2) }}"></label>
+  <label data-criteria-points>{{ _('Баллы критериев через запятую') }}<input class="qb-form-control" name="criterion_points" value="{{ params.get('criterion_points',[1]) | join(',') }}"></label>
+  <p>{{ _('Максимальный балл рассчитывается автоматически. Количество элементов не зависит от баллов.') }}</p>
+</div>
+<script src="{{ url_for('static', path='js/teacher/assessment/question_bank/element_scoring_editor.js') }}?v=63"></script>
+{% endif %}

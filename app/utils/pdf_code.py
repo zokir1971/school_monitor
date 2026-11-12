@@ -1,3 +1,4 @@
+from app.core.i18n import translate
 from io import BytesIO
 from datetime import datetime
 
@@ -20,7 +21,15 @@ def generate_codes_pdf(
     scope_name: str | None = None,
     notes: str | None = None,
     context_header: str = "Контекст",
+    ui_language: str = "ru",
 ) -> bytes:
+    def t(message):
+        return translate(message, ui_language)
+
+    title = t(title)
+    context_header = t(context_header)
+    if scope_label:
+        scope_label = t(scope_label)
     register_cyrillic_fonts()
 
     buf = BytesIO()
@@ -86,9 +95,9 @@ def generate_codes_pdf(
         Paragraph(
             "<br/>".join(
                 [x for x in [
-                    f"Дата формирования: {datetime.now().strftime('%d.%m.%Y %H:%M')}",
-                    f"Уровень: {level_label}" if level_label else None,
-                    f"Выдал: {issuer_name}" if issuer_name else None,
+                    f"{t('Дата формирования')}: {datetime.now().strftime('%d.%m.%Y %H:%M')}",
+                    f"{t('Уровень')}: {level_label}" if level_label else None,
+                    f"{t('Выдал')}: {issuer_name}" if issuer_name else None,
                 ] if x]
             ),
             normal_style,
@@ -113,9 +122,9 @@ def generate_codes_pdf(
 
     table_data = [[
         Paragraph(context_header, header_cell_style),
-        Paragraph("Код", header_cell_style),
-        Paragraph("Квота", header_cell_style),
-        Paragraph("Действует до", header_cell_style),
+        Paragraph(t("Код"), header_cell_style),
+        Paragraph(t("Квота"), header_cell_style),
+        Paragraph(t("Действует до"), header_cell_style),
     ]]
 
     for item in issued:
@@ -123,7 +132,7 @@ def generate_codes_pdf(
             Paragraph(str(context(item)), cell_style),
             Paragraph(str(item.get("raw_code", "")), cell_style),
             Paragraph(str(item.get("quota_total", "")), cell_style),
-            Paragraph(str(item.get("expires_at") or "без срока"), cell_style),
+            Paragraph(t(str(item.get("expires_at") or "без срока")), cell_style),
         ])
 
     table = Table(
@@ -151,7 +160,7 @@ def generate_codes_pdf(
     story.append(Spacer(1, 12))
     story.append(
         Paragraph(
-            "Сохраните PDF и передайте коды адресатам. При утрате кодов может потребоваться повторная выдача.",
+            t("Сохраните PDF и передайте коды адресатам. При утрате кодов может потребоваться повторная выдача."),
             normal_style,
         )
     )

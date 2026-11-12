@@ -1,0 +1,132 @@
+<!-- =============================================
+     ORDERING
+     ============================================= -->
+
+<div
+  id="ordering-fields"
+  class="qb-answer-builder"
+  data-question-fields="ordering"
+  hidden
+>
+
+  <div class="qb-answer-builder__header">
+    <h3>
+      {{ _('Дұрыс реттілік') }}
+    </h3>
+
+    <p>
+      {{ _('Элементтерді дұрыс ретімен енгізіңіз. Оқушыға тапсырма берілген кезде элементтер араластырылып көрсетіледі.') }}
+    </p>
+  </div>
+
+
+  <div data-ordering-legacy>
+  <div
+    id="ordering-items-container"
+    class="qb-ordering-items"
+  >
+
+    <!-- ITEM 1 -->
+
+    <div
+      class="qb-ordering-row"
+      data-ordering-row
+    >
+
+      <div
+        class="qb-ordering-number"
+        data-ordering-number
+      >
+        1
+      </div>
+
+      <input
+        type="text"
+        name="ordering_item"
+        class="qb-form-control"
+        placeholder="{{ _('Бірінші элемент') }}"
+        data-type-input
+        disabled
+      >
+
+      <button
+        type="button"
+        class="qb-remove-answer"
+        data-remove-ordering
+        aria-label="{{ _('Элементті жою') }}"
+       data-sm-action="danger" data-sm-icon="true">
+        ×
+      </button>
+
+    </div>
+
+
+    <!-- ITEM 2 -->
+
+    <div
+      class="qb-ordering-row"
+      data-ordering-row
+    >
+
+      <div
+        class="qb-ordering-number"
+        data-ordering-number
+      >
+        2
+      </div>
+
+      <input
+        type="text"
+        name="ordering_item"
+        class="qb-form-control"
+        placeholder="{{ _('Екінші элемент') }}"
+        data-type-input
+        disabled
+      >
+
+      <button
+        type="button"
+        class="qb-remove-answer"
+        data-remove-ordering
+        aria-label="{{ _('Элементті жою') }}"
+       data-sm-action="danger" data-sm-icon="true">
+        ×
+      </button>
+
+    </div>
+
+  </div>
+
+
+  <button
+    type="button"
+    id="add-ordering-item"
+    class="qb-add-answer"
+   data-sm-action="primary">
+    {{ _('+ Элемент қосу') }}
+  </button>
+
+  </div>
+  <div data-scored-ordering-rows></div>
+  <p data-scored-ordering-status role="status" aria-live="polite"></p>
+  <input type="hidden" name="ordering_items_payload" data-scored-ordering-payload data-type-input disabled>
+  <template data-scored-ordering-template>
+    <section data-scored-ordering-row style="border:1px solid #eaecf0;border-radius:8px;padding:12px;margin-top:12px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px;">
+        <label data-scored-ordering-label class="qb-form-label"></label>
+        <div style="display:flex;gap:6px;">
+          <button type="button" data-ordering-move="-1" aria-label="{{ _('Жоғары / Вверх') }}" data-sm-action="nav">↑</button>
+          <button type="button" data-ordering-move="1" aria-label="{{ _('Төмен / Вниз') }}" data-sm-action="nav">↓</button>
+        </div>
+      </div>
+      <div class="qb-rich-editor" data-rich-editor>
+        <div class="qb-rich-editor__toolbar"><button type="button" data-rich-add-math data-sm-action="nav">{{ _('+ Формула') }}</button></div>
+        <div class="qb-rich-editor__content" data-rich-content contenteditable="true" role="textbox" aria-multiline="true"></div>
+        <input type="hidden" data-rich-plain-value data-type-input>
+        <input type="hidden" data-rich-segments data-type-input>
+      </div>
+    </section>
+  </template>
+</div>
+
+<script defer src="{{ url_for('static', path='js/teacher/assessment/question_bank/ordering_editor.js') }}?v=63"></script>

@@ -1,0 +1,222 @@
+{% from 'teacher/assessment/question_bank/components/creation_plan.html' import creation_plan with context %}
+{% from 'teacher/assessment/question_bank/components/objective_picker.html' import objective_picker with context %}
+{% from 'teacher/assessment/question_bank/components/objective_preview.html' import objective_language_select with context %}
+{% extends "base.html" %}
+{% block title %}{{ _('AI арқылы тапсырма құру') }}{% endblock %}
+
+
+{% block content %}
+<script defer src="{{ url_for('static',path='js/teacher/assessment/question_bank/ai_image_options.js') }}?v=74"></script>
+<link rel="stylesheet" href="{{ url_for('static',path='css/teacher/assessment/question_bank/creation_plan.css') }}?v=63">
+<script defer src="{{ url_for('static',path='js/teacher/assessment/question_bank/creation_plan.js') }}?v=65"></script>
+<link rel="stylesheet" href="{{ url_for('static',path='css/teacher/assessment/question_bank/page_heading.css') }}?v=40">
+
+
+<link rel="stylesheet" href="{{ url_for('static',path='css/teacher/assessment/question_bank/question_bank_objective_preview.css') }}">
+<link rel="stylesheet" href="{{ url_for('static',path='css/teacher/assessment/question_bank/question_bank_objective_picker.css') }}">
+<style>
+.qb-ai-page { max-width:1000px; margin:24px auto; padding:0 20px; font:14px/1.5 system-ui,-apple-system,"Segoe UI",Arial,sans-serif; color:#1e293b; }
+.qb-ai-page * { box-sizing:border-box; }
+.qb-ai-page h1 { font-size:26px; margin:12px 0 8px; }
+.qb-ai-page h2 { font-size:18px; margin:0 0 16px; }
+.qb-ai-create-heading { display:flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.qb-ai-create-heading h1 { margin: 0; }
+.qb-ai-create-heading__back {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: auto;
+  padding: 10px 18px;
+
+  background: #2563eb;
+  border: 1px solid #2563eb;
+  border-radius: 8px;
+
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.5;
+  text-decoration: none;
+}
+
+.qb-ai-create-heading__back:hover {
+  background: #1d4ed8;
+  border-color: #1d4ed8;
+  color: #fff;
+  text-decoration: none;
+}
+
+.qb-ai-create-heading__back:focus-visible {
+  outline: 3px solid #93c5fd;
+  outline-offset: 2px;
+}
+
+.qb-ai-card { margin-top:20px; padding:24px; background:#fff; border:1px solid #e2e8f0; border-radius:14px; }
+.qb-ai-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; }
+.qb-ai-filters { grid-template-columns:repeat(3,minmax(0,1fr)); }
+.qb-ai-page label { display:flex; flex-direction:column; gap:6px; font-weight:500; }
+.qb-ai-page input:not([type="hidden"]),.qb-ai-page select,.qb-ai-page textarea { width:100%; min-width:0; padding:10px 12px; border:1px solid #cbd5e1; border-radius:8px; font:inherit; color:#1e293b; background:#fff; }
+.qb-ai-page textarea { resize:vertical; }
+.qb-ai-page input:focus,.qb-ai-page select:focus,.qb-ai-page textarea:focus { outline:2px solid #bfdbfe; border-color:#3b82f6; }
+.qb-ai-wide { grid-column:1/-1; }
+.qb-ai-help { color:#64748b; font-weight:400; margin:8px 0 0; }
+.qb-ai-actions { display:flex; align-items:center; flex-wrap:wrap; gap:12px; margin-top:20px; }
+.qb-ai-page button,.qb-ai-primary { padding:10px 18px; border:0; border-radius:8px; background:#2563eb; color:white; font:600 14px/1.5 system-ui; cursor:pointer; text-decoration:none; }
+.qb-ai-page button:disabled { opacity:.6; cursor:wait; }
+.qb-ai-error { padding:14px 18px; border:1px solid #fecaca; background:#fef2f2; color:#991b1b; border-radius:10px; margin-top:18px; }
+.qb-ai-page [hidden] { display:none!important; }
+@media(max-width:640px) { .qb-ai-grid { grid-template-columns:minmax(0,1fr); } .qb-ai-card { padding:18px; } }
+</style>
+<link rel="stylesheet" href="{{ url_for('static',path='css/teacher/assessment/question_bank/context_filters.css') }}?v=39">
+
+<link rel="stylesheet" href="{{ url_for('static',path='css/teacher/assessment/question_bank/question_bank_form_layout.css') }}">
+{% set requested_language = selected_language|default(values.get('language',request.query_params.get('language','kk'))) %}
+{% set qb_selected_language = requested_language if requested_language in ['kk','ru','en'] else 'kk' %}
+<div class="qb-ai-page">
+  <div class="qb-ai-create-heading qb-page-heading">
+    <h1>{{ _('AI арқылы тапсырма құру') }}</h1>
+    <a href="{{ url_for('teacher_question_bank_page') }}"
+       class="qb-ai-create-heading__back qb-page-heading__button" data-sm-action="nav" data-sm-back="true">
+      {{ _('← Тапсырмалар конструкторына қайту') }}</a>
+
+  </div>
+
+  <p class="qb-ai-help">{% if qb_selected_language in ['ru','kk'] %}{{ _('AI создаёт одно задание сразу на казахском и русском языках одним запросом. Обе версии сохраняются вместе как черновик.') }}{% else %}{{ _('AI бір тапсырма дайындайды. Нәтижені өңдеп, тексеруге жібере аласыз.') }}{% endif %}</p>
+  {% if error %}<div class="qb-ai-error" role="alert">{{ _(error) }} <a href="{{ url_for('teacher_question_bank_ai_create_page') }}" data-sm-action="nav">{{ _('Жаңа сұрау') }}</a></div>{% endif %}
+  <section class="qb-ai-card">
+    <h2>{{ _('1. Пән және оқу мақсаты') }}</h2>
+    {% if teaching_scope %}
+    <form method="get" action="{{ url_for('teacher_question_bank_ai_create_page') }}">
+      <div class="qb-ai-grid qb-ai-filters">
+        {{ objective_language_select(qb_selected_language,id='qb-ai-scope-language') }}
+        <input type="hidden" name="scope" id="qb-ai-scope" value="{{ scope or '' }}">
+        <label for="qb-ai-subject">{{ _('Пән') }}
+          <select id="qb-ai-subject" required>
+            <option value="">{{ _('Таңдаңыз') }}</option>
+            {% for item in teaching_scope | unique(attribute='subject_id') %}
+              {% if item.subject_id == subject_id %}
+                <option value="{{ item.subject_id }}" selected>{{ qb_subject_name(item) }}</option>
+              {% else %}
+                <option value="{{ item.subject_id }}">{{ qb_subject_name(item) }}</option>
+              {% endif %}
+            {% endfor %}
+          </select>
+        </label>
+        <label for="qb-ai-grade">{{ _('Сынып') }}
+          <select id="qb-ai-grade" required>
+            <option value="">{{ _('Алдымен пәнді таңдаңыз') }}</option>
+          </select>
+        </label>
+        <label for="qb-ai-track" {% if grade_level not in [10,11] %}hidden{% endif %}>{{ _('Направление обучения (10–11 классы)') }}
+          <select name="education_track" id="qb-ai-track" {% if grade_level in [10,11] %}required{% else %}disabled{% endif %}>
+            <option value="">{{ _('Выберите направление') }}</option>
+            {% for code,label in [('general','Общее (без направления)'),('emn','Естественно-математическое направление (ЕМН)'),('ogn','Общественно-гуманитарное направление (ОГН)')] %}
+            <option value="{{ code }}" {% if education_track==code %}selected{% endif %}>{{ _(label) }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <label>{{ _('Тоқсан') }}
+          <select name="quarter" required>
+            {% for q in range(1,5) %}
+              {% if q == quarter %}<option value="{{ q }}" selected>{{ q }} {{ _('тоқсан') }}</option>
+              {% else %}<option value="{{ q }}">{{ q }} {{ _('тоқсан') }}</option>{% endif %}
+            {% endfor %}
+          </select>
+        </label>
+      </div>
+<div class="qb-ai-actions"><button type="submit" data-sm-action="nav">{{ _('Оқу мақсаттарын көрсету') }}</button></div>
+    </form>
+    {% else %}<p class="qb-ai-help">{{ _('Сізге пән мен сынып тағайындалмаған. Әкімшіге хабарласыңыз.') }}</p>{% endif %}
+  </section>
+  {% if objectives and token %}
+  <section class="qb-ai-card">
+    <h2>{{ _('2. Тапсырма параметрлері') }}</h2>
+    <form id="qb-ai-generate" enctype="multipart/form-data" method="post" action="{{ url_for('teacher_question_bank_ai_create_submit') }}">
+      <input type="hidden" name="token" value="{{ token }}">
+      <input type="hidden" name="subject_id" value="{{ subject_id }}">
+      <input type="hidden" name="grade_level" value="{{ grade_level }}">
+      <input type="hidden" name="quarter" value="{{ quarter }}">
+      {% if education_track %}<input type="hidden" name="education_track" value="{{ education_track }}">{% endif %}
+      <input type="hidden" name="language" data-qb-objective-language-value value="{{ qb_selected_language }}">
+      <div class="qb-ai-grid">
+        <div class="qb-ai-wide">{{ objective_picker(objectives, values.get('objective_id'), qb_selected_language, id='qb-ai-objective') }}</div>
+        <div class="qb-ai-wide">{{ creation_plan(ai=true, initial=values.get('creation_plan')) }}</div>
+        <label class="qb-ai-wide">{{ _('Тақырып (міндетті емес)') }}
+          <input type="text" name="title" maxlength="255" value="{{ values.get('title','') }}">
+        </label>
+        <label class="qb-ai-wide">{{ _('Рисунок для задания (необязательно)') }}
+          <input type="file" name="source_image" accept="image/png,image/jpeg,image/webp">
+          <img hidden data-ai-source-preview alt="{{ _('Рисунок для задания (необязательно)') }}">
+          <span class="qb-ai-help">{{ _('Один рисунок PNG, JPEG или WebP до 5 МБ. Общий для карточек и обоих языков. Анализ рисунка расходует токены API. После ошибки выберите файл заново.') }}</span>
+        </label>
+        <fieldset class="qb-ai-wide qb-ai-image-options" data-ai-image-options data-constraint="{{ _('Для рисунков: один тип и одна карточка') }}" hidden>
+          <legend>{{ _('Рисунки вариантов ответа A–D') }}</legend>
+          <p class="qb-ai-help">{{ _('Выберите один тип «Выбор изображения» и одну карточку. Загрузите четыре разных рисунка до 5 МБ каждый. AI определит один правильный ответ. Проверьте результат перед отправкой эксперту.') }}</p>
+          <div class="qb-ai-image-options__grid">
+          {% for letter in ['A','B','C','D'] %}
+            <label>{{ letter }}<input type="file" name="image_{{ letter|lower }}" accept="image/png,image/jpeg,image/webp" data-ai-option-file disabled><img hidden data-ai-option-preview alt="{{ letter }}"></label>
+          {% endfor %}
+          </div>
+        </fieldset>
+        <label class="qb-ai-wide">{{ _('Қосымша талаптар (міндетті емес)') }}
+          <textarea name="additional_requirements" rows="4" maxlength="10000" placeholder="{{ _('Мысалы: күнделікті өмірден мысал қолданыңыз') }}">{{ values.get('additional_requirements','') }}</textarea>
+        </label>
+      </div>
+      <p class="qb-ai-help">{{ _('Нәтиже жоба ретінде сақталады. AI жауабын тексеріп, қажет болса түзетіңіз.') }}</p>
+      <div class="qb-ai-actions"><button type="submit" data-generate data-sm-action="primary">{{ _('AI арқылы құру') }}</button><span data-progress hidden role="status">{{ _('Тапсырма дайындалуда…') }}</span></div>
+    </form>
+  </section>
+  {% elif track_pending %}<p class="qb-ai-help">{{ _('Выберите направление и нажмите «Показать учебные цели».') }}</p>
+  {% elif scope %}<p class="qb-ai-help">{{ _('Таңдалған пән, сынып және тоқсан бойынша оқу мақсаттары жоқ.') }}</p>{% endif %}
+</div>
+<script>
+(() => {
+  const subject = document.getElementById('qb-ai-subject');
+  const grade = document.getElementById('qb-ai-grade');
+  const scope = document.getElementById('qb-ai-scope');
+  if (!subject || !grade || !scope) return;
+  const allowed = [
+    {% for item in teaching_scope %}
+    {subject: {{ item.subject_id | tojson }}, grade: {{ item.grade_level | tojson }}},
+    {% endfor %}
+  ];
+  const selectedGrade = {{ grade_level | tojson }};
+  function updateScope() {
+    scope.value = subject.value && grade.value ? `${subject.value}:${grade.value}` : '';
+    const track = document.getElementById('qb-ai-track');
+    if (track) {
+      const upper = ['10','11'].includes(grade.value);
+      track.closest('label').hidden = !upper;
+      track.disabled = !upper;
+      track.required = upper;
+      if (!upper) track.value = '';
+    }
+  }
+  function updateGrades(selected = '') {
+    const grades = [...new Set(allowed.filter(item => String(item.subject) === subject.value).map(item => item.grade))].sort((a,b) => a-b);
+    grade.replaceChildren(new Option(subject.value ? window.SchoolMonitorI18n.t("qb_fba8fbbb6ce3") : window.SchoolMonitorI18n.t("qb_ec1225f362b8"), ''));
+    grades.forEach(value => grade.add(new Option(window.SchoolMonitorI18n.t("qb_40fc81f4d4c3", {p0: (value)}), String(value))));
+    grade.disabled = !subject.value;
+    grade.value = grades.some(value => String(value) === String(selected)) ? String(selected) : '';
+    updateScope();
+  }
+  subject.addEventListener('change', () => updateGrades());
+  grade.addEventListener('change', updateScope);
+  subject.form.addEventListener('submit', updateScope);
+  window.addEventListener('pageshow', () => updateGrades(grade.value));
+  updateGrades(selectedGrade);
+})();
+(() => {
+  const form=document.getElementById('qb-ai-generate');
+  if(!form) return;
+  let submitting=false;
+  form.addEventListener('submit',event=>{
+    if(submitting){event.preventDefault();return;}
+    submitting=true;form.querySelector('[data-generate]').disabled=true;form.querySelector('[data-progress]').hidden=false;
+  });
+  window.addEventListener('pageshow',()=>{submitting=false;form.querySelector('[data-generate]').disabled=false;form.querySelector('[data-progress]').hidden=true;});
+})();
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathlive" defer></script>
+<script src="{{ url_for('static',path='js/teacher/assessment/question_bank/question_bank_objective_picker.js') }}?v=i18n3" defer></script>
+{% endblock %}

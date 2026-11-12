@@ -1,158 +1,36 @@
-{% extends "base.html" %}
-
-{% block title %}Панель сотрудника школы{% endblock %}
-
+{% extends 'base.html' %}
+{% import 'dashboards/components/organized_sections.html' as sections with context %}
+{% set ru=ui_language()=='ru' %}
+{% block title %}{{ "Панель сотрудника школы" if ru else "Мектеп қызметкерінің панелі" }}{% endblock %}
 {% block extra_css %}
-<link rel="stylesheet" href="{{ url_for('static', path='css/admin.css') }}">
+<link rel="stylesheet" href="{{ url_for('static',path='css/dashboards/organized_sections.css') }}?v=124">
+<script defer src="{{ url_for('static',path='js/assessment/navigation.js') }}?v=99"></script>
 {% endblock %}
-
 {% block content %}
-
-<div class="dashboard">
-
-  <section class="dashboard-section">
-    <h3 class="section-title">Задачи на текущий месяц</h3>
-
-    {% set role = (user.role.value if user.role is not string else user.role) %}
-
-    <div class="card-grid">
-
-      <a class="card" href="{{ request.url_for('staff_tasks_page') }}">
-        <div class="card__inner">
-          <div class="card__top">
-            <div class="card__icon">📅</div>
-          </div>
-          <h3 class="card__title">Мои задачи</h3>
-          <p class="card__desc">Мои ближайшие задачи по направлениям ВШК</p>
-          <div class="card__footer">
-            <span>Открыть</span><span class="card__arrow">→</span>
-          </div>
-        </div>
-      </a>
-
-      <a class="card" href="{{ request.url_for('staff_my_reports_page') }}?month={{ today.month }}">
-        <div class="card__inner">
-          <div class="card__top">
-            <div class="card__icon">📋</div>
-          </div>
-          <h3 class="card__title">
-            Перейти к заполнению отчетов
-          </h3>
-          <p class="card__desc">
-            Заполнение отчетов, сохранение и подписание за {{ MONTH_NAMES[today.month] }} месяц
-          </p>
-          <div class="card__footer">
-            <span>Открыть</span>
-            <span class="card__arrow">→</span>
-          </div>
-        </div>
-      </a>
-
-      <a class="card" href="{{ url_for('review_result_list_page') }}">
-        <div class="card__inner">
-          <div class="card__top">
-            <div class="card__icon">✅</div>
-          </div>
-          <h3 class="card__title">Просмотр рассмотрения задач</h3>
-          <p class="card__desc">Статус, протокол, итоговый документ и отчеты</p>
-          <div class="card__footer">
-            <span>Открыть</span><span class="card__arrow">→</span>
-          </div>
-        </div>
-      </a>
-
-    </div>
-  </section>
-
-  <section class="dashboard-section">
-    <h3 class="section-title">Школьный контроль</h3>
-
-    <div class="card-grid">
-      <a class="card" href="/lessons/observations">
-        <div class="card__inner">
-          <div class="card__top">
-            <div class="card__icon">📋</div>
-          </div>
-          <h3 class="card__title">Наблюдение уроков</h3>
-          <p class="card__desc">Планирование и проведение наблюдений</p>
-          <div class="card__footer">
-            <span>Открыть</span><span class="card__arrow">→</span>
-          </div>
-        </div>
-      </a>
-
-      <a class="card" href="/assessments">
-        <div class="card__inner">
-          <div class="card__top">
-            <div class="card__icon">🧠</div>
-          </div>
-          <h3 class="card__title">Оценка качества урока</h3>
-          <p class="card__desc">Критерии, шкалы, результаты</p>
-          <div class="card__footer">
-            <span>Открыть</span><span class="card__arrow">→</span>
-          </div>
-        </div>
-      </a>
-
-      <a class="card" href="/staff_school">
-        <div class="card__inner">
-          <div class="card__top">
-            <div class="card__icon">🎓</div>
-          </div>
-          <h3 class="card__title">Развитие педагогов</h3>
-          <p class="card__desc">Анализ, рекомендации, рост</p>
-          <div class="card__footer">
-            <span>Открыть</span><span class="card__arrow">→</span>
-          </div>
-        </div>
-      </a>
-    </div>
-  </section>
-
-  <section class="dashboard-section">
-    <h3>Статистика ВШК</h3>
-
-    <div class="card-grid">
-      <a class="card" href="{{ url_for('staff_statistics_page') }}">
-        <div class="card__inner">
-          <div class="card__top">
-            <div class="card__icon">📊</div>
-          </div>
-          <h3 class="card__title">Моя статистика ВШК</h3>
-          <p class="card__desc">Статистика исполнение задач и рассмотрение</p>
-          <div class="card__footer">
-            <span>Открыть</span><span class="card__arrow">→</span>
-          </div>
-        </div>
-      </a>
-
-      <a class="card" href="/reports/schools">
-        <div class="card__inner">
-          <div class="card__top">
-            <div class="card__icon">📊</div>
-          </div>
-          <h3 class="card__title">Отчёты по предметам</h3>
-          <p class="card__desc">Справки и протоколы</p>
-          <div class="card__footer">
-            <span>Открыть</span><span class="card__arrow">→</span>
-          </div>
-        </div>
-      </a>
-
-      <a class="card" href="/reports/schools">
-        <div class="card__inner">
-          <div class="card__top">
-            <div class="card__icon">📊</div>
-          </div>
-          <h3 class="card__title">Отчёты по учителям</h3>
-          <p class="card__desc">Справки и протоколы</p>
-          <div class="card__footer">
-            <span>Открыть</span><span class="card__arrow">→</span>
-          </div>
-        </div>
-      </a>
-    </div>
-  </section>
-
+{% set role=user.role.value if user.role is not string else user.role %}
+<div class="role-dashboard">
+<header class="role-dashboard__heading"><h1>{{ "Панель сотрудника школы" if ru else "Мектеп қызметкерінің панелі" }}</h1></header>
+<nav class="role-dashboard__nav" aria-label="{{ 'Разделы панели' if ru else 'Панель бөлімдері' }}">
+<a href="#control" data-sm-action="nav">{{ "Мои задачи и ВШК" if ru else "Менің тапсырмаларым және МІБ" }}</a>
+{% if assessment_enabled() %}<a href="#assessment" data-sm-action="nav">{{ "Оценивание и аналитика" if ru else "Бағалау және талдау" }}</a>{% endif %}
+<a href="#statistics" data-sm-action="nav">{{ "Статистика школы" if ru else "Мектеп статистикасы" }}</a>
+</nav>
+<section class="role-dashboard__section" aria-labelledby="control">
+{{ sections.heading("control","Мои задачи и ВШК","Менің тапсырмаларым және МІБ","Исполнение задач, отчёты и материалы рассмотрения.","Тапсырмаларды орындау, есептер және қарау материалдары.") }}
+<div class="role-dashboard__grid">
+{{ sections.card(url_for('staff_tasks_page'), "📅", "Мои задачи", "Менің тапсырмаларым", "Назначенные задачи и сроки исполнения.", "Тағайындалған тапсырмалар және орындау мерзімдері.") }}
+{{ sections.card(request.url_for('staff_my_reports_page').include_query_params(month=today.month), "📋", "Мои отчёты", "Менің есептерім", "Заполнение, сохранение и подписание отчётов за текущий месяц.", "Ағымдағы айдың есептерін толтыру, сақтау және қол қою.") }}
+{{ sections.card(url_for('review_result_list_page'), "✅", "Рассмотрение задач", "Тапсырмаларды қарау", "Статусы рассмотрения, протоколы и итоговые документы.", "Қарау мәртебелері, хаттамалар және қорытынды құжаттар.") }}
+{{ sections.card('/lessons/observations', "👁", "Наблюдение уроков", "Сабақтарды бақылау", "Планирование и проведение наблюдений.", "Бақылауды жоспарлау және өткізу.") }}
+{{ sections.card('/assessments', "🧠", "Оценка качества урока", "Сабақ сапасын бағалау", "Критерии, шкалы и результаты наблюдений.", "Бақылау өлшемдері, шкалалары және нәтижелері.") }}
+{{ sections.card('/staff_school', "🎓", "Развитие педагогов", "Педагогтердің дамуы", "Анализ, рекомендации и профессиональный рост.", "Талдау, ұсынымдар және кәсіби өсу.") }}
+</div></section>
+{{ sections.assessment('staff_assessment_analytics_page','staff_assessment_knowledge_quality_dynamics',results=role in ['school_admin','school_staff'],manual=role in ['school_admin','school_staff'],manual_first=true) }}
+<section class="role-dashboard__section" aria-labelledby="statistics">
+{{ sections.heading("statistics","Статистика школы","Мектеп статистикасы","Статистика выполнения задач и доступные отчёты.","Тапсырмалардың орындалу статистикасы және қолжетімді есептер.") }}
+<div class="role-dashboard__grid">
+{{ sections.card(url_for('staff_statistics_page'), "📊", "Моя статистика ВШК", "Менің МІБ статистикам", "Выполнение задач и результаты рассмотрения.", "Тапсырмалардың орындалуы және қарау нәтижелері.") }}
+{{ sections.card('/reports/schools', "📄", "Отчёты школы", "Мектеп есептері", "Доступные отчётные материалы школы.", "Мектептің қолжетімді есеп материалдары.") }}
+</div></section>
 </div>
 {% endblock %}

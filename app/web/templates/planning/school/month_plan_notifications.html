@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Уведомление исполнителей{% endblock %}
+{% block title %}{{ _('Уведомление исполнителей') }}{% endblock %}
 
 {% block extra_css %}
   <link rel="stylesheet" href="{{ url_for('static', path='css/monthly_plan.css') }}">
@@ -478,15 +478,16 @@
 {% endblock %}
 
 {% block content %}
+{% set ru = ui_language() == 'ru' %}
 <section class="dashboard-section notifications-page">
 
   <section class="notifications-shell">
   <div class="notifications-head">
     <div class="notifications-head__content">
-      <h2 class="section-title">Уведомление исполнителей</h2>
+      <h2 class="section-title">{{ _('Уведомление исполнителей') }}</h2>
 
       <div class="notifications-plan-meta">
-        Месячный план №{{ month_plan.id }}
+        {{ _('Месячный план №') }}{{ month_plan.id }}
         · {{ "%02d"|format(month_plan.month) }}.{{ month_plan.year }}
       </div>
 
@@ -496,45 +497,45 @@
         {% set total_tasks.value = total_tasks.value + recipient.task_count %}
       {% endfor %}
 
-      <div class="notifications-summary">
-
-  <span class="summary-badge summary-badge--sent">
-    🔵 Жіберілді:
-    {{ notification_progress.sent_count if notification_progress else 0 }}
-  </span>
-
-  <span class="summary-badge summary-badge--accepted">
-    🟢 Орындауға қабылданды:
-    {{ notification_progress.accepted_count if notification_progress else 0 }}
-  </span>
-
-  <span class="summary-badge summary-badge--pending">
-    ⚪ Жіберілмеген:
-    {{ notification_progress.pending_count if notification_progress else recipients|length }}
-  </span>
-
-</div>
+      <p class="muted">{{ 'Уведомления в системе' if ru else 'Жүйедегі хабарламалар' }}</p>
+      <div class="notifications-summary" data-internal-summary>
+        <span class="summary-badge summary-badge--sent" data-summary="notified">{{ 'Уведомлены в системе' if ru else 'Жүйеде хабарланғаны' }}: {{ internal_summary.notified }} / {{ internal_summary.registered }}</span>
+        <span class="summary-badge summary-badge--accepted" data-summary="read">{{ 'Прочитали' if ru else 'Оқылғаны' }}: {{ internal_summary.read }}</span>
+        <span class="summary-badge summary-badge--pending" data-summary="unread">{{ 'Ещё не прочитали' if ru else 'Әлі оқылмағаны' }}: {{ internal_summary.unread }}</span>
+      </div>
+      <p data-summary="pending">{{ 'Нужно уведомить или обновить уведомление' if ru else 'Хабарлау немесе хабарламаны жаңарту қажет' }}: {{ internal_summary.pending }}.</p>
+      <p data-summary="no-account">{{ 'Нет активной учётной записи' if ru else 'Белсенді тіркелгісі жоқ' }}: {{ internal_summary.no_account }} · {{ 'Всего исполнителей' if ru else 'Барлық орындаушылар' }}: {{ internal_summary.total }}.</p>
 
     </div>
 
     <a
       class="btn--back"
       href="{{ request.url_for('school_monthly_page') }}?month={{ month_plan.month }}"
-    >
-      ← Вернуться к месячному плану
+     data-sm-action="nav" data-sm-back="true">
+      {{ _('← Вернуться к месячному плану') }}
     </a>
   </div>
 </section>
 
-  <div class="notifications-info-card">
-    План отправлен на исполнение. Введите номер WhatsApp каждого
-    сотрудника и откройте подготовленное сообщение. Отправка
-    выполняется вручную в WhatsApp.
-  </div>
+  <section class="notifications-info-card">
+    <h3>{{ 'Внутренние уведомления' if ru else 'Жүйедегі хабарламалар' }}</h3>
+    <p>{{ 'Одна кнопка создаёт персональное уведомление каждому зарегистрированному исполнителю. Повторная отправка без изменений не создаёт дублей. Изменённые задачи и сроки отправляются новой версией.' if ru else 'Бір батырма әр тіркелген орындаушыға жеке хабарлама жасайды. Өзгеріссіз қайта жіберу көшірме жасамайды. Өзгерген тапсырмалар мен мерзімдер жаңа нұсқамен жіберіледі.' }}</p>
+    <form method="post" action="{{ request.url_for('school_monthly_notify_internal',month_plan_id=month_plan.id) }}">
+      <button type="submit" class="btn" data-sm-action="primary" {% if month_plan.status.value != 'active' %}disabled{% endif %}>{{ 'Уведомить всех зарегистрированных' if ru else 'Барлық тіркелгендерге хабарлау' }}</button>
+      <a class="btn" data-sm-action="nav" href="{{ request.url_for('school_monthly_notifications',month_plan_id=month_plan.id) }}">{{ 'Обновить статусы' if ru else 'Мәртебелерді жаңарту' }}</a>
+    </form>
+    <p class="muted">{{ 'Уведомление видно при входе в систему. WhatsApp остаётся дополнительным способом; его открытие не подтверждает доставку. Прочтение уведомления не означает принятие задач в работу.' if ru else 'Хабарлама жүйеге кіргенде көрінеді. WhatsApp қосымша тәсіл болып қалады; оны ашу жеткізілуін растамайды. Хабарламаны оқу тапсырмаларды жұмысқа қабылдау емес.' }}</p>
+  </section>
+  {% if internal_success %}<div class="alert alert--success" role="status">{{ internal_success }}</div>{% endif %}
+
+  <details class="notifications-info-card">
+    <summary>{{ 'Дополнительно: WhatsApp — открывали' if ru else 'Қосымша: WhatsApp ашылғаны' }}: {{ whatsapp_opened }}</summary>
+    <p>{{ 'Это отдельный канал. Открытие WhatsApp не подтверждает отправку или доставку сообщения и не входит в счётчик внутренних уведомлений.' if ru else 'Бұл бөлек арна. WhatsApp ашылуы хабарламаның жіберілуін немесе жеткізілуін растамайды және жүйедегі хабарламалар санына қосылмайды.' }}</p>
+  </details>
 
   {% if error %}
     <div class="alert alert--warning">
-      {{ error }}
+      {{ error.split(' / ')[0] if ru else error.split(' / ')[-1] }}
     </div>
   {% endif %}
 
@@ -542,8 +543,8 @@
     <section class="notification-status-card">
       <div class="card-section-head">
         <div>
-          <h3>Статус уведомлений</h3>
-          <p>Текущее состояние отправки сообщений исполнителям</p>
+          <h3>{{ _('Статус уведомлений') }}</h3>
+          <p>{{ _('Текущее состояние отправки сообщений исполнителям') }}</p>
         </div>
       </div>
 
@@ -551,10 +552,11 @@
       <table class="notification-status-table">
         <thead>
           <tr>
-            <th>Исполнитель</th>
-            <th>Статус</th>
-            <th>Последнее открытие</th>
-            <th>Попыток</th>
+            <th>{{ _('Исполнитель') }}</th>
+            <th>{{ 'В системе' if ru else 'Жүйеде' }}</th>
+            <th>{{ 'WhatsApp / принятие задач' if ru else 'WhatsApp / тапсырмаларды қабылдау' }}</th>
+            <th>{{ _('Последнее открытие') }}</th>
+            <th>{{ _('Попыток') }}</th>
           </tr>
         </thead>
 
@@ -574,22 +576,23 @@
               </td>
 
               <td>
+                {% set notice = internal_status_map.get(recipient.staff_member_id) %}
+                {% if not recipient.is_registered %}{{ 'Нет активной учётной записи' if ru else 'Белсенді тіркелгісі жоқ' }}
+                {% elif notice and notice.stale %}<strong>{{ 'Есть изменения — уведомите повторно' if ru else 'Өзгерістер бар — қайта хабарлаңыз' }}</strong>
+                {% elif notice %}
+                  <strong>{{ ('Прочитано' if notice.read_at else 'Уведомление создано') if ru else ('Оқылды' if notice.read_at else 'Хабарлама жасалды') }}</strong><br>
+                  <small>{{ notice.sent_at.strftime('%d.%m.%Y %H:%M') }} · {{ 'версия' if ru else 'нұсқа' }} {{ notice.revision }}</small>
+                {% else %}{{ 'Не уведомлён' if ru else 'Хабарланбаған' }}{% endif %}
+              </td>
+              <td>
 
-  {% if status_value == "accepted" %}
-    <span class="notification-status-badge notification-status-badge--accepted">
-      🟢 Орындауға қабылданды
-    </span>
-
-  {% elif status_value == "sent" %}
-    <span class="notification-status-badge notification-status-badge--sent">
-      🔵 Жіберілді
-    </span>
-
+  {% if notification and notification.open_count > 0 %}
+    <span class="notification-status-badge notification-status-badge--sent">{{ 'WhatsApp открывался' if ru else 'WhatsApp ашылған' }}</span>
   {% else %}
-    <span class="notification-status-badge notification-status-badge--pending">
-      ⚪ Жіберілмеген
-    </span>
-
+    <span class="notification-status-badge notification-status-badge--pending">{{ 'WhatsApp не открывался' if ru else 'WhatsApp ашылмаған' }}</span>
+  {% endif %}
+  {% if status_value == 'accepted' %}
+    <span class="notification-status-badge notification-status-badge--accepted">{{ 'Есть принятые задачи' if ru else 'Қабылданған тапсырмалар бар' }}</span>
   {% endif %}
 
 </td>
@@ -614,11 +617,10 @@
 
   {% if not recipients %}
     <div class="card empty-state">
-      <h3>Получатели не найдены</h3>
+      <h3>{{ _('Получатели не найдены') }}</h3>
 
       <p class="muted">
-        У включённых задач нет назначенных исполнителей.
-        Вернитесь в месячный план и проверьте назначения.
+        {{ _('У включённых задач нет назначенных исполнителей. Вернитесь в месячный план и проверьте назначения.') }}
       </p>
     </div>
   {% else %}
@@ -634,18 +636,18 @@
 
           {% if recipient.is_registered %}
             <span class="registration-status registration-status--registered">
-              ✓ Зарегистрирован в системе
+              {{ _('✓ Зарегистрирован в системе') }}
             </span>
           {% else %}
             <span class="registration-status registration-status--not-registered">
-              Не зарегистрирован в системе
+              {{ _('Не зарегистрирован в системе') }}
             </span>
           {% endif %}
           </div>
 
           <div class="recipient-meta">
-            {{ recipient.role_summary }}
-            · задач: {{ recipient.task_count }}
+            {{ _(recipient.role_summary) }}
+            {{ _('· задач:') }} {{ recipient.task_count }}
           </div>
 
           <div class="notification-tasks">
@@ -653,7 +655,7 @@
             {% if recipient.primary_tasks %}
               <div class="notification-task-group">
                 <div class="notification-task-group__title">
-                  Жауапты / Ответственный
+                  {{ _('Жауапты / Ответственный') }}
                 </div>
 
                 <ul class="notification-task-list">
@@ -662,7 +664,7 @@
                       {{ task.title }}
 
                       <span class="notification-task-deadline">
-                        Срок: {{ task.deadline_text }}
+                        {{ _('Срок:') }} {{ task.deadline_text }}
                       </span>
                     </li>
                   {% endfor %}
@@ -673,7 +675,7 @@
             {% if recipient.co_executor_tasks %}
               <div class="notification-task-group">
                 <div class="notification-task-group__title">
-                  Бірлескен орындаушы / Соисполнитель
+                  {{ _('Бірлескен орындаушы / Соисполнитель') }}
                 </div>
 
                 <ul class="notification-task-list">
@@ -682,7 +684,7 @@
                       {{ task.title }}
 
                       <span class="notification-task-deadline">
-                        Срок: {{ task.deadline_text }}
+                        {{ _('Срок:') }} {{ task.deadline_text }}
                       </span>
                     </li>
                   {% endfor %}
@@ -704,7 +706,7 @@
           target="_blank"
         >
           <label for="phone-{{ recipient.staff_member_id }}">
-            Номер WhatsApp
+            {{ _('Номер WhatsApp') }}
           </label>
 
           <input
@@ -717,28 +719,26 @@
             autocomplete="tel"
             inputmode="tel"
             pattern="^\+?7[\s\-()]?\d{3}[\s\-()]?\d{3}[\s\-()]?\d{2}[\s\-()]?\d{2}$|^8[\s\-()]?\d{3}[\s\-()]?\d{3}[\s\-()]?\d{2}[\s\-()]?\d{2}$"
-            title="Введите номер в формате +7 700 123 45 67"
+            title="{{ _('Введите номер в формате +7 700 123 45 67') }}"
             required
           >
 
           <p class="muted whatsapp-help">
-            Формат: +7 700 123 45 67 или 8 700 123 45 67.
-            Номер сохраняется в состоянии уведомления.
+            {{ _('Формат: +7 700 123 45 67 или 8 700 123 45 67. Номер сохраняется в состоянии уведомления.') }}
           </p>
 
           {% if not recipient.is_registered %}
             <div class="alert alert--warning">
-              В сообщении будет указано, что сотруднику необходимо
-              обратиться к администратору для регистрации.
+              {{ _('В сообщении будет указано, что сотруднику необходимо обратиться к администратору для регистрации.') }}
             </div>
           {% endif %}
 
           <button
             type="submit"
             class="btn btn--whatsapp"
-          >
+           data-sm-action="nav">
             <span aria-hidden="true">💬</span>
-            Открыть WhatsApp
+            {{ _('Открыть WhatsApp') }}
           </button>
         </form>
 

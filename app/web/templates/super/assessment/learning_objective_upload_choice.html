@@ -1,0 +1,110 @@
+{% extends 'base.html' %}
+
+{% block title %}
+  {{ _('Оқу мақсаттары') }}
+{% endblock %}
+
+{% block extra_css %}
+  <link
+    rel="stylesheet"
+    href="{{ url_for(
+      'static',
+      path='css/learning_objective_import.css'
+    ) }}"
+  >
+  <link
+    rel="stylesheet"
+    href="{{ url_for(
+      'static',
+      path='css/learning_objective_upload_choice.css'
+    ) }}"
+  >
+{% endblock %}
+
+{% block content %}
+
+<div class="lo-import">
+
+  <div class="lo-heading">
+    <div>
+      <h1>{{ _('Оқу мақсаттары / Учебные цели') }}</h1>
+      <p>
+        {{ _('Загрузите учебные цели или откройте справочник для просмотра и редактирования.') }}
+      </p>
+    </div>
+  </div>
+
+  <div class="lo-upload-options">
+
+    <a
+      class="lo-panel lo-upload-option"
+      href="{{ url_for(
+        'super_learning_objective_reference_list'
+      ) }}"
+    >
+      <span class="lo-upload-format">
+        {{ _('Анықтамалық / Справочник') }}
+      </span>
+
+      <h2>{{ _('Сақталған оқу мақсаттары') }}</h2>
+
+      <p>
+        {{ _('Просмотр сохранённых целей, поиск по предмету и классу, редактирование текстов и формул.') }}
+      </p>
+
+      <span class="lo-button">
+        {{ _('Анықтамалықты ашу / Открыть справочник') }}
+      </span>
+    </a>
+
+    <a
+      class="lo-panel lo-upload-option"
+      href="{{ url_for(
+        'super_learning_objective_table_import_page'
+      ) }}"
+    >
+      <span class="lo-upload-format">
+        XLS / XLSX
+      </span>
+
+      <h2>{{ _('Таблица из официального источника') }}</h2>
+
+      <p>
+        {{ _('Загрузите выгрузку Excel без перестройки таблицы. Четверти и объединённые ячейки распознаются автоматически.') }}
+      </p>
+
+      <span class="lo-button">
+        {{ _('XLS / XLSX жүктеу') }}
+      </span>
+    </a>
+
+    <a
+      class="lo-panel lo-upload-option"
+      href="{{ url_for(
+        'super_learning_objective_import_page'
+      ) }}"
+    >
+      <span class="lo-upload-format">
+        PDF
+      </span>
+
+      <h2>{{ _('Программа в PDF') }}</h2>
+
+      <p>
+        {{ _('Выберите программу и страницы с учебными целями. Документ должен содержать текст, который можно выделить и скопировать.') }}
+      </p>
+
+      <span class="lo-button">
+        {{ _('PDF жүктеу') }}
+      </span>
+    </a>
+
+  </div>
+
+  <p class="lo-hint">
+    {{ _('После загрузки проверьте цели в предпросмотре и подтвердите сохранение. Сохранённые тексты и формулы можно изменить в справочнике.') }}
+  </p>
+
+</div>
+
+{% endblock %}

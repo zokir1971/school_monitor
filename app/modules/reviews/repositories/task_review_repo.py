@@ -4,7 +4,8 @@ from __future__ import annotations
 from collections.abc import Sequence
 from datetime import date
 
-from sqlalchemy import func, select, update
+from sqlalchemy import func, select, update, or_
+from app.modules.reports.repositories.document_correction_repo import DocumentCorrectionRepo
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -493,12 +494,12 @@ class TaskReviewRepository:
             )
 
             stmt = stmt.where(
-                ~already_reviewed_by_selected_ma
+                or_(~already_reviewed_by_selected_ma, DocumentCorrectionRepo.pending_expression(SchoolMonthPlanItem.id))
             )
 
         else:
             stmt = stmt.where(
-                ~SchoolMonthPlanItem.review_results.any()
+                or_(~SchoolMonthPlanItem.review_results.any(), DocumentCorrectionRepo.pending_expression(SchoolMonthPlanItem.id))
             )
 
         result = await db.execute(stmt)
@@ -554,7 +555,7 @@ class TaskReviewRepository:
                 SchoolMonthPlanItem.planned_end.is_not(None),
                 SchoolMonthPlanItem.planned_end < today,
 
-                ~SchoolMonthPlanItem.review_results.any(),
+                or_(~SchoolMonthPlanItem.review_results.any(), DocumentCorrectionRepo.pending_expression(SchoolMonthPlanItem.id)),
             )
             .options(
                 # Для отображения просроченной строки нужны только
@@ -1051,7 +1052,7 @@ class TaskReviewRepository:
                 ),
                 SchoolMonthPlanItem.planned_end.is_not(None),
                 SchoolMonthPlanItem.planned_end < today,
-                ~SchoolMonthPlanItem.review_results.any(),
+                or_(~SchoolMonthPlanItem.review_results.any(), DocumentCorrectionRepo.pending_expression(SchoolMonthPlanItem.id)),
             )
         )
 

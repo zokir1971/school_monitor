@@ -1,0 +1,53 @@
+/* Direction editor: scoped presentation, existing save/delete handlers are retained. */
+#pageRoot .planning-container{max-width:1500px}
+#pageRoot .card--section{overflow:visible}
+#pageRoot .planning-hero{padding:20px;margin-bottom:16px}
+#pageRoot .planning-hero__title{font-size:24px}
+#pageRoot .planning-context{margin-bottom:16px}
+#pageRoot .direction-description{border:1px solid #dce4ef;border-radius:14px;background:#fff;margin:16px 0}
+#pageRoot .direction-description>summary{padding:18px 20px;cursor:pointer;font-size:15px;font-weight:700;color:#244eab}
+#pageRoot .direction-description[open]>summary{border-bottom:1px solid #dce4ef}
+#pageRoot .direction-description>.card{margin:0;border:0;box-shadow:none}
+#pageRoot .table-wrap{max-height:none;overflow:visible;border-color:#dce4ef;border-radius:0 0 14px 14px}
+#pageRoot #grid11{width:100%;min-width:0;table-layout:fixed;border-collapse:separate;border-spacing:0}
+#pageRoot #grid11 th,#pageRoot #grid11 td{width:auto;min-width:0;vertical-align:top;overflow-wrap:anywhere}
+#pageRoot #grid11 thead th{position:sticky;top:var(--direction-header-height,64px);z-index:5;background:#f7f9fc;padding:12px 10px;color:#475467;border-bottom:1px solid #dce4ef}
+#pageRoot #grid11 col:not([class]){width:32%}
+#pageRoot #grid11 .direction-col-number{width:4%}
+#pageRoot #grid11 .direction-col-period{width:14%}
+#pageRoot #grid11 .direction-col-roles{width:20%}
+#pageRoot #grid11 .direction-col-place{width:18%}
+#pageRoot #grid11 .direction-col-actions{width:12%}
+#pageRoot #grid11>tbody>tr>td{padding:14px 10px;border-bottom:1px solid #e4eaf2;background:#fff}
+#pageRoot #grid11>tbody>tr.row-selected>td{background:#fff7e6}
+#pageRoot #grid11>tbody>tr.is-expanded>td{background:#f5f8ff}
+#pageRoot #grid11>tbody>tr.row-selected.is-expanded>td{background:#fff7e6}
+#pageRoot #grid11 tr[data-row]{scroll-margin-top:calc(var(--direction-header-height,64px) + 60px)}
+#pageRoot #grid11 [data-field=topic]>.cell__text{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden;white-space:normal;font-weight:600;line-height:1.55}
+#pageRoot #grid11 .is-expanded [data-field=topic]>.cell__text,#pageRoot #grid11 .cell--editing>.cell__text{display:block;-webkit-line-clamp:unset;overflow:visible;white-space:pre-wrap}
+#pageRoot #grid11 .row-number-actions{display:flex;justify-content:center}
+#pageRoot #grid11 .meta-hint{font-size:11px;line-height:1.4;color:#77869b;margin-top:8px}
+#pageRoot #grid11 .meta-hint .badge{white-space:normal;background:#f5f7fa;border-color:#e6ebf2;font-weight:400}
+#pageRoot #grid11 .roles-pills{display:flex;flex-wrap:wrap;gap:4px}
+#pageRoot #grid11 .direction-empty{color:#895011;background:#fff9ef;border-color:#ead5b5}
+#pageRoot #grid11 .direction-task-actions>div{display:flex;align-items:flex-start;flex-direction:column;gap:8px}
+#pageRoot #grid11 .direction-task-actions [data-sm-action]{width:auto;white-space:nowrap!important}
+#pageRoot #grid11 .direction-task-details[hidden]{display:none!important}
+#pageRoot #grid11 .direction-task-details>td{padding:16px;background:#f5f8ff}
+#pageRoot .direction-task-panels{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+#pageRoot .direction-task-field{min-width:0;background:#fff;border:1px solid #dce4ef;border-radius:12px;padding:16px}
+#pageRoot .direction-task-field h4{font-size:14px;margin:0 0 12px;color:#172840}
+#pageRoot .direction-task-field .cell,#pageRoot .direction-task-field .meta{padding:0;border:0;background:transparent}
+#pageRoot .direction-task-field .cell__text{white-space:pre-wrap;line-height:1.6;min-height:24px}
+#pageRoot .direction-task-field .cell--editing{outline:2px solid #7da5ff;outline-offset:4px}
+#pageRoot .direction-task-subfield+.direction-task-subfield{border-top:1px solid #e4eaf2;padding-top:12px;margin-top:12px}
+#pageRoot .direction-task-subfield>strong{display:block;font-size:12px;color:#64748b;margin-bottom:6px}
+#pageRoot .direction-task-footer{position:sticky;bottom:12px;z-index:8;display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:14px;background:#fff;border:1px solid #dce4ef;border-radius:12px;box-shadow:0 6px 18px #17284012;margin:14px}
+#pageRoot .direction-save-hint{flex:1 1 280px;color:#64748b;font-size:12px}
+#pageRoot .table-footer-actions [data-sm-action]{white-space:nowrap!important}
+@media(max-width:1000px){#pageRoot .table-wrap{overflow-x:auto}#pageRoot #grid11{min-width:980px}#pageRoot #grid11 thead th{top:0}#pageRoot .direction-task-panels{grid-template-columns:1fr}}
+@media print{#pageRoot .direction-task-actions,#pageRoot .table-footer-actions{display:none}#pageRoot #grid11 thead th{position:static}}
+
+/* 177: long metadata pills remain within their wider columns. */
+#pageRoot #grid11 .cell-vertical,#pageRoot #grid11 .js-period-view,#pageRoot #grid11 .roles-pills{min-width:0;max-width:100%}
+#pageRoot #grid11 .meta .badge{box-sizing:border-box;min-width:0;max-width:100%;white-space:normal;overflow-wrap:anywhere;line-height:1.4}

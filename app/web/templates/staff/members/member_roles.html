@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Роли сотрудника{% endblock %}
+{% block title %}{{ _('Роли сотрудника') }}{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', path='css/member_roles.css') }}">
@@ -12,10 +12,10 @@
       <div class="head-row">
         <div class="head-title">
           <h2>{{ m.full_name }}</h2>
-          <div class="sub">ИИН: {{ m.iin }} · Назначения в должность в администрации школы</div>
+          <div class="sub">{{ _('ИИН:') }} {{ m.iin }} {{ _('· Назначения в должность в администрации школы') }}</div>
         </div>
         <div class="head-actions">
-          <a class="btn btn--ghost" href="/staff/school">← Назад</a>
+          <a class="btn btn--ghost" href="/staff/school" data-sm-action="nav" data-sm-back="true">{{ _('← Назад') }}</a>
         </div>
       </div>
     </div>
@@ -30,16 +30,20 @@
   </div>
 
   <div class="form-actions">
-    <button class="btn btn--ghost" type="button" onclick="addRoleRow()">+ Добавить роль</button>
-    <button class="btn btn--primary" type="submit">Сохранить</button>
+    <button class="btn btn--ghost" type="button" onclick="addRoleRow()" data-sm-action="primary">{{ _('+ Добавить роль') }}</button>
+    <button class="btn btn--primary" type="submit" data-sm-action="primary">{{ _('Сохранить') }}</button>
   </div>
 </form>
   </div>
 </div>
 
 <script>
-  const ROLES = {{ responsible_roles|tojson }};
+  const ROLES = {{ staff_role_options(responsible_roles)|tojson }};
   const EXISTING = {{ member_roles|tojson }};
+
+  function escapeRoleText(value) {
+    return String(value).replace(/[&<>"']/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
+  }
 
   function roleRowHtml(idx, roleVal="", ctxVal=""){
     const options = ROLES.map(r => {
@@ -47,35 +51,7 @@
       return `<option value="${r.value}" ${sel}>${r.label_kz}</option>`;
     }).join("");
 
-    return `
-      <div class="role-row" data-idx="${idx}">
-
-        <div class="field">
-          <label>Роль</label>
-          <select class="rr-role">
-            <option value="">— выбери —</option>
-            ${options}
-          </select>
-        </div>
-
-        <div class="field">
-          <label>Контекст</label>
-          <input class="rr-context"
-                value="${ctxVal || ""}"
-                placeholder="Напр: 1 смена / МО математики">
-        </div>
-
-        <div class="field">
-          <label>&nbsp;</label>
-          <button type="button"
-              class="btn btn--danger btn--sm"
-              onclick="removeRoleRow(${idx})">
-            Удалить
-          </button>
-        </div>
-
-      </div>
-`   ;
+    return window.SchoolMonitorI18n.t("st_874a9eb095ab", {p0: (idx), p1: (options), p2: (escapeRoleText(ctxVal || "")), p3: (idx)})   ;
   }
 
   function addRoleRow(roleVal="", ctxVal=""){

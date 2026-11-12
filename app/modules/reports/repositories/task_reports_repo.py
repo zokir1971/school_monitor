@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from app.modules.reports.repositories.execution_repo import ExecutionRepo
 from sqlalchemy.orm import selectinload
 
 from app.modules.planning.models_month_plan import (
@@ -108,32 +109,7 @@ class TaskReportsRepo:
 
         return await db.scalar(stmt)
 
-    @classmethod
-    async def get_execution_data_with_selected_reports(
-            cls,
-            db: AsyncSession,
-            *,
-            month_item_id: int,
-    ) -> TaskExecutionData | None:
-        """
-        Получить execution_data вместе с выбранными отчетами.
-
-        Нужен для промежуточной страницы:
-        - какие отчеты выбрал исполнитель;
-        - для какого объекта/учителя/класса каждый отчет.
-        """
-
-        stmt = (
-            select(TaskExecutionData)
-            .where(TaskExecutionData.month_item_id == month_item_id)
-            .options(
-                selectinload(TaskExecutionData.selected_reports).selectinload(
-                    TaskExecutionSelectedReport.report_type
-                )
-            )
-        )
-
-        return await db.scalar(stmt)
+    get_execution_data_with_selected_reports = ExecutionRepo.get_execution_data_for_task
 
     @classmethod
     async def list_review_places(

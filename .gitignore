@@ -96,3 +96,23 @@ alembic/versions/__pycache__/
 
 /backups/
 nohup.out
+
+# =========================
+# Local installer backups (project root only)
+# =========================
+/backup_*
+
+# Source-collection and update archives (project root only)
+/assessment_review_session*.zip
+/access_recovery_sources_*.zip
+/school_monitor_*_sources_*.zip
+/school_monitor_*_stage*.zip
+
+# Local database exports and migration previews
+/*.dump
+/migration_preview.sql
+
+# Editor/patch backup files; not application sources
+*.bak
+*.orig
+*.rej

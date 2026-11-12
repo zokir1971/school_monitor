@@ -27,3 +27,10 @@ class ReportTypeRepo:
             for report_type_id, code in rows.all()
             if code
         }
+
+
+    @staticmethod
+    async def get_labels(db: AsyncSession) -> dict:
+        rows = (await db.execute(select(ReportTypeModel.code,ReportTypeModel.name_ru,ReportTypeModel.name_kz))).all()
+        return {str(row.code):dict(ru=row.name_ru or row.name_kz or row.code,
+                                 kk=row.name_kz or row.name_ru or row.code) for row in rows if row.code}

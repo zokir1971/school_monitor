@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Планирование ВШК — Конструктор{% endblock %}
+{% block title %}{{ _('Планирование ВШК — Конструктор') }}{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', path='css/planning_edit.css') }}">
@@ -7,21 +7,21 @@
 
 
 {% block content %}
-<h2>Конструктор шаблона ВШК (1 docx = 2 таблицы)</h2>
+<h2>{{ _('Конструктор шаблона ВШК (1 docx = 2 таблицы)') }}</h2>
 
 {% if error %}
-  <div class="alert alert--error">{{ error }}</div>
+  <div class="alert alert--error">{{ super_planning_message(error) }}</div>
 {% endif %}
 {% if success %}
-  <div class="alert">{{ success }}</div>
+  <div class="alert">{{ super_planning_message(success) }}</div>
 {% endif %}
 
 <form method="get" action="/planning/super/builder" class="card" style="padding:12px; margin-bottom:16px;">
   <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:end;">
     <div>
-      <label>Шаблон (учебный год)</label><br>
+      <label>{{ _('Шаблон (учебный год)') }}</label><br>
       <select name="template_id" required>
-        <option value="">— выберите —</option>
+        <option value="">{{ _('— выберите —') }}</option>
         {% for t in templates %}
           <option value="{{ t.id }}" {% if selected_template_id == t.id %}selected{% endif %}>
             {{ t.name }}{% if t.academic_year %} ({{ t.academic_year }}){% endif %}{% if t.is_active %} ★{% endif %}
@@ -31,9 +31,9 @@
     </div>
 
     <div>
-      <label>Направление</label><br>
+      <label>{{ _('Направление') }}</label><br>
       <select name="direction_id" required>
-        <option value="">— выберите —</option>
+        <option value="">{{ _('— выберите —') }}</option>
         {% for d in directions %}
           <option value="{{ d.id }}" {% if selected_direction_id == d.id %}selected{% endif %}>
             {{ d.short_title }}
@@ -43,7 +43,7 @@
     </div>
 
     <div>
-      <button class="btn btn--primary" type="submit">Открыть</button>
+      <button class="btn btn--primary" type="submit" data-sm-action="nav">{{ _('Открыть') }}</button>
     </div>
   </div>
 </form>
@@ -56,22 +56,22 @@
 
     <div style="display:flex; gap:12px; align-items:end; flex-wrap:wrap;">
       <div>
-        <label>.docx (таблица 1 = объекты, таблица 2 = задачи)</label><br>
+        <label>{{ _('.docx (таблица 1 = объекты, таблица 2 = задачи)') }}</label><br>
         <input type="file" name="file" accept=".docx" required>
       </div>
       <div>
-        <button class="btn btn--primary" type="submit">Импортировать (REPLACE)</button>
+        <button class="btn btn--primary" type="submit" data-sm-action="primary">{{ _('Импортировать (REPLACE)') }}</button>
       </div>
     </div>
     <p style="margin-top:10px; font-size:13px; opacity:.8;">
-      Внимание: импорт удалит старые строки таблиц №+3 и №+10 для выбранного направления и загрузит новые.
+      {{ _('Внимание: импорт удалит старые строки таблиц №+3 и №+10 для выбранного направления и загрузит новые.') }}
     </p>
   </form>
 
 <div class="card" style="margin-bottom:15px;">
   <div class="card__inner">
     <h2 style="margin:0;">
-      План ВШК —
+      {{ _('План ВШК —') }}
       {% if selected_template %}
         {{ selected_template.academic_year }}
       {% endif %}
@@ -85,16 +85,16 @@
   </div>
 </div>
 
-  <h3>Таблица 1: Объекты контроля </h3>
+  <h3>{{ _('Таблица 1: Объекты контроля') }} </h3>
 
 <table border="1" class="table" style="width:100%; margin-bottom:18px;">
   <thead>
     <tr>
       <th style="width:50px;">№</th>
-      <th>Бақылау нысаны</th>
-      <th>Мәселелер, тәуекелдер</th>
-      <th>Басқарушылық шешімдердің нұсқалары</th>
-      <th style="width:110px;">Действия</th>
+      <th>{{ _('Бақылау нысаны') }}</th>
+      <th>{{ _('Мәселелер, тәуекелдер') }}</th>
+      <th>{{ _('Басқарушылық шешімдердің нұсқалары') }}</th>
+      <th style="width:110px;">{{ _('Действия') }}</th>
     </tr>
   </thead>
 
@@ -108,10 +108,10 @@
         <td>
           <form method="post"
                 action="/planning/super/builder/rows4/{{ r.id }}/delete"
-                onsubmit="return confirm('Удалить строку?');">
+                onsubmit="return confirm({{ _('Удалить строку?')|tojson|forceescape }});">
             <input type="hidden" name="template_id" value="{{ selected_template_id }}">
             <input type="hidden" name="direction_id" value="{{ selected_direction_id }}">
-            <button class="btn btn--primary" type="submit">Удалить</button>
+            <button class="btn btn--primary" type="submit" data-sm-action="danger">{{ _('Удалить') }}</button>
           </form>
         </td>
       </tr>
@@ -125,16 +125,16 @@
 
         <td>+</td>
         <td>
-          <input type="text" name="control_object" placeholder="Бақылау нысаны" required style="width:100%;">
+          <input type="text" name="control_object" placeholder="{{ _('Бақылау нысаны') }}" required style="width:100%;">
         </td>
         <td>
-          <input type="text" name="risk_text" placeholder="Мәселелер, тәуекелдер" style="width:100%;">
+          <input type="text" name="risk_text" placeholder="{{ _('Мәселелер, тәуекелдер') }}" style="width:100%;">
         </td>
         <td>
-          <input type="text" name="decision_text" placeholder="Басқарушылық шешімдер" style="width:100%;">
+          <input type="text" name="decision_text" placeholder="{{ _('Басқарушылық шешімдер') }}" style="width:100%;">
         </td>
         <td>
-          <button class="btn btn--primary" type="submit">Добавить</button>
+          <button class="btn btn--primary" type="submit" data-sm-action="primary">{{ _('Добавить') }}</button>
         </td>
       </form>
     </tr>
@@ -143,23 +143,23 @@
 </table>
 
 
-<h3>Таблица 2: Задачи (Row11)</h3>
+<h3>{{ _('Таблица 2: Задачи (Row11)') }}</h3>
 
 <table border="1" class="table" style="width:100%;">
   <thead>
     <tr>
       <th style="width:50px;">№</th>
-      <th>Бақылау тақырыбы</th>
-      <th>Бақылау мақсаты</th>
-      <th>Бақылау нысаны</th>
-      <th>Бақылау түрі</th>
-      <th>Бақылау әдісі</th>
-      <th>Орындау мерзімі</th>
-      <th>Жауаптылар</th>
-      <th>Қарау орны</th>
-      <th>Басқарушылық шешім</th>
-      <th>2 - Бақылау</th>
-      <th style="width:110px;">Әрекет</th>
+      <th>{{ _('Бақылау тақырыбы') }}</th>
+      <th>{{ _('Бақылау мақсаты') }}</th>
+      <th>{{ _('Бақылау нысаны') }}</th>
+      <th>{{ _('Бақылау түрі') }}</th>
+      <th>{{ _('Бақылау әдісі') }}</th>
+      <th>{{ _('Орындау мерзімі') }}</th>
+      <th>{{ _('Жауаптылар') }}</th>
+      <th>{{ _('Қарау орны') }}</th>
+      <th>{{ _('Басқарушылық шешім') }}</th>
+      <th>{{ _('2 - Бақылау') }}</th>
+      <th style="width:110px;">{{ _('Әрекет') }}</th>
     </tr>
   </thead>
 
@@ -180,10 +180,10 @@
         <td>
           <form method="post"
                 action="/planning/super/builder/rows11/{{ r.id }}/delete"
-                onsubmit="return confirm('Удалить строку?');">
+                onsubmit="return confirm({{ _('Удалить строку?')|tojson|forceescape }});">
             <input type="hidden" name="template_id" value="{{ selected_template_id }}">
             <input type="hidden" name="direction_id" value="{{ selected_direction_id }}">
-            <button class="btn btn--primary" type="submit">Удалить</button>
+            <button class="btn btn--primary" type="submit" data-sm-action="danger">{{ _('Удалить') }}</button>
           </form>
         </td>
       </tr>
@@ -196,18 +196,18 @@
         <input type="hidden" name="direction_id" value="{{ selected_direction_id }}">
 
         <td>+</td>
-        <td><input name="topic" required style="width:100%;" placeholder="Бақылау тақырыбы"></td>
-        <td><input name="goal" style="width:100%;" placeholder="Бақылау мақсаты"></td>
-        <td><input name="control_object" style="width:100%;" placeholder="Бақылау нысаны"></td>
-        <td><input name="control_type" style="width:100%;" placeholder="Бақылау түрі"></td>
-        <td><input name="methods" style="width:100%;" placeholder="Бақылау әдісі"></td>
-        <td><input name="deadlines" style="width:100%;" placeholder="Орындау мерзімі"></td>
-        <td><input name="responsibles" style="width:100%;" placeholder="Жауаптылар"></td>
-        <td><input name="review_place" style="width:100%;" placeholder="Қарау орны"></td>
-        <td><input name="management_decision" style="width:100%;" placeholder="Басқарушылық шешім"></td>
-        <td><input name="second_control" style="width:100%;" placeholder="2-Бақылау"></td>
+        <td><input name="topic" required style="width:100%;" placeholder="{{ _('Бақылау тақырыбы') }}"></td>
+        <td><input name="goal" style="width:100%;" placeholder="{{ _('Бақылау мақсаты') }}"></td>
+        <td><input name="control_object" style="width:100%;" placeholder="{{ _('Бақылау нысаны') }}"></td>
+        <td><input name="control_type" style="width:100%;" placeholder="{{ _('Бақылау түрі') }}"></td>
+        <td><input name="methods" style="width:100%;" placeholder="{{ _('Бақылау әдісі') }}"></td>
+        <td><input name="deadlines" style="width:100%;" placeholder="{{ _('Орындау мерзімі') }}"></td>
+        <td><input name="responsibles" style="width:100%;" placeholder="{{ _('Жауаптылар') }}"></td>
+        <td><input name="review_place" style="width:100%;" placeholder="{{ _('Қарау орны') }}"></td>
+        <td><input name="management_decision" style="width:100%;" placeholder="{{ _('Басқарушылық шешім') }}"></td>
+        <td><input name="second_control" style="width:100%;" placeholder="{{ _('2-Бақылау') }}"></td>
         <td>
-          <button class="btn btn--primary" type="submit">Добавить</button>
+          <button class="btn btn--primary" type="submit" data-sm-action="primary">{{ _('Добавить') }}</button>
         </td>
       </form>
     </tr>

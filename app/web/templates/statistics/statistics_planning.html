@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Статистика планирования ВШК{% endblock %}
+{% block title %}{{ _('Статистика планирования ВШК') }}{% endblock %}
 {% block extra_css %}
 <style>
   html {
@@ -466,23 +466,23 @@
 
     <div class="stats-hero">
       <div class="stats-hero__left">
-        <h1 class="stats-hero__title">Статистика планирования ВШК</h1>
+        <h1 class="stats-hero__title">{{ _('Статистика планирования ВШК') }}</h1>
         <div class="stats-hero__meta">
           <div class="stats-hero__school">{{ school_name }}</div>
-          <div class="stats-hero__year">{{ academic_year }} Учебный год</div>
+          <div class="stats-hero__year">{{ academic_year }} {{ _('Учебный год') }}</div>
         </div>
         <div class="stats-actions">
           <a
             class="stats-nav-link"
             href="{{ url_for('school_execution_statistics_page') }}"
-          >
-            📊 Статистика выполнения
+           data-sm-action="nav">
+            {{ _('📊 Статистика выполнения') }}
           </a>
         </div>
       </div>
 
       <div class="stats-total-card">
-        <div class="stats-total-card__label">Всего запланировано задач</div>
+        <div class="stats-total-card__label">{{ _('Всего запланировано задач') }}</div>
         <div class="stats-total-card__value">{{ total_planned_count }}</div>
       </div>
     </div>
@@ -491,9 +491,9 @@
       <div class="stats-info-card">
         <div class="stats-info-card__icon">📅</div>
         <div class="stats-info-card__body">
-          <div class="stats-info-card__title">Периоды</div>
+          <div class="stats-info-card__title">{{ _('Периоды') }}</div>
           <div class="stats-info-card__desc">
-            Анализ распределения задач по типам периодов
+            {{ _('Анализ распределения задач по типам периодов') }}
           </div>
         </div>
       </div>
@@ -501,9 +501,9 @@
       <div class="stats-info-card">
         <div class="stats-info-card__icon">📊</div>
         <div class="stats-info-card__body">
-          <div class="stats-info-card__title">Нагрузка</div>
+          <div class="stats-info-card__title">{{ _('Нагрузка') }}</div>
           <div class="stats-info-card__desc">
-            Расчетное количество задач по направлениям
+            {{ _('Расчетное количество задач по направлениям') }}
           </div>
         </div>
       </div>
@@ -511,9 +511,9 @@
 
     <section class="stats-section">
       <div class="stats-section__head">
-        <h2 class="stats-section__title">Структура плана по периодам</h2>
+        <h2 class="stats-section__title">{{ _('Структура плана по периодам') }}</h2>
         <div class="stats-section__sub">
-          Сколько строк плана относится к каждому типу периода
+          {{ _('Сколько строк плана относится к каждому типу периода') }}
         </div>
       </div>
 
@@ -522,12 +522,12 @@
           <table class="stats-table">
             <thead>
               <tr>
-                <th>Направление</th>
-                <th class="ta-center">Нақты көрсетілген ай</th>
-                <th class="ta-center">Бір неше ай</th>
-                <th class="ta-center">Айсайын</th>
-                <th class="ta-center">Тоқсан сайын</th>
-                <th class="ta-center">Жыл бойы</th>
+                <th>{{ _('Направление') }}</th>
+                <th class="ta-center">{{ _('Нақты көрсетілген ай') }}</th>
+                <th class="ta-center">{{ _('Бір неше ай') }}</th>
+                <th class="ta-center">{{ _('Айсайын') }}</th>
+                <th class="ta-center">{{ _('Тоқсан сайын') }}</th>
+                <th class="ta-center">{{ _('Жыл бойы') }}</th>
               </tr>
             </thead>
             <tbody>
@@ -549,9 +549,9 @@
 
     <section class="stats-section">
       <div class="stats-section__head">
-        <h2 class="stats-section__title">Планируемое количество задач по направлениям</h2>
+        <h2 class="stats-section__title">{{ _('Планируемое количество задач по направлениям') }}</h2>
         <div class="stats-section__sub">
-          Итоговый расчет нагрузки по правилам периодичности
+          {{ _('Итоговый расчет нагрузки по правилам периодичности') }}
         </div>
       </div>
 
@@ -560,9 +560,9 @@
           <table class="stats-table">
             <thead>
               <tr>
-                <th>Направление</th>
-                <th class="ta-center stats-table__planned-col">Количество задач</th>
-                <th>Визуальный индикатор</th>
+                <th>{{ _('Направление') }}</th>
+                <th class="ta-center stats-table__planned-col">{{ _('Количество задач') }}</th>
+                <th>{{ _('Визуальный индикатор') }}</th>
               </tr>
             </thead>
             <tbody>
@@ -587,16 +587,16 @@
     </section>
     <section class="stats-section">
       <div class="stats-section__head">
-        <h2 class="stats-section__title">Статистика мест рассмотрения по направлениям</h2>
+        <h2 class="stats-section__title">{{ _('Статистика мест рассмотрения по направлениям') }}</h2>
         <div class="stats-section__sub">
-          Итоговый расчет нагрузки по правилам мест рассмотрения выполненных задач
+          {{ _('Итоговый расчет нагрузки по правилам мест рассмотрения выполненных задач') }}
         </div>
       </div>
 
       <div class="stats-card">
         <div class="table-wrap">
           <div class="chart-block">
-            <h3>Диаграмма распределения мест рассмотрения</h3>
+            <h3>{{ _('Диаграмма распределения мест рассмотрения') }}</h3>
             <div class="chart-canvas-wrap">
               <canvas id="reviewPlaceChart"></canvas>
             </div>
@@ -605,13 +605,13 @@
           <table class="stats-table">
             <thead>
     <tr>
-      <th>Направление</th>
-      <th>Пед.кеңес</th>
-      <th>Әд.кеңес</th>
-      <th>ДЖ.кеңес</th>
-      <th>Әк.кеңес</th>
-      <th>ӘБ.отырысы</th>
-      <th>Итого</th>
+      <th>{{ _('Направление') }}</th>
+      <th>{{ _('Пед.кеңес') }}</th>
+      <th>{{ _('Әд.кеңес') }}</th>
+      <th>{{ _('ДЖ.кеңес') }}</th>
+      <th>{{ _('Әк.кеңес') }}</th>
+      <th>{{ _('ӘБ.отырысы') }}</th>
+      <th>{{ _('Итого') }}</th>
     </tr>
   </thead>
   <tbody>
@@ -629,7 +629,7 @@
   </tbody>
   <tfoot>
 <tr>
-  <th>Итого</th>
+  <th>{{ _('Итого') }}</th>
   <th>{{ review_place_totals.ped_council_count }}</th>
   <th>{{ review_place_totals.method_council_count }}</th>
   <th>{{ review_place_totals.director_council_count }}</th>
@@ -646,28 +646,28 @@
     <div class="card card--large stats-section-card">
   <div class="section-head">
     <div>
-      <h3 class="section-title">Контроль совпадений по направлениям</h3>
+      <h3 class="section-title">{{ _('Контроль совпадений по направлениям') }}</h3>
       <div class="section-sub">
-        Проверка соответствия количества задач по периодам и местам рассмотрения
+        {{ _('Проверка соответствия количества задач по периодам и местам рассмотрения') }}
       </div>
     </div>
   </div>
 
   <div class="comparison-summary">
     <div class="comparison-summary__item">
-      <span class="comparison-summary__label">Всего направлений</span>
+      <span class="comparison-summary__label">{{ _('Всего направлений') }}</span>
       <span class="comparison-summary__value">{{ comparison_summary.total_directions }}</span>
     </div>
 
     <div class="comparison-summary__item">
-      <span class="comparison-summary__label">Совпадает</span>
+      <span class="comparison-summary__label">{{ _('Совпадает') }}</span>
       <span class="comparison-summary__value comparison-summary__value--ok">
         {{ comparison_summary.matched_count }}
       </span>
     </div>
 
     <div class="comparison-summary__item">
-      <span class="comparison-summary__label">Не совпадает</span>
+      <span class="comparison-summary__label">{{ _('Не совпадает') }}</span>
       <span class="comparison-summary__value comparison-summary__value--bad">
         {{ comparison_summary.mismatched_count }}
       </span>
@@ -678,12 +678,12 @@
     <table class="plan stats-table">
       <thead>
         <tr>
-          <th>Направление</th>
-          <th class="center nowrap">По периодам</th>
-          <th class="center nowrap">По плану</th>
-          <th class="center nowrap">По местам рассмотрения</th>
-          <th class="center nowrap">Разница</th>
-          <th class="center nowrap">Статус</th>
+          <th>{{ _('Направление') }}</th>
+          <th class="center nowrap">{{ _('По периодам') }}</th>
+          <th class="center nowrap">{{ _('По плану') }}</th>
+          <th class="center nowrap">{{ _('По местам рассмотрения') }}</th>
+          <th class="center nowrap">{{ _('Разница') }}</th>
+          <th class="center nowrap">{{ _('Статус') }}</th>
         </tr>
       </thead>
       <tbody>
@@ -709,9 +709,9 @@
 
           <td class="center">
             {% if item.is_match %}
-              <span class="status-badge status-badge--ok">Совпадает</span>
+              <span class="status-badge status-badge--ok">{{ _('Совпадает') }}</span>
             {% else %}
-              <span class="status-badge status-badge--bad">Не совпадает</span>
+              <span class="status-badge status-badge--bad">{{ _('Не совпадает') }}</span>
             {% endif %}
           </td>
         </tr>
@@ -733,14 +733,14 @@ new Chart(document.getElementById("reviewPlaceChart"), {
   type: "bar",
   data: {
     labels: [
-      "Пед.кеңес",
-      "Әд.кеңес",
-      "ДЖ.кеңес",
-      "Әк.кеңес",
-      "ӘБ.отырысы"
+      {{ _('Пед.кеңес')|tojson }},
+      {{ _('Әд.кеңес')|tojson }},
+      {{ _('ДЖ.кеңес')|tojson }},
+      {{ _('Әк.кеңес')|tojson }},
+      {{ _('ӘБ.отырысы')|tojson }}
     ],
     datasets: [{
-      label: "Количество задач",
+      label: {{ _('Количество задач')|tojson }},
       data: [
         reviewPlaceData.ped_council_count,
         reviewPlaceData.method_council_count,

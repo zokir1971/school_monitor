@@ -78,7 +78,7 @@ async def _guard_plan_edit(
         raise HTTPException(
             status_code=409,
             detail=(
-                "Мұрағатталған ВШК жоспарын "
+                "Мұрағатталған МІБ жоспарын "
                 "өзгертуге болмайды."
             ),
         )
@@ -897,7 +897,7 @@ class SchoolRowsService:
             raise HTTPException(
                 status_code=409,
                 detail=(
-                    "Мұрағатталған ВШК жоспарына "
+                    "Мұрағатталған МІБ жоспарына "
                     "жаңа жол қосуға болмайды."
                 ),
             )

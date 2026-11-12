@@ -1,9 +1,9 @@
 {% extends "base.html" %}
-{% block title %}Шаблон ВШК{% endblock %}
+{% block title %}{{ _('Шаблон ВШК') }}{% endblock %}
 
 {% block content %}
 
-<h2>Шаблон ВШК</h2>
+<h2>{{ _('Шаблон ВШК') }}</h2>
 
 {# --- Выбор шаблона (если используешь) --- #}
 {% if selected_direction and templates and templates|length > 0 %}
@@ -16,7 +16,7 @@
         </option>
       {% endfor %}
     </select>
-    <button class="btn btn--primary">Открыть</button>
+    <button class="btn btn--primary" data-sm-action="nav">Открыть</button>
   </form>
   <hr>
 {% endif %}
@@ -45,7 +45,7 @@
     <input type="hidden" name="direction_id" value="{{ selected_direction_id }}">
     <input name="name" placeholder="Название шаблона" required>
     <input name="academic_year" placeholder="Напр. 2026-2027">
-    <button class="btn btn--primary" style="margin-top:10px;">Создать</button>
+    <button class="btn btn--primary" style="margin-top:10px;" data-sm-action="primary">Создать</button>
   </form>
 
 {% endif %}
@@ -90,7 +90,7 @@
                 <form method="post" action="/planning/super/templates4/items/{{ item.id }}/delete">
                   <input type="hidden" name="direction_id" value="{{ selected_direction_id }}">
                   <input type="hidden" name="template_id" value="{{ selected_template_id }}">
-                  <button class="btn">Удалить</button>
+                  <button class="btn" data-sm-action="danger">Удалить</button>
                 </form>
               </td>
             </tr>
@@ -112,7 +112,7 @@
       <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:10px;">
         <label style="opacity:.8;">№ (реті):</label>
         <input name="sort_order" type="number" value="1" min="1" style="width:90px;">
-        <button class="btn btn--primary">Қосу</button>
+        <button class="btn btn--primary" data-sm-action="primary">Қосу</button>
       </div>
       <div>DEBUG section.id={{ section.id }} direction={{ selected_direction_id }}</div>
 
@@ -128,7 +128,7 @@
     <input type="hidden" name="direction_id" value="{{ selected_direction_id }}">
     <input type="hidden" name="template_id" value="{{ selected_template_id }}">
     <input type="file" name="file" accept=".docx" required>
-    <button class="btn btn--primary">Импорт</button>
+    <button class="btn btn--primary" data-sm-action="primary">Импорт</button>
   </form>
 
 {% endif %}

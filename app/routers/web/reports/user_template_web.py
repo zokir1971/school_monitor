@@ -1,7 +1,7 @@
 # app/routers/web/reports/user_template_web.py
 from urllib.parse import urlencode
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Request, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -64,11 +64,14 @@ async def create_template_page(request: Request):
         - UserReportTemplate.schema_json.
         """
 
-    page_context = UserReportTemplateService.get_constructor_page_context(
-        report_code=request.query_params.get("report_code"),
-        month_item_id=request.query_params.get("month_item_id"),
-        selected_report_id=request.query_params.get("selected_report_id"),
-    )
+    try:
+        page_context = UserReportTemplateService.get_constructor_page_context(
+            report_code=request.query_params.get("report_code"),
+            month_item_id=request.query_params.get("month_item_id"),
+            selected_report_id=request.query_params.get("selected_report_id"),
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     return render(
         templates,
@@ -106,14 +109,17 @@ async def create_template(
     """
     form = await request.form()
 
-    await UserReportTemplateService.create_my_template(
-        db,
-        owner_user_id=user.id,
-        report_code=form.get("report_code"),
-        title=form.get("title"),
-        description=form.get("description"),
-        schema_json=form.get("schema_json"),
-    )
+    try:
+        await UserReportTemplateService.create_my_template(
+            db,
+            owner_user_id=user.id,
+            report_code=form.get("report_code"),
+            title=form.get("title"),
+            description=form.get("description"),
+            schema_json=form.get("schema_json"),
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     month_item_id = form.get("context_month_item_id")
     selected_report_id = form.get("context_selected_report_id")

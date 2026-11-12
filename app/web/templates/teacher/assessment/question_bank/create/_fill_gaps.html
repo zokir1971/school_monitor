@@ -1,0 +1,269 @@
+<!-- =============================================
+     FILL GAPS
+     ============================================= -->
+
+<div
+  id="fill-gaps-fields"
+  class="qb-answer-builder"
+  data-question-fields="fill_gaps"
+  hidden
+>
+
+  <div class="qb-answer-builder__header">
+    <h3>
+      {{ _('Бос орындарды толтыру') }}
+    </h3>
+
+    <p>
+      {{ _('Дұрыс жауап болатын сөздерді немесе сөз тіркестерін') }}
+      <strong>{{ _('[[қос жақша]]') }}</strong>
+      {{ _('ішінде жазыңыз.') }}
+    </p>
+  </div>
+
+
+  <!-- ===========================================
+       INPUT MODE
+       =========================================== -->
+
+  <div class="qb-form-group">
+
+    <label class="qb-form-label">
+      {{ _('Жауап беру тәсілі') }}
+    </label>
+
+    <div class="qb-fill-mode-grid">
+
+      <label class="qb-fill-mode-card">
+
+        <input
+          type="radio"
+          name="fill_gaps_mode"
+          value="text_input"
+          data-type-input
+          checked
+          disabled
+        >
+
+        <span class="qb-fill-mode-card__body">
+
+          <strong>
+            {{ _('Жауапты өзі енгізеді') }}
+          </strong>
+
+          <span>
+            {{ _('Оқушы бос орынға жауапты пернетақта арқылы енгізеді.') }}
+          </span>
+
+        </span>
+
+      </label>
+
+
+      <label class="qb-fill-mode-card">
+
+        <input
+          type="radio"
+          name="fill_gaps_mode"
+          value="word_bank"
+          data-type-input
+          disabled
+        >
+
+        <span class="qb-fill-mode-card__body">
+
+          <strong>
+            {{ _('Выбор из банка ответов') }}
+          </strong>
+
+          <span>
+            {{ _('Оқушы дайын нұсқалардың ішінен жауапты таңдайды.') }}
+          </span>
+
+        </span>
+
+      </label>
+
+    </div>
+
+  </div>
+
+
+  <!-- ===========================================
+       SOURCE TEXT
+       =========================================== -->
+
+  <div class="qb-form-group">
+
+    <label
+      class="qb-form-label"
+      for="fill_gaps_text"
+    >
+      {{ _('Мәтін және дұрыс жауаптар') }}
+    </label>
+
+    <textarea
+      id="fill_gaps_text"
+      name="fill_gaps_text"
+      class="qb-form-control qb-fill-source"
+      rows="5"
+      data-type-input
+      disabled
+      placeholder="{{ _('Мысалы: Процессор [[ақпаратты өңдейді]], ал жедел жады [[ақпаратты уақытша сақтайды]].') }}"
+    ></textarea>
+
+    <div class="qb-form-hint">
+      {{ _('Әр бос орынның дұрыс жауабын') }}
+      <strong>[[ ]]</strong>
+      {{ _('белгісінің арасына жазыңыз.') }}
+    </div>
+
+  </div>
+
+
+  <!-- ===========================================
+       PREVIEW
+       =========================================== -->
+
+  <div
+    id="fill-gaps-preview-section"
+    class="qb-fill-preview-section"
+    hidden
+  >
+
+    <div class="qb-form-label">
+      {{ _('Оқушыға көрсетілетін мәтін') }}
+    </div>
+
+    <div
+      id="fill-gaps-preview"
+      class="qb-fill-preview"
+    ></div>
+
+  </div>
+
+
+  <!-- ===========================================
+       GAP SETTINGS
+       =========================================== -->
+
+  <div
+    id="fill-gaps-settings"
+    class="qb-fill-gap-settings"
+  ></div>
+
+
+  <!-- ===========================================
+       WORD BANK
+       =========================================== -->
+
+  <div
+    id="fill-word-bank-section"
+    class="qb-fill-word-bank"
+    hidden
+  >
+
+    <div class="qb-form-group">
+
+      <label class="qb-form-label">
+        {{ _('Қосымша жауап нұсқалары') }}
+      </label>
+
+      <div class="qb-form-hint">
+        {{ _('Дұрыс жауаптар сөздер банкіне автоматты түрде қосылады. Мұнда тек қосымша қате немесе алаңдатушы нұсқаларды енгізіңіз.') }}
+      </div>
+
+
+      <div
+        id="fill-word-bank-container"
+        class="qb-fill-word-bank__items"
+      >
+
+        <div
+          class="qb-short-answer-row"
+          data-fill-word-row
+        >
+
+          <input
+            type="text"
+            name="fill_word_bank"
+            class="qb-form-control"
+            placeholder="{{ _('Қосымша нұсқа') }}"
+            data-type-input
+            disabled
+          >
+
+          <button
+            type="button"
+            class="qb-remove-answer"
+            data-remove-fill-word
+            hidden
+            aria-label="{{ _('Нұсқаны жою') }}"
+           data-sm-action="danger" data-sm-icon="true">
+            ×
+          </button>
+
+        </div>
+
+      </div>
+
+
+      <button
+        type="button"
+        id="add-fill-word"
+        class="qb-add-answer"
+       data-sm-action="primary">
+        {{ _('+ Нұсқа қосу') }}
+      </button>
+
+    </div>
+
+  </div>
+
+  <div data-rich-bank-panel hidden data-fg-labels="{{ dict(bank=_('Банк ответов'), answers=_('Правильные ответы для пропусков'), preview=_('Текст с правильными ответами'), choose=_('Выберите ответ'), alternative=_('Можно выбрать несколько равнозначных ответов.'), distractor=_('Отвлекающий вариант'), correct=_('Правильный для пропусков'), variant=_('Вариант'), missing=_('Ответ не выбран'), instruction=_('Обозначьте пропуски как [[1]], [[2]], … и выберите правильные ответы ниже.')) | tojson | forceescape }}" data-fg-media-url="{{ url_for('teacher_question_bank_media_view') }}">
+    <h4>{{ _('Правильные ответы для пропусков') }}</h4>
+    <p>{{ _('Можно выбрать несколько равнозначных ответов.') }}</p>
+    <div data-fg-pickers></div>
+    <h4>{{ _('Текст с правильными ответами') }}</h4>
+    <div data-fg-filled class="qb-fg-preview"></div>
+    <h4>{{ _('Банк ответов') }}</h4>
+
+    <div data-rich-bank-rows></div>
+    <button type="button" data-rich-bank-add data-sm-action="primary">{{ _('+ Нұсқа / Добавить вариант') }}</button>
+    <p data-rich-bank-status role="status" aria-live="polite"></p>
+  </div>
+  <input type="hidden" name="fill_gaps_rich_payload" data-rich-bank-payload disabled>
+  <template data-rich-bank-template>
+    <section data-rich-bank-row style="border:1px solid #eaecf0;border-radius:8px;padding:12px;margin:10px 0;">
+      <div style="display:flex;justify-content:space-between;gap:8px;">
+        <strong data-bank-label></strong><button type="button" data-bank-remove data-sm-action="danger">{{ _('Жою / Удалить') }}</button>
+      </div>
+      <div class="qb-rich-editor" data-rich-editor>
+        <div class="qb-rich-editor__toolbar"><button type="button" data-rich-add-math data-sm-action="nav">{{ _('+ Формула / символ') }}</button></div>
+        <div class="qb-rich-editor__content" data-rich-content contenteditable="true" role="textbox" aria-label="{{ _('Вариант ответа') }}" aria-multiline="true"></div>
+        <input type="hidden" data-rich-plain-value><input type="hidden" data-rich-segments>
+      </div>
+      <p data-bank-gaps role="status"></p>
+    </section>
+  </template>
+  <style>
+    .qb-fg-preview {white-space:pre-wrap;line-height:1.8;padding:12px;border:1px solid #d0d5dd;border-radius:8px;background:#f8fafc;overflow-x:auto;min-width:0}
+    .qb-fg-picker {border:1px solid #d0d5dd;border-radius:8px;padding:10px;margin:8px 0;min-width:0}
+    .qb-fg-picker summary {cursor:pointer;display:flex;gap:10px;align-items:center;overflow-x:auto}
+    .qb-fg-picker summary::after {content:"▾";margin-left:auto;color:#2563eb}
+    .qb-fg-picker summary math-field,.qb-fg-option math-field {pointer-events:none}
+    .qb-fg-option {display:flex;gap:10px;align-items:center;padding:8px;border-bottom:1px solid #eaecf0;min-width:0}
+    .qb-fg-option > span {overflow-x:auto;min-width:0}
+    [data-rich-bank-panel] math-field[read-only] {border:0;background:transparent;vertical-align:middle;max-width:none;overflow:visible;padding:0}
+    #fill-gaps-fields[data-rich-bank-active="true"] #fill-gaps-preview-section,
+    #fill-gaps-fields[data-rich-bank-active="true"] .qb-form-group:has(#fill_gaps_text) .qb-form-hint {display:none}
+
+    #fill-gaps-fields[data-rich-bank-active="true"] #fill-gaps-settings,
+    #fill-gaps-fields[data-rich-bank-active="true"] #fill-word-bank-section {display:none !important;}
+    #fill-gaps-fields [data-rich-bank-panel][hidden] {display:none !important;}
+    #fill-gaps-fields [data-bank-gaps] label {display:inline-flex;gap:5px;align-items:center;margin:8px 14px 0 0;}
+  </style>
+  <script defer src="{{ url_for('static', path='js/teacher/assessment/question_bank/fill_gaps_rich_bank.js') }}?v=63"></script>
+  <p data-rich-bank-supported="true" data-fill-score-status role="status" aria-live="polite" style="margin-top:12px;"></p>
+</div>
+<script defer src="{{ url_for('static', path='js/teacher/assessment/question_bank/fill_gaps_score_editor.js') }}?v=63"></script>

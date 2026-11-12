@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Проверка тетрадей{% endblock %}
+{% block title %}{{ _('Проверка тетрадей') }}{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', path='css/template_report.css') }}">
@@ -10,18 +10,18 @@
 
 <div class="page-header">
   <div>
-    <h2>{{ document.report_label if document else "Проверка тетрадей" }}</h2>
-    <div class="muted">Заполнение отчета</div>
+    <h2>{{ _(document.report_label if document else "Проверка тетрадей") }}</h2>
+    <div class="muted">{{ _('Заполнение отчета') }}</div>
   </div>
 
   <a href="{{ url_for('staff_report_templates_page', month_item_id=month_item_id) }}{% if request.query_params.get('month') %}?month={{ request.query_params.get('month') }}{% endif %}"
-     class="btn btn-secondary">
-    Назад к отчетам
+     class="btn btn-secondary" data-sm-action="nav" data-sm-back="true">
+    {{ _('Назад к отчетам') }}
   </a>
 </div>
 
 {% if error %}
-  <div class="alert alert-danger">{{ error }}</div>
+  <div class="alert alert-danger">{{ reports_feedback(error) }}</div>
 {% endif %}
 
 {% if request.query_params.get("debug") == "1" %}
@@ -71,15 +71,30 @@ report.level: {{ report.level if report else "NO REPORT" }}
 <form method="post"
       action="{{ checking_post_url }}{% if template_id %}?template_id={{ template_id }}{% if request.query_params.get('month') %}&month={{ request.query_params.get('month') }}{% endif %}{% elif request.query_params.get('month') %}?month={{ request.query_params.get('month') }}{% endif %}">
 
+  {% set saved_document_language = (report.criteria_scores or {}).get('document_language') if report else none %}
+  {% set selected_document_language = saved_document_language if saved_document_language in ['ru','kk'] else ui_language() %}
+  <div class="card report-card">
+    {% if readonly and saved_document_language not in ['ru','kk'] %}
+      <p>{{ _('Язык документа') }}: {{ _('Язык ранее подписанного PDF не сохранён; файл открывается в исходном виде.') }}</p>
+    {% else %}
+    <label for="document-language">{{ _('Язык документа') }}</label>
+    <select id="document-language" name="document_language" required {% if readonly %}disabled{% endif %}>
+      <option value="kk" {% if selected_document_language == 'kk' %}selected{% endif %}>Қазақша</option>
+      <option value="ru" {% if selected_document_language == 'ru' %}selected{% endif %}>Русский</option>
+    </select>
+    {% endif %}
+    <p class="muted">{{ _('Язык PDF сохраняется с отчётом. Авторский текст не переводится автоматически.') }}</p>
+  </div>
+
   <!-- 1. Общая информация -->
   <div class="card report-card">
     <div class="card-title-row">
-      <h3>1. Общая информация</h3>
+      <h3>{{ _('1. Общая информация') }}</h3>
     </div>
 
     {% if readonly %}
       <div class="alert alert-success">
-        Отчет подписан. Редактирование запрещено.
+        {{ _('Отчет подписан. Редактирование запрещено.') }}
       </div>
     {% endif %}
 
@@ -87,7 +102,7 @@ report.level: {{ report.level if report else "NO REPORT" }}
   <table class="lesson-info-table">
     <tbody>
       <tr>
-        <th>Білім беру ұйымы</th>
+        <th>{{ _('Білім беру ұйымы') }}</th>
         <td>
           <input type="text"
                  name="info_school_name"
@@ -95,7 +110,7 @@ report.level: {{ report.level if report else "NO REPORT" }}
                  {% if readonly %}disabled{% endif %}>
         </td>
 
-        <th>Тексеру күні</th>
+        <th>{{ _('Тексеру күні') }}</th>
         <td>
           <input type="datetime-local"
                  name="info_check_date"
@@ -106,7 +121,7 @@ report.level: {{ report.level if report else "NO REPORT" }}
       </tr>
 
       <tr>
-        <th>Тексерушінің ТАӘ</th>
+        <th>{{ _('Тексерушінің ТАӘ') }}</th>
         <td>
           <input type="text"
                  name="info_checker_name"
@@ -114,7 +129,7 @@ report.level: {{ report.level if report else "NO REPORT" }}
                  {% if readonly %}disabled{% endif %}>
         </td>
 
-        <th>Тексерушінің лауазымы</th>
+        <th>{{ _('Тексерушінің лауазымы') }}</th>
         <td>
           <input type="text"
                  name="info_checker_post"
@@ -124,7 +139,7 @@ report.level: {{ report.level if report else "NO REPORT" }}
       </tr>
 
       <tr>
-        <th>Мұғалімнің ТАӘ</th>
+        <th>{{ _('Мұғалімнің ТАӘ') }}</th>
         <td>
           <input type="text"
                  name="info_teacher_name"
@@ -132,7 +147,7 @@ report.level: {{ report.level if report else "NO REPORT" }}
                  {% if readonly %}disabled{% endif %}>
         </td>
 
-        <th>Сынып</th>
+        <th>{{ _('Сынып') }}</th>
         <td>
           <input type="text"
                  name="info_class_name"
@@ -142,7 +157,7 @@ report.level: {{ report.level if report else "NO REPORT" }}
       </tr>
 
       <tr>
-        <th>Пән</th>
+        <th>{{ _('Пән') }}</th>
         <td colspan="3">
           <input type="text"
                  name="info_subject_name"
@@ -159,7 +174,7 @@ report.level: {{ report.level if report else "NO REPORT" }}
   <!-- 2. Критерии оценки -->
 <div class="card report-card section-score-card">
   <div class="card-title-row">
-    <h3>2. Критерии оценки</h3>
+    <h3>{{ _('2. Критерии оценки') }}</h3>
   </div>
 
   <div class="table-wrap">
@@ -167,7 +182,7 @@ report.level: {{ report.level if report else "NO REPORT" }}
       <thead>
         <tr>
           <th class="col-number">№</th>
-          <th>Критерий</th>
+          <th>{{ _('Критерий') }}</th>
 
           {% for value in score_scale %}
             <th class="col-score">{{ value }}</th>
@@ -185,7 +200,7 @@ report.level: {{ report.level if report else "NO REPORT" }}
             {% set criterion_scores = {} %}
           {% else %}
             {% set criterion_key = criterion.get("key") or "criterion_" ~ criterion_index %}
-            {% set criterion_text = criterion.get("label_kz") or criterion.get("text") or criterion.get("name") or "Критерий " ~ loop.index %}
+            {% set criterion_text = criterion.get("label_kz") or criterion.get("text") or criterion.get("name") or _("Критерий") ~ " " ~ loop.index %}
             {% set criterion_scores = criterion.get("scores", {}) %}
           {% endif %}
 
@@ -202,12 +217,12 @@ report.level: {{ report.level if report else "NO REPORT" }}
             <td class="cell-number">{{ loop.index }}</td>
 
             <td class="cell-criterion">
-              <strong>{{ criterion_text }}</strong>
+              <strong>{{ report_form_label(criterion_text) }}</strong>
 
               {% if criterion_scores %}
                 <div class="muted" style="margin-top: 4px;">
                   {% for score_value, score_data in criterion_scores.items() %}
-                    {{ score_value }} — {{ score_data.get("label_kz", "") }}{% if not loop.last %}; {% endif %}
+                    {{ score_value }} — {{ report_form_label(score_data.get("label_kz", "")) }}{% if not loop.last %}; {% endif %}
                   {% endfor %}
                 </div>
               {% endif %}
@@ -236,12 +251,12 @@ report.level: {{ report.level if report else "NO REPORT" }}
   <!-- 3. Итог -->
 <div class="card report-card total-card">
   <div class="card-title-row">
-    <h3>3. Итог</h3>
+    <h3>{{ _('3. Итог') }}</h3>
   </div>
 
   <div class="total-grid">
     <div class="form-field">
-      <label>Общий балл</label>
+      <label>{{ _('Общий балл') }}</label>
       <input type="text"
              id="total_score"
              name="total_score"
@@ -250,7 +265,7 @@ report.level: {{ report.level if report else "NO REPORT" }}
     </div>
 
     <div class="form-field">
-      <label>Максимальный балл</label>
+      <label>{{ _('Максимальный балл') }}</label>
       <input type="text"
              id="max_score"
              name="max_score"
@@ -259,7 +274,7 @@ report.level: {{ report.level if report else "NO REPORT" }}
     </div>
 
     <div class="form-field">
-      <label>Процент</label>
+      <label>{{ _('Процент') }}</label>
       <input type="text"
              id="percent"
              name="percent"
@@ -268,12 +283,12 @@ report.level: {{ report.level if report else "NO REPORT" }}
     </div>
 
     <div class="form-field">
-      <label>Уровень</label>
-      <input type="text"
+      <label>{{ _('Уровень') }}</label>
+      <input type="hidden"
              id="level"
              name="info_level"
-             value="{{ level }}"
-             readonly>
+             value="{{ level }}">
+      <input type="text" id="level_display" value="{{ report_score_level_label(level) }}" readonly>
     </div>
   </div>
 </div>
@@ -281,18 +296,18 @@ report.level: {{ report.level if report else "NO REPORT" }}
   <!-- 4. Выводы -->
   <div class="card report-card">
     <div class="card-title-row">
-      <h3>4. Выводы и рекомендации</h3>
+      <h3>{{ _('4. Выводы и рекомендации') }}</h3>
     </div>
 
     <div class="form-field form-field--full">
-      <label>Вывод</label>
+      <label>{{ _('Вывод') }}</label>
       <textarea name="info_conclusion"
                 rows="3"
                 {% if readonly %}disabled{% endif %}>{{ saved_info.get('conclusion', report.conclusion if report else '') }}</textarea>
     </div>
 
     <div class="form-field form-field--full">
-      <label>Рекомендации</label>
+      <label>{{ _('Рекомендации') }}</label>
       <textarea name="info_recommendations"
                 rows="3"
                 {% if readonly %}disabled{% endif %}>{{ saved_info.get('recommendations', report.recommendations if report else '') }}</textarea>
@@ -304,39 +319,39 @@ report.level: {{ report.level if report else "NO REPORT" }}
 
   {% if not readonly %}
 
-    <button type="submit" name="action" value="save" class="btn btn-primary">
-      Сохранить черновик
+    <button type="submit" name="action" value="save" class="btn btn-primary" data-sm-action="primary">
+      {{ _('Сохранить черновик') }}
     </button>
 
     <button type="submit"
             name="action"
             value="complete"
             class="btn btn-success"
-            onclick="return confirm('После подписания отчет нельзя будет редактировать. Подписать и сохранить?')">
-      Подписать и сохранить
+            data-confirm="{{ _('После подписания отчет нельзя будет редактировать. Подписать и сохранить?') }}" onclick="return confirm(this.dataset.confirm);" data-sm-action="success">
+      {{ _('Подписать и сохранить') }}
     </button>
 
     <a href="{{ url_for('staff_report_templates_page', month_item_id=month_item_id) }}{% if request.query_params.get('month') %}?month={{ request.query_params.get('month') }}{% endif %}"
-       class="btn btn-secondary">
-      Отмена
+       class="btn btn-secondary" data-sm-action="nav">
+      {{ _('Отмена') }}
     </a>
 
   {% else %}
 
     <a href="{{ url_for('checking_notebooks_pdf_view', report_id=report.id) }}"
        class="btn btn-secondary"
-       target="_blank">
-      Просмотреть PDF
+       target="_blank" data-sm-action="nav">
+      {{ _('Просмотреть PDF') }}
     </a>
 
     <a href="{{ url_for('checking_notebooks_pdf_download', report_id=report.id) }}"
-       class="btn btn-primary">
-      Скачать PDF
+       class="btn btn-primary" data-sm-action="nav">
+      {{ _('Скачать PDF') }}
     </a>
 
     <a href="{{ url_for('staff_report_templates_page', month_item_id=month_item_id) }}{% if request.query_params.get('month') %}?month={{ request.query_params.get('month') }}{% endif %}"
-       class="btn btn-secondary">
-      Назад к отчетам
+       class="btn btn-secondary" data-sm-action="nav" data-sm-back="true">
+      {{ _('Назад к отчетам') }}
     </a>
 
   {% endif %}
@@ -352,6 +367,7 @@ report.level: {{ report.level if report else "NO REPORT" }}
   const maxInput = document.getElementById("max_score");
   const percentInput = document.getElementById("percent");
   const levelInput = document.getElementById("level");
+  const levelDisplayInput = document.getElementById("level_display");
 
   if (!totalInput || !maxInput || !percentInput || !levelInput) {
     return;
@@ -379,6 +395,12 @@ report.level: {{ report.level if report else "NO REPORT" }}
       levelInput.value = "Төмен";
     } else {
       levelInput.value = "—";
+    }
+
+    if (levelDisplayInput) {
+      const levelKeys = {"Жоғары": "report_form_level_high", "Орта": "report_form_level_medium", "Төмен": "report_form_level_low"};
+      const key = levelKeys[levelInput.value];
+      levelDisplayInput.value = key ? window.SchoolMonitorI18n.t(key) : levelInput.value;
     }
   }
 

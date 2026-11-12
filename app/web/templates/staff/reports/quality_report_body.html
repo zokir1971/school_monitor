@@ -1,0 +1,5 @@
+{% if snapshot.get('kind')=='vsk_structured_report' %}{% include 'staff/reports/structured_report_body.html' %}{% else %}
+{# Compatibility path: canonical system table uses the existing template_map file. #}
+{% include "staff/reports/template_map/_knowledge_quality_table.html" %}
+
+{% endif %}

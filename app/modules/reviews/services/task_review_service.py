@@ -890,6 +890,8 @@ class TaskReviewService:
         invalid_place_ids: list[int] = []
         invalid_status_ids: list[int] = []
         already_reviewed_ids: list[int] = []
+        from app.modules.reports.repositories.document_correction_repo import DocumentCorrectionRepo
+        correction_ids = await DocumentCorrectionRepo.pending_ids(db, unique_ids)
 
         allowed_statuses = {
             PlanItemStatus.DONE,
@@ -934,7 +936,7 @@ class TaskReviewService:
             else:
                 already_reviewed = bool(item.review_results)
 
-            if already_reviewed:
+            if already_reviewed and item.id not in correction_ids:
                 already_reviewed_ids.append(item.id)
 
         if invalid_place_ids:
@@ -1046,11 +1048,13 @@ class TaskReviewService:
                 )
 
             # 7. Один пакетный flush результатов.
-            return await TaskReviewRepository.create_many(
+            results = await TaskReviewRepository.create_many(
                 db,
                 create_dtos,
                 flush=True,
             )
+            await DocumentCorrectionRepo.accept_corrections(db, unique_ids)
+            return results
 
         except Exception:
             # БД откатывает маршрут. Здесь компенсируем файловое I/O,

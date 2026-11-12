@@ -1,13 +1,13 @@
 {% extends "base.html" %}
-{% block title %}Настройка завершена{% endblock %}
+{% block title %}{{ _('Настройка завершена') }}{% endblock %}
 
 {% block content %}
 <div class="auth-card">
-  <h1>Супер-админ уже создан</h1>
-  <p>Первичная настройка системы выполнена.</p>
+  <h1>{{ _('Супер-админ уже создан') }}</h1>
+  <p>{{ _('Первичная настройка системы выполнена.') }}</p>
 
-  <a href="/login" class="btn btn--primary">
-    Перейти к входу
+  <a href="/login" class="btn btn--primary" data-sm-action="nav">
+    {{ _('Перейти к входу') }}
   </a>
 </div>
 {% endblock %}

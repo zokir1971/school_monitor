@@ -15,3 +15,20 @@ from app.modules.reports.models_template_reports import LessonObservationReport,
 from app.modules.reports.models_report_signature_token import ReportSignatureToken  # noqa: F401
 from app.modules.reports.models_report_assignments import TaskSelectedReportAssignment  # noqa: F401
 from app.modules.reviews.models_task_review import SchoolMethodAssociation, SchoolTaskReview, SchoolMonthPlanItemReviewResult  # noqa: F401
+from app.modules.education.models import Subject, SchoolClass, SchoolStudent, SchoolStudentEnrollment, SchoolClassSubjectTeacher  # noqa: F401
+from app.modules.assessment.models import Assessment, AssessmentGroup, AssessmentStudent, LearningObjective, AssessmentObjective, AssessmentResult, AssessmentObjectiveResult, AssessmentQuestion, AssessmentStudentAnswer, AssessmentTaskLink, AssessmentQualitySummary  # noqa: F401
+from app.modules.assessment.models_question_bank_experts import QuestionBankExpert  # noqa: F401
+from app.modules.assessment.models_teacher_ai_question_runs import TeacherAIQuestionRun  # noqa: F401
+from app.modules.assessment.models_learning_objective_reference import LearningObjectiveSource, LearningObjectiveProgram, LearningObjectiveQuarter, LearningObjectiveFormulation  # noqa: F401
+
+from app.modules.assessment.models_learning_objective_import import LearningObjectiveImportDraft  # noqa: F401
+
+from app.modules.assessment.models_work_plans import AssessmentWorkPlan, AssessmentWorkPlanItem  # noqa: F401
+
+from app.modules.assessment.models_work_assignments import AssessmentWorkAssignment, AssessmentWorkParticipant  # noqa: F401
+
+from app.modules.assessment.models_diagnostic_sessions import DiagnosticSession, DiagnosticSubject, DiagnosticParticipant  # noqa: F401
+from app.modules.assessment.models_diagnostic_attempts import DiagnosticAttempt  # noqa: F401
+from app.modules.assessment.models_diagnostic_preparation import DiagnosticPreparation  # noqa: F401
+
+from app.modules.users.models_recovery import AccessRecoveryGrant, AccessRecoveryAudit, AccessRecoveryLimit  # noqa: F401

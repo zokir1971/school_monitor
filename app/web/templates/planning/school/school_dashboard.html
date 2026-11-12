@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}ВШК жоспарлау{% endblock %}
+{% block title %}{{ _('МІБ жоспарлау') }}{% endblock %}
 
 {% block extra_css %}
 <link
@@ -21,30 +21,29 @@
 
     <div>
       <div class="planning-header__eyebrow">
-        Мектепішілік бақылау
+        {{ _('Мектепішілік бақылау') }}
       </div>
 
       <h1 class="planning-header__title">
-        ВШК жоспарлау
+        {{ _('МІБ жоспарлау') }}
       </h1>
 
       <p class="planning-header__description">
-        Оқу жылын таңдаңыз, жылдық жоспарды басқарыңыз
-        және аяқталған оқу жылдарын мұрағаттаңыз.
+        {{ _('Оқу жылын таңдаңыз, жылдық жоспарды басқарыңыз және аяқталған оқу жылдарын мұрағаттаңыз.') }}
       </p>
     </div>
 
     <div class="planning-header__school">
 
       <span class="planning-header__school-label">
-        Мектеп
+        {{ _('Мектеп') }}
       </span>
 
       <strong>
         {% if school %}
           {{ school.name }}
         {% else %}
-          Мектеп тіркелмеген
+          {{ _('Мектеп тіркелмеген') }}
         {% endif %}
       </strong>
 
@@ -59,7 +58,7 @@
 
   {% if error %}
     <div class="planning-alert planning-alert--error">
-      {{ error }}
+      {{ planning_error(error) }}
     </div>
   {% endif %}
 
@@ -74,12 +73,11 @@
 
       <div>
         <h2 class="planning-panel__title">
-          Оқу жылы
+          {{ _('Оқу жылы') }}
         </h2>
 
         <p class="planning-panel__description">
-          Жоспарларды көру немесе жаңа жоспар құру
-          үшін оқу жылын көрсетіңіз.
+          {{ _('Жоспарларды көру немесе жаңа жоспар құру үшін оқу жылын көрсетіңіз.') }}
         </p>
       </div>
 
@@ -106,7 +104,7 @@
             class="planning-field__label"
             for="academic-year"
           >
-            Оқу жылы
+            {{ _('Оқу жылы') }}
           </label>
 
           <input
@@ -124,8 +122,8 @@
         <button
           class="planning-btn planning-btn--secondary"
           type="submit"
-        >
-          Көрсету
+         data-sm-action="nav">
+          {{ _('Көрсету') }}
         </button>
 
       </form>
@@ -151,7 +149,7 @@
             class="planning-field__label"
             for="template-id"
           >
-            Белсенді үлгі
+            {{ _('Белсенді үлгі') }}
           </label>
 
           <select
@@ -180,7 +178,7 @@
             {% else %}
 
               <option value="">
-                Белсенді үлгі жоқ
+                {{ _('Белсенді үлгі жоқ') }}
               </option>
 
             {% endif %}
@@ -193,8 +191,8 @@
           class="planning-btn planning-btn--primary"
           type="submit"
           {% if not templates_active %}disabled{% endif %}
-        >
-          Жоспар құру
+         data-sm-action="primary">
+          {{ _('Жоспар құру') }}
         </button>
 
       </form>
@@ -214,12 +212,11 @@
 
       <div>
         <h2 class="planning-panel__title">
-          Жылдық жоспарлар
+          {{ _('Жылдық жоспарлар') }}
         </h2>
 
         <p class="planning-panel__description">
-          {{ academic_year }} оқу жылына арналған
-          мектептің ВШК жоспарлары.
+          {{ academic_year }} {{ _('оқу жылына арналған мектептің МІБ жоспарлары.') }}
         </p>
       </div>
 
@@ -233,22 +230,22 @@
       <a
         href="?academic_year={{ academic_year }}&tab=my"
         class="planning-tab {% if tab == 'my' %}is-active{% endif %}"
-      >
-        Менің жоспарларым
+       data-sm-action="nav">
+        {{ _('Менің жоспарларым') }}
       </a>
 
       <a
         href="?academic_year={{ academic_year }}&tab=active"
         class="planning-tab {% if tab == 'active' %}is-active{% endif %}"
-      >
-        Белсенді
+       data-sm-action="nav">
+        {{ _('Белсенді') }}
       </a>
 
       <a
         href="?academic_year={{ academic_year }}&tab=archive"
         class="planning-tab {% if tab == 'archive' %}is-active{% endif %}"
-      >
-        Мұрағат
+       data-sm-action="edit">
+        {{ _('Мұрағат') }}
       </a>
 
     </nav>
@@ -289,7 +286,7 @@
                   {% if plan.template %}
                     {{ plan.template.name }}
                   {% else %}
-                    Үлгі #{{ plan.template_id }}
+                    {{ _('Үлгі #') }}{{ plan.template_id }}
                   {% endif %}
                 </h3>
 
@@ -299,19 +296,19 @@
               {% if plan_status == 'active' %}
 
                 <span class="planning-status planning-status--active">
-                  Белсенді
+                  {{ _('Белсенді') }}
                 </span>
 
               {% elif plan_status == 'archived' %}
 
                 <span class="planning-status planning-status--archived">
-                  Мұрағатталған
+                  {{ _('Мұрағатталған') }}
                 </span>
 
               {% else %}
 
                 <span class="planning-status planning-status--draft">
-                  Жоба
+                  {{ _('Жоба') }}
                 </span>
 
               {% endif %}
@@ -322,8 +319,7 @@
             {% if plan_status == 'archived' %}
 
               <div class="planning-plan-card__notice">
-                Бұл оқу жылы мұрағатталған.
-                Жоспар тарихи деректер ретінде сақталады.
+                {{ _('Бұл оқу жылы мұрағатталған. Жоспар тарихи деректер ретінде сақталады.') }}
               </div>
 
             {% endif %}
@@ -345,8 +341,8 @@
                   plan_id=plan.id
                 ) }}"
                 class="planning-btn planning-btn--secondary"
-              >
-                Ашу
+               data-sm-action="nav">
+                {{ _('Ашу') }}
               </a>
 
             {% endif %}
@@ -362,8 +358,8 @@
                 plan_id=plan.id
               ) }}"
               class="planning-btn planning-btn--secondary"
-            >
-              Қарау
+             data-sm-action="nav">
+              {{ _('Қарау') }}
             </a>
 
 
@@ -380,18 +376,14 @@
                   plan_id=plan.id
                 ) }}"
                 class="planning-archive-form"
-                onsubmit="
-                  return confirm(
-                    '{{ plan.academic_year }} оқу жылының ВШК жоспарын мұрағаттайсыз ба? Бұл әрекеттен кейін жоспар тек қарау режимінде қолжетімді болады.'
-                  );
-                "
+                data-confirm="{{ _('Archive plan for {year}? It will become read-only.').format(year=plan.academic_year) }}" onsubmit="return confirm(this.dataset.confirm);"
               >
 
                 <button
                   type="submit"
                   class="planning-btn planning-btn--danger"
-                >
-                  Мұрағаттау
+                 data-sm-action="edit">
+                  {{ _('Мұрағаттау') }}
                 </button>
 
               </form>
@@ -411,12 +403,11 @@
           </div>
 
           <h3 class="planning-empty__title">
-            Жоспар табылмады
+            {{ _('Жоспар табылмады') }}
           </h3>
 
           <p class="planning-empty__text">
-            {{ academic_year }} оқу жылына жоспар
-            әлі құрылмаған.
+            {{ academic_year }} {{ _('оқу жылына жоспар әлі құрылмаған.') }}
           </p>
 
         </div>
@@ -437,7 +428,7 @@
     <div class="planning-summary__item">
 
       <span class="planning-summary__label">
-        Мектеп
+        {{ _('Мектеп') }}
       </span>
 
       <strong class="planning-summary__value">
@@ -454,7 +445,7 @@
     <div class="planning-summary__item">
 
       <span class="planning-summary__label">
-        Оқу жылы
+        {{ _('Оқу жылы') }}
       </span>
 
       <strong class="planning-summary__value">
@@ -467,7 +458,7 @@
     <div class="planning-summary__item">
 
       <span class="planning-summary__label">
-        Ағымдағы жоспар
+        {{ _('Ағымдағы жоспар') }}
       </span>
 
       {% if active_plan %}
@@ -482,7 +473,7 @@
           {% if active_plan.template %}
             {{ active_plan.template.name }}
           {% else %}
-            Үлгі #{{ active_plan.template_id }}
+            {{ _('Үлгі #') }}{{ active_plan.template_id }}
           {% endif %}
         </strong>
 
@@ -501,8 +492,8 @@
             <button
               type="submit"
               class="planning-btn planning-btn--primary"
-            >
-              Белсенді ету
+             data-sm-action="primary">
+              {{ _('Белсенді ету') }}
             </button>
 
           </form>
@@ -512,7 +503,7 @@
       {% else %}
 
         <strong class="planning-summary__value planning-summary__value--muted">
-          Жоспар жоқ
+          {{ _('Жоспар жоқ') }}
         </strong>
 
       {% endif %}

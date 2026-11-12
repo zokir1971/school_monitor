@@ -1,0 +1,16 @@
+{% macro render_fill_gaps_grading_summary(item) %}
+{% if item.grading_settings.get('element_score_policy') == 'weighted_elements_v2' %}
+{% from 'teacher/assessment/question_bank/components/weighted_grading_summary.html' import render_weighted_grading with context %}{{ render_weighted_grading(item) }}
+{% else %}
+  {% set grading = item.grading_settings or {} %}
+  {% set scored = grading.get('fill_gaps_score_policy') == 'per_gap_v1' %}
+  <div class="qb-grading-list">
+    <div class="qb-grading-row"><span class="qb-grading-row__key">{{ _('Ең жоғары балл') }}</span><span class="qb-grading-row__value">{{ item.max_score }} {{ _('балл') }}</span></div>
+    <div class="qb-grading-row"><span class="qb-grading-row__key">{{ _('Әр дұрыс толтырылған бос орын үшін' if scored else 'Барлық бос орын дұрыс толтырылса') }}</span><span class="qb-grading-row__value">{{ '1' if scored else item.max_score }} {{ _('балл') }}</span></div>
+    {% if scored %}<div class="qb-grading-row"><span class="qb-grading-row__key">{{ _('Қате немесе жауапсыз бос орын үшін') }}</span><span class="qb-grading-row__value">{{ _('0 балл') }}</span></div>{% endif %}
+    <div class="qb-grading-row"><span class="qb-grading-row__key">{{ _('Бас және кіші әріптер') }}</span><span class="qb-grading-row__value">{{ _('Ескеріледі' if grading.get('case_sensitive', false) else 'Ескерілмейді') }}</span></div>
+    <div class="qb-grading-row"><span class="qb-grading-row__key">{{ _('Жауап шетіндегі бос аралықтар') }}</span><span class="qb-grading-row__value">{{ _('Алынып тасталады' if grading.get('trim_whitespace', true) else 'Ескеріледі') }}</span></div>
+  </div>
+  <p class="qb-text qb-muted">{% if scored %}{{ _('Әр бос орын жеке бағаланады. Жауаптың кез келген рұқсат етілген нұсқасы қабылданады.') }}{% else %}{{ _('Ескі тапсырма: барлық жауап дұрыс болса толық балл, қате немесе жауапсыз бос орын болса — 0 балл.') }}{% endif %}</p>
+{% endif %}
+{% endmacro %}

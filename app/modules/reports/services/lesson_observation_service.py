@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+from app.core.i18n import resolve_language
+from app.core.report_pdf_i18n import select_document_language, saved_report_language, report_pdf_context
+
 import logging
 from dataclasses import fields
 from datetime import datetime, timezone
@@ -518,6 +521,10 @@ class LessonObservationService(BaseReportService):
                 "Отчет уже подписан. Редактирование запрещено."
             )
 
+        document_language = select_document_language(
+            form.get("document_language"), saved_report_language(report), resolve_language(request, user)
+        )
+
         # =========================================================
         # TEMPLATE / DOCUMENT SNAPSHOT
         # =========================================================
@@ -642,6 +649,8 @@ class LessonObservationService(BaseReportService):
             db,
             dto=dto,
         )
+        report.criteria_scores = {**(report.criteria_scores or {}), "document_language": document_language}
+
 
         await db.flush()
         await db.refresh(report)
@@ -704,6 +713,7 @@ class LessonObservationService(BaseReportService):
                 report=report,
                 schema=schema,
                 qr_data_uri=qr_data_uri,
+                document=document,
             )
 
             storage_context = (
@@ -982,6 +992,7 @@ class LessonObservationService(BaseReportService):
             report: LessonObservationReport,
             schema: dict | None = None,
             qr_data_uri: str,
+            document=None,
     ) -> bytes:
         html = templates.get_template(
             "staff/reports/user_templates/"
@@ -991,6 +1002,7 @@ class LessonObservationService(BaseReportService):
             report=report,
             schema=schema or {},
             qr_file=qr_data_uri,
+            **report_pdf_context(request, report, document),
         )
 
         async with async_playwright() as playwright:

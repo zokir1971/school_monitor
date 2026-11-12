@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from app.core.i18n import normalize_language
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.users.enums import UserRole
@@ -27,6 +29,7 @@ class BootstrapService:
             iin: str,
             email: str,
             phone: str,
+            ui_language: str | None = None,
     ) -> User:
         username = username.strip()
         full_name = full_name.strip()
@@ -59,6 +62,7 @@ class BootstrapService:
             raise ValueError("Пользователь с таким телефоном уже существует")
 
         user = User(
+            ui_language=normalize_language(ui_language),
             username=username,
             full_name=full_name,
             iin=iin,

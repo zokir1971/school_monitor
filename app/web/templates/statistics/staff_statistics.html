@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Моя статистика{% endblock %}
+{% block title %}{{ _('Моя статистика') }}{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -260,7 +260,7 @@
   <header class="page-header">
 
     <h1 class="page-header__title">
-        Моя статистика ВШК
+        {{ _('Моя статистика ВШК') }}
     </h1>
 
     <div class="page-header__employee">
@@ -281,7 +281,7 @@
         {{ school_name }}
 
         {% if academic_year %}
-            · {{ academic_year }} учебный год
+            · {{ academic_year }} {{ _('учебный год') }}
         {% endif %}
     </div>
 
@@ -294,7 +294,7 @@
 
     <article class="summary-card">
       <div class="summary-card__label">
-        Назначено задач
+        {{ _('Назначено задач') }}
       </div>
 
       <div class="summary-card__value">
@@ -302,13 +302,13 @@
       </div>
 
       <div class="summary-card__note">
-        За весь учебный год
+        {{ _('За весь учебный год') }}
       </div>
     </article>
 
     <article class="summary-card">
       <div class="summary-card__label">
-        Выполнено
+        {{ _('Выполнено') }}
       </div>
 
       <div class="summary-card__value">
@@ -316,14 +316,13 @@
       </div>
 
       <div class="summary-card__note">
-        {{ monthly_totals.completion_percent }}%
-        от назначенных задач
+        {{ monthly_totals.completion_percent }}{{ _('% от назначенных задач') }}
       </div>
     </article>
 
     <article class="summary-card">
       <div class="summary-card__label">
-        Не выполнено
+        {{ _('Не выполнено') }}
       </div>
 
       <div class="summary-card__value">
@@ -331,13 +330,13 @@
       </div>
 
       <div class="summary-card__note">
-        Из назначенных задач
+        {{ _('Из назначенных задач') }}
       </div>
     </article>
 
     <article class="summary-card">
       <div class="summary-card__label">
-        Рассмотрено
+        {{ _('Рассмотрено') }}
       </div>
 
       <div class="summary-card__value">
@@ -345,8 +344,7 @@
       </div>
 
       <div class="summary-card__note">
-        {{ monthly_totals.review_percent }}%
-        от выполненных задач
+        {{ monthly_totals.review_percent }}{{ _('% от выполненных задач') }}
       </div>
     </article>
 
@@ -360,12 +358,11 @@
 
     <div class="section-header">
       <h2 class="section-title">
-        Моя статистика по месяцам
+        {{ _('Моя статистика по месяцам') }}
       </h2>
 
       <p class="section-description">
-        Учитываются задачи, где вы указаны основным ответственным,
-        исполнителем или соисполнителем.
+        {{ _('Учитываются задачи, где вы указаны основным ответственным, исполнителем или соисполнителем.') }}
       </p>
     </div>
 
@@ -376,14 +373,14 @@
 
           <thead>
           <tr>
-            <th>Месяц</th>
-            <th>Статус плана</th>
-            <th>Назначено</th>
-            <th>Выполнено</th>
-            <th>Не выполнено</th>
-            <th>Рассмотрено</th>
-            <th>Выполнение</th>
-            <th>Рассмотрено из выполненных</th>
+            <th>{{ _('Месяц') }}</th>
+            <th>{{ _('Статус плана') }}</th>
+            <th>{{ _('Назначено') }}</th>
+            <th>{{ _('Выполнено') }}</th>
+            <th>{{ _('Не выполнено') }}</th>
+            <th>{{ _('Рассмотрено') }}</th>
+            <th>{{ _('Выполнение') }}</th>
+            <th>{{ _('Рассмотрено из выполненных') }}</th>
           </tr>
           </thead>
 
@@ -399,11 +396,11 @@
                   <a
                     class="month-link"
                     href="{{ url_for('staff_statistics_page') }}?month_plan_id={{ row.month_plan_id }}#month-direction-statistics"
-                  >
-                    {{ row.month_name }}
+                   data-sm-action="nav">
+                    {{ _(row.month_name) }}
                   </a>
                 {% else %}
-                  {{ row.month_name }}
+                  {{ _(row.month_name) }}
                 {% endif %}
 
                 <div class="month-year">
@@ -413,7 +410,7 @@
 
               <td>
                 <span class="status-badge">
-                  {{ row.plan_status_label }}
+                  {{ _(row.plan_status_label) }}
                 </span>
               </td>
 
@@ -451,7 +448,7 @@
           <tfoot>
           <tr>
             <td colspan="2">
-              Итого за учебный год
+              {{ _('Итого за учебный год') }}
             </td>
 
             <td>
@@ -486,7 +483,7 @@
     {% else %}
 
       <div class="empty-state">
-        Для текущего учебного года месячные планы пока не сформированы.
+        {{ _('Для текущего учебного года месячные планы пока не сформированы.') }}
       </div>
 
     {% endif %}
@@ -505,14 +502,12 @@
 
     <div class="section-header">
       <h2 class="section-title">
-        {{ selected_month.month_name }}
-        {{ selected_month.year }}:
-        моя статистика по направлениям
+        {{ _(selected_month.month_name) }}
+        {{ selected_month.year }}{{ _(': моя статистика по направлениям') }}
       </h2>
 
       <p class="section-description">
-        Показатели рассчитаны относительно ваших задач
-        в выбранном месячном плане.
+        {{ _('Показатели рассчитаны относительно ваших задач в выбранном месячном плане.') }}
       </p>
     </div>
 
@@ -523,13 +518,13 @@
 
           <thead>
           <tr>
-            <th>Направление ВШК</th>
-            <th>Назначено</th>
-            <th>Выполнено</th>
-            <th>Не выполнено</th>
-            <th>Рассмотрено</th>
-            <th>Выполнение</th>
-            <th>Рассмотрено из выполненных</th>
+            <th>{{ _('Направление ВШК') }}</th>
+            <th>{{ _('Назначено') }}</th>
+            <th>{{ _('Выполнено') }}</th>
+            <th>{{ _('Не выполнено') }}</th>
+            <th>{{ _('Рассмотрено') }}</th>
+            <th>{{ _('Выполнение') }}</th>
+            <th>{{ _('Рассмотрено из выполненных') }}</th>
           </tr>
           </thead>
 
@@ -574,7 +569,7 @@
           <tfoot>
           <tr>
             <td>
-              Итого за выбранный месяц
+              {{ _('Итого за выбранный месяц') }}
             </td>
 
             <td>
@@ -609,7 +604,7 @@
     {% else %}
 
       <div class="empty-state">
-        В выбранном месяце назначенные задачи отсутствуют.
+        {{ _('В выбранном месяце назначенные задачи отсутствуют.') }}
       </div>
 
     {% endif %}

@@ -56,15 +56,6 @@ class ExecutionDocumentService:
             .lstrip("/")
         )
 
-        if not normalized_key.startswith("schools/"):
-            logger.warning(
-                "Старый файл не удалён автоматически, "
-                "поскольку он относится к прежней структуре "
-                "хранилища: %s",
-                object_key,
-            )
-            return
-
         try:
             await storage_service.delete(
                 object_key=normalized_key,
@@ -209,8 +200,8 @@ class ExecutionDocumentService:
                 file_size=stored_file.file_size,
             )
 
+            await ExecutionDocumentRepo.refresh_before_commit(db, document=doc)
             await db.commit()
-            await db.refresh(doc)
 
         except Exception:
             await db.rollback()
@@ -234,10 +225,12 @@ class ExecutionDocumentService:
                 old_object_key
                 and old_object_key != stored_file.object_key
         ):
-            await cls._delete_replaced_document_file(
-                storage_service=storage_service,
-                object_key=old_object_key,
-            )
+            from app.modules.reports.repositories.document_correction_repo import DocumentCorrectionRepo
+            if not await DocumentCorrectionRepo.referenced(db, old_object_key):
+                await cls._delete_replaced_document_file(
+                    storage_service=storage_service,
+                    object_key=old_object_key,
+                )
 
         return doc
 
@@ -265,7 +258,15 @@ class ExecutionDocumentService:
         if not document:
             return None
 
+        def check_feature():
+            from app.core.feature_access import ensure_report,FeatureUnavailable
+            from app.core.feature_flags import assessment_enabled,snapshot_has_assessment
+            ensure_report(document.report_code)
+            if not assessment_enabled() and snapshot_has_assessment(document.schema_json):raise FeatureUnavailable()
         if user_role == UserRole.SCHOOL_ADMIN:
+            from app.modules.reports.repositories.document_correction_repo import DocumentCorrectionRepo
+            if not await DocumentCorrectionRepo.admin_owns_document(db, document_id=document_id, user_id=user_id):return None
+            check_feature()
             return document
 
         has_access = await ExecutionRepo.user_has_access_to_month_item(
@@ -276,4 +277,5 @@ class ExecutionDocumentService:
         if not has_access:
             return None
 
+        check_feature()
         return document

@@ -1,25 +1,26 @@
 {% extends "base.html" %}
 
-{% block title %}Исполнение задачи{% endblock %}
+{% block title %}{{ _('Исполнение задачи') }}{% endblock %}
 
 {% block extra_css %}
   <link rel="stylesheet" href="{{ url_for('static', path='css/staff_task.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', path='css/task_execute_layout.css') }}?v=129">
 {% endblock %}
 
 {% block content %}
-<div class="page">
+<div class="page task-execution-page">
   <div class="page-inner">
 
     <div class="execute-head card">
       <div class="execute-head__left">
-        <h2>Исполнение задачи</h2>
-        <div class="sub">Подготовка материалов и справки по результатам контроля</div>
+        <h2>{{ _('Исполнение задачи') }}</h2>
+        <div class="sub">{{ _('Подготовка материалов и справки по результатам контроля') }}</div>
       </div>
 
       <div>
         <a href="{{ request.url_for('staff_tasks_page') }}{% if month is not none %}?month={{ month }}{% endif %}"
-           class="btn btn-secondary">
-          Назад к задачам
+           class="btn btn-secondary" data-sm-action="nav" data-sm-back="true">
+          {{ _('Назад к задачам') }}
         </a>
       </div>
     </div>
@@ -27,9 +28,9 @@
     {% if request.query_params.get("success") == "accepted" %}
       <div class="card">
         <div class="hint-box">
-          <div class="hint-box__title">Задача принята</div>
+          <div class="hint-box__title">{{ _('Задача принята') }}</div>
           <div class="hint-box__text">
-            Задача успешно принята в исполнение. Теперь выберите её в списке и заполните материалы.
+            {{ _('Задача успешно принята в исполнение. Теперь выберите её в списке и заполните материалы.') }}
           </div>
         </div>
       </div>
@@ -38,9 +39,9 @@
     {% if request.query_params.get("success") == "saved" %}
       <div class="card">
         <div class="hint-box">
-          <div class="hint-box__title">Сохранено</div>
+          <div class="hint-box__title">{{ _('Сохранено') }}</div>
           <div class="hint-box__text">
-            Данные по исполнению задачи успешно сохранены.
+            {{ _('Данные по исполнению задачи успешно сохранены.') }}
           </div>
         </div>
       </div>
@@ -49,23 +50,23 @@
     {% if request.query_params.get("error") %}
       <div class="card">
         <div class="hint-box">
-          <div class="hint-box__title">Ошибка</div>
+          <div class="hint-box__title">{{ _('Ошибка') }}</div>
           <div class="hint-box__text">
-            {{ request.query_params.get("error") }}
+            {{ execution_error(request.query_params.get("error")) }}
           </div>
         </div>
       </div>
     {% endif %}
 
     <div class="card">
-      <h3>Выбор задачи</h3>
+      <h3>{{ _('Выбор задачи') }}</h3>
 
       {% if tasks %}
         <form class="form-grid" onsubmit="return false;">
           <input type="hidden" name="month" id="month" value="{{ month }}">
 
           <div class="form-field">
-            <label for="selected_task_id">Принятые задачи</label>
+            <label for="selected_task_id">{{ _('Принятые задачи') }}</label>
 
             <select
               name="selected_task_id"
@@ -77,14 +78,14 @@
               hx-include="#month, #selected_task_id"
               hx-indicator="#task-details-loader"
             >
-              <option value="">Выберите задачу</option>
+              <option value="">{{ _('Выберите задачу') }}</option>
 
               {% for t in tasks %}
                 {% set is_selected = selected_task_id and selected_task_id == t.month_item_id %}
                 <option value="{{ t.month_item_id }}" {% if is_selected %}selected{% endif %}>
-                  {{ t.topic or ("Задача #" ~ t.month_item_id) }}
+                  {{ t.topic or (_("Задача #") ~ t.month_item_id) }}
                   {% if t.planned_end %}
-                    — до {{ t.planned_end.strftime("%d.%m.%Y") if t.planned_end.strftime is defined else t.planned_end }}
+                    {{ _('— до') }} {{ t.planned_end.strftime("%d.%m.%Y") if t.planned_end.strftime is defined else t.planned_end }}
                   {% endif %}
                 </option>
               {% endfor %}
@@ -93,9 +94,9 @@
         </form>
       {% else %}
         <div class="hint-box">
-          <div class="hint-box__title">Нет задач</div>
+          <div class="hint-box__title">{{ _('Нет задач') }}</div>
           <div class="hint-box__text">
-            У вас пока нет задач со статусом «Орындалу үстінде».
+            {{ _('У вас пока нет задач со статусом «Орындалу үстінде».') }}
           </div>
         </div>
       {% endif %}
@@ -103,19 +104,23 @@
 
     <div id="task-details-loader" class="card htmx-indicator" style="display:none;">
       <div class="hint-box">
-        <div class="hint-box__title">Загрузка</div>
+        <div class="hint-box__title">{{ _('Загрузка') }}</div>
         <div class="hint-box__text">
-          Загружаем данные по выбранной задаче...
+          {{ _('Загружаем данные по выбранной задаче...') }}
         </div>
       </div>
     </div>
 
+    <nav class="task-execution-nav" data-task-execution-nav hidden aria-label="{{ 'Разделы выполнения задачи' if ui_language()=='ru' else 'Тапсырманы орындау бөлімдері' }}">
+      <div class="task-execution-nav__links"></div>
+    </nav>
+
     <div id="task-execution-details">
       <div class="card">
         <div class="hint-box">
-          <div class="hint-box__title">Выберите задачу</div>
+          <div class="hint-box__title">{{ _('Выберите задачу') }}</div>
           <div class="hint-box__text">
-            Для начала выберите одну из принятых задач в верхнем списке.
+            {{ _('Для начала выберите одну из принятых задач в верхнем списке.') }}
           </div>
         </div>
       </div>
@@ -127,6 +132,9 @@
 
 {% block extra_js %}
   <script src="https://unpkg.com/htmx.org@1.9.12"></script>
-  <script src="{{ url_for('static', path='js/task_execute.js') }}"></script>
+  <script src="{{ url_for('static', path='js/report_area_planner.js') }}?v=188"></script>
+  <script src="{{ url_for('static', path='js/report_area_editor.js') }}?v=188"></script>
+  <script src="{{ url_for('static', path='js/task_execute.js') }}?v=186"></script>
+  <script src="{{ url_for('static', path='js/task_execute_layout.js') }}?v=129" defer></script>
 
 {% endblock %}

@@ -1,0 +1,1065 @@
+{% extends "base.html" %}
+
+{% block title %}
+{{ _('Білім сапасының аудандық аналитикасы') }}
+{% endblock %}
+
+
+{% block extra_css %}
+<style>
+  .analytics-page {
+    max-width: 1440px;
+    margin: 0 auto;
+    padding: 24px 16px 48px;
+  }
+
+  /* ===================================================== */
+  /* HEADER */
+  /* ===================================================== */
+
+  .analytics-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    margin-bottom: 22px;
+  }
+
+  .analytics-header h1 {
+    margin: 0 0 6px;
+    font-size: 28px;
+    font-weight: 700;
+    color: #101828;
+  }
+
+  .analytics-header p {
+    margin: 0;
+    color: #667085;
+  }
+
+  .analytics-header__content {
+    min-width: 14;
+  }
+
+  .analytics-header__actions {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  /* ===================================================== */
+  /* BUTTONS */
+  /* ===================================================== */
+
+  .analytics-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    box-sizing: border-box;
+
+    padding: 0 14px;
+
+    border: 1px solid transparent;
+    border-radius: 8px;
+
+    font: inherit;
+    font-weight: 600;
+    line-height: 1;
+
+    text-decoration: none;
+    white-space: nowrap;
+
+    cursor: pointer;
+
+    transition:
+      background 0.15s ease,
+      border-color 0.15s ease;
+  }
+
+  .analytics-btn--primary {
+    background: #344054;
+    color: #fff;
+  }
+
+  .analytics-btn--primary:hover {
+    background: #1d2939;
+  }
+
+  .analytics-btn--secondary {
+    background: #f2f4f7;
+    border-color: #d0d5dd;
+    color: #344054;
+  }
+
+  .analytics-btn--secondary:hover {
+    background: #e4e7ec;
+    border-color: #98a2b3;
+    color: #1d2939;
+    text-decoration: none;
+  }
+
+  .analytics-btn--export {
+    min-width: 130px;
+    height: 42px;
+    min-height: 42px;
+    padding: 0 18px;
+
+    box-sizing: border-box;
+
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1;
+
+    white-space: nowrap;
+  }
+
+  /* ===================================================== */
+  /* FILTERS */
+  /* ===================================================== */
+
+  .analytics-filters {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 12px;
+
+    padding: 16px;
+    margin-bottom: 22px;
+
+    background: #fff;
+    border: 1px solid #e4e7ec;
+    border-radius: 12px;
+  }
+
+  .analytics-filter-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+
+    min-width: 210px;
+  }
+
+  .analytics-filter-field label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #475467;
+  }
+
+  /*
+   * Одинаковая высота select и кнопок.
+   */
+  .analytics-filter-select,
+  .analytics-filter-actions .analytics-btn {
+    box-sizing: border-box;
+    height: 42px;
+    min-height: 42px;
+  }
+
+  .analytics-filter-select {
+    width: 100%;
+    padding: 0 12px;
+
+    border: 1px solid #d0d5dd;
+    border-radius: 8px;
+
+    background: #fff;
+    color: #101828;
+
+    font: inherit;
+  }
+
+  .analytics-filter-select:focus {
+    outline: none;
+
+    border-color: #98a2b3;
+
+    box-shadow:
+      0 0 0 3px
+      rgba(152, 162, 179, 0.14);
+  }
+
+  .analytics-filter-actions {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+  }
+
+  /*
+   * Обе кнопки одинаковой ширины.
+   */
+  .analytics-filter-actions .analytics-btn {
+    width: 100px;
+    flex: 0 0 100px;
+  }
+
+  /* ===================================================== */
+  /* KPI */
+  /* ===================================================== */
+
+  .analytics-kpi-grid {
+    display: grid;
+
+    grid-template-columns: repeat(
+      5,
+      minmax(0, 1fr)
+    );
+
+    gap: 14px;
+    margin-bottom: 22px;
+  }
+
+  .analytics-kpi {
+    padding: 16px;
+
+    background: #fff;
+    border: 1px solid #e4e7ec;
+    border-radius: 12px;
+  }
+
+  .analytics-kpi__label {
+    display: block;
+    margin-bottom: 6px;
+
+    font-size: 13px;
+    color: #667085;
+  }
+
+  .analytics-kpi__value {
+    display: block;
+
+    font-size: 26px;
+    font-weight: 700;
+    color: #101828;
+  }
+
+  .analytics-kpi__subtext {
+    margin-top: 5px;
+
+    font-size: 12px;
+    color: #667085;
+  }
+
+  /* ===================================================== */
+  /* DISTRIBUTION */
+  /* ===================================================== */
+
+  .grade-summary {
+    display: grid;
+
+    grid-template-columns: repeat(
+      4,
+      minmax(0, 1fr)
+    );
+
+    gap: 12px;
+    margin-bottom: 22px;
+  }
+
+  .grade-summary__item {
+    padding: 14px 16px;
+
+    background: #fff;
+    border: 1px solid #e4e7ec;
+    border-radius: 12px;
+  }
+
+  .grade-summary__label {
+    display: block;
+    margin-bottom: 5px;
+
+    color: #667085;
+    font-size: 13px;
+  }
+
+  .grade-summary__value {
+    font-size: 22px;
+    font-weight: 700;
+    color: #101828;
+  }
+
+  /* ===================================================== */
+  /* TABLE */
+  /* ===================================================== */
+
+  .analytics-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 14px;
+
+    margin-bottom: 12px;
+  }
+
+  .analytics-section-header h2 {
+    margin: 0;
+
+    font-size: 20px;
+    color: #101828;
+  }
+
+  .analytics-section-header p {
+    margin: 4px 0 0;
+
+    color: #667085;
+    font-size: 13px;
+  }
+
+  .analytics-card {
+    overflow: hidden;
+
+    background: #fff;
+    border: 1px solid #e4e7ec;
+    border-radius: 14px;
+  }
+
+  .analytics-table-wrap {
+    width: 100%;
+    overflow-x: auto;
+  }
+
+  .analytics-table {
+    width: 100%;
+    min-width: 1180px;
+
+    border-collapse: collapse;
+  }
+
+  .analytics-table th,
+  .analytics-table td {
+    padding: 12px 14px;
+
+    border-bottom: 1px solid #eaecf0;
+
+    vertical-align: middle;
+  }
+
+  .analytics-table th {
+    background: #f9fafb;
+
+    color: #475467;
+    font-size: 12px;
+    font-weight: 600;
+
+    text-align: center;
+    white-space: nowrap;
+  }
+
+  .analytics-table th:first-child,
+  .analytics-table td:first-child {
+    text-align: left;
+  }
+
+  .analytics-table tbody tr:last-child td {
+    border-bottom: 0;
+  }
+
+  .analytics-table tbody tr:hover {
+    background: #fcfcfd;
+  }
+
+  .school-name {
+    font-weight: 600;
+    color: #101828;
+  }
+
+  .metric-value {
+    text-align: center;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .metric-muted {
+    color: #667085;
+    font-weight: 400;
+  }
+
+  .quality-value {
+    font-weight: 700;
+  }
+
+  /* ===================================================== */
+  /* EMPTY / SUMMARY */
+  /* ===================================================== */
+
+  .analytics-empty {
+    padding: 48px 20px;
+
+    text-align: center;
+    color: #667085;
+  }
+
+  .analytics-empty h3 {
+    margin: 0 0 8px;
+    color: #344054;
+  }
+
+  .analytics-summary-line {
+    margin-bottom: 14px;
+
+    color: #667085;
+    font-size: 13px;
+  }
+
+  /* ===================================================== */
+  /* RESPONSIVE */
+  /* ===================================================== */
+
+  @media (max-width: 760px) {
+    .analytics-header__actions {
+      width: 100%;
+    }
+
+    .analytics-btn--export {
+      width: 100%;
+    }
+
+    .analytics-header__actions .analytics-btn {
+      width: 100%;
+    }
+  }
+
+  @media (max-width: 1100px) {
+    .analytics-kpi-grid {
+      grid-template-columns: repeat(
+        3,
+        minmax(0, 1fr)
+      );
+    }
+  }
+
+  @media (max-width: 760px) {
+    .analytics-header {
+      flex-direction: column;
+    }
+
+    .analytics-filters {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .analytics-filter-field {
+      width: 100%;
+      min-width: 0;
+    }
+
+    .analytics-filter-actions {
+      width: 100%;
+    }
+
+    /*
+     * На мобильном кнопки занимают
+     * одинаковые половины строки.
+     */
+    .analytics-filter-actions .analytics-btn {
+      width: auto;
+      flex: 1 1 0;
+    }
+
+    .analytics-kpi-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .grade-summary {
+      grid-template-columns: repeat(
+        2,
+        minmax(0, 1fr)
+      );
+    }
+  }
+</style>
+
+{% endblock %}
+
+
+{% block content %}
+
+<div class="analytics-page">
+
+  <!-- ================================================= -->
+  <!-- HEADER -->
+  <!-- ================================================= -->
+
+  <div class="analytics-header">
+    <div class="analytics-header__content">
+      <h1>
+        {{ _('Білім сапасының аналитикасы') }}
+      </h1>
+      <p>
+        {{ _('Аудан мектептері бойынша Assessment нәтижелерінің жиынтық көрсеткіштері.') }}
+      </p>
+    </div>
+
+    <div class="analytics-header__actions">
+      <a
+        class="analytics-btn analytics-btn--secondary analytics-btn--export"
+        href="{{
+          url_for(
+            'district_assessment_analytics_export_excel'
+          )
+        }}?academic_year_start={{
+          selected_academic_year or ''
+        }}&subject_id={{
+          selected_subject_id or ''
+        }}&grade_level={{
+          selected_grade_level or ''
+        }}&amp;work_key={{ work_selection.work_key|urlencode }}&amp;checkpoint={{ work_selection.checkpoint|urlencode }}" data-sm-action="primary" aria-disabled="{{ 'false' if work_selection.selected else 'true' }}">
+        {{ _('Excel жүктеу') }}
+      </a>
+    </div>
+  </div>
+
+
+  <!-- ================================================= -->
+  <!-- FILTERS -->
+  <!-- ================================================= -->
+
+  <form data-sm-quality-filter
+    method="get"
+    action="{{
+      url_for(
+        'district_assessment_analytics_page'
+      )
+    }}"
+    class="analytics-filters"
+  >
+
+    <!-- ACADEMIC YEAR -->
+    <div class="analytics-filter-field">
+
+      <label for="academic_year_start">
+        {{ _('Оқу жылы') }}
+      </label>
+
+      <select
+        id="academic_year_start"
+        name="academic_year_start"
+        class="analytics-filter-select"
+      >
+
+        {% for year in academic_years %}
+
+          <option
+            value="{{ year }}"
+            {% if selected_academic_year == year %}
+              selected
+            {% endif %}
+          >
+            {{ year }}/{{ year + 1 }}
+          </option>
+
+        {% endfor %}
+
+      </select>
+
+    </div>
+
+
+    <!-- SUBJECT -->
+    <div class="analytics-filter-field">
+
+      <label for="subject_id">
+        {{ _('Пән') }}
+      </label>
+
+      <select
+        id="subject_id"
+        name="subject_id"
+        class="analytics-filter-select"
+      >
+
+        <option value="">
+          {{ _('Барлық пәндер') }}
+        </option>
+
+        {% for subject in subjects %}
+
+          <option
+            value="{{ subject.id }}"
+            {% if
+              selected_subject_id is not none
+              and selected_subject_id == subject.id
+            %}
+              selected
+            {% endif %}
+          >
+            {{ assessment_subject_name(subject) }}
+          </option>
+
+        {% endfor %}
+
+      </select>
+
+    </div>
+
+
+    <!-- GRADE LEVEL -->
+    <div class="analytics-filter-field">
+
+      <label for="grade_level">
+        {{ _('Параллель') }}
+      </label>
+
+      <select
+        id="grade_level"
+        name="grade_level"
+        class="analytics-filter-select"
+      >
+
+        <option value="">
+          {{ _('Барлық параллельдер') }}
+        </option>
+
+        {% for grade in grade_levels %}
+
+          <option
+            value="{{ grade }}"
+            {% if
+              selected_grade_level is not none
+              and selected_grade_level == grade
+            %}
+              selected
+            {% endif %}
+          >
+            {{ grade }}{{ _('-сынып') }}
+          </option>
+
+        {% endfor %}
+
+      </select>
+
+    </div>
+
+
+    <!-- ACTIONS -->
+    {% include 'components/assessment_work_filter.html' %}
+
+    <div class="analytics-filter-actions">
+
+      <button
+        type="submit"
+        class="
+          analytics-btn
+          analytics-btn--primary
+        "
+       data-sm-action="primary">
+        {{ _('Сүзу') }}
+      </button>
+
+      <a
+        class="
+          analytics-btn
+          analytics-btn--secondary
+        "
+        href="{{
+          url_for(
+            'district_assessment_analytics_page'
+          )
+        }}"
+       data-sm-action="nav">
+        {{ _('Тазарту') }}
+      </a>
+
+    </div>
+
+  </form>
+  {% include 'components/assessment_work_notice.html' %}
+  {% if work_selection.work_key == 'all' %}{% include 'components/assessment_all_works.html' %}{% endif %}
+
+
+
+  <!-- ================================================= -->
+  <!-- KPI -->
+  <!-- ================================================= -->
+
+  {% if work_selection.selected and work_selection.work_key != 'all' %}
+<div class="analytics-kpi-grid">
+
+    <!-- TOTAL -->
+    <div class="analytics-kpi">
+
+      <span class="analytics-kpi__label">
+        {{ _('Барлық оқушы') }}
+      </span>
+
+      <span class="analytics-kpi__value">
+        {{ district_analytics.total_students }}
+      </span>
+
+    </div>
+
+
+    <!-- PARTICIPATED -->
+    <div class="analytics-kpi">
+
+      <span class="analytics-kpi__label">
+        {{ _('Қатысқандар') }}
+      </span>
+
+      <span class="analytics-kpi__value">
+        {{ district_analytics.participated_students }}
+      </span>
+
+      <div class="analytics-kpi__subtext">
+        {{
+          district_analytics.participation_display
+        }}
+      </div>
+
+    </div>
+
+
+    <!-- AVERAGE -->
+    <div class="analytics-kpi">
+
+      <span class="analytics-kpi__label">
+        {{ _('Орташа нәтиже') }}
+      </span>
+
+      <span class="analytics-kpi__value">
+        {{
+          district_analytics
+          .average_percent_display
+        }}
+      </span>
+
+      <div class="analytics-kpi__subtext">
+        {{ _('Орташа балл:') }}
+        {{
+          district_analytics
+          .average_score_display
+        }}
+      </div>
+
+    </div>
+
+
+    <!-- ACHIEVEMENT -->
+    <div class="analytics-kpi">
+
+      <span class="analytics-kpi__label">
+        {{ _('Үлгерім') }}
+      </span>
+
+      <span class="analytics-kpi__value">
+        {{
+          district_analytics
+          .achievement_percent_display
+        }}
+      </span>
+
+    </div>
+
+
+    <!-- QUALITY -->
+    <div class="analytics-kpi">
+
+      <span class="analytics-kpi__label">
+        {{ _('Білім сапасы') }}
+      </span>
+
+      <span class="analytics-kpi__value">
+        {{
+          district_analytics
+          .quality_percent_display
+        }}
+      </span>
+
+    </div>
+
+  </div>
+{% endif %}
+
+
+  <!-- ================================================= -->
+  <!-- GRADE DISTRIBUTION -->
+  <!-- ================================================= -->
+
+  {% if work_selection.selected and work_selection.work_key != 'all' %}
+<div class="grade-summary">
+
+    <div class="grade-summary__item">
+
+      <span class="grade-summary__label">
+        {{ _('«5» алғандар') }}
+      </span>
+
+      <span class="grade-summary__value">
+        {{ district_analytics.grade_5_count }}
+      </span>
+
+    </div>
+
+
+    <div class="grade-summary__item">
+
+      <span class="grade-summary__label">
+        {{ _('«4» алғандар') }}
+      </span>
+
+      <span class="grade-summary__value">
+        {{ district_analytics.grade_4_count }}
+      </span>
+
+    </div>
+
+
+    <div class="grade-summary__item">
+
+      <span class="grade-summary__label">
+        {{ _('«3» алғандар') }}
+      </span>
+
+      <span class="grade-summary__value">
+        {{ district_analytics.grade_3_count }}
+      </span>
+
+    </div>
+
+
+    <div class="grade-summary__item">
+
+      <span class="grade-summary__label">
+        {{ _('«2» алғандар') }}
+      </span>
+
+      <span class="grade-summary__value">
+        {{ district_analytics.grade_2_count }}
+      </span>
+
+    </div>
+
+  </div>
+{% endif %}
+
+
+  <!-- ================================================= -->
+  <!-- SCHOOLS -->
+  <!-- ================================================= -->
+
+{% if work_selection.selected and work_selection.work_key != 'all' %}
+  <div class="analytics-section-header">
+
+    <div>
+
+      <h2>
+        {{ _('Мектептер бойынша') }}
+      </h2>
+
+      <p>
+        {{ _('Аудан мектептерінің салыстырмалы нәтижелері.') }}
+      </p>
+
+    </div>
+
+  </div>
+
+
+  <div class="analytics-summary-line">
+
+    {{ _('Мектеп саны:') }}
+    <strong>{{ school_count }}</strong>
+
+    {% if
+      selected_subject_id
+      or selected_grade_level
+    %}
+      {{ _('· Сүзгі қолданылды') }}
+    {% endif %}
+
+  </div>
+
+
+  <section class="analytics-card">
+
+    {% if schools %}
+
+      <div class="analytics-table-wrap">
+
+        <table class="analytics-table">
+
+          <thead>
+
+            <tr>
+
+              <th>
+                {{ _('Мектеп') }}
+              </th>
+
+              <th>
+                {{ _('Қатысқан') }}
+              </th>
+
+              <th>
+                {{ _('Қатыспады') }}
+              </th>
+
+              <th>
+                5
+              </th>
+
+              <th>
+                4
+              </th>
+
+              <th>
+                3
+              </th>
+
+              <th>
+                2
+              </th>
+
+              <th>
+                {{ _('Орташа балл') }}
+              </th>
+
+              <th>
+                {{ _('Орташа %') }}
+              </th>
+
+              <th>
+                {{ _('Үлгерім') }}
+              </th>
+
+              <th>
+                {{ _('Білім сапасы') }}
+              </th>
+
+            </tr>
+
+          </thead>
+
+
+          <tbody>
+
+            {% for school in schools %}
+
+              <tr>
+
+                <!-- SCHOOL -->
+                <td>
+
+                  <span class="school-name">
+                    {{ school.entity_name }}
+                  </span>
+
+                </td>
+
+
+                <!-- PARTICIPATED -->
+                <td class="metric-value">
+
+                  {{ school.participation_display }}
+
+                </td>
+
+
+                <!-- ABSENT -->
+                <td class="metric-value">
+
+                  {{ school.absent_students }}
+
+                </td>
+
+
+                <!-- GRADES -->
+                <td class="metric-value">
+                  {{ school.grade_5_count }}
+                </td>
+
+                <td class="metric-value">
+                  {{ school.grade_4_count }}
+                </td>
+
+                <td class="metric-value">
+                  {{ school.grade_3_count }}
+                </td>
+
+                <td class="metric-value">
+                  {{ school.grade_2_count }}
+                </td>
+
+
+                <!-- AVERAGE SCORE -->
+                <td class="metric-value">
+
+                  {{
+                    school
+                    .average_score_display
+                  }}
+
+                </td>
+
+
+                <!-- AVERAGE PERCENT -->
+                <td class="metric-value">
+
+                  {{
+                    school
+                    .average_percent_display
+                  }}
+
+                </td>
+
+
+                <!-- ACHIEVEMENT -->
+                <td class="metric-value">
+
+                  {{
+                    school
+                    .achievement_percent_display
+                  }}
+
+                </td>
+
+
+                <!-- QUALITY -->
+                <td
+                  class="
+                    metric-value
+                    quality-value
+                  "
+                >
+
+                  {{
+                    school
+                    .quality_percent_display
+                  }}
+
+                </td>
+
+              </tr>
+
+            {% endfor %}
+
+          </tbody>
+
+        </table>
+
+      </div>
+
+    {% else %}
+
+      <div class="analytics-empty">
+
+        <h3>
+          {{ _('Деректер табылмады') }}
+        </h3>
+
+        <p>
+          {{ _('Таңдалған сүзгілер бойынша аяқталған Assessment нәтижелері жоқ.') }}
+        </p>
+
+      </div>
+
+    {% endif %}
+
+  </section>
+{% endif %}
+
+</div>
+
+<script src="{{ url_for('static', path='js/assessment/analytics_work_filter.js') }}?v=173" defer></script>
+{% endblock %}

@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Планирование ВШК — Направления{% endblock %}
+{% block title %}{{ _('Планирование ВШК — Направления') }}{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', path='css/admin.css') }}">
@@ -35,16 +35,16 @@
 {% block content %}
 <section class="dashboard-section">
   <div class="section-head">
-    <h2 class="section-title">Планирование ВШК — Направления</h2>
+    <h2 class="section-title">{{ _('Планирование ВШК — Направления') }}</h2>
   </div>
 
   {% if error %}
-    <div class="alert alert--error">{{ error }}</div>
+    <div class="alert alert--error">{{ super_planning_message(error) }}</div>
   {% endif %}
 
   {% if directions is not defined or directions|length == 0 %}
     <div class="alert alert--info" style="margin: 12px 0 16px;">
-      Направления пока не созданы. Нажми “Добавить направление”.
+      {{ _('Направления пока не созданы. Нажми “Добавить направление”.') }}
     </div>
   {% endif %}
 
@@ -57,9 +57,9 @@
         <form method="post"
               action="/planning/super/directions/{{ d.id }}/delete"
               class="card-delete-form"
-              onsubmit="return confirm('Удалить направление?');"
+              onsubmit="return confirm({{ _('Удалить направление?')|tojson|forceescape }});"
               onclick="event.stopPropagation();">
-          <button type="submit" class="card-delete-btn">✖</button>
+          <button type="submit" class="card-delete-btn" data-sm-action="danger" data-sm-icon="true">✖</button>
         </form>
 
         <!-- САМА КАРТОЧКА -->
@@ -74,7 +74,7 @@
             <p class="card__desc">{{ d.full_title or "" }}</p>
 
             <div class="card__footer">
-              <span>Открыть</span>
+              <span>{{ _('Открыть') }}</span>
               <span class="card__arrow">→</span>
             </div>
           </div>
@@ -91,11 +91,11 @@
             <div class="card__icon">➕</div>
           </div>
 
-          <h3 class="card__title">Добавить направление</h3>
-          <p class="card__desc">Создай новый раздел ВШК для шаблонов</p>
+          <h3 class="card__title">{{ _('Добавить направление') }}</h3>
+          <p class="card__desc">{{ _('Создай новый раздел ВШК для шаблонов') }}</p>
 
           <div class="card__footer">
-            <span>Создать</span>
+            <span>{{ _('Создать') }}</span>
             <span class="card__arrow">→</span>
           </div>
         </div>

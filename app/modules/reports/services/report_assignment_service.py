@@ -193,6 +193,7 @@ class ReportAssignmentService:
         )
 
         cls._require_task_in_progress(task)
+        await ReportAssignmentRepo.lock_report_selection(db, month_item_id=month_item_id)
 
         normalized_assignments = (
             cls._normalize_assignment_inputs(
@@ -210,6 +211,7 @@ class ReportAssignmentService:
         selected_report_ids = {
             int(report.selected_report_id)
             for report in assignable_report_rows
+            if report.assignable
         }
 
         if not selected_report_ids:
@@ -259,6 +261,14 @@ class ReportAssignmentService:
             for assignment in existing_assignments
         }
 
+        for selected_report_id, staff_member_id in normalized_assignments.items():
+            current = existing_by_report_id.get(selected_report_id)
+            if (current is not None
+                    and cls._normalize_status(current.status) == ReportAssignmentStatus.COMPLETED.value
+                    and int(current.staff_member_id) != staff_member_id):
+                raise HTTPException(status_code=status.HTTP_409_CONFLICT,
+                                    detail="Выполненный отчёт нельзя переназначить. / Аяқталған есепті қайта тағайындауға болмайды.")
+
         created_count = 0
         updated_count = 0
         unchanged_count = 0
@@ -280,6 +290,7 @@ class ReportAssignmentService:
                     ),
                     staff_member_id=staff_member_id,
                     assigned_by_user_id=user_id,
+                    flush=False,
                 )
 
                 created_count += 1
@@ -297,6 +308,7 @@ class ReportAssignmentService:
                 assignment=existing,
                 staff_member_id=staff_member_id,
                 assigned_by_user_id=user_id,
+                    flush=False,
             )
 
             updated_count += 1
@@ -348,6 +360,7 @@ class ReportAssignmentService:
         )
 
         cls._require_task_in_progress(task)
+        await ReportAssignmentRepo.lock_report_selection(db, month_item_id=month_item_id)
 
         selected_report_id = cls._require_positive_id(
             selected_report_id,
@@ -380,9 +393,11 @@ class ReportAssignmentService:
         )
 
         if assignment is None:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Назначение выбранного отчёта не найдено.",
+            return await ReportAssignmentRepo.create(
+                db,
+                selected_report_id=selected_report_id,
+                staff_member_id=staff_member_id,
+                assigned_by_user_id=user_id,
             )
 
         current_status = cls._normalize_status(
@@ -613,12 +628,12 @@ class ReportAssignmentService:
         к текущей задаче.
         """
 
-        selected_report_ids = (
-            await ReportAssignmentRepo.get_selected_report_ids(
-                db,
-                month_item_id=month_item_id,
-            )
-        )
+        rows = await ReportAssignmentRepo.list_report_rows(db, month_item_id=month_item_id)
+        selected_report_ids = {row.selected_report_id for row in rows if row.assignable}
+        invalid = next((row for row in rows if row.selected_report_id == selected_report_id and not row.assignable), None)
+        if invalid:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=invalid.target_error)
+
 
         if selected_report_id not in selected_report_ids:
             raise HTTPException(

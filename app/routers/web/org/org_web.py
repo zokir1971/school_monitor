@@ -5,6 +5,8 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette import status
 
+from app.core.i18n import resolve_language
+from app.core.schools_i18n import school_feedback
 from app.db.session import get_db
 from app.modules.org.repo import OrgRepo
 from app.modules.users.deps import require_roles
@@ -155,7 +157,7 @@ async def school_edit_page(
 ):
     school = await OrgRepo.get_school(db, school_id=school_id)
     if not school:
-        raise HTTPException(status_code=404, detail="Школа не найдена")
+        raise HTTPException(status_code=404, detail=school_feedback("Школа не найдена", resolve_language(request)))
 
     regions = await OrgRepo.list_regions(db)
     districts = await OrgRepo.list_districts(db, region_id=school.district.region_id)
@@ -190,7 +192,7 @@ async def school_update(
 ):
     school = await OrgRepo.get_school(db, school_id=school_id)
     if not school:
-        raise HTTPException(status_code=404, detail="Школа не найдена")
+        raise HTTPException(status_code=404, detail=school_feedback("Школа не найдена", resolve_language(request)))
 
     try:
         await OrgRepo.update_school(
@@ -241,7 +243,7 @@ async def school_delete(
 ):
     school = await OrgRepo.get_school(db, school_id=school_id)
     if not school:
-        raise HTTPException(status_code=404, detail="Школа не найдена")
+        raise HTTPException(status_code=404, detail=school_feedback("Школа не найдена", resolve_language(request)))
 
     await OrgRepo.delete_school(db, school)
 

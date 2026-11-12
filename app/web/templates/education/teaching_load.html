@@ -1,0 +1,510 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('Оқу процесі — Оқу жүктемесі') }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet"
+      href="{{ url_for('static', path='css/education/teaching_load.css') }}">
+{% endblock %}
+
+{% block content %}
+
+<div class="teaching-load-page">
+
+  <!-- =====================================================
+       PAGE HEADER
+       ===================================================== -->
+
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">{{ _('Оқу процесі') }}</h1>
+
+      <p class="page-subtitle">
+        {{ _('Педагогтердің оқу жүктемесін басқару және сабақ кестесін құру') }}
+      </p>
+    </div>
+
+    <a href="{{ url_for('school_admin_dashboard') }}"
+       class="btn btn--secondary btn--back" data-sm-action="nav" data-sm-back="true">
+      {{ _('← Артқа') }}
+    </a>
+  </div>
+
+
+  <!-- =====================================================
+       MODULE NAVIGATION
+       ===================================================== -->
+
+  <div class="process-nav">
+
+    <div class="process-nav__item process-nav__item--active">
+      <div class="process-nav__icon">📚</div>
+
+      <div>
+        <div class="process-nav__title">
+          {{ _('Оқу жүктемесі') }}
+        </div>
+
+        <div class="process-nav__text">
+          {{ _('Мұғалім → пән → сынып') }}
+        </div>
+      </div>
+    </div>
+
+    <div class="process-nav__item process-nav__item--disabled">
+      <div class="process-nav__icon">📅</div>
+
+      <div>
+        <div class="process-nav__title">
+          {{ _('Сабақ кестесі') }}
+        </div>
+
+        <div class="process-nav__text">
+          {{ _('Келесі кезеңде іске қосылады') }}
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+
+  <!-- =====================================================
+       MESSAGES
+       ===================================================== -->
+
+  {% if success %}
+    <div class="alert alert-success">
+      {{ success }}
+    </div>
+  {% endif %}
+
+  {% if error %}
+    <div class="alert alert-danger">
+      {{ _(error) }}
+    </div>
+  {% endif %}
+
+
+  <!-- =====================================================
+       ACADEMIC YEAR
+       ===================================================== -->
+
+  <section class="content-card">
+
+    <div class="card-header">
+      <div>
+        <h2 class="card-title">
+          {{ _('Оқу жылы') }}
+        </h2>
+
+        <p class="card-description">
+          {{ _('Оқу жүктемесі таңдалған оқу жылындағы сыныптар бойынша көрсетіледі.') }}
+        </p>
+      </div>
+    </div>
+
+    <form method="get"
+          action="{{ url_for('school_teaching_load_page') }}"
+          class="academic-year-form">
+
+      <div class="form-group">
+        <label for="academic_year_start">
+          {{ _('Оқу жылы') }}
+        </label>
+
+        <select id="academic_year_start"
+                name="academic_year_start"
+                class="form-control">
+
+          {% for year in range(page.academic_year_start - 2,
+                               page.academic_year_start + 3) %}
+
+            <option value="{{ year }}"
+              {% if year == page.academic_year_start %}
+                selected
+              {% endif %}>
+              {{ year }}/{{ year + 1 }}
+            </option>
+
+          {% endfor %}
+
+        </select>
+      </div>
+
+      <button type="submit"
+              class="btn btn--secondary" data-sm-action="nav">
+        {{ _('Көрсету') }}
+      </button>
+
+    </form>
+
+  </section>
+
+
+  <!-- =====================================================
+       CREATE ASSIGNMENT
+       ===================================================== -->
+
+  <section class="content-card">
+
+    <div class="card-header">
+
+      <div>
+        <h2 class="card-title">
+          {{ _('Оқу жүктемесін тағайындау') }}
+        </h2>
+
+        <p class="card-description">
+          {{ _('Мұғалімге пән мен сыныпты тағайындаңыз. Бұл ақпарат кейін сабақ кестесін құру кезінде пайдаланылады.') }}
+        </p>
+      </div>
+
+      <div class="academic-year-badge">
+        {{ page.academic_year_label }}
+      </div>
+
+    </div>
+
+
+    {% if page.classes and page.subjects and page.teachers %}
+
+      <form method="post"
+            action="{{ url_for('school_teaching_load_create') }}"
+            class="assignment-form">
+
+        <input type="hidden"
+               name="academic_year_start"
+               value="{{ page.academic_year_start }}">
+
+        <!-- Main assignment is the default workflow. -->
+        <input type="hidden"
+               name="is_primary"
+               value="true">
+
+
+        <!-- CLASS -->
+
+        <div class="form-group">
+
+          <label for="school_class_id">
+            {{ _('Сынып') }}
+          </label>
+
+          <select id="school_class_id"
+                  name="school_class_id"
+                  class="form-control"
+                  required>
+
+            <option value="">
+              {{ _('Сыныпты таңдаңыз') }}
+            </option>
+
+            {% for item in page.classes %}
+              <option value="{{ item.id }}">
+                {{ item.name }}
+              </option>
+            {% endfor %}
+
+          </select>
+
+        </div>
+
+
+        <!-- SUBJECT -->
+
+        <div class="form-group">
+
+          <label for="subject_id">
+            {{ _('Пән') }}
+          </label>
+
+          <select id="subject_id"
+                  name="subject_id"
+                  class="form-control"
+                  required>
+
+            <option value="">
+              {{ _('Пәнді таңдаңыз') }}
+            </option>
+
+            {% for item in page.subjects %}
+              <option value="{{ item.id }}">
+                {{ item.name }}
+              </option>
+            {% endfor %}
+
+          </select>
+
+        </div>
+
+
+        <!-- TEACHER -->
+
+        <div class="form-group">
+
+          <label for="staff_member_id">
+            {{ _('Мұғалім') }}
+          </label>
+
+          <select id="staff_member_id"
+                  name="staff_member_id"
+                  class="form-control"
+                  required>
+
+            <option value="">
+              {{ _('Мұғалімді таңдаңыз') }}
+            </option>
+
+            {% for item in page.teachers %}
+              <option value="{{ item.staff_member_id }}">
+                {{ item.full_name }}
+              </option>
+            {% endfor %}
+
+          </select>
+
+        </div>
+
+
+        <!-- SUBMIT -->
+
+        <div class="form-group form-group--action">
+
+          <button type="submit"
+                  class="btn btn--primary" data-sm-action="primary">
+            {{ _('Тағайындау') }}
+          </button>
+
+        </div>
+
+      </form>
+
+    {% else %}
+
+      <div class="empty-state">
+
+        <div class="empty-state__title">
+          {{ _('Оқу жүктемесін тағайындау мүмкін емес') }}
+        </div>
+
+        <div class="empty-state__text">
+
+          {% if not page.classes %}
+            {{ _('Таңдалған оқу жылында белсенді сыныптар жоқ.') }}
+          {% elif not page.subjects %}
+            {{ _('Белсенді пәндер жоқ.') }}
+          {% elif not page.teachers %}
+            {{ _('Мектепте белсенді қызметкерлер жоқ.') }}
+          {% endif %}
+
+        </div>
+
+      </div>
+
+    {% endif %}
+
+  </section>
+
+
+  <!-- =====================================================
+       CURRENT LOAD
+       ===================================================== -->
+
+  <section class="content-card">
+
+    <div class="card-header">
+
+      <div>
+        <h2 class="card-title">
+          {{ _('Тағайындалған оқу жүктемесі') }}
+        </h2>
+
+        <p class="card-description">
+          {{ page.academic_year_label }} {{ _('оқу жылындағы белсенді педагогикалық жүктеме') }}
+        </p>
+      </div>
+
+      <div class="count-badge">
+        {{ page.assignments | length }}
+      </div>
+
+    </div>
+
+
+    {% if page.assignments %}
+
+      <div class="table-responsive">
+
+        <table class="data-table">
+
+          <thead>
+          <tr>
+            <th class="col-number">№</th>
+            <th>{{ _('Сынып') }}</th>
+            <th>{{ _('Пән') }}</th>
+            <th>{{ _('Мұғалім') }}</th>
+            <th>{{ _('Мәртебе') }}</th>
+            <th class="col-actions">{{ _('Әрекет') }}</th>
+          </tr>
+          </thead>
+
+          <tbody>
+
+          {% for item in page.assignments %}
+
+            <tr>
+
+              <td class="col-number">
+                {{ loop.index }}
+              </td>
+
+              <td>
+                <span class="class-badge">
+                  {{ item.class_name }}
+                </span>
+              </td>
+
+              <td>
+                {{ item.subject_name }}
+              </td>
+
+              <td>
+                {{ item.teacher_name }}
+              </td>
+
+              <td>
+
+                {% if item.is_primary %}
+                  <span class="status-badge status-badge--primary">
+                    {{ _('Негізгі') }}
+                  </span>
+                {% else %}
+                  <span class="status-badge status-badge--secondary">
+                    {{ _('Қосымша') }}
+                  </span>
+                {% endif %}
+
+              </td>
+
+              <td class="col-actions">
+
+                <form method="post"
+                      action="{{ url_for(
+                          'school_teaching_load_deactivate',
+                          assignment_id=item.id
+                      ) }}"
+                      onsubmit="return confirm(
+                          'Осы оқу жүктемесін тоқтатасыз ба?'
+                      );">
+
+                  <input type="hidden"
+                         name="academic_year_start"
+                         value="{{ page.academic_year_start }}">
+
+                  <button type="submit"
+                          class="btn btn--danger btn--small" data-sm-action="danger">
+                    {{ _('Тоқтату') }}
+                  </button>
+
+                </form>
+
+              </td>
+
+            </tr>
+
+          {% endfor %}
+
+          </tbody>
+
+        </table>
+
+      </div>
+
+    {% else %}
+
+      <div class="empty-state">
+
+        <div class="empty-state__icon">
+          📚
+        </div>
+
+        <div class="empty-state__title">
+          {{ _('Оқу жүктемесі әлі тағайындалмаған') }}
+        </div>
+
+        <div class="empty-state__text">
+          {{ _('Алдымен сыныпты, пәнді және мұғалімді таңдап, оқу жүктемесін тағайындаңыз.') }}
+        </div>
+
+      </div>
+
+    {% endif %}
+
+  </section>
+
+
+  <!-- =====================================================
+       FUTURE SCHEDULE
+       ===================================================== -->
+
+  <section class="content-card schedule-preview">
+
+    <div class="card-header">
+
+      <div>
+        <h2 class="card-title">
+          {{ _('Сабақ кестесі') }}
+        </h2>
+
+        <p class="card-description">
+          {{ _('Сабақ кестесі осы бетте қалыптастырылған оқу жүктемесіне негізделеді.') }}
+        </p>
+      </div>
+
+      <span class="coming-soon-badge">
+        {{ _('Келесі кезең') }}
+      </span>
+
+    </div>
+
+    <div class="schedule-flow">
+
+      <div class="schedule-flow__item">
+        <strong>1</strong>
+        <span>{{ _('Оқу жүктемесі') }}</span>
+      </div>
+
+      <div class="schedule-flow__arrow">
+        →
+      </div>
+
+      <div class="schedule-flow__item">
+        <strong>2</strong>
+        <span>{{ _('Апта күні және сабақ') }}</span>
+      </div>
+
+      <div class="schedule-flow__arrow">
+        →
+      </div>
+
+      <div class="schedule-flow__item">
+        <strong>3</strong>
+        <span>{{ _('Кабинет') }}</span>
+      </div>
+
+      <div class="schedule-flow__arrow">
+        →
+      </div>
+
+      <div class="schedule-flow__item">
+        <strong>4</strong>
+        <span>{{ _('Дайын сабақ кестесі') }}</span>
+      </div>
+
+    </div>
+
+  </section>
+
+</div>
+
+{% endblock %}

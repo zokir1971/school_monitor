@@ -1,0 +1,614 @@
+/* ============================================================
+   QUESTION BANK EXPERT — DETAIL
+   ============================================================ */
+
+
+/* ============================================================
+   1. PAGE
+   ============================================================ */
+
+.qb-experts-page {
+    --qb-primary: #2563eb;
+    --qb-primary-dark: #1d4ed8;
+
+    --qb-success: #15803d;
+    --qb-success-bg: #f0fdf4;
+    --qb-success-border: #bbf7d0;
+
+    --qb-danger: #dc2626;
+    --qb-danger-dark: #b91c1c;
+
+    --qb-text: #1f2937;
+    --qb-muted: #64748b;
+
+    --qb-border: #e2e8f0;
+    --qb-bg: #ffffff;
+    --qb-bg-soft: #f8fafc;
+
+    --qb-radius: 12px;
+    --qb-radius-sm: 8px;
+
+    width: 100%;
+    max-width: 1120px;
+
+    margin: 0 auto;
+    padding: 20px 14px 32px;
+
+    color: var(--qb-text);
+}
+
+
+/* ============================================================
+   PAGE HEADER
+   ============================================================ */
+
+.qb-experts-page .qb-page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    gap: 32px;
+
+    width: 100%;
+
+    margin-bottom: 18px;
+}
+
+.qb-experts-page .qb-page-header__main {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.qb-experts-page .qb-page-title {
+    margin: 0;
+
+    color: var(--qb-text);
+
+    font-size: 1.65rem;
+    font-weight: 700;
+    line-height: 1.25;
+}
+
+.qb-experts-page .qb-page-statuses {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+
+    gap: 7px;
+
+    margin-top: 8px;
+}
+
+
+/* ============================================================
+   HEADER ACTIONS
+   ============================================================ */
+
+.qb-experts-page .qb-page-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+
+    flex: 0 0 auto;
+
+    gap: 8px;
+
+    margin: 0;
+    padding: 0;
+}
+
+.qb-experts-page .qb-inline-form {
+    display: inline-flex;
+    align-items: center;
+
+    margin: 0;
+    padding: 0;
+}
+
+/* ============================================================
+   4. CARDS
+   ============================================================ */
+
+.qb-experts-page .qb-detail-section {
+    margin-bottom: 14px;
+}
+
+.qb-experts-page .qb-card {
+    overflow: hidden;
+
+    background-color: var(--qb-bg);
+
+    border: 1px solid var(--qb-border);
+    border-radius: var(--qb-radius);
+
+    box-shadow:
+        0 1px 2px rgba(15, 23, 42, 0.03),
+        0 4px 14px rgba(15, 23, 42, 0.03);
+}
+
+
+/* ============================================================
+   5. CARD HEADER
+   ============================================================ */
+
+.qb-experts-page .qb-card-header {
+    display: flex;
+    align-items: center;
+
+    min-height: 46px;
+
+    padding: 11px 18px;
+
+    background-color: var(--qb-bg-soft);
+
+    border-bottom: 1px solid var(--qb-border);
+}
+
+.qb-experts-page .qb-card-title {
+    margin: 0;
+
+    color: var(--qb-text);
+
+    font-size: 0.96rem;
+    font-weight: 700;
+    line-height: 1.35;
+}
+
+
+/* ============================================================
+   6. CARD BODY
+   ============================================================ */
+
+.qb-experts-page .qb-card-body {
+    padding: 14px 16px;
+}
+
+
+/* ============================================================
+   7. DETAIL GRID
+   ============================================================ */
+
+.qb-experts-page .qb-detail-grid {
+    display: grid;
+
+    column-gap: 24px;
+    row-gap: 14px;
+}
+
+.qb-experts-page .qb-detail-grid--2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.qb-experts-page .qb-detail-grid--3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.qb-experts-page .qb-detail-grid--4 {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.qb-experts-page .qb-detail-grid--organization {
+    grid-template-columns:
+        minmax(0, 2fr)
+        minmax(0, 1fr)
+        minmax(0, 1fr);
+}
+
+.qb-experts-page .qb-detail-item {
+    min-width: 0;
+}
+
+
+/* ============================================================
+   8. DETAIL VALUES
+   ============================================================ */
+
+.qb-experts-page .qb-detail-label {
+    margin-bottom: 3px;
+
+    color: var(--qb-muted);
+
+    font-size: 0.76rem;
+    font-weight: 500;
+    line-height: 1.3;
+}
+
+.qb-experts-page .qb-detail-value {
+    color: #334155;
+
+    font-size: 0.89rem;
+    font-weight: 400;
+    line-height: 1.4;
+}
+
+.qb-experts-page .qb-detail-value--strong {
+    color: var(--qb-text);
+
+    font-weight: 600;
+}
+
+.qb-experts-page .qb-detail-value--break {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+.qb-experts-page .qb-detail-note {
+    margin-top: 3px;
+
+    color: var(--qb-muted);
+
+    font-size: 0.75rem;
+    line-height: 1.3;
+}
+
+
+/* ============================================================
+   9. BADGES
+   ============================================================ */
+
+.qb-experts-page .qb-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    min-height: 24px;
+
+    padding: 3px 8px;
+
+    border: 1px solid transparent;
+    border-radius: 999px;
+
+    font-size: 0.74rem;
+    font-weight: 600;
+    line-height: 1.2;
+
+    white-space: nowrap;
+}
+
+.qb-experts-page .qb-badge--success {
+    color: #166534;
+    background-color: #dcfce7;
+
+    border-color: #bbf7d0;
+}
+
+.qb-experts-page .qb-badge--primary {
+    color: #1e40af;
+    background-color: #dbeafe;
+
+    border-color: #bfdbfe;
+}
+
+.qb-experts-page .qb-badge--secondary {
+    color: #475569;
+    background-color: #f1f5f9;
+
+    border-color: #e2e8f0;
+}
+
+.qb-experts-page .qb-badge--light {
+    color: #475569;
+    background-color: #ffffff;
+
+    border-color: #cbd5e1;
+}
+
+
+/* ============================================================
+   10. INFO BOX
+   ============================================================ */
+
+.qb-experts-page .qb-info-box {
+    padding: 11px 13px;
+
+    border: 1px solid;
+    border-radius: var(--qb-radius-sm);
+}
+
+.qb-experts-page .qb-info-box--success {
+    color: #166534;
+    background-color: var(--qb-success-bg);
+
+    border-color: var(--qb-success-border);
+}
+
+.qb-experts-page .qb-info-box--neutral {
+    color: #475569;
+    background-color: var(--qb-bg-soft);
+
+    border-color: var(--qb-border);
+}
+
+.qb-experts-page .qb-info-box__title {
+    margin-bottom: 3px;
+
+    color: inherit;
+
+    font-size: 0.88rem;
+    font-weight: 700;
+    line-height: 1.35;
+}
+
+.qb-experts-page .qb-info-box__text {
+    color: inherit;
+
+    font-size: 0.82rem;
+    line-height: 1.45;
+}
+
+
+/* ============================================================
+   11. BUTTON BASE
+   Одинаковый размер для <a> и <button>
+   ============================================================ */
+
+.qb-experts-page .qb-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    box-sizing: border-box;
+
+    height: 42px;
+    min-height: 42px;
+
+    padding: 0 14px;
+
+    margin: 0;
+
+    border: 1px solid transparent;
+    border-radius: var(--qb-radius-sm);
+
+    font-family: inherit;
+    font-size: 0.86rem;
+    font-weight: 600;
+    line-height: 1;
+
+    white-space: nowrap;
+    text-decoration: none;
+
+    cursor: pointer;
+
+    vertical-align: middle;
+
+    appearance: none;
+    -webkit-appearance: none;
+
+    box-shadow: none;
+
+    transition:
+        color 0.15s ease,
+        background-color 0.15s ease,
+        border-color 0.15s ease,
+        transform 0.1s ease;
+}
+
+.qb-experts-page a.qb-btn,
+.qb-experts-page button.qb-btn {
+    height: 42px;
+    min-height: 42px;
+}
+
+.qb-experts-page .qb-btn:active {
+    transform: translateY(1px);
+}
+
+/* ============================================================
+   12. PRIMARY BUTTON
+   ============================================================ */
+
+.qb-experts-page .qb-btn--primary {
+    color: #ffffff;
+    background-color: var(--qb-primary);
+
+    border-color: var(--qb-primary);
+}
+
+.qb-experts-page .qb-btn--primary:hover,
+.qb-experts-page .qb-btn--primary:focus {
+    color: #ffffff;
+    background-color: var(--qb-primary-dark);
+
+    border-color: var(--qb-primary-dark);
+}
+
+
+/* ============================================================
+   13. OUTLINE PRIMARY
+   ============================================================ */
+
+.qb-experts-page .qb-btn--outline-primary {
+    color: var(--qb-primary);
+    background-color: #ffffff;
+
+    border-color: #93c5fd;
+}
+
+.qb-experts-page .qb-btn--outline-primary:hover,
+.qb-experts-page .qb-btn--outline-primary:focus {
+    color: #ffffff;
+    background-color: var(--qb-primary);
+
+    border-color: var(--qb-primary);
+}
+
+
+/* ============================================================
+   14. SECONDARY BUTTON
+   ============================================================ */
+
+.qb-experts-page .qb-btn--secondary {
+    color: #475569;
+    background-color: #ffffff;
+
+    border-color: #cbd5e1;
+}
+
+.qb-experts-page .qb-btn--secondary:hover,
+.qb-experts-page .qb-btn--secondary:focus {
+    color: #1f2937;
+    background-color: #f8fafc;
+
+    border-color: #94a3b8;
+}
+
+
+/* ============================================================
+   15. DANGER BUTTON
+   ============================================================ */
+
+.qb-experts-page .qb-btn--danger {
+    color: var(--qb-danger);
+    background-color: #ffffff;
+
+    border-color: #fca5a5;
+}
+
+.qb-experts-page .qb-btn--danger:hover,
+.qb-experts-page .qb-btn--danger:focus {
+    color: #ffffff;
+    background-color: var(--qb-danger);
+
+    border-color: var(--qb-danger);
+}
+
+
+/* ============================================================
+   16. SUCCESS BUTTON
+   ============================================================ */
+
+.qb-experts-page .qb-btn--success {
+    color: #ffffff;
+    background-color: var(--qb-success);
+
+    border-color: var(--qb-success);
+}
+
+.qb-experts-page .qb-btn--success:hover,
+.qb-experts-page .qb-btn--success:focus {
+    color: #ffffff;
+    background-color: #166534;
+
+    border-color: #166534;
+}
+
+
+/* ============================================================
+   17. BOTTOM ACTIONS
+   ============================================================ */
+
+.qb-experts-page .qb-bottom-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+    gap: 10px;
+
+    padding-top: 4px;
+}
+
+
+/* ============================================================
+   18. TABLET
+   ============================================================ */
+
+@media (max-width: 991.98px) {
+
+    .qb-experts-page .qb-detail-grid--3,
+    .qb-experts-page .qb-detail-grid--4,
+    .qb-experts-page .qb-detail-grid--organization {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+
+/* ============================================================
+   19. MOBILE
+   ============================================================ */
+
+@media (max-width: 767.98px) {
+
+    .qb-experts-page {
+        padding: 16px 10px 24px;
+    }
+
+    .qb-experts-page .qb-page-header {
+        flex-direction: column;
+
+        gap: 14px;
+    }
+
+    .qb-experts-page .qb-page-title {
+        font-size: 1.4rem;
+    }
+
+    .qb-experts-page .qb-page-actions {
+        justify-content: flex-start;
+
+        width: 100%;
+    }
+
+    .qb-experts-page .qb-detail-grid--2,
+    .qb-experts-page .qb-detail-grid--3,
+    .qb-experts-page .qb-detail-grid--4,
+    .qb-experts-page .qb-detail-grid--organization {
+        grid-template-columns: 1fr;
+    }
+
+    .qb-experts-page .qb-card-header {
+        padding: 10px 15px;
+    }
+
+    .qb-experts-page .qb-card-body {
+        padding: 14px;
+    }
+
+    .qb-experts-page .qb-bottom-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .qb-experts-page .qb-bottom-actions .qb-btn {
+        width: 100%;
+    }
+}
+
+
+/* ============================================================
+   20. SMALL MOBILE
+   ============================================================ */
+
+@media (max-width: 575.98px) {
+
+    .qb-experts-page {
+        padding-left: 8px;
+        padding-right: 8px;
+    }
+
+    .qb-experts-page .qb-page-title {
+        font-size: 1.3rem;
+    }
+
+    .qb-experts-page .qb-page-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .qb-experts-page .qb-page-actions .qb-btn,
+    .qb-experts-page .qb-page-actions .qb-inline-form,
+    .qb-experts-page .qb-page-actions .qb-inline-form .qb-btn {
+        width: 100%;
+    }
+
+    .qb-experts-page .qb-card {
+        border-radius: 10px;
+    }
+
+    .qb-experts-page .qb-card-header {
+        padding: 10px 13px;
+    }
+
+    .qb-experts-page .qb-card-body {
+        padding: 13px;
+    }
+}

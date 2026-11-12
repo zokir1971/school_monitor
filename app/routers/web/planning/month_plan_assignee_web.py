@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from urllib.parse import quote
+from urllib.parse import quote, urlencode
+import logging
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -21,6 +22,10 @@ from app.routers.web.helpers.render import render
 from app.routers.web.web_common import templates
 
 
+from app.utils.calendar_weeks import month_weeks_grid
+from app.modules.planning.services.month_correction_service import MonthCorrectionService
+
+
 router = APIRouter(
     prefix="/planning/school",
     tags=["planning-school-month-assignees"],
@@ -35,6 +40,8 @@ router = APIRouter(
 async def school_month_item_assignees_page(
     request: Request,
     month_item_id: int,
+    draft_week: str | None = Query(default=None),
+    draft_included: str | None = Query(default=None),
     success: str | None = Query(default=None),
     error: str | None = Query(default=None),
     db: AsyncSession = Depends(get_db),
@@ -69,6 +76,13 @@ async def school_month_item_assignees_page(
             detail="Задача месячного плана не найдена.",
         )
 
+    weeks = month_weeks_grid(page_data.year, page_data.month)
+    selected_week = str(page_data.week_of_month or "")
+    if draft_week is not None and (draft_week == "" or draft_week in {str(w.week) for w in weeks}):
+        selected_week = draft_week
+
+    selected_included = (draft_included == "1") if draft_included in ("0", "1") else page_data.is_included
+
     return render(
         templates,
         request,
@@ -76,6 +90,13 @@ async def school_month_item_assignees_page(
         {
             "user": user,
             "dto": page_data,
+            "weeks": weeks,
+            "selected_week": selected_week,
+            "selected_included": selected_included,
+            "selected_range": next((w for w in weeks if str(w.week) == selected_week), None),
+            "plan_revision": page_data.plan_revision,
+            "is_active_plan": page_data.is_active_plan,
+            "return_to_plan_url": str(request.url_for("school_monthly_page")) + "?" + urlencode({k:v for k,v in dict(month=page_data.month, school_plan_id=page_data.school_plan_id, restore_plan_draft=1).items() if v is not None}) + f"#month-item-{month_item_id}",
 
             # Основные сведения о задаче.
             "month_item_id": page_data.month_item_id,
@@ -121,6 +142,11 @@ async def school_month_item_assignees_save(
     request: Request,
     month_item_id: int,
     primary_staff_role_id: int | None = Form(default=None),
+    correction_reason: str | None = Form(default=None),
+    plan_revision: str = Form(...),
+    schedule_week: str = Form(default=""),
+    inclusion_present: bool = Form(default=False),
+    include_task: bool = Form(default=False),
     co_executor_staff_role_ids: list[int] = Form(default=[]),
     db: AsyncSession = Depends(get_db),
     user: User = Depends(
@@ -136,6 +162,7 @@ async def school_month_item_assignees_save(
 
     school_id = require_school_id(user)
 
+    audits = []
     try:
         month, school_plan_id = (
             await SchoolMonthPlanAssigneeService
@@ -148,10 +175,16 @@ async def school_month_item_assignees_save(
                     co_executor_staff_role_ids
                 ),
                 assigned_by_user_id=user.id,
+                correction_reason=correction_reason,
+                plan_revision=plan_revision, schedule_week=schedule_week, audit_out=audits,
+                include_in_plan=include_task if inclusion_present else None,
             )
         )
 
         await db.commit()
+        for audit in audits:
+            MonthCorrectionService.log_committed(audit)
+        logging.getLogger(__name__).info("MONTH_ASSIGNEES_SAVED actor=%s item=%s primary=%s co=%s reason=%s", user.id, month_item_id, primary_staff_role_id, co_executor_staff_role_ids, correction_reason)
 
     except HTTPException as exc:
         await db.rollback()
@@ -167,7 +200,7 @@ async def school_month_item_assignees_save(
         )
 
         return RedirectResponse(
-            url=f"{page_url}?error={error_text}",
+            url=f"{page_url}?error={error_text}&draft_week={quote(schedule_week, safe='')}" + (f"&draft_included={int(include_task)}" if inclusion_present else ""),
             status_code=status.HTTP_303_SEE_OTHER,
         )
 
@@ -176,7 +209,7 @@ async def school_month_item_assignees_save(
         raise
 
     success_text = quote(
-        "Исполнители успешно назначены.",
+        "Назначения и параметры задачи сохранены / Тапсырманың тағайындаулары мен параметрлері сақталды",
         safe="",
     )
 
@@ -190,6 +223,9 @@ async def school_month_item_assignees_save(
             f"?month={month}"
             f"&school_plan_id={school_plan_id}"
             f"&success={success_text}"
+            f"&restore_plan_draft=1&saved_schedule_item={month_item_id}&task_saved={month_item_id}"
+            + (f"&saved_inclusion_item={month_item_id}" if inclusion_present else "")
+            + f"#month-item-{month_item_id}"
         ),
         status_code=status.HTTP_303_SEE_OTHER,
     )

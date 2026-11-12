@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+{% block title %}{{ _('НОБД — оқушыларды импорттау') }}{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', path='css/education/nobd_import.css') }}">
+{% endblock %}
+{% block content %}
+<div class="nobd-page">
+  <header class="nobd-heading">
+    <div><span class="nobd-eyebrow">{{ _('Оқу процесін басқару') }}</span>
+      <h1>{{ _('Оқушылар контингенті және сыныптар') }}</h1>
+      <p>{{ _('Загрузите выгрузку НОБД, проверьте состав классов и выберите направление обучения.') }}</p>
+    </div>
+    <span class="nobd-badge">{{ school_name }}</span>
+  </header>
+  {% if error %}<div class="nobd-notice nobd-notice--error" role="alert"><strong>{{ _('Не удалось продолжить') }}</strong><p>{{ _(error) }}</p></div>{% endif %}
+  {% if result %}
+  <section class="nobd-notice nobd-notice--success" role="status">
+    <h2>{{ _('Импорт завершён') }}</h2><p>{{ _('Контингент, классы и языки обучения сохранены.') }}</p>
+    <dl class="nobd-stats">
+      <div><dt>{{ _('Язык класса обновлён') }}</dt><dd>{{ result.class_languages_saved }}</dd></div><div><dt>{{ _('Новые классы') }}</dt><dd>{{ result.new_classes }}</dd></div>
+      <div><dt>{{ _('Новые ученики') }}</dt><dd>{{ result.new_students }}</dd></div>
+      <div><dt>{{ _('Обновлены') }}</dt><dd>{{ result.updated_students }}</dd></div>
+      <div><dt>{{ _('Без изменений') }}</dt><dd>{{ result.unchanged_students }}</dd></div>
+      <div><dt>{{ _('Сменили класс') }}</dt><dd>{{ result.moved_students }}</dd></div>
+    </dl>
+  </section>
+  {% endif %}
+  {% if result and result.curriculum %}
+  <div class="nobd-notice"><p>{{ _('Новых предметов классов:') }} {{ result.curriculum.new_subjects }}{{ _('. Новых распределений по подгруппам:') }} {{ result.curriculum.new_members }}.</p>
+  {% for warning in result.curriculum.warnings %}<p>{{ _(warning) }}</p>{% endfor %}
+  <a href="{{ request.url_for('school_class_subjects_page').include_query_params(academic_year_start=year) }}" data-sm-action="nav">{{ _('Открыть предметы и подгруппы →') }}</a></div>
+  {% endif %}
+  <section class="nobd-panel" aria-labelledby="nobd-upload-title">
+    <div class="nobd-panel-heading"><span class="nobd-step">1</span><div><h2 id="nobd-upload-title">{{ _('Загрузка выгрузки') }}</h2><p>{{ _('Исходный файл НОБД в CSV или TSV, до 15 МБ.') }}</p></div></div>
+    <form method="post" enctype="multipart/form-data" action="{{ request.url_for('school_nobd_import_preview') }}">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <div class="nobd-upload-grid">
+        <div class="nobd-field"><label for="nobd-year">{{ _('Начало учебного года') }}</label>
+          <input id="nobd-year" type="number" min="2000" max="2100" name="academic_year_start" value="{{ year }}" required aria-describedby="nobd-year-hint">
+          <small id="nobd-year-hint">{{ _('Например, 2026 для 2026–2027 года.') }}</small></div>
+        <div class="nobd-field"><label for="nobd-file">{{ _('Выгрузка НОБД') }}</label>
+          <input id="nobd-file" type="file" name="file" accept=".csv,.tsv,.txt" required>
+          <small>{{ _('Сохраните исходные колонки и разделитель файла.') }}</small></div>
+      </div>
+      <div class="nobd-actions"><button class="nobd-button nobd-button--primary" type="submit" data-sm-action="nav">{{ _('Предпросмотр') }} <span aria-hidden="true">→</span></button></div>
+    </form>
+    <div class="nobd-note">{{ _('Учебный год задаётся явно. Ученики 0 класса исключаются. Отсутствующие в файле ученики не отчисляются.') }}</div>
+  </section>
+  {% if preview %}
+  <section class="nobd-panel" aria-labelledby="nobd-preview-title">
+    <div class="nobd-panel-heading"><span class="nobd-step">2</span><div><h2 id="nobd-preview-title">{{ _('Предпросмотр') }} {{ year }}–{{ year|int + 1 }}</h2><p>{{ _('Проверьте школу, классы и направления перед сохранением.') }}</p></div></div>
+    <dl class="nobd-stats nobd-stats--summary">
+      <div><dt>{{ _('Ученики для импорта') }}</dt><dd>{{ preview.rows|length }}</dd></div>
+      <div><dt>{{ _('Классы') }}</dt><dd>{{ preview.groups|length }}</dd></div>
+      <div><dt>{{ _('Исключены: 0 класс') }}</dt><dd>{{ preview.skipped }}</dd></div>
+    </dl>
+    {% for name in preview.organizations %}<p class="nobd-organization"><strong>{{ _('Организация из файла:') }}</strong> {{ name }}</p>{% endfor %}
+    {% if not preview.organizations %}<div class="nobd-notice nobd-notice--warning"><p>{{ _('В файле не указано наименование организации. Проверьте принадлежность выгрузки школе «') }}{{ school_name }}».</p></div>{% endif %}
+    {% if counters %}
+    <dl class="nobd-stats">
+      <div><dt>{{ _('Новые ученики') }}</dt><dd>{{ counters.new_students }}</dd></div>
+      <div><dt>{{ _('Обновлены') }}</dt><dd>{{ counters.updated_students }}</dd></div>
+      <div><dt>{{ _('Без изменений') }}</dt><dd>{{ counters.unchanged_students }}</dd></div>
+      <div><dt>{{ _('Новые классы') }}</dt><dd>{{ counters.new_classes }}</dd></div>
+      <div><dt>{{ _('Сменят класс') }}</dt><dd>{{ counters.moved_students }}</dd></div>
+    </dl>
+    {% endif %}
+    {% if preview.errors %}
+    <div class="nobd-notice nobd-notice--error" role="alert"><strong>{{ _('Импорт заблокирован') }}</strong><p>{{ _('Исправьте ошибки и загрузите файл снова.') }}</p><ul class="nobd-errors">{% for e in preview.errors %}<li>{{ e }}</li>{% endfor %}</ul></div>
+    {% endif %}
+    <form method="post" action="{{ request.url_for('school_nobd_import_apply') }}">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <input type="hidden" name="preview_token" value="{{ preview_token or '' }}">
+      <div class="nobd-table-heading"><h3>{{ _('Классы и направления обучения') }}</h3><p>{{ _('Для 10–11 классов выберите ЕМН или ОГН.') }}</p></div>
+      <div class="nobd-table-wrap" tabindex="0" role="region" aria-label="{{ _('Классы и направления обучения') }}">
+        <table class="nobd-table"><thead><tr><th scope="col">{{ _('Класс') }}</th><th scope="col">{{ _('Ученики') }}</th><th scope="col">{{ _('Язык из НОБД') }}</th><th scope="col">{{ _('Язык класса') }}</th><th scope="col">{{ _('Состояние') }}</th><th scope="col">{{ _('Направление') }}</th></tr></thead>
+        <tbody>{% for g in preview.groups %}<tr>
+          <th scope="row">{{ g.grade }}{{ g.letter }}</th><td class="nobd-number">{{ g.count }}</td>
+          <td>{{ g.languages|join(', ') }}{% if g.languages|length > 1 %}<span class="nobd-inline-warning">{{ _('Несколько языков — проверьте выгрузку.') }}</span>{% endif %}</td>
+          <td><label class="nobd-sr-only" for="nobd-language-{{ loop.index }}">{{ _('Язык обучения') }} {{ g.grade }}{{ g.letter }}</label>
+            <select id="nobd-language-{{ loop.index }}" name="language_{{ g.key }}" required>
+              <option value="">{{ _('Выберите язык') }}</option>
+              {% for code,name in languages.items() %}
+              {% if (g.inferred_language or g.saved_language) == code %}
+              <option value="{{ code }}" selected>{{ _(name) }}</option>
+              {% else %}
+              <option value="{{ code }}">{{ _(name) }}</option>
+              {% endif %}
+              {% endfor %}
+            </select>
+          </td>
+          <td>{% if g.existing %}<span class="nobd-status">{{ _('Существующий') }}</span>{% else %}<span class="nobd-status nobd-status--new">{{ _('Новый') }}</span>{% endif %}</td>
+          <td>{% if g.grade in [10,11] %}
+            <label class="nobd-sr-only" for="nobd-track-{{ loop.index }}">{{ _('Направление класса') }} {{ g.grade }}{{ g.letter }}</label>
+            <select id="nobd-track-{{ loop.index }}" name="track_{{ g.key }}" required>
+              <option value="">{{ _('Выберите направление') }}</option>
+              {% if g.saved_track == 'emn' %}
+              <option value="emn" selected>{{ _('ЕМН / ЖМБ') }}</option>
+              {% else %}
+              <option value="emn">{{ _('ЕМН / ЖМБ') }}</option>
+              {% endif %}
+              {% if g.saved_track == 'ogn' %}
+              <option value="ogn" selected>{{ _('ОГН / ҚГБ') }}</option>
+              {% else %}
+              <option value="ogn">{{ _('ОГН / ҚГБ') }}</option>
+              {% endif %}
+            </select>
+          {% else %}<span class="nobd-muted">{{ _('Не требуется') }}</span>{% endif %}</td>
+        </tr>{% endfor %}
+        {% if not preview.groups %}<tr><td colspan="6" class="nobd-empty">{{ _('Нет классов для импорта.') }}</td></tr>{% endif %}
+        </tbody></table>
+      </div>
+      {% if preview_token and not preview.errors %}
+      <div class="nobd-confirm">
+        <h3>{{ _('Подтверждение импорта') }}</h3>
+        <label class="nobd-check"><input type="checkbox" name="confirm_school" value="yes" required><span>{{ _('Подтверждаю школу «') }}{{ school_name }}{{ _('» и учебный год') }} {{ year }}–{{ year|int + 1 }}.</span></label>
+        <label class="nobd-check"><input type="checkbox" name="confirm_tracks" value="yes"><span>{{ _('Подтверждаю изменение ранее сохранённых направлений, если изменил выбор.') }}</span></label>
+        <label class="nobd-check"><input type="checkbox" name="confirm_languages" value="yes"><span>{{ _('Подтверждаю ручной выбор при пустом, неизвестном или смешанном языке НОБД, расхождения с НОБД и изменение ранее сохранённых языков.') }}</span></label>
+        <div class="nobd-actions"><button class="nobd-button nobd-button--primary" type="submit" data-sm-action="primary">{{ _('Сохранить в БД') }}</button><span class="nobd-muted">{{ _('Предпросмотр действует 1 час.') }}</span></div>
+      </div>
+      {% endif %}
+    </form>
+  </section>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,6 +1,8 @@
-<div id="task-execution-details">
+{% set task_ui_language = ui_language() if ui_language is defined else 'ru' %}
+<div class="task-execution-content">
 
   {% set task = selected_task %}
+{% if user.role.value == "school_admin" %}<div style="margin:12px 0"><a class="btn btn--secondary" href="{{ request.url_for('task_document_correction_page', month_item_id=task.month_item_id) }}" data-sm-action="nav">Заменить загруженные документы / Жүктелген құжаттарды ауыстыру</a></div>{% endif %}
   {% set task_status = task.status %}
 
   {% set task_execute_state = {
@@ -254,7 +256,7 @@
      ИНФОРМАЦИЯ О ЗАДАЧЕ
      ========================================================= #}
 
-  <div class="card task-info">
+  <div class="card task-info" id="task-section-info" data-task-section data-section-label="{{ 'Информация' if task_ui_language=='ru' else 'Ақпарат' }}">
 
     <div style="
       display:flex;
@@ -265,7 +267,7 @@
     ">
 
       <h3 style="margin:0;">
-        Информация о задаче
+        {{ _('Информация о задаче') }}
       </h3>
 
       <div class="traffic-status">
@@ -275,7 +277,7 @@
           <span class="traffic traffic--yellow"></span>
 
           <span class="traffic-status__text">
-            {{ task.status_label or "Жоспарланған" }}
+            {{ _(task.status_label or "Жоспарланған") }}
           </span>
 
         {% elif task_status == "in_progress" %}
@@ -283,7 +285,7 @@
           <span class="traffic traffic--green"></span>
 
           <span class="traffic-status__text">
-            {{ task.status_label or "Орындалу үстінде" }}
+            {{ _(task.status_label or "Орындалу үстінде") }}
           </span>
 
         {% elif task_status == "done" %}
@@ -291,7 +293,7 @@
           <span class="traffic traffic--blue"></span>
 
           <span class="traffic-status__text">
-            {{ task.status_label or "Орындалды" }}
+            {{ _(task.status_label or "Орындалды") }}
           </span>
 
         {% elif task_status == "not_executed" %}
@@ -299,7 +301,7 @@
           <span class="traffic traffic--red"></span>
 
           <span class="traffic-status__text">
-            {{ task.status_label or "Орындалмады" }}
+            {{ _(task.status_label or "Орындалмады") }}
           </span>
 
         {% else %}
@@ -318,18 +320,18 @@
     <div class="info-grid">
 
       <div class="info-item">
-        <div class="label">Тема</div>
+        <div class="label">{{ _('Тема') }}</div>
         <div class="value">{{ task.topic or "—" }}</div>
       </div>
 
       <div class="info-item">
-        <div class="label">Цель</div>
+        <div class="label">{{ _('Цель') }}</div>
         <div class="value">{{ task.goal or "—" }}</div>
       </div>
 
       <div class="info-item">
         <div class="label">
-          Объект контроля по задаче
+          {{ _('Объект контроля по задаче') }}
         </div>
         <div class="value">
           {{ task.control_object or "—" }}
@@ -338,7 +340,7 @@
 
       <div class="info-item">
         <div class="label">
-          Тип контроля по задаче
+          {{ _('Тип контроля по задаче') }}
         </div>
         <div class="value">
           {{ task.control_type or "—" }}
@@ -346,25 +348,34 @@
       </div>
 
       <div class="info-item">
+        <div class="label">{% if task_ui_language == 'kk' %}Жоспардағы бақылау әдістері{% else %}Методы контроля по плану{% endif %}</div>
+        <div class="value">{{ task.control_methods or '—' }}</div>
+      </div>
+
+      <div class="info-item">
         <div class="label">
-          Форма контроля по задаче
+          {% if task_ui_language == 'kk' %}Бақылау формасы (орындау){% else %}Форма контроля (исполнение){% endif %}
         </div>
         <div class="value">
-          {{ task.control_form or "—" }}
+          {% if task.control_form and task.control_form != '—' %}
+            {{ task.control_form_ru if task_ui_language == 'ru' else task.control_form }}
+          {% else %}
+            {% if task_ui_language == 'kk' %}Орындау үшін әлі таңдалмаған{% else %}Ещё не выбрана для исполнения{% endif %}
+          {% endif %}
         </div>
       </div>
 
       <div class="info-item">
         <div class="label">
-          Место рассмотрения
+          {{ _('Место рассмотрения') }}
         </div>
         <div class="value">
-          {{ task.review_place or "—" }}
+          {{ (task.review_place_ru if task_ui_language == 'ru' else task.review_place) or '—' }}
         </div>
       </div>
 
       <div class="info-item">
-        <div class="label">Срок</div>
+        <div class="label">{{ _('Срок') }}</div>
         <div class="value">
           {{ task.period_text or "—" }}
         </div>
@@ -379,22 +390,21 @@
      ВЫБОР ВАРИАНТА ЗАВЕРШЕНИЯ
      ========================================================= #}
 
-  <div class="card completion-mode-card">
+  <div class="card completion-mode-card" id="task-section-mode" data-task-section data-section-label="{{ 'Способ выполнения' if task_ui_language=='ru' else 'Орындау тәсілі' }}">
 
     <h3>
       <span class="flow-step-badge">1</span>
-      Выберите вариант завершения задачи
+      {{ _('Выберите вариант завершения задачи') }}
     </h3>
 
     <div class="hint-box completion-mode-intro">
 
       <div class="hint-box__title">
-        Способ выполнения задачи
+        {{ _('Способ выполнения задачи') }}
       </div>
 
       <div class="hint-box__text">
-        Выберите, требуется ли подготовка системных отчётов
-        перед загрузкой итогового документа.
+        {{ _('Выберите, требуется ли подготовка системных отчётов перед загрузкой итогового документа.') }}
       </div>
 
     </div>
@@ -433,13 +443,11 @@
           <div class="completion-mode-option__text">
 
             <div class="completion-mode-option__title">
-              Только итоговый документ
+              {{ _('Только итоговый документ') }}
             </div>
 
             <div class="completion-mode-option__description">
-              Построение алгоритма и заполнение системных
-              отчётов не требуется. Можно сразу перейти
-              к загрузке итогового документа.
+              {{ _('Построение алгоритма и заполнение системных отчётов не требуется. Можно сразу перейти к загрузке итогового документа.') }}
             </div>
 
           </div>
@@ -480,13 +488,11 @@
           <div class="completion-mode-option__text">
 
             <div class="completion-mode-option__title">
-              Итоговый документ + системные отчёты
+              {{ _('Итоговый документ + системные отчёты') }}
             </div>
 
             <div class="completion-mode-option__description">
-              Сначала нужно построить алгоритм выполнения,
-              выбрать системные отчёты, распределить их
-              между исполнителями и заполнить.
+              {{ _('Сначала нужно построить алгоритм выполнения, выбрать системные отчёты, распределить их между исполнителями и заполнить.') }}
             </div>
 
           </div>
@@ -502,12 +508,11 @@
       <div class="hint-box completion-flow-hint">
 
         <div class="hint-box__title">
-          Итоговый документ
+          {{ _('Итоговый документ') }}
         </div>
 
         <div class="hint-box__text">
-          Загрузите итоговый документ, добавьте комментарий
-          и отправьте задачу на рассмотрение.
+          {{ _('Загрузите итоговый документ, добавьте комментарий и отправьте задачу на рассмотрение.') }}
         </div>
 
       </div>
@@ -544,7 +549,7 @@
         <div class="form-field">
 
           <label for="simple_reference_file">
-            Итоговый документ
+            {{ _('Итоговый документ') }}
           </label>
           <input type="file"
                  id="simple_reference_file"
@@ -552,28 +557,28 @@
                  required>
 
           <div class="hint">
-            Загрузите итоговый документ.
+            {{ _('Загрузите итоговый документ.') }}
           </div>
         </div>
 
         <div class="form-field">
           <label for="simple_review_result">
-            Комментарий
+            {{ _('Комментарий') }}
           </label>
 
           <textarea id="simple_review_result"
                     name="review_result"
                     rows="4"
-                    placeholder="Комментарий">{{ execution.review_result if execution else "" }}
+                    placeholder="{{ _('Комментарий') }}">{{ execution.review_result if execution else "" }}
           </textarea>
         </div>
 
-        <div class="action-panel" style="margin-top:20px;">
+        <div class="action-panel task-execution-actions" data-task-actions style="margin-top:20px;">
           <button type="submit"
                   name="action"
                   value="upload_final"
-                  class="btn btn-success">
-            Загрузить, завершить и отправить
+                  class="btn btn-success" data-sm-action="success">
+            {{ _('Загрузить, завершить и отправить') }}
           </button>
         </div>
       </form>
@@ -584,19 +589,18 @@
 
       <div class="hint-box completion-flow-hint">
         <div class="hint-box__title">
-          Системные отчёты
+          {{ _('Системные отчёты') }}
         </div>
 
         <div class="hint-box__text">
-          Составьте алгоритм выполнения задачи, выберите необходимые
-          системные отчёты, а затем распределите их между исполнителями.
+          {{ _('Составьте алгоритм выполнения задачи, выберите необходимые системные отчёты, а затем распределите их между исполнителями.') }}
         </div>
       </div>
 
       <button type="button"
               id="btn-start-system-reports-flow"
-              class="btn btn-primary">
-        Составить алгоритм выполнения
+              class="btn btn-primary" data-sm-action="primary">
+        {{ _('Составить алгоритм выполнения') }}
       </button>
     </div>
   </div>
@@ -617,19 +621,17 @@
       <div class="card">
 
         <h3>
-          Алгоритм действий
+          {{ _('Алгоритм действий') }}
         </h3>
 
         <div class="hint-box">
 
           <div class="hint-box__title">
-            Порядок выполнения
+            {{ _('Порядок выполнения') }}
           </div>
 
           <div class="hint-box__text">
-            Сначала выберите параметры контроля и необходимые
-            системные отчёты. После сохранения распределите
-            выбранные отчёты между исполнителями.
+            {{ _('Сначала выберите параметры контроля и необходимые системные отчёты. После сохранения распределите выбранные отчёты между исполнителями.') }}
           </div>
 
         </div>
@@ -647,8 +649,8 @@
 
       <div
         id="task-execution-json-data"
-        data-control-flow='{{ control_flow | tojson | safe }}'
-        data-state='{{ state_json | safe }}'
+        data-control-flow="{{ control_flow | tojson | forceescape }}"
+        data-state="{{ state_json | forceescape }}"
         style="display:none;"
       ></div>
 
@@ -675,11 +677,11 @@
          ПАРАМЕТРЫ КОНТРОЛЯ
          ===================================================== #}
 
-      <div class="card">
+      <div class="card" id="task-section-parameters" data-task-section data-section-label="{{ 'Параметры' if task_ui_language=='ru' else 'Параметрлер' }}">
 
         <h3>
           <span class="flow-step-badge">2</span>
-          Выбор параметров контроля
+          {{ _('Выбор параметров контроля') }}
         </h3>
 
         <div class="control-grid">
@@ -689,7 +691,7 @@
             <div class="form-field">
 
               <label for="control_scope">
-                Объект контроля
+                {{ _('Объект контроля') }}
               </label>
 
               <select
@@ -698,7 +700,7 @@
                 required
               >
                 <option value="">
-                  Выберите
+                  {{ _('Выберите') }}
                 </option>
               </select>
 
@@ -715,7 +717,7 @@
                 id="scope-detail-label"
                 class="form-label"
               >
-                Дополнительный параметр
+                {{ _('Дополнительный параметр') }}
               </label>
 
               <div id="scope-detail-container"></div>
@@ -733,7 +735,7 @@
                 id="teacher-detail-label"
                 class="form-label"
               >
-                Мұғалімдер
+                {{ _('Мұғалімдер') }}
               </label>
 
               <div id="teacher-detail-container"></div>
@@ -748,7 +750,7 @@
             <div class="form-field">
 
               <label for="control_kind">
-                Вид контроля
+                {{ _('Вид контроля') }}
               </label>
 
               <select
@@ -758,7 +760,7 @@
                 disabled
               >
                 <option value="">
-                  Сначала выберите объект
+                  {{ _('Сначала выберите объект') }}
                 </option>
               </select>
 
@@ -768,7 +770,7 @@
             <div class="form-field">
 
               <label for="control_form">
-                Форма контроля
+                {{ _('Форма контроля') }}
               </label>
 
               <select
@@ -778,7 +780,7 @@
                 disabled
               >
                 <option value="">
-                  Сначала выберите объект
+                  {{ _('Сначала выберите объект') }}
                 </option>
               </select>
 
@@ -788,7 +790,7 @@
             <div class="form-field">
 
               <label class="form-label">
-                Тип отчёта
+                {{ _('Тип отчёта') }}
               </label>
 
               <div
@@ -796,7 +798,7 @@
                 class="checkbox-group"
               >
                 <div class="checkbox-placeholder">
-                  Сначала выберите объект
+                  {{ _('Сначала выберите объект') }}
                 </div>
               </div>
 
@@ -810,16 +812,14 @@
         <div class="hint-box">
 
           <div class="hint-box__title">
-            Подсказка
+            {{ _('Подсказка') }}
           </div>
 
           <div
             class="hint-box__text"
             id="control_hint"
           >
-            Сначала выберите объект контроля. После этого
-            система предложит допустимые формы, виды
-            и рекомендованные типы отчёта.
+            {{ _('Сначала выберите объект контроля. После этого система предложит допустимые формы, виды и рекомендованные типы отчёта.') }}
           </div>
 
         </div>
@@ -827,15 +827,37 @@
       </div>
 
 
+      <section class="card" id="report-teacher-targets" data-task-section data-section-label="{{ 'Классы и учителя' if task_ui_language=='ru' else 'Сыныптар мен мұғалімдер' }}">
+        <h3>{{ 'Область проверки и проверяемые учителя' if task_ui_language=='ru' else 'Тексеру ауқымы және тексерілетін мұғалімдер' }}</h3>
+        <p>{{ 'Учителя отбираются по фактической учебной нагрузке, предмету, классам и учебному году плана. Исполнители отчётов назначаются после сохранения алгоритма.' if task_ui_language=='ru' else 'Мұғалімдер нақты оқу жүктемесі, пән, сыныптар және жоспардың оқу жылы бойынша іріктеледі. Есеп орындаушылары алгоритм сақталғаннан кейін тағайындалады.' }}</p>
+        <input type="hidden" name="report_teacher_selection" value="1">
+        <input type="hidden" name="algorithm_schema" value="2">
+        <input type="hidden" name="algorithm_revision" value="{{ execution.algorithm_revision if execution and execution.algorithm_revision is defined else 0 }}">
+        <div data-algorithm-matrix data-language="{{ task_ui_language }}">
+          <h4>{{ 'Классы проверки' if task_ui_language=='ru' else 'Тексерілетін сыныптар' }}</h4>
+          <p data-class-hint></p>
+          <div data-algorithm-classes style="display:flex;flex-wrap:wrap;gap:12px;max-height:180px;overflow:auto"></div>
+          <div data-matrix-teachers>
+            <h4>{{ 'Проверяемые учителя — один общий список' if task_ui_language=='ru' else 'Тексерілетін мұғалімдер — бір ортақ тізім' }}</h4>
+            <p data-matrix-hint role="status"></p>
+            <div style="overflow:auto;max-height:440px">
+              <table style="width:100%;border-collapse:collapse" data-teacher-matrix>
+                <thead></thead><tbody></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {# =====================================================
          ПОДГОТОВКА МАТЕРИАЛОВ
          ===================================================== #}
 
-      <div class="card">
+      <div class="card" id="task-section-materials" data-task-section data-section-label="{{ 'Материалы' if task_ui_language=='ru' else 'Материалдар' }}">
 
         <h3>
           <span class="flow-step-badge">3</span>
-          Подготовка материалов на рассмотрение
+          {{ _('Подготовка материалов на рассмотрение') }}
         </h3>
 
         <div class="form-grid">
@@ -843,11 +865,11 @@
           <div class="form-field">
 
             <label>
-              Запланированное место рассмотрения
+              {{ _('Запланированное место рассмотрения') }}
             </label>
 
             <div class="value">
-              {{ task.review_place or "—" }}
+              {{ (task.review_place_ru if task_ui_language == 'ru' else task.review_place) or '—' }}
             </div>
 
           </div>
@@ -856,7 +878,7 @@
           <div class="form-field">
 
             <label>
-              Сформированные материалы
+              {{ _('Сформированные материалы') }}
             </label>
 
             <div
@@ -868,8 +890,7 @@
                 class="hint-box__text"
                 id="materials-preview-summary"
               >
-                После выбора параметров здесь появится список
-                материалов, которые нужно подготовить.
+                {{ _('После выбора параметров здесь появится список материалов, которые нужно подготовить.') }}
               </div>
 
               <ul
@@ -898,11 +919,11 @@
          РАССМОТРЕНИЕ
          ===================================================== #}
 
-      <div class="card">
+      <div class="card" id="task-section-review" data-task-section data-section-label="{{ 'Рассмотрение' if task_ui_language=='ru' else 'Қарау' }}">
 
         <h3>
           <span class="flow-step-badge">4</span>
-          Рассмотрение
+          {{ _('Рассмотрение') }}
         </h3>
 
         <div class="form-grid">
@@ -910,7 +931,7 @@
           <div class="form-field">
 
             <label for="review_result">
-              Что выносится на рассмотрение
+              {{ _('Что выносится на рассмотрение') }}
             </label>
 
             <input
@@ -918,7 +939,7 @@
               id="review_result"
               name="review_result"
               value="{{ execution.review_result if execution else '' }}"
-              placeholder="Например: справка, аналитическая таблица, проект решения"
+              placeholder="{{ _('Например: справка, аналитическая таблица, проект решения') }}"
               readonly
             >
 
@@ -928,13 +949,13 @@
           <div class="form-field">
 
             <label for="task_status_view">
-              Текущий статус
+              {{ _('Текущий статус') }}
             </label>
 
             <input
               type="text"
               id="task_status_view"
-              value="{{ task.status_label or '—' }}"
+              value="{{ _(task.status_label or '—') }}"
               readonly
             >
 
@@ -949,7 +970,7 @@
          ДЕЙСТВИЯ
          ===================================================== #}
 
-      <div class="card action-panel">
+      <div class="card action-panel task-execution-actions" data-task-actions>
 
         {% if request.query_params.get("success") == "saved" %}
 
@@ -957,7 +978,7 @@
             class="alert alert-success"
             style="margin-bottom:16px;"
           >
-            Параметры отчёта успешно сохранены.
+            {{ _('Параметры отчёта успешно сохранены.') }}
           </div>
 
         {% endif %}
@@ -968,11 +989,11 @@
           name="action"
           value="save"
           class="btn btn-secondary"
-        >
+         data-sm-action="primary">
           {% if current_draft is not none %}
-            Сохранить изменения
+            {{ _('Сохранить изменения') }}
           {% else %}
-            Сохранить черновик
+            {{ _('Сохранить черновик') }}
           {% endif %}
         </button>
 
@@ -980,8 +1001,8 @@
         {% if current_draft is not none %}
 
           <a href="{{ request.url_for('staff_report_assignments_page', month_item_id=task.month_item_id) }}{% if month is not none %}?month={{ month }}{% endif %}"
-             class="btn btn-primary">
-            Перейти к распределению отчётов
+             class="btn btn-primary" data-sm-action="nav">
+            {{ _('Перейти к распределению отчётов') }}
           </a>
 
         {% endif %}

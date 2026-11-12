@@ -1,0 +1,837 @@
+{% extends "base.html" %}
+
+{% block title %}
+{{ _('ONLINE Assessment — жауаптарды тексеру') }}
+{% endblock %}
+
+
+{% from 'teacher/assessment/question_bank/_segments.html' import render_segments with context %}
+{% from 'teacher/assessment/question_bank/components/question_content.html' import render_question_content with context %}
+{% from 'teacher/assessment/question_bank/components/answer_key.html' import render_answer_key with context %}
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static',path='css/teacher/assessment/question_bank/question_bank_renderer.css') }}?v=168">
+<style>
+  .review-page {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 32px 24px 48px;
+  }
+
+  .review-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 24px;
+    margin-bottom: 24px;
+  }
+
+  .review-header__title {
+    margin: 0;
+    font-size: 28px;
+    line-height: 1.2;
+  }
+
+  .review-header__subtitle {
+    margin-top: 8px;
+    color: #64748b;
+    font-size: 14px;
+  }
+
+  .back-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 38px;
+    padding: 0 16px;
+    border: 1px solid #cbd5e1;
+    border-radius: 9px;
+    background: #ffffff;
+    color: #0f172a;
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .back-button:hover {
+    background: #f8fafc;
+  }
+
+  .message {
+    margin-bottom: 20px;
+    padding: 14px 16px;
+    border: 1px solid;
+    border-radius: 10px;
+    font-size: 14px;
+  }
+
+  .message--success {
+    border-color: #86efac;
+    background: #f0fdf4;
+    color: #166534;
+  }
+
+  .message--error {
+    border-color: #fecaca;
+    background: #fef2f2;
+    color: #991b1b;
+  }
+
+  .student-panel {
+    display: grid;
+    grid-template-columns: minmax(220px, 1fr) 2fr;
+    gap: 24px;
+    margin-bottom: 20px;
+    padding: 20px;
+    border: 1px solid #dbe3ee;
+    border-radius: 12px;
+    background: #ffffff;
+  }
+
+  .student-label,
+  .summary-label,
+  .field-label {
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .student-name {
+    margin-top: 5px;
+    font-size: 19px;
+    font-weight: 700;
+    color: #0f172a;
+  }
+
+  .student-status {
+    margin-top: 10px;
+  }
+
+  .participation-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 5px 9px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  .participation-badge--submitted {
+    background: #fef3c7;
+    color: #92400e;
+  }
+
+  .participation-badge--completed {
+    background: #dcfce7;
+    color: #166534;
+  }
+
+  .participation-badge--assigned {
+    background: #f1f5f9;
+    color: #475569;
+  }
+
+  .participation-badge--in_progress {
+    background: #dbeafe;
+    color: #1d4ed8;
+  }
+
+  .summary-grid {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+  }
+
+  .summary-card {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 38px;
+    box-sizing: border-box;
+    padding: 8px 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 9px;
+    background: #f8fafc;
+    text-align: left;
+    white-space: nowrap;
+  }
+
+  .summary-label {
+    color: #64748b;
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  .summary-value {
+    margin: 0;
+    color: #0f172a;
+    font-size: 15px;
+    font-weight: 700;
+  }
+
+  .result-summary-card {
+    background: #ffffff;
+  }
+
+  .result-summary-card .summary-value {
+    white-space: nowrap;
+  }
+
+  .review-alert {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 24px;
+    padding: 14px 16px;
+    border: 1px solid #f5c84c;
+    border-radius: 10px;
+    background: #fffbea;
+    color: #854d0e;
+    font-size: 14px;
+  }
+
+  .review-alert--complete {
+    border-color: #86efac;
+    background: #f0fdf4;
+    color: #166534;
+  }
+
+  .review-alert__count {
+    min-width: 36px;
+    padding: 5px 10px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, .65);
+    text-align: center;
+    font-weight: 700;
+  }
+
+  .answers-list {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  .answer-card {
+    overflow: hidden;
+    border: 1px solid #dbe3ee;
+    border-radius: 12px;
+    background: #ffffff;
+  }
+
+  .answer-card__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 20px;
+    padding: 16px 18px;
+    border-bottom: 1px solid #e2e8f0;
+    background: #f8fafc;
+  }
+
+  .question-title {
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1.45;
+    color: #0f172a;
+  }
+
+  .status-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 5px 9px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  .status-badge--pending {
+    background: #fff3cd;
+    color: #92400e;
+  }
+
+  .status-badge--checked {
+    background: #dcfce7;
+    color: #166534;
+  }
+
+  .status-badge--neutral {
+    background: #e2e8f0;
+    color: #475569;
+  }
+
+  .answer-card__body {
+    padding: 18px;
+  }
+
+  .question-type {
+    margin-bottom: 18px;
+  }
+
+  .field-value {
+    margin-top: 5px;
+    color: #0f172a;
+    font-size: 14px;
+  }
+
+  .student-answer {
+    margin-top: 8px;
+    padding: 16px;
+    border: 1px solid #e2e8f0;
+    border-radius: 9px;
+    background: #f8fafc;
+    color: #0f172a;
+    font-size: 14px;
+    line-height: 1.6;
+    white-space: normal;
+  }
+
+  .student-answer--empty {
+    color: #94a3b8;
+  }
+
+  .grading-section {
+    margin-top: 20px;
+    padding-top: 18px;
+    border-top: 1px solid #e2e8f0;
+  }
+
+  .grading-title {
+    margin-bottom: 14px;
+    font-size: 14px;
+    font-weight: 700;
+  }
+
+  .grading-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 14px;
+  }
+
+  .score-field {
+    width: 220px;
+  }
+
+  .score-control {
+    display: flex;
+    margin-top: 7px;
+  }
+
+  .score-input {
+    width: 120px;
+    height: 38px;
+    box-sizing: border-box;
+    padding: 0 10px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px 0 0 8px;
+    outline: none;
+    font-size: 14px;
+  }
+
+  .score-input:focus {
+    border-color: #94a3b8;
+  }
+
+  .score-max {
+    display: flex;
+    align-items: center;
+    min-height: 38px;
+    box-sizing: border-box;
+    padding: 0 12px;
+    border: 1px solid #cbd5e1;
+    border-left: 0;
+    border-radius: 0 8px 8px 0;
+    background: #f8fafc;
+    color: #475569;
+    font-size: 14px;
+  }
+
+  .grade-button {
+    min-width: 120px;
+    height: 38px;
+    padding: 0 18px;
+    border: 0;
+    border-radius: 8px;
+    background: #f59e0b;
+    color: #ffffff;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .grade-button:hover {
+    background: #d97706;
+  }
+
+  .checked-result {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 14px;
+    margin-top: 20px;
+    padding-top: 18px;
+    border-top: 1px solid #e2e8f0;
+  }
+
+  .score-result {
+    font-size: 14px;
+  }
+
+  .correct-badge {
+    padding: 5px 9px;
+    border-radius: 999px;
+    background: #dcfce7;
+    color: #166534;
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  .incorrect-badge {
+    padding: 5px 9px;
+    border-radius: 999px;
+    background: #fee2e2;
+    color: #991b1b;
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  .empty-state {
+    padding: 32px;
+    border: 1px dashed #cbd5e1;
+    border-radius: 12px;
+    background: #ffffff;
+    color: #64748b;
+    text-align: center;
+  }
+
+  .review-footer {
+    margin-top: 24px;
+  }
+
+  @media (max-width: 1050px) {
+    .student-panel {
+      grid-template-columns: 1fr;
+    }
+
+    .summary-grid {
+      justify-content: flex-start;
+    }
+
+    .review-header {
+      flex-direction: column;
+    }
+
+    .answer-card__header {
+      flex-direction: column;
+    }
+
+    .grading-row {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .score-field {
+      width: 100%;
+    }
+
+    .grade-button {
+      width: 100%;
+    }
+  }
+.review-question{margin:14px 0;padding:14px;border:1px solid #e2e8f0;border-radius:10px;overflow-wrap:anywhere}
+.review-response__line + .review-response__line{border-top:1px solid #e2e8f0;margin-top:10px;padding-top:10px}
+.review-response .qb-segment-text{white-space:pre-wrap}
+.review-key{margin:14px 0}.review-key summary{cursor:pointer;font-weight:600}
+.review-page math-field{display:inline-block;min-width:0;max-width:100%;border:0;background:transparent;padding:0;margin:0;font-size:1em;vertical-align:middle;pointer-events:none}
+.review-page math-field::part(menu-toggle),.review-page math-field::part(virtual-keyboard-toggle){display:none}
+</style>
+{% endblock %}
+
+
+{% block content %}
+
+<div class="review-page">
+
+  <div class="review-header">
+
+    <div>
+      <h1 class="review-header__title">
+        {{ _('ONLINE Assessment — Жауаптарды тексеру') }}
+      </h1>
+
+      <div class="review-header__subtitle">
+        {{ _('Оқушының жауаптарын қарап, қолмен тексеруді қажет ететін сұрақтарға балл қойыңыз') }}
+      </div>
+    </div>
+
+    <a
+      href="{{ back_url }}"
+      class="back-button"
+     data-sm-action="nav" data-sm-back="true">
+      {{ _('← Оқушыларға оралу') }}
+    </a>
+
+  </div>
+
+
+  {% if success == "graded" %}
+    <div class="message message--success">
+      {{ _('Жауап сәтті тексерілді.') }}
+    </div>
+  {% endif %}
+
+
+  {% if error %}
+    <div class="message message--error">
+      {{ assessment_error(error) }}
+    </div>
+  {% endif %}
+
+
+  <section class="student-panel">
+
+    <div>
+      <div class="student-label">
+        {{ _('ОҚУШЫ') }}
+      </div>
+
+      <div class="student-name">
+        {{ student_name }}
+      </div>
+
+      <div class="student-status">
+        <span
+          class="
+           participation-badge
+            participation-badge--{{ dto.participation_status.value }}
+          ">
+          {{ _(dto.participation_status_display) }}
+        </span>
+      </div>
+    </div>
+
+
+    <div class="summary-grid">
+
+      <div class="summary-card">
+        <div class="summary-label">
+          {{ _('БАРЛЫҒЫ:') }}
+        </div>
+
+        <div class="summary-value">
+          {{ total_answers }}
+        </div>
+      </div>
+
+
+      <div class="summary-card">
+        <div class="summary-label">
+          {{ _('ТЕКСЕРІЛДІ:') }}
+        </div>
+
+        <div class="summary-value">
+          {{ checked_count }}
+        </div>
+      </div>
+
+
+      <div class="summary-card">
+        <div class="summary-label">
+          {{ _('ТЕКСЕРУДІ КҮТУДЕ:') }}
+        </div>
+
+        <div class="summary-value">
+          {{ pending_review_count }}
+        </div>
+      </div>
+
+      <div class="summary-card result-summary-card">
+        <div class="summary-label">
+          {{ _('БАЛЛ:') }}
+        </div>
+
+        <div class="summary-value">
+          {{ dto.score_display }}
+        </div>
+      </div>
+
+
+      <div class="summary-card result-summary-card">
+        <div class="summary-label">
+          {{ _('НӘТИЖЕ:') }}
+        </div>
+
+        <div class="summary-value">
+          {{ dto.percent_display }}
+        </div>
+      </div>
+
+
+      <div class="summary-card result-summary-card">
+        <div class="summary-label">
+          {{ _('БАҒА:') }}
+        </div>
+
+        <div class="summary-value">
+          {{ dto.grade_display }}
+        </div>
+      </div>
+
+    </div>
+
+  </section>
+
+
+  {% if has_pending_review %}
+
+    <div class="review-alert">
+
+      <div>
+        {{ _('Қолмен тексеруді қажет ететін') }}
+        <strong>{{ pending_review_count }}</strong>
+        {{ _('жауап бар.') }}
+      </div>
+
+      <div class="review-alert__count">
+        {{ pending_review_count }}
+      </div>
+
+    </div>
+
+  {% else %}
+
+    <div class="review-alert review-alert--complete">
+      <div>
+        {{ _('Барлық жауаптар тексерілді.') }}
+      </div>
+    </div>
+
+  {% endif %}
+
+
+  {% if answers %}
+
+    <div class="answers-list">
+
+      {% for answer in answers %}
+
+        <article class="answer-card">
+
+          <header class="answer-card__header">
+
+            <div class="question-title">
+              {{ 'Задание' if ui_language()=='ru' else 'Тапсырма' }} {{ answer.question_order_no }}
+            </div>
+
+
+            {% if answer.requires_manual_review %}
+
+              <span class="status-badge status-badge--pending">
+                {{ _('Тексеруді күтуде') }}
+              </span>
+
+            {% elif answer.status.value == "checked" %}
+
+              <span class="status-badge status-badge--checked">
+                {{ _('✓ Тексерілді') }}
+              </span>
+
+            {% else %}
+
+              <span class="status-badge status-badge--neutral">
+                {{ assessment_enum_label(answer.status) }}
+              </span>
+
+            {% endif %}
+
+          </header>
+
+
+          <div class="answer-card__body">
+
+            <div class="question-type">
+
+              <div class="field-label">
+                {{ _('СҰРАҚ ТҮРІ') }}
+              </div>
+
+              <div class="field-value">
+                {{ _(answer.question_type.label_kz) }}
+              </div>
+
+            </div>
+
+
+            {% if answer.question_view %}
+            <section class="review-question qb-renderer">
+              {{ render_segments(answer.question_view.text_segments, fallback=answer.question_view.text) }}
+              {% if answer.question_view.instruction %}<p>{{ answer.question_view.instruction }}</p>{% endif %}
+              {{ render_question_content(answer.question_view) }}
+            </section>
+            {% endif %}
+            <section>
+              <h3 class="field-label">{{ 'Ответ ученика' if ui_language()=='ru' else 'Оқушының жауабы' }}</h3>
+              <div class="student-answer review-response">
+              {% for line in answer.response_lines %}
+                <div class="review-response__line">
+                {% if line.number %}<strong>{{ 'Задача' if ui_language()=='ru' else 'Есеп' }} {{ line.number }}.</strong>{% endif %}
+                {% if line.prefix %}{{ render_segments(line.prefix) }} → {% endif %}
+                {% if line.boolean %}
+                  {{ ('Верно' if ui_language()=='ru' else 'Дұрыс') if line.raw is sameas true else ('Неверно' if ui_language()=='ru' else 'Бұрыс') if line.raw is sameas false else '—' }}
+                {% else %}{% for value in line['values'] %}<div>{{ render_segments(value) }}</div>{% endfor %}{% endif %}
+                </div>
+              {% else %}{{ 'Ответ не дан' if ui_language()=='ru' else 'Жауап берілмеген' }}{% endfor %}
+              </div>
+            </section>
+            {% if answer.question_view %}<details class="review-key"><summary>{{ 'Правильный ответ / критерии' if ui_language()=='ru' else 'Дұрыс жауап / критерийлер' }}</summary>{{ render_answer_key(answer.question_view) }}</details>{% endif %}
+
+            {% if answer.requires_manual_review %}
+
+              <div class="grading-section">
+
+                <div class="grading-title">
+                  {{ _('Қолмен тексеру') }}
+                </div>
+
+
+                <form
+                  method="post"
+                  action="{{
+                    url_for(
+                      'teacher_online_assessment_answer_grade',
+                      answer_id=answer.answer_id
+                    )
+                  }}"
+                >
+
+                  <input
+                    type="hidden"
+                    name="assessment_student_id"
+                    value="{{ assessment_student_id }}"
+                  >
+                  <input
+                    type="hidden"
+                    name="origin"
+                    value="{{ origin }}"
+                  >
+
+
+                  <div class="grading-row">
+
+                    <div class="score-field">
+
+                      <label
+                        for="score_{{ answer.answer_id }}"
+                        class="field-label"
+                      >
+                        {{ _('БАЛЛ') }}
+                      </label>
+
+
+                      <div class="score-control">
+
+                        <input
+                          type="number"
+                          id="score_{{ answer.answer_id }}"
+                          name="score"
+                          class="score-input"
+                          min="0"
+                          max="{{ answer.max_score }}"
+                          step="0.01"
+                          required
+                        >
+
+                        <span class="score-max">
+                          / {{ answer.max_score_display }}
+                        </span>
+
+                      </div>
+
+                    </div>
+
+
+                    <button
+                      type="submit"
+                      class="grade-button"
+                     data-sm-action="primary">
+                      {{ _('Тексеру') }}
+                    </button>
+
+                  </div>
+
+                </form>
+
+              </div>
+
+
+            {% elif answer.status.value == "checked" %}
+
+              <div class="checked-result">
+
+                <div class="score-result">
+                  {{ _('Балл:') }}
+                  <strong>
+                    {{ answer.score_display }}
+                    /
+                    {{ answer.max_score_display }}
+                  </strong>
+                </div>
+
+
+                {% if answer.is_correct is true %}
+
+                  <span class="correct-badge">
+                    {{ _('✓ Дұрыс') }}
+                  </span>
+
+                {% elif answer.is_correct is false %}
+
+                  <span class="incorrect-badge">
+                    {{ _('Дұрыс емес') }}
+                  </span>
+
+                {% endif %}
+
+              </div>
+
+            {% endif %}
+
+          </div>
+
+        </article>
+
+      {% endfor %}
+
+    </div>
+
+
+  {% else %}
+
+    <div class="empty-state">
+      {{ _('Оқушының жауаптары табылмады.') }}
+    </div>
+
+  {% endif %}
+
+
+  <div class="review-footer">
+
+    <a
+      href="{{ back_url }}"
+      class="back-button"
+     data-sm-action="nav" data-sm-back="true">
+      {{ _('← Оқушыларға оралу') }}
+    </a>
+
+  </div>
+
+</div>
+
+{% endblock %}
+{% block extra_js %}{{ super() }}
+<script defer src="https://cdn.jsdelivr.net/npm/mathlive"></script>
+<script defer src="{{ url_for('static',path='js/teacher/assessment/question_bank/question_bank_readonly_formulas.js') }}?v=168"></script>
+{% endblock %}

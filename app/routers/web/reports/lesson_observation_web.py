@@ -221,6 +221,10 @@ async def staff_user_lesson_observation_fill_submit(
 
 
 @router.get(
+    "/lesson-observation/{report_id}/pdf/download",
+    name="lesson_observation_pdf_download",
+)
+@router.get(
     "/lesson-observation/{report_id}/pdf/view",
     name="lesson_observation_pdf_view",
 )
@@ -280,64 +284,7 @@ async def lesson_observation_pdf_view(
     )
 
 
-@router.get(
-    "/lesson-observation/{report_id}/pdf/download",
-    name="lesson_observation_pdf_download",
-)
-async def lesson_observation_pdf_download(
-        report_id: int,
-        db: AsyncSession = Depends(get_db),
-        user: User = Depends(
-            require_roles(
-                UserRole.SCHOOL_STAFF,
-                UserRole.SCHOOL_ADMIN,
-            )
-        ),
-):
-    report = await LessonObservationRepo.get_by_id(
-        db,
-        report_id,
-    )
-
-    if not report:
-        raise HTTPException(
-            status_code=404,
-            detail="Отчет не найден",
-        )
-
-    if report.observer_user_id != user.id:
-        raise HTTPException(
-            status_code=403,
-            detail="Нет доступа к отчету",
-        )
-
-    pdf_file = report.pdf_signed_file
-
-    if not pdf_file:
-        raise HTTPException(
-            status_code=404,
-            detail="PDF не найден",
-        )
-
-    storage = get_storage()
-
-    if not await storage.exists(
-        object_key=str(pdf_file),
-    ):
-        raise HTTPException(
-            status_code=404,
-            detail="PDF-файл не найден в хранилище",
-        )
-
-    download_url = await storage.get_download_url(
-        object_key=str(pdf_file),
-        expires_in=300,
-    )
-
-    return RedirectResponse(
-        url=download_url,
-        status_code=302,
-    )
+lesson_observation_pdf_download = lesson_observation_pdf_view
 
 
 @router.get(

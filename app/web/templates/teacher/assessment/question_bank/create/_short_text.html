@@ -1,0 +1,67 @@
+<!-- =============================================
+     SHORT TEXT
+     ============================================= -->
+
+<div
+  id="short-text-fields"
+  class="qb-answer-builder"
+  data-question-fields="short_text"
+  hidden
+>
+
+  <div class="qb-answer-builder__header">
+
+    <h3>
+      {{ _('Қабылданатын жауаптар') }}
+    </h3>
+
+    <p>
+      {{ _('Автоматты тексеру кезінде дұрыс деп қабылданатын қысқа жауаптарды енгізіңіз.') }}
+    </p>
+
+  </div>
+
+
+  <div
+    id="accepted-answers-container"
+    class="qb-short-answers"
+  >
+
+    <div
+      class="qb-short-answer-row"
+      data-accepted-answer-row
+    >
+
+      <input
+        type="text"
+        name="accepted_answers"
+        class="qb-form-control"
+        placeholder="{{ _('Мысалы: процессор') }}"
+        data-type-input
+        disabled
+      >
+
+      <button
+        type="button"
+        class="qb-remove-answer"
+        data-remove-answer
+        hidden
+        aria-label="{{ _('Жауапты жою') }}"
+       data-sm-action="danger" data-sm-icon="true">
+        ×
+      </button>
+
+    </div>
+
+  </div>
+
+
+  <button
+    type="button"
+    id="add-accepted-answer"
+    class="qb-add-answer"
+   data-sm-action="primary">
+    {{ _('+ Жауап қосу') }}
+  </button>
+
+</div>

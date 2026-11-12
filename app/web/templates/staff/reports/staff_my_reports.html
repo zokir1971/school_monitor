@@ -3,25 +3,30 @@
 {% extends "base.html" %}
 
 {% block title %}
-Мои отчеты
+{{ _('Мои отчеты') }}
 {% endblock %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static',path='css/reports/my_reports.css') }}?v=131">
+{% endblock %}
+
+{% set ru=ui_language()=='ru' %}
 {% block content %}
 
-<div class="page-container">
+<div class="page-container my-reports-page">
 
     <div class="page-header">
         <div>
-            <h2>Мои отчеты</h2>
+            <h2>{{ _('Мои отчеты') }}</h2>
             <div class="muted">
-                Выберите месяц и задачу для перехода к заполнению назначенных отчетов
+                {{ 'Выбранные в алгоритмах отчёты и ваши назначения на их выполнение' if ru else 'Алгоритмдерде таңдалған есептер және оларды орындау тағайындауларыңыз' }}
             </div>
         </div>
     </div>
 
     {% if error %}
         <div class="alert alert-danger">
-            {{ error }}
+            {{ reports_feedback(error) }}
         </div>
     {% endif %}
 
@@ -31,15 +36,15 @@
 
     <section class="report-card">
         <div class="card-title-row">
-            <h3>Выбор месяца</h3>
+            <h3>{{ _('Выбор месяца') }}</h3>
         </div>
 
         <form method="get"
               action="{{ request.url_for('staff_my_reports_page') }}"
-              class="month-filter">
+              class="month-filter" data-no-draft-restore>
 
             <label for="month">
-                Месяц
+                {{ _('Месяц') }}
             </label>
 
             <select id="month"
@@ -49,18 +54,16 @@
                 {% for month_number, month_name in MONTH_NAMES.items() %}
                     <option value="{{ month_number }}"
                             {% if month_number == month %}selected{% endif %}>
-                        {{ month_name }}
+                        {{ _(month_name) }}
                     </option>
                 {% endfor %}
 
             </select>
 
-            <noscript>
                 <button type="submit"
-                        class="btn btn-primary">
-                    Показать
+                        class="btn btn-primary" data-sm-action="nav">
+                    {{ _('Показать') }}
                 </button>
-            </noscript>
 
         </form>
     </section>
@@ -75,11 +78,11 @@
         <div class="card-title-row">
             <div>
                 <h3>
-                    Задачи на {{ MONTH_NAMES.get(month, month) }}
+                    {{ _('Задачи на') }} {{ _(MONTH_NAMES.get(month, month)|string) }}
                 </h3>
 
                 <div class="muted">
-                    Показаны только задачи, в которых вам назначено заполнение отчетов
+                    {{ 'Ответственному показаны все выбранные отчёты его задач; сотруднику — назначенные ему.' if ru else 'Жауаптыға өз тапсырмаларындағы барлық таңдалған есептер, қызметкерге өзіне тағайындалған есептер көрсетілген.' }}
                 </div>
             </div>
         </div>
@@ -97,23 +100,23 @@
                         </th>
 
                         <th>
-                            Задача
+                            {{ _('Задача') }}
                         </th>
 
                         <th style="width: 180px;">
-                            Срок выполнения
+                            {{ _('Срок выполнения') }}
                         </th>
 
                         <th style="width: 150px;">
-                            Статус задачи
+                            {{ _('Статус задачи') }}
                         </th>
 
                         <th style="width: 160px;">
-                            Назначено отчетов
+                            {{ 'Отчёты из алгоритма' if ru else 'Алгоритмдегі есептер' }}
                         </th>
 
                         <th style="width: 170px;">
-                            Действие
+                            {{ _('Действие') }}
                         </th>
                     </tr>
                     </thead>
@@ -134,7 +137,7 @@
                                 </div>
 
                                 <div class="muted task-id">
-                                    ID задачи: {{ task.month_item_id }}
+                                    {{ _('ID задачи:') }} {{ task.month_item_id }}
                                 </div>
                             </td>
 
@@ -146,24 +149,43 @@
                                 {% if task.task_status_label %}
                                     <span class="status-badge
                                         status-{{ task.task_status or 'default' }}">
-                                        {{ task.task_status_label }}
+                                        {{ _(task.task_status_label) }}
                                     </span>
                                 {% else %}
                                     —
                                 {% endif %}
                             </td>
 
-                            <td class="text-center">
-                                <span class="report-count">
-                                    {{ task.assigned_reports_count }}
-                                </span>
+                            <td class="my-report-catalog">
+                              {% for report in task.reports %}
+                              <article class="my-report-catalog__item">
+                                <strong>{{ report.title_ru if ru else report.title_kk }}</strong>
+                                {% if report.target_label %}<div class="muted">{{ report.target_label }}</div>{% endif %}
+                                {% set labels={'unassigned':('Не назначен','Тағайындалмаған'),'pending':('Ожидает выполнения','Орындалуын күтуде'),'draft':('Черновик','Жоба'),'completed':('Завершён','Аяқталған'),'waived':('Не требуется','Қажет емес')} %}
+                                <span class="my-report-catalog__status my-report-catalog__status--{{ report.status }}">{{ labels.get(report.status,labels['pending'])[0 if ru else 1] }}</span>
+                                {% if report.assigned_to %}<div class="muted">{{ 'Исполнитель' if ru else 'Орындаушы' }}: {{ report.assigned_to }}</div>{% endif %}
+                                <div class="my-report-catalog__actions">{% if feature_report_available(report.report_code) %}
+                                {% if report.status=='unassigned' and report.can_assign %}
+                                  <a class="btn" href="{{ request.url_for('staff_report_assignments_page',month_item_id=task.month_item_id) }}?month={{ month }}#assignment-report-{{ report.selected_report_id }}" data-sm-action="primary">{{ 'Назначить исполнителя' if ru else 'Орындаушыны тағайындау' }}</a>
+                                {% elif report.is_my_report or task.is_primary %}
+                                  <a class="btn btn-primary" href="{{ request.url_for('staff_report_templates_page',month_item_id=task.month_item_id) }}?month={{ month }}#selected-report-{{ report.selected_report_id }}" data-sm-action="nav">{{ 'Открыть отчёт' if ru else 'Есепті ашу' }}</a>
+                                {% endif %}
+                                {% if task.is_primary and report.can_assign and report.status not in ('unassigned', 'completed') %}
+                                  <a class="btn" href="{{ request.url_for('staff_report_assignments_page',month_item_id=task.month_item_id) }}?month={{ month }}#assignment-report-{{ report.selected_report_id }}" data-sm-action="edit">{{ 'Переназначить' if ru else 'Қайта тағайындау' }}</a>
+                                {% endif %}
+                                {% else %}<span class="muted">{{ 'Раздел временно отключён.' if ru else 'Бөлім уақытша өшірілген.' }}</span>{% endif %}</div>
+                              </article>
+                              {% endfor %}
                             </td>
 
                             <td>
                                 <a class="btn btn-primary"
-                                   href="{{ request.url_for('staff_my_reports_page') }}{% if month is not none %}?month={{ month }}&{% else %}?{% endif %}task_id={{ task.month_item_id }}">
-                                    Открыть отчеты
+                                   href="{{ request.url_for('staff_report_templates_page',month_item_id=task.month_item_id) }}?month={{ month }}" data-sm-action="nav">
+                                    {{ _('Открыть отчеты') }}
                                 </a>
+                                {% if task.is_primary and task.task_status == 'in_progress' and task.reports|selectattr('can_assign')|list|length %}
+                                <a class="btn" href="{{ request.url_for('staff_report_assignments_page',month_item_id=task.month_item_id) }}?month={{ month }}" data-sm-action="nav">{{ 'Распределение отчётов' if ru else 'Есептерді бөлу' }}</a>
+                                {% endif %}
                             </td>
 
                         </tr>
@@ -185,12 +207,11 @@
                 </div>
 
                 <h3>
-                    Назначенных отчетов нет
+                    {{ 'Выбранных или назначенных отчётов нет' if ru else 'Таңдалған немесе тағайындалған есептер жоқ' }}
                 </h3>
 
                 <p class="muted">
-                    На выбранный месяц вам пока не назначено
-                    заполнение отчетов по задачам.
+                    {{ 'Проверьте месяц, сохранение алгоритма и распределение отчётов между исполнителями.' if ru else 'Айды, алгоритмнің сақталуын және есептердің орындаушыларға бөлінуін тексеріңіз.' }}
                 </p>
 
             </div>

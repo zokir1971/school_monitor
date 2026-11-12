@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Рейтинг исполнителей{% endblock %}
+{% block title %}{{ _('Рейтинг исполнителей') }}{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -668,12 +668,12 @@
 <div class="monitoring-page">
 
   <header class="page-header">
-    <h1>Рейтинг исполнителей задач ВШК</h1>
+    <h1>{{ _('Рейтинг исполнителей задач ВШК') }}</h1>
 
     <p class="page-subtitle">
       {{ school_name }}
       {% if academic_year %}
-        · {{ academic_year }} учебный год
+        · {{ academic_year }} {{ _('учебный год') }}
       {% endif %}
     </p>
   </header>
@@ -687,7 +687,7 @@
 
     <article class="summary-card">
       <div class="summary-card__label">
-        Исполнителей
+        {{ _('Исполнителей') }}
       </div>
 
       <div class="summary-card__value">
@@ -695,14 +695,14 @@
       </div>
 
       <div class="summary-card__note">
-        Сотрудники, участвующие в рейтинге
+        {{ _('Сотрудники, участвующие в рейтинге') }}
       </div>
     </article>
 
 
     <article class="summary-card">
       <div class="summary-card__label">
-        Уникальных задач
+        {{ _('Уникальных задач') }}
       </div>
 
       <div class="summary-card__value">
@@ -710,14 +710,14 @@
       </div>
 
       <div class="summary-card__note">
-        Только задачи, включённые в месячные планы
+        {{ _('Только задачи, включённые в месячные планы') }}
       </div>
     </article>
 
 
     <article class="summary-card">
       <div class="summary-card__label">
-        Участий в задачах
+        {{ _('Участий в задачах') }}
       </div>
 
       <div class="summary-card__value">
@@ -725,15 +725,15 @@
       </div>
 
       <div class="summary-card__note">
-        PRIMARY: {{ totals.primary_assignment_count }}
-        · Соисполнители: {{ totals.co_executor_assignment_count }}
+        {{ _('PRIMARY:') }} {{ totals.primary_assignment_count }}
+        {{ _('· Соисполнители:') }} {{ totals.co_executor_assignment_count }}
       </div>
     </article>
 
 
     <article class="summary-card">
       <div class="summary-card__label">
-        Задач с соисполнителями
+        {{ _('Задач с соисполнителями') }}
       </div>
 
       <div class="summary-card__value">
@@ -741,7 +741,7 @@
       </div>
 
       <div class="summary-card__note">
-        Завершено:
+        {{ _('Завершено:') }}
         {{ totals.completed_tasks_with_coexecutors_count }}
       </div>
     </article>
@@ -749,7 +749,7 @@
 
     <article class="summary-card summary-card--reports">
       <div class="summary-card__label">
-        Назначено отчётов
+        {{ _('Назначено отчётов') }}
       </div>
 
       <div class="summary-card__value">
@@ -757,14 +757,14 @@
       </div>
 
       <div class="summary-card__note">
-        Персональные назначения сотрудников
+        {{ _('Персональные назначения сотрудников') }}
       </div>
     </article>
 
 
     <article class="summary-card summary-card--completed">
       <div class="summary-card__label">
-        Выполнено отчётов
+        {{ _('Выполнено отчётов') }}
       </div>
 
       <div class="summary-card__value">
@@ -772,7 +772,7 @@
       </div>
 
       <div class="summary-card__note">
-        Личное выполнение:
+        {{ _('Личное выполнение:') }}
         {{ totals.report_completion_percent }}%
       </div>
     </article>
@@ -780,7 +780,7 @@
 
     <article class="summary-card summary-card--pending">
       <div class="summary-card__label">
-        Ожидают выполнения
+        {{ _('Ожидают выполнения') }}
       </div>
 
       <div class="summary-card__value">
@@ -788,14 +788,14 @@
       </div>
 
       <div class="summary-card__note">
-        Назначения со статусом PENDING
+        {{ _('Назначения со статусом PENDING') }}
       </div>
     </article>
 
 
     <article class="summary-card summary-card--waived">
       <div class="summary-card__label">
-        Освобождено
+        {{ _('Освобождено') }}
       </div>
 
       <div class="summary-card__value">
@@ -803,7 +803,7 @@
       </div>
 
       <div class="summary-card__note">
-        Не считаются выполненными сотрудником
+        {{ _('Не считаются выполненными сотрудником') }}
       </div>
     </article>
 
@@ -818,30 +818,27 @@
 
     <div class="section-header">
       <h2 class="section-title">
-        Результативность исполнителей
+        {{ _('Результативность исполнителей') }}
       </h2>
 
       <p class="section-description">
-        Персональный результат сотрудника считается независимо
-        от завершения всей задачи. Каждый выполненный назначенный
-        отчёт даёт 1 балл. Итоговый документ учитывается только
-        у ответственного исполнителя PRIMARY.
+        {{ _('Персональный результат сотрудника считается независимо от завершения всей задачи. Каждый выполненный назначенный отчёт даёт 1 балл. Итоговый документ учитывается только у ответственного исполнителя PRIMARY.') }}
       </p>
 
       <div class="legend">
         <span class="legend-item">
           <span class="legend-dot legend-dot--done"></span>
-          COMPLETED — выполнено
+          {{ _('COMPLETED — выполнено') }}
         </span>
 
         <span class="legend-item">
           <span class="legend-dot legend-dot--pending"></span>
-          PENDING — ожидает
+          {{ _('PENDING — ожидает') }}
         </span>
 
         <span class="legend-item">
           <span class="legend-dot legend-dot--waived"></span>
-          WAIVED — освобождено, 0 баллов
+          {{ _('WAIVED — освобождено, 0 баллов') }}
         </span>
       </div>
     </div>
@@ -854,25 +851,25 @@
 
           <thead>
           <tr>
-            <th>Место</th>
-            <th>Исполнитель</th>
+            <th>{{ _('Место') }}</th>
+            <th>{{ _('Исполнитель') }}</th>
 
             <th class="col-participation">
-                Участий<br>в задачах
+                {{ _('Участий в задачах') }}
             </th>
-            <th>Завершено<br>задач</th>
+            <th>{{ _('Завершено задач') }}</th>
 
-            <th>Итоговых<br>документов</th>
+            <th>{{ _('Итоговых документов') }}</th>
 
-            <th>Назначено<br>отчётов</th>
-            <th>Выполнено<br>отчётов</th>
-            <th>Ожидают</th>
-            <th>Освобождено</th>
+            <th>{{ _('Назначено отчётов') }}</th>
+            <th>{{ _('Выполнено отчётов') }}</th>
+            <th>{{ _('Ожидают') }}</th>
+            <th>{{ _('Освобождено') }}</th>
 
-            <th>Личное выполнение<br>отчётов</th>
+            <th>{{ _('Личное выполнение отчётов') }}</th>
 
-            <th>Средний балл<br>за участие</th>
-            <th>Общий балл</th>
+            <th>{{ _('Средний балл за участие') }}</th>
+            <th>{{ _('Общий балл') }}</th>
           </tr>
           </thead>
 
@@ -901,13 +898,13 @@
                 <div class="role-summary">
                   {% if row.primary_assignment_count %}
                     <span class="role-chip role-chip--primary">
-                      PRIMARY: {{ row.primary_assignment_count }}
+                      {{ _('PRIMARY:') }} {{ row.primary_assignment_count }}
                     </span>
                   {% endif %}
 
                   {% if row.co_executor_assignment_count %}
                     <span class="role-chip role-chip--co">
-                      Соисп.: {{ row.co_executor_assignment_count }}
+                      {{ _('Соисп.:') }} {{ row.co_executor_assignment_count }}
                     </span>
                   {% endif %}
                 </div>
@@ -1016,7 +1013,7 @@
           <tfoot>
           <tr>
             <td colspan="2">
-              Итого
+              {{ _('Итого') }}
             </td>
 
             <td>
@@ -1071,7 +1068,7 @@
     {% else %}
 
       <div class="empty-state">
-        Для выбранного периода данные исполнителей отсутствуют.
+        {{ _('Для выбранного периода данные исполнителей отсутствуют.') }}
       </div>
 
     {% endif %}

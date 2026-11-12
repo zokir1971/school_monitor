@@ -1,0 +1,30 @@
+.lo-language{min-width:0}.lo-language h3{font-family:inherit;font-weight:600;font-size:16px;line-height:1.5;margin:0 0 10px}.lo-rich-tools{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}.lo-rich-tools button{font:inherit;font-size:13px;padding:6px 10px;border:1px solid #cbd5e1;background:#f8fafc;border-radius:6px;cursor:pointer}.lo-rich-tools button:disabled{opacity:.45;cursor:default}.qb-rich-editor__content{min-height:130px;white-space:pre-wrap;overflow-wrap:anywhere;border:1px solid #cbd5e1;border-radius:8px;padding:12px;background:#fff;font:inherit;line-height:1.7}.qb-rich-editor__content:focus{outline:2px solid #3b82f6;outline-offset:2px}.qb-rich-math{display:inline-block;padding:2px 5px;border-radius:5px;vertical-align:middle;cursor:pointer}.qb-rich-math.is-selected{background:#dbeafe;outline:2px solid #2563eb}.qb-rich-math__field{border:0;background:transparent;pointer-events:none;font-size:18px;max-width:100%}.lo-import .lo-check{display:flex;flex-direction:row;align-items:flex-start;gap:8px;margin-top:10px;font-size:14px}.lo-check input{width:auto!important;margin-top:3px}.lo-warning{padding:10px;background:#fffbeb;border-left:3px solid #d97706;font-size:14px;line-height:1.5}.lo-import [hidden],.qb-math-dialog[hidden]{display:none!important}.qb-math-dialog{position:fixed;inset:0;z-index:2000;display:flex;align-items:center;justify-content:center;padding:20px}.qb-math-dialog__backdrop{position:absolute;inset:0;background:rgba(15,23,42,.5)}.qb-math-dialog__panel{position:relative;background:#fff;border-radius:14px;padding:22px;width:min(700px,100%);max-height:85vh;overflow:auto;box-shadow:0 20px 70px #0004;font-family:inherit}.qb-math-dialog__header{display:flex;align-items:center;justify-content:space-between}.qb-math-dialog__close{border:0;background:transparent;font-size:28px;cursor:pointer}.qb-math-tools__buttons{display:flex;flex-wrap:wrap;gap:7px}.qb-math-tools__button,.qb-math-dialog__button{font:inherit;border:1px solid #cbd5e1;background:#f8fafc;border-radius:6px;padding:8px 12px;cursor:pointer}.qb-math-dialog__actions{display:flex;justify-content:flex-end;gap:10px;margin-top:16px}#qb-math-field{display:block;min-height:70px;margin-top:14px;font-size:22px;width:100%;border:1px solid #94a3b8;border-radius:8px}.qb-math-dialog-open{overflow:hidden}.lo-texts{align-items:start}@media(max-width:850px){.lo-texts{grid-template-columns:1fr!important}}
+
+/* MathLive's body-level keyboard must receive clicks above the modal backdrop. */
+body.qb-math-dialog-open { --keyboard-zindex: 2100; }
+.qb-math-dialog {
+  bottom: var(--lo-keyboard-height, 0px);
+  box-sizing: border-box;
+}
+.qb-math-dialog__panel {
+  box-sizing: border-box;
+  max-height: min(85vh, calc(100dvh - var(--lo-keyboard-height, 0px) - 40px));
+}
+@media (max-height: 600px) {
+  .qb-math-dialog { padding: 8px; }
+  .qb-math-dialog__panel {
+    padding: 12px;
+    max-height: calc(100dvh - var(--lo-keyboard-height, 0px) - 16px);
+  }
+}
+
+/* Capture clicks above MathLive's shadow DOM without changing the formula. */
+.qb-rich-math { position: relative; isolation: isolate; }
+.qb-rich-math__hitbox {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  cursor: pointer;
+  pointer-events: auto;
+}
+.qb-rich-math:focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; }

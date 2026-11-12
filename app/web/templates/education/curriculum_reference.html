@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Пәндер жиынтығы') }}{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{{ url_for('static', path='css/education/class_curriculum.css') }}"><style>.curriculum-page [hidden] { display: none !important; }</style>{% endblock %}
+{% block content %}
+<div class="curriculum-page">
+<header><h1>{{ _('Пәндер жиынтығы және әдістемелік профильдер') }}</h1><p>{{ _('Наборы предметов по языку обучения, параллели и направлению.') }}</p><a href="{{ request.url_for('super_subject_reference_list') }}" data-sm-action="nav">{{ _('Открыть справочник предметов →') }}</a></header>
+{% if error %}<div class="curriculum-notice curriculum-error" role="alert">{{ _(error) }}</div>{% endif %}
+{% if notice %}<div class="curriculum-notice" role="status">{{ _(notice) }}</div>{% endif %}
+<section><h2 id="rule-form-title">{{ _('Добавить предмет в типовой набор') }}</h2><p>{{ _('Выберите существующий предмет справочника. Диапазон параллелей задайте по учебному плану. Общий вариант «Узбекский / уйгурский / таджикский» сохранит одинаковые правила для трёх языков; существующие совпадающие записи обновятся. Для неязыкового предмета вариант «Все языки обучения» сохранит набор сразу для пяти языков.') }}</p>
+<form method="post" action="{{ request.url_for('super_curriculum_save') }}" class="curriculum-form">
+<input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="action" value="rule"><input type="hidden" name="rule_id" value="">
+<label>{{ _('Язык обучения') }}<select name="language" required><option value="" selected disabled>{{ _('Выберите язык обучения') }}</option><option value="all" data-all-languages hidden disabled>{{ _('Все языки обучения') }}</option>{% for code,name in rule_languages.items() %}<option value="{{ code }}">{{ _(name) }}</option>{% endfor %}</select></label>
+<label>{{ _('С параллели') }}<input type="number" name="grade_from" min="1" max="11" value="5" required></label>
+<label>{{ _('По параллель') }}<input type="number" name="grade_to" min="1" max="11" value="9" required></label>
+<label>{{ _('Направление') }}<select name="track"><option value="">{{ _('Общее для обоих направлений') }}</option><option value="emn">{{ _('ЕМН / ЖМБ (10–11)') }}</option><option value="ogn">{{ _('ОГН / ҚГБ (10–11)') }}</option></select></label>
+<label>{{ _('Санат / Категория') }}<select name="category_id" required><option value="">{{ _('Выберите категорию') }}</option>{% for c in categories %}<option value="{{ c.id }}">{{ assessment_subject_name(c) }}</option>{% endfor %}<option value="0">{{ _('Без категории — требуется настройка') }}</option></select></label>
+<label>{{ _('Предмет') }}<select name="subject_id" required><option value="">{{ _('Выберите') }}</option>{% for s in subjects %}{% if s.is_active %}<option value="{{ s.id }}" data-category="{{ s.category_id or 0 }}">{{ assessment_subject_name(s) }}</option>{% else %}<option value="{{ s.id }}" data-category="{{ s.category_id or 0 }}" disabled>{{ assessment_subject_name(s) }} {{ _('(неактивен)') }}</option>{% endif %}{% endfor %}</select></label>
+<p class="curriculum-hint" data-subject-policy aria-live="polite">{{ _('Правила преподавания подставляются из справочника предметов.') }}</p>
+<label>{{ _('Профиль МО') }}<select name="profile_id"><option value="">{{ _('Не задан') }}</option>{% for p in profiles %}<option value="{{ p.id }}">{{ p.name }}</option>{% endfor %}</select></label>
+<label>{{ _('Деление') }}<select name="split_mode"><option value="whole">{{ _('Весь класс') }}</option><option value="threshold">{{ _('По численности класса') }}</option></select></label>
+<label>{{ _('Порог (≥)') }}<input type="number" name="split_threshold" min="2" value="20"></label>
+<p class="curriculum-hint" data-rule-preview aria-live="polite"></p>
+<label data-edit-active hidden><input type="checkbox" name="is_active" value="yes">{{ _('Правило активно') }}</label><div><button type="submit" data-rule-save data-sm-action="primary">{{ _('Сохранить набор') }}</button> <button type="button" class="curriculum-secondary" data-rule-cancel hidden data-sm-action="nav">{{ _('Отменить редактирование') }}</button></div>
+</form><div class="curriculum-hint">{{ _('Начальная школа: отдельные языки; с 5 класса язык, отличный от языка обучения, представлен объединённым предметом. Русский язык как отдельный предмет начинается со 2 класса. Иностранный язык — с 3 класса. Порог задаётся явно: ≥ означает «не меньше». Значение 20 в форме — исходное значение, а не подтверждение нормы.') }}</div>
+</section>
+<section><h2>{{ _('Профили МО для предметов') }}</h2><form method="post" action="{{ request.url_for('super_curriculum_save') }}" class="curriculum-form">
+<input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="action" value="profile">
+<label>{{ _('Код') }}<input name="code" maxlength="80" placeholder="languages" required></label><label>{{ _('Название') }}<input name="name" maxlength="255" required></label><div><button type="submit" data-sm-action="primary">{{ _('Сохранить профиль') }}</button></div></form>
+<p>{{ _('Это общая группировка предметов. Школьные МО и их руководители управляются в существующем разделе школы.') }}</p></section>
+<section><h2>{{ _('Сохранённые правила') }}</h2>
+<form class="curriculum-form" data-rule-filters role="search" aria-label="{{ _('Поиск сохранённых правил') }}">
+<label>{{ _('Поиск') }}<input type="search" name="search" placeholder="{{ _('Название предмета, тип, профиль МО или ID правила') }}"></label>
+<label>{{ _('Язык обучения') }}<select name="language"><option value="">{{ _('Все языки') }}</option>{% for code,name in languages.items() %}<option value="{{ code }}">{{ _(name) }}</option>{% endfor %}<option value="uz_ug_tg">{{ _('Узбекский / уйгурский / таджикский') }}</option></select></label>
+<label>{{ _('Класс') }}<select name="grade"><option value="">{{ _('Все классы') }}</option>{% for grade in range(1,12) %}<option value="{{ grade }}">{{ grade }}</option>{% endfor %}</select></label>
+<label>{{ _('Предмет') }}<select name="subject"><option value="">{{ _('Все предметы') }}</option>{% for subject in subjects %}<option value="{{ subject.id }}">{{ assessment_subject_name(subject) }}</option>{% endfor %}</select></label>
+<label>{{ _('Санат / Категория') }}<select name="category"><option value="">{{ _('Все категории') }}</option><option value="0">{{ _('Без категории') }}</option>{% for c in categories %}<option value="{{ c.id }}">{{ assessment_subject_name(c) }}</option>{% endfor %}</select></label>
+<label>{{ _('Направление') }}<select name="track"><option value="">{{ _('Все направления') }}</option><option value="general">{{ _('Общее') }}</option><option value="emn">{{ _('ЕМН / ЖМБ') }}</option><option value="ogn">{{ _('ОГН / ҚГБ') }}</option></select></label>
+<label>{{ _('Состояние') }}<select name="state"><option value="">{{ _('Все правила') }}</option><option value="yes">{{ _('Активные') }}</option><option value="no">{{ _('Неактивные') }}</option></select></label>
+<label>{{ _('Деление') }}<select name="split"><option value="">{{ _('Любое') }}</option><option value="yes">{{ _('По численности') }}</option><option value="no">{{ _('Весь класс') }}</option></select></label>
+<label>{{ _('Проверка') }}<select name="errors"><option value="">{{ _('Все записи') }}</option><option value="yes">{{ _('С предупреждениями') }}</option></select></label>
+<div><button type="reset" class="curriculum-secondary" data-sm-action="nav">{{ _('Сбросить фильтры') }}</button></div>
+</form>
+<p class="curriculum-muted" data-filter-count role="status" aria-live="polite"></p>
+<div class="curriculum-hint" data-filter-empty hidden>{{ _('По выбранным фильтрам правил не найдено.') }}</div>
+<div class="curriculum-table-wrap"><table><thead><tr><th>{{ _('Язык') }}</th><th>{{ _('Класс') }}</th><th>{{ _('Направление') }}</th><th>{{ _('Предмет') }}</th><th>{{ _('Категория') }}</th><th>{{ _('МО') }}</th><th>{{ _('Деление') }}</th><th>{{ _('Состояние') }}</th><th>{{ _('Редактирование') }}</th></tr></thead><tbody>
+{% for r in rules %}<tr data-rule-row data-language="{{ r.instruction_language }}" data-grade="{{ r.grade_level }}"
+ data-category="{{ subject_by_id.get(r.subject_id, {}).get('category_id') or 0 }}" data-subject="{{ r.subject_id }}" data-role="{{ r.subject_role }}" data-track="{{ r.education_track or 'general' }}"
+ data-state="{{ 'yes' if r.is_active else 'no' }}" data-split="{{ 'yes' if r.split_threshold else 'no' }}"
+ data-errors="{{ 'yes' if r.id in rule_errors else 'no' }}"
+ data-search="{{ r.id }} {% for subject in subjects %}{% if subject.id == r.subject_id %}{{ subject.name_kz }} {{ subject.name_ru or '' }}{% endif %}{% endfor %} {{ roles.get(r.subject_role, r.subject_role) }} {% for profile in profiles %}{% if profile.id == r.method_profile_id %}{{ profile.name }}{% endif %}{% endfor %}"><td>{{ _(languages[r.instruction_language]) }}</td><td>{{ r.grade_level }}</td><td>{{ r.education_track or _('Общее') }}</td><td>{% for s in subjects %}{% if s.id == r.subject_id %}{{ s.name_kz }}{% endif %}{% endfor %}<small>№{{ r.subject_id }}</small>{% if r.id in rule_errors %}<small class="curriculum-error">{{ _(rule_errors[r.id]) }}</small>{% endif %}</td><td>{% set rs = subject_by_id.get(r.subject_id, {}) %}{% set category = category_by_id.get(rs.get('category_id')) %}{{ assessment_subject_name(category) if category else _('Требуется настройка') }}</td><td>{% for p in profiles %}{% if p.id == r.method_profile_id %}{{ p.name }}{% endif %}{% endfor %}</td><td>{% if r.split_threshold %}≥{{ r.split_threshold }} {{ _('→ 2 подгруппы') }}{% else %}{{ _('Весь класс') }}{% endif %}</td><td>{% if r.is_active %}<form method="post" action="{{ request.url_for('super_curriculum_save') }}"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="action" value="deactivate"><input type="hidden" name="rule_id" value="{{ r.id }}"><button class="curriculum-secondary" type="submit" data-sm-action="primary">{{ _('Отключить') }}</button></form>{% else %}{{ _('Неактивно') }}{% endif %}</td><td><button type="button" class="curriculum-secondary" data-edit-rule
+ data-id="{{ r.id }}" data-language="{{ r.instruction_language }}" data-grade="{{ r.grade_level }}"
+ data-track="{{ r.education_track or '' }}" data-category="{{ subject_by_id.get(r.subject_id, {}).get('category_id') or 0 }}" data-subject="{{ r.subject_id }}" data-role="{{ r.subject_role }}"
+ data-profile="{{ r.method_profile_id or '' }}" data-threshold="{{ r.split_threshold or '' }}"
+ data-active="{{ 'yes' if r.is_active else 'no' }}" data-sm-action="edit">{{ _('Редактировать') }}</button>
+<form method="post" action="{{ request.url_for('super_curriculum_save') }}" data-delete-rule-form>
+<input type="hidden" name="csrf" value="{{ csrf }}">
+<input type="hidden" name="action" value="delete_rule">
+<input type="hidden" name="rule_id" value="{{ r.id }}">
+<button type="submit" class="curriculum-secondary" data-sm-action="danger">{{ _('Удалить') }}</button>
+</form></td></tr>
+{% else %}<tr><td colspan="9">{{ _('Наборы пока не настроены.') }}</td></tr>{% endfor %}</tbody></table></div></section>
+</div>
+<script>
+(() => {
+  document.querySelectorAll('[data-delete-rule-form]').forEach(form => {
+    form.addEventListener('submit', event => {
+      if (!window.confirm(window.SchoolMonitorI18n.t("ed_5a9b9b9e0eb5") + form.elements.rule_id.value + window.SchoolMonitorI18n.t("ed_08514cd8aae2"))) event.preventDefault();
+    });
+  });
+  const form = document.querySelector('[data-rule-filters]');
+  const rows = Array.from(document.querySelectorAll('[data-rule-row]'));
+  const count = document.querySelector('[data-filter-count]');
+  const empty = document.querySelector('[data-filter-empty]');
+  const normalize = value => value.toLocaleLowerCase().replace(/\s+/g, ' ').trim();
+  function apply() {
+    const f = form.elements;
+    const words = normalize(f.search.value).split(' ').filter(Boolean);
+    let visible = 0;
+    rows.forEach(row => {
+      const d = row.dataset;
+      const language = f.language.value;
+      const languageMatch = !language || (language === 'uz_ug_tg' ? ['uz','ug','tg'].includes(d.language) : d.language === language);
+      const matches = languageMatch && ['grade','subject','category','track','state','split','errors'].every(key => !f[key].value || f[key].value === d[key]) && words.every(word => normalize(d.search).includes(word));
+      row.hidden = !matches;
+      if (matches) visible += 1;
+    });
+    count.textContent = window.SchoolMonitorI18n.t("ed_a223161469c6") + visible + window.SchoolMonitorI18n.t("ed_e029cc4b39ce") + rows.length;
+    empty.hidden = visible !== 0 || rows.length === 0;
+  }
+  form.addEventListener('submit', event => event.preventDefault());
+  form.addEventListener('input', apply);
+  form.addEventListener('change', apply);
+  form.addEventListener('reset', () => setTimeout(apply, 0));
+  apply();
+})();
+</script>
+<script>
+(() => {
+  const form = document.querySelector('input[value="rule"]').form;
+  const preview = form.querySelector('[data-rule-preview]');
+  const subjects = {{ subject_by_id|tojson }};
+  const policyLabels = {{ education_labels(policy_labels)|tojson }};
+  const policyHint = form.querySelector('[data-subject-policy]');
+  function filterSubjects(keep = '') {
+    const category = form.elements.category_id.value;
+    for (const option of form.elements.subject_id.options) {
+      if (option.value) option.hidden = !category || option.dataset.category !== category;
+    }
+    form.elements.subject_id.value = keep;
+  }
+  form.elements.category_id.addEventListener('change', () => { filterSubjects(); update(); });
+
+  function syncLanguageOptions(preferAll = false) {
+    const f = form.elements;
+    const subject = subjects[f.subject_id.value];
+    const canUseAll = f.action.value === 'rule' && subject?.all_languages_allowed === true;
+    const option = f.language.querySelector('[data-all-languages]');
+    option.hidden = !canUseAll;
+    option.disabled = !canUseAll;
+    f.language.querySelector('option[value="uz_ug_tg"]').disabled = f.action.value === 'edit_rule';
+    if (canUseAll && preferAll) f.language.value = 'all';
+    else if (!canUseAll && f.language.value === 'all') f.language.value = '';
+  }
+
+  function update() {
+    syncLanguageOptions();
+    const f = form.elements;
+    const subject = subjects[f.subject_id.value];
+    policyHint.textContent = subject
+      ? window.SchoolMonitorI18n.t("ed_632f0676645b") + (policyLabels[subject.curriculum_role] || window.SchoolMonitorI18n.t("ed_b101ae465354"))
+      : window.SchoolMonitorI18n.t("ed_18b68d903f76");
+    const threshold = f.split_mode.value === 'threshold';
+    f.split_threshold.disabled = !threshold;
+    f.split_threshold.required = threshold;
+    preview.textContent = window.SchoolMonitorI18n.t("ed_faf8db836767", {p0: (f.language.selectedOptions[0]?.textContent || window.SchoolMonitorI18n.t("ed_5679f25fefc6")), p1: (f.grade_from.value), p2: (f.grade_to.value), p3: (f.subject_id.selectedOptions[0].textContent), p4: (threshold ? '≥' + f.split_threshold.value + window.SchoolMonitorI18n.t("ed_2a18c25605c3") : window.SchoolMonitorI18n.t("ed_daf8d6cea2d8"))});
+  }
+  const fields = form.elements;
+  const cancel = form.querySelector('[data-rule-cancel]');
+  const save = form.querySelector('[data-rule-save]');
+  const active = form.querySelector('[data-edit-active]');
+  const title = document.getElementById('rule-form-title');
+  document.querySelectorAll('[data-edit-rule]').forEach(button => {
+    button.addEventListener('click', () => {
+      const d = button.dataset;
+      fields.action.value = 'edit_rule'; fields.rule_id.value = d.id;
+      fields.language.value = d.language;
+      fields.grade_from.value = d.grade; fields.grade_to.value = d.grade;
+      fields.grade_to.readOnly = true;
+      fields.track.value = d.track;
+      const selected = Array.from(fields.subject_id.options).find(o => o.value === d.subject);
+      fields.category_id.value = selected?.dataset.category || '0';
+      filterSubjects(d.subject);
+      fields.profile_id.value = d.profile;
+      fields.split_mode.value = d.threshold ? 'threshold' : 'whole';
+      fields.split_threshold.value = d.threshold || '20';
+      fields.is_active.checked = d.active === 'yes';
+      fields.language.querySelector('option[value="uz_ug_tg"]').disabled = true;
+      title.textContent = window.SchoolMonitorI18n.t("ed_062975658a9b") + d.id;
+      save.textContent = window.SchoolMonitorI18n.t("ed_744cf2b21999"); cancel.hidden = false; active.hidden = false;
+      update(); form.scrollIntoView({behavior: 'smooth', block: 'start'});
+    });
+  });
+  fields.grade_from.addEventListener('input', () => {
+    if (fields.action.value === 'edit_rule') fields.grade_to.value = fields.grade_from.value;
+    update();
+  });
+  cancel.addEventListener('click', () => {
+    form.reset(); fields.action.value = 'rule'; fields.rule_id.value = '';
+    fields.grade_to.readOnly = false;
+    fields.language.querySelector('option[value="uz_ug_tg"]').disabled = false;
+    title.textContent = window.SchoolMonitorI18n.t("ed_991f42873393"); save.textContent = window.SchoolMonitorI18n.t("ed_5d173c14398f");
+    cancel.hidden = true; active.hidden = true; filterSubjects(); update();
+  });
+  form.addEventListener('input', update);
+  form.addEventListener('change', event => {
+    if (event.target === fields.subject_id) syncLanguageOptions(true);
+    update();
+  });
+  filterSubjects(); update();
+})();
+</script>
+{% endblock %}

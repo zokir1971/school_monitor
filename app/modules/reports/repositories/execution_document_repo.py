@@ -83,6 +83,7 @@ class ExecutionDocumentRepo:
                     TaskExecutionDocument.id,
                     TaskExecutionDocument.selected_report_id,
                     TaskExecutionDocument.status,
+                    TaskExecutionDocument.file_path,
                     TaskExecutionDocument.source,
                     TaskExecutionDocument.custom_template_id,
                     TaskExecutionDocument.template_mode,
@@ -463,3 +464,9 @@ class ExecutionDocumentRepo:
 
         result = await db.execute(stmt)
         return result.scalar_one_or_none()
+
+
+    @staticmethod
+    async def refresh_before_commit(db, *, document):
+        await db.flush()
+        await db.refresh(document)

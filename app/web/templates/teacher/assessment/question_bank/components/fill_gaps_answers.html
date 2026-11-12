@@ -1,0 +1,43 @@
+{% from 'teacher/assessment/question_bank/_segments.html' import render_segments with context %}
+{% macro fill_label(ru, kk) -%}
+{{ kk if qb_label_language|default('') == 'kk' else ru if qb_label_language|default('') == 'ru' else _(ru) }}
+{%- endmacro %}
+{% macro fill_answer(content, answer) -%}
+{% if content.get('word_bank_format') == 'rich_v1' %}
+{% for option in content.get('word_bank', []) %}{% if option.get('value') == answer %}{{ render_segments(option.get('segments', [])) }}{% endif %}{% endfor %}
+{% else %}{{ answer }}{% endif %}
+{%- endmacro %}
+{% macro render_fill_gaps_answers(item) %}
+{% set content = item.content or {} %}
+{% set gaps = item.answer_key.get('gaps', {}) %}
+<div class="qb-fg-answers">
+  <h4>{{ fill_label('Правильные ответы для пропусков', 'Бос орындардың дұрыс жауаптары') }}</h4>
+  {% set count = namespace(value=0) %}
+  {% for segment in content.get('segments', []) %}{% if segment.get('type') == 'gap' %}
+    {% set count.value = count.value + 1 %}
+    <div class="qb-answer-gap"><strong>{{ count.value }})</strong><div class="qb-answer-gap__values">
+    {% for answer in gaps.get(segment.get('gap_id'), {}).get('accepted_answers', []) %}
+      <span class="qb-answer-chip">{{ fill_answer(content, answer) }}</span>
+    {% else %}<span>{{ fill_label('Ответ не выбран', 'Жауап таңдалмаған') }}</span>{% endfor %}
+    </div></div>
+  {% endif %}{% endfor %}
+  <h4>{{ fill_label('Текст с правильными ответами', 'Дұрыс жауаптармен толтырылған мәтін') }}</h4>
+  <div class="qb-fg-filled-readonly">{% for segment in content.get('segments', []) %}{% if segment.get('type') == 'text' %}{{ segment.get('text', '') }}{% elif segment.get('type') == 'gap' %}{% set answers = gaps.get(segment.get('gap_id'), {}).get('accepted_answers', []) %}<span class="qb-fg-filled-answer">{% if answers %}{{ fill_answer(content, answers[0]) | trim }}{% else %}—{% endif %}</span>{% endif %}{% endfor %}</div>
+  {% if content.get('input_mode') == 'word_bank' %}
+  <h4>{{ fill_label('Банк ответов', 'Жауаптар банкі') }}</h4>
+  {% for option in content.get('word_bank', []) %}
+    {% set value = option.get('value') if content.get('word_bank_format') == 'rich_v1' else option %}
+    <div class="qb-fg-bank-review">
+      <strong>{{ loop.index0 | matching_letter }}</strong>
+      <div>{% if content.get('word_bank_format') == 'rich_v1' %}{{ render_segments(option.get('segments', [])) }}{% else %}{{ option }}{% endif %}</div>
+      {% set uses = namespace(numbers=[]) %}{% set index = namespace(value=0) %}
+      {% for segment in content.get('segments', []) %}{% if segment.get('type') == 'gap' %}
+        {% set index.value = index.value + 1 %}
+        {% if value in gaps.get(segment.get('gap_id'), {}).get('accepted_answers', []) %}{% set uses.numbers = uses.numbers + [index.value|string + ')'] %}{% endif %}
+      {% endif %}{% endfor %}
+      <small>{% if uses.numbers %}{{ fill_label('Правильный для пропусков', 'Дұрыс болатын бос орындар') }}: {{ uses.numbers|join(', ') }}{% else %}{{ fill_label('Отвлекающий вариант', 'Алаңдатушы нұсқа') }}{% endif %}</small>
+    </div>
+  {% endfor %}
+  {% endif %}
+</div>
+{% endmacro %}

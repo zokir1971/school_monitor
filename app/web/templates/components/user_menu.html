@@ -1,0 +1,33 @@
+{% set account_language = ui_language() if ui_language is defined else language if language is defined else 'ru' %}
+{% set account_ru = account_language == 'ru' %}
+{% set account_role = user.role.value if user.role.value is defined else user.role %}
+{% set account_roles = {
+ 'superuser': ('Суперадминистратор', 'Бас әкімші'),
+ 'region_admin': ('Администратор области', 'Облыс әкімшісі'),
+ 'district_admin': ('Администратор района', 'Аудан әкімшісі'),
+ 'school_admin': ('Администратор школы', 'Мектеп әкімшісі'),
+ 'region_staff': ('Сотрудник области', 'Облыс қызметкері'),
+ 'district_staff': ('Сотрудник района', 'Аудан қызметкері'),
+ 'school_staff': ('Сотрудник школы', 'Мектеп қызметкері'),
+ 'teacher': ('Учитель', 'Мұғалім')
+} %}
+{% set account_name = user.full_name or user.username %}
+{% set account_parts = account_name.split() %}
+<details class="sm-user-menu" data-sm-user-menu data-sm-no-style>
+  <summary class="sm-user-menu__trigger" aria-label="{{ 'Меню пользователя' if account_ru else 'Пайдаланушы мәзірі' }}: {{ account_name }}" title="{{ account_name }}">
+    <span class="sm-user-menu__avatar" aria-hidden="true">{{ account_name[:1]|upper }}</span>
+    <span class="sm-user-menu__name">{% if user.full_name and account_parts|length > 1 %}{{ account_parts[0]|title }}{% for part in account_parts[1:3] %} {{ part[:1]|upper }}.{% endfor %}{% else %}{{ account_name }}{% endif %}</span>
+    <span class="sm-user-menu__arrow" aria-hidden="true">▾</span>
+  </summary>
+  <div class="sm-user-menu__dropdown">
+    <div class="sm-user-menu__identity">
+      <strong>{{ account_name }}</strong>
+      <span>{{ account_roles.get(account_role, ('Пользователь', 'Пайдаланушы'))[0 if account_ru else 1] }}</span>
+      <span class="sm-user-menu__login">{{ 'Логин' if account_ru else 'Логин' }}: {{ user.username }}</span>
+    </div>
+    <a class="sm-user-menu__action" href="/access-recovery/change-password"><span aria-hidden="true">⚿</span>{{ 'Сменить пароль' if account_ru else 'Құпиясөзді өзгерту' }}</a>
+    <form method="post" action="/logout" class="sm-user-menu__logout" data-no-draft-restore>
+      <button type="submit" class="sm-user-menu__action sm-user-menu__action--logout"><span aria-hidden="true">↪</span>{{ 'Выйти' if account_ru else 'Шығу' }}</button>
+    </form>
+  </div>
+</details>

@@ -55,6 +55,13 @@ class ReportAssignmentRowDTO:
     target_value: str
     target_label: str
 
+    context_label: str = ""
+    context_label_kk: str = ""
+    report_name_kk: str = ""
+    target_label_kk: str = ""
+    assignable: bool = True
+    target_error: str | None = None
+
     # =========================================================
     # ТЕКУЩЕЕ НАЗНАЧЕНИЕ
     # =========================================================

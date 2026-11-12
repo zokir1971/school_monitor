@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 
 {% block title %}
-Результаты рассмотрения задач
+{{ _('Результаты рассмотрения задач') }}
 {% endblock %}
 
 {% block extra_css %}
@@ -434,12 +434,11 @@
     <div class="review-card__header">
       <div>
         <h1 class="review-card__title">
-          Результаты рассмотрения задач
+          {{ _('Результаты рассмотрения задач') }}
         </h1>
 
         <p class="review-card__description">
-          Просмотр задач, результатов и истории рассмотрения
-          за выбранный учебный период.
+          {{ _('Просмотр задач, результатов и истории рассмотрения за выбранный учебный период.') }}
         </p>
       </div>
 
@@ -450,7 +449,7 @@
 
     {% if error %}
       <div class="alert alert-error">
-        {{ error }}
+        {{ review_result_error(error) }}
       </div>
     {% endif %}
 
@@ -466,7 +465,7 @@
 
       <div class="form-group">
         <label for="year">
-          Учебный год
+          {{ _('Учебный год') }}
         </label>
 
         <select id="year"
@@ -475,7 +474,7 @@
 
   {% if not available_years %}
     <option value="">
-      Нет данных
+      {{ _('Нет данных') }}
     </option>
   {% endif %}
 
@@ -492,7 +491,7 @@
 
       <div class="form-group">
         <label for="month">
-          Месяц
+          {{ _('Месяц') }}
         </label>
 
         <select id="month"
@@ -500,7 +499,7 @@
         class="form-control">
 
   <option value="">
-    Все месяцы
+    {{ _('Все месяцы') }}
   </option>
 
   {% for available_month in available_months %}
@@ -508,7 +507,7 @@
             {% if selected_month == available_month.num %}
               selected
             {% endif %}>
-      {{ available_month.label }}
+      {{ _(available_month.label) }}
     </option>
   {% endfor %}
 
@@ -517,7 +516,7 @@
 
       <div class="form-group">
         <label for="review_place">
-          Место рассмотрения
+          {{ _('Место рассмотрения') }}
         </label>
 
         <select id="review_place"
@@ -525,7 +524,7 @@
                 class="form-control">
 
           <option value="">
-            Все места рассмотрения
+            {{ _('Все места рассмотрения') }}
           </option>
 
         {% set selected_place_value = selected_review_place.value
@@ -536,11 +535,11 @@
         {% for place in review_places %}
           {% if selected_place_value == place["value"] %}
             <option value="{{ place['value'] }}" selected>
-              {{ place["label"] }}
+              {{ review_result_label(place["label"]) }}
             </option>
           {% else %}
             <option value="{{ place['value'] }}">
-              {{ place["label"] }}
+              {{ review_result_label(place["label"]) }}
             </option>
           {% endif %}
         {% endfor %}
@@ -550,7 +549,7 @@
 
       <div class="form-group">
         <label for="reviewed">
-          Состояние рассмотрения
+          {{ _('Состояние рассмотрения') }}
         </label>
 
         <select id="reviewed"
@@ -561,21 +560,21 @@
                   {% if selected_reviewed is none %}
                     selected
                   {% endif %}>
-            Все задачи
+            {{ _('Все задачи') }}
           </option>
 
           <option value="true"
                   {% if selected_reviewed is sameas true %}
                     selected
                   {% endif %}>
-            Рассмотренные
+            {{ _('Рассмотренные') }}
           </option>
 
           <option value="false"
                   {% if selected_reviewed is sameas false %}
                     selected
                   {% endif %}>
-            Не рассмотренные
+            {{ _('Не рассмотренные') }}
           </option>
 
         </select>
@@ -583,7 +582,7 @@
 
       <div class="form-group">
         <label for="task_review_id">
-          Протокол рассмотрения
+          {{ _('Протокол рассмотрения') }}
         </label>
 
         <select id="task_review_id"
@@ -591,17 +590,17 @@
                 class="form-control">
 
           <option value="">
-            Все протоколы
+            {{ _('Все протоколы') }}
           </option>
 
           {% for protocol in available_protocols | default([], true) %}
             {% if selected_task_review_id == protocol["id"] %}
               <option value="{{ protocol['id'] }}" selected>
-                {{ protocol["label"] }}
+                {{ review_protocol_label(protocol["label"]) }}
               </option>
             {% else %}
               <option value="{{ protocol['id'] }}">
-                {{ protocol["label"] }}
+                {{ review_protocol_label(protocol["label"]) }}
               </option>
             {% endif %}
           {% endfor %}
@@ -611,13 +610,13 @@
 
       <div class="filter-actions">
         <button type="submit"
-                class="btn btn-primary">
-          Применить
+                class="btn btn-primary" data-sm-action="primary">
+          {{ _('Применить') }}
         </button>
 
         <a href="{{ url_for('review_result_list_page') }}{% if school_id %}?school_id={{ school_id }}{% endif %}"
-           class="btn btn-secondary">
-          Сбросить
+           class="btn btn-secondary" data-sm-action="nav">
+          {{ _('Сбросить') }}
         </a>
       </div>
     </form>
@@ -628,7 +627,7 @@
 
       <div class="statistics-item">
         <div class="statistics-item__label">
-          Всего задач
+          {{ _('Всего задач') }}
         </div>
 
         <div class="statistics-item__value">
@@ -638,7 +637,7 @@
 
       <div class="statistics-item statistics-item--reviewed">
         <div class="statistics-item__label">
-          Рассмотрено
+          {{ _('Рассмотрено') }}
         </div>
 
         <div class="statistics-item__value">
@@ -648,7 +647,7 @@
 
       <div class="statistics-item statistics-item--not-reviewed">
         <div class="statistics-item__label">
-          Не рассмотрено
+          {{ _('Не рассмотрено') }}
         </div>
 
         <div class="statistics-item__value">
@@ -663,12 +662,11 @@
     <div class="review-card__header">
       <div>
         <h2 class="review-card__title">
-          Задачи
+          {{ _('Задачи') }}
         </h2>
 
         <p class="review-card__description">
-          Для просмотра подробной информации и истории
-          рассмотрения откройте нужную задачу.
+          {{ _('Для просмотра подробной информации и истории рассмотрения откройте нужную задачу.') }}
         </p>
       </div>
     </div>
@@ -679,13 +677,13 @@
           <thead>
           <tr>
             <th class="task-number">№</th>
-            <th>Задача</th>
-            <th>Ответственный</th>
-            <th>Плановый период</th>
-            <th>Статус задачи</th>
-            <th>Рассмотрение</th>
-            <th>Последний результат</th>
-            <th class="row-actions">Действие</th>
+            <th>{{ _('Задача') }}</th>
+            <th>{{ _('Ответственный') }}</th>
+            <th>{{ _('Плановый период') }}</th>
+            <th>{{ _('Статус задачи') }}</th>
+            <th>{{ _('Рассмотрение') }}</th>
+            <th>{{ _('Последний результат') }}</th>
+            <th class="row-actions">{{ _('Действие') }}</th>
           </tr>
           </thead>
 
@@ -709,7 +707,7 @@
     </td>
 
     <td class="task-name">
-      {{ item.task_name | default('Без названия', true) }}
+      {{ item.task_name | default(_('Без названия'), true) }}
 
       {% if item.task_goal %}
         <span class="task-goal">
@@ -719,42 +717,40 @@
     </td>
 
     <td class="responsible-name">
-      {{ item.responsible_name | default('Не указан', true) }}
+      {{ item.responsible_name | default(_('Не указан'), true) }}
 
       {% if item.participation_label %}
         <span class="task-goal">
-          {{ item.participation_label }}
+          {{ review_result_label(item.participation_label) }}
         </span>
       {% endif %}
     </td>
 
     <td class="period-text">
-      {{ item.planned_period_text | default('Не указан', true) }}
+      {{ item.planned_period_text | default(_('Не указан'), true) }}
     </td>
 
     <td>
       <span class="status-badge {{ status_class }}">
-        {{
-          item.task_status_label
-          | default('Не определён', true)
-        }}
+        {{ review_result_label(item.task_status_label
+          | default(_('Не определён'), true)) }}
       </span>
     </td>
 
     <td>
       {% if item.is_reviewed %}
         <span class="review-badge review-badge--yes">
-          Рассмотрено
+          {{ _('Рассмотрено') }}
         </span>
 
         {% if item.review_count > 1 %}
           <span class="task-goal">
-            Рассмотрений: {{ item.review_count }}
+            {{ _('Рассмотрений:') }} {{ item.review_count }}
           </span>
         {% endif %}
       {% else %}
         <span class="review-badge review-badge--no">
-          Не рассмотрено
+          {{ _('Не рассмотрено') }}
         </span>
       {% endif %}
     </td>
@@ -764,10 +760,8 @@
   {% if item.is_reviewed %}
 
     <strong>
-      {{
-        item.latest_review_status_label
-        | default('Результат сохранён', true)
-      }}
+      {{ review_result_label(item.latest_review_status_label
+        | default(_('Результат сохранён'), true)) }}
     </strong>
 
     {% if item.latest_reviewed_at %}
@@ -779,14 +773,14 @@
     {% if item.latest_protocol_number or item.latest_protocol_date %}
       <div class="latest-protocol">
 
-        Протокол
+        {{ _('Протокол') }}
 
         {% if item.latest_protocol_number %}
           №{{ item.latest_protocol_number }}
         {% endif %}
 
         {% if item.latest_protocol_date %}
-          от {{ item.latest_protocol_date.strftime('%d.%m.%Y') }}
+          {{ _('от') }} {{ item.latest_protocol_date.strftime('%d.%m.%Y') }}
         {% endif %}
 
       </div>
@@ -809,8 +803,8 @@
          href="{{ url_for(
              'review_result_task_detail_page',
              month_item_id=item.month_item_id
-         ) }}?review_place={{ item.review_place }}{% if school_id %}&school_id={{ school_id }}{% endif %}">
-        Открыть
+         ) }}?review_place={{ item.review_place }}{% if school_id %}&school_id={{ school_id }}{% endif %}" data-sm-action="nav">
+        {{ _('Открыть') }}
       </a>
     </td>
   </tr>
@@ -823,12 +817,11 @@
     {% else %}
       <div class="empty-state">
         <h3 class="empty-state__title">
-          Задачи не найдены
+          {{ _('Задачи не найдены') }}
         </h3>
 
         <p class="empty-state__text">
-          Для выбранных фильтров нет доступных задач.
-          Измените учебный год, месяц, протокол или состояние рассмотрения.
+          {{ _('Для выбранных фильтров нет доступных задач. Измените учебный год, месяц, протокол или состояние рассмотрения.') }}
         </p>
       </div>
     {% endif %}
@@ -837,7 +830,7 @@
 </div>
 
 <script>
-  document.querySelector("form").addEventListener("submit", function (e) {
+  document.querySelector(".filters-form").addEventListener("submit", function (e) {
 
     const reviewPlace =
         document.querySelector(
@@ -849,7 +842,7 @@
         e.preventDefault();
 
         alert(
-            "Для просмотра результатов необходимо выбрать место рассмотрения."
+            {{ _('Для просмотра результатов необходимо выбрать место рассмотрения.')|tojson }}
         );
 
         reviewPlace.focus();

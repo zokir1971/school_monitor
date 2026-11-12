@@ -1,133 +1,98 @@
 {% extends "base.html" %}
 
-{% block title %}Назначение исполнителей{% endblock %}
+{% block title %}{{ _('Назначение исполнителей') }}{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet"
       href="{{ url_for('static', path='css/plan_assignees.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', path='css/planning/assignee_groups.css') }}?v=181">
 {% endblock %}
 
 {% block content %}
+{% set ru = ui_language() == 'ru' %}
 <div class="page assignee-page">
   <div class="page-inner">
 
     <header class="assignee-hero">
       <div>
-        <div class="assignee-hero__eyebrow">Месячный план</div>
-        <h2 class="assignee-hero__title">Назначение исполнителей</h2>
+        <div class="assignee-hero__eyebrow">{{ _('Месячный план') }}</div>
+        <h2 class="assignee-hero__title">{{ _('Назначение исполнителей') }}</h2>
         <p class="assignee-hero__subtitle">
-          Выберите одного основного исполнителя и при необходимости
-          добавьте соисполнителей.
+          {{ _('Выберите одного основного исполнителя и при необходимости добавьте соисполнителей.') }}
         </p>
       </div>
 
-      <a href="javascript:history.back()" class="btn">
-        Назад
+      <a href="{{ return_to_plan_url }}" class="btn" data-sm-action="nav" data-sm-back="true">
+        {{ _('Назад') }}
       </a>
     </header>
 
     {% if success %}
-      <div class="alert alert-success">{{ success }}</div>
+      <div class="alert alert-success">{{ monthly_message(success) }}</div>
     {% endif %}
 
     {% if error %}
-      <div class="alert alert-danger">{{ error }}</div>
+      <div class="alert alert-danger">{% if ' / ' in error %}{{ error.split(' / ')[0] if ru else error.split(' / ')[-1] }}{% else %}{{ monthly_message(error) }}{% endif %}</div>
     {% endif %}
 
     <section class="task-overview">
       <div class="task-overview__grid">
         <article class="info-card">
-          <div class="info-label">Направление</div>
+          <div class="info-label">{{ _('Направление') }}</div>
           <div class="info-value">{{ direction_name or "—" }}</div>
         </article>
 
         <article class="info-card">
-          <div class="info-label">Статус включения</div>
+          <div class="info-label">{{ _('Статус включения') }}</div>
           <div class="info-value">
-            {% if is_included %}
-              <span class="status-pill status-pill--success">
-                Включена в месячный план
-              </span>
-            {% else %}
-              <span class="status-pill status-pill--danger">
-                Не включена
-              </span>
-            {% endif %}
+            <span id="inclusion-preview" class="status-pill {{ 'status-pill--pending' if selected_included != is_included else ('status-pill--success' if is_included else 'status-pill--danger') }}">
+              {% if selected_included != is_included %}
+                {{ ('Будет включена при сохранении' if selected_included else 'Будет исключена при сохранении') if ru else ('Сақтағаннан кейін енгізіледі' if selected_included else 'Сақтағаннан кейін алып тасталады') }}
+              {% elif is_included %}{{ _('Включена в месячный план') }}{% else %}{{ _('Не включена') }}{% endif %}
+            </span>
           </div>
         </article>
 
         <article class="info-card info-card--wide">
-          <div class="info-label">Тема</div>
+          <div class="info-label">{{ _('Тема') }}</div>
           <div class="info-value">{{ topic or "—" }}</div>
         </article>
 
         <article class="info-card info-card--wide">
-          <div class="info-label">Цель</div>
+          <div class="info-label">{{ _('Цель') }}</div>
           <div class="info-value">{{ goal or "—" }}</div>
         </article>
 
         <article class="info-card">
-          <div class="info-label">Неделя</div>
+          <div class="info-label">{{ _('Неделя') }}</div>
           <div class="info-value">
-            {{ week_of_month if week_of_month is not none else "—" }}
+            <span id="week-preview">{{ selected_week or "—" }}</span>
           </div>
         </article>
 
         <article class="info-card">
-          <div class="info-label">Срок выполнения</div>
+          <div class="info-label">{{ _('Срок выполнения') }}</div>
           <div class="info-value">
-            {% if planned_start and planned_end %}
-              {{ planned_start.strftime("%d.%m.%Y") }}
-              —
-              {{ planned_end.strftime("%d.%m.%Y") }}
-            {% elif planned_start %}
-              с {{ planned_start.strftime("%d.%m.%Y") }}
-            {% elif planned_end %}
-              до {{ planned_end.strftime("%d.%m.%Y") }}
-            {% else %}
-              —
-            {% endif %}
+            <span id="date-preview">{% if selected_range %}{{ selected_range.start.strftime('%d.%m.%Y') }} — {{ selected_range.end.strftime('%d.%m.%Y') }}{% else %}—{% endif %}</span>
           </div>
         </article>
       </div>
     </section>
 
-    {% set no_primary_candidates = not primary_groups %}
-    {% set no_deadline = (
-      week_of_month is none
-      or planned_start is none
-      or planned_end is none
-    ) %}
-
     {% if not can_assign %}
       <section class="alert alert-danger">
         <div class="alert-title">
-          Назначение исполнителей сейчас недоступно
+          {{ _('Назначение исполнителей сейчас недоступно') }}
         </div>
-        <ul>
-          {% if not is_included %}
-            <li>Задача не включена в месячный план.</li>
-          {% endif %}
-          {% if no_deadline %}
-            <li>
-              Сначала укажите неделю и полный срок выполнения задачи.
-            </li>
-          {% endif %}
-          {% if no_primary_candidates %}
-            <li>
-              Для ответственных ролей годового плана не найдено
-              активных сотрудников школы.
-            </li>
-          {% endif %}
-        </ul>
+        <p>Проверьте наличие сотрудников по плановым ролям. Архивный план изменять нельзя. / Жоспардағы рөлдерге сәйкес қызметкерлерді тексеріңіз. Мұрағат жоспарын өзгертуге болмайды.</p>
       </section>
     {% endif %}
 
     <section class="assignment-summary">
       <div class="section-heading">
         <div>
-          <h3>Текущие назначения</h3>
-          <p>Сохранённые участники этой задачи.</p>
+          <h3>{{ _('Текущие назначения') }}</h3>
+          <p>{{ _('Сохранённые участники этой задачи.') }}</p>
         </div>
         <span class="count-badge">
           {{ assigned_participants | length }}
@@ -144,26 +109,26 @@
                   {{ participant.full_name }}
                 </div>
                 <div class="participant-card__meta">
-                  {{ participant.role_label }}
+                  {{ _(participant.role_label) }}
                   {% if participant.role_context %}
                     — {{ participant.role_context }}
                   {% endif %}
                 </div>
                 {% if participant.position_text %}
                   <div class="participant-card__position">
-                    {{ participant.position_text }}
+                    {{ staff_position_label(participant.position_text) }}
                   </div>
                 {% endif %}
               </div>
 
               {% if participant.assignment_kind == "primary" %}
                 <span class="assignment-badge assignment-badge--primary">
-                  Основной исполнитель
+                  {{ _('Основной исполнитель') }}
                 </span>
               {% else %}
                 <div class="participant-card__actions">
                   <span class="assignment-badge assignment-badge--coexecutor">
-                    Соисполнитель
+                    {{ _('Соисполнитель') }}
                   </span>
                   {% if can_assign %}
                     <button
@@ -171,8 +136,8 @@
                       class="btn js-remove-coexecutor"
                       data-staff-role-id="{{ participant.staff_role_id }}"
                       aria-pressed="false"
-                    >
-                      Убрать
+                     data-sm-action="danger">
+                      {{ _('Убрать') }}
                     </button>
                   {% endif %}
                 </div>
@@ -182,7 +147,7 @@
         </div>
       {% else %}
         <div class="empty-box">
-          Исполнители пока не назначены.
+          {{ _('Исполнители пока не назначены.') }}
         </div>
       {% endif %}
     </section>
@@ -197,18 +162,41 @@
         ) }}"
         id="assignee-form"
       >
+        <input type="hidden" name="plan_revision" value="{{ plan_revision }}">
+        <section class="assignment-panel" data-no-draft-restore>
+          <input type="hidden" name="inclusion_present" value="1">
+          <label class="inclusion-choice"><input type="checkbox" id="include-task" name="include_task" value="1" {% if selected_included %}checked{% endif %}
+            {{ 'Включить эту задачу в месячный план' if ru else 'Осы тапсырманы айлық жоспарға енгізу' }}
+          </label>
+          <p class="muted">{{ ('План уже отправлен. После включения и сохранения задача станет доступна назначенным исполнителям. Если галочка снята, сохранятся только подготовленные назначения и параметры.' if is_active_plan else 'Включение и назначения сохраняются вместе. Исполнителям задача станет доступна после отправки месячного плана.') if ru else ('Жоспар жіберілген. Енгізіп, сақтағаннан кейін тапсырма тағайындалған орындаушыларға қолжетімді болады. Белгі қойылмаса, тек дайындалған тағайындаулар мен параметрлер сақталады.' if is_active_plan else 'Енгізу мен тағайындаулар бірге сақталады. Айлық жоспар жіберілгеннен кейін тапсырма орындаушыларға қолжетімді болады.') }}</p>
+          <label for="assignment-week">{{ _('Неделя') }}</label>
+          <select id="assignment-week" name="schedule_week" class="input" {% if selected_included %}required{% endif %}>
+            <option value="">{{ 'Аптаны таңдаңыз' if ui_language() == 'kk' else 'Выберите неделю' }}</option>
+            {% for w in weeks %}
+            <option value="{{ w.week }}" data-range="{{ w.start.strftime('%d.%m.%Y') }} — {{ w.end.strftime('%d.%m.%Y') }}" {% if selected_week == w.week|string %}selected{% endif %}>
+              {{ w.week }} · {{ w.start.strftime('%d.%m.%Y') }} — {{ w.end.strftime('%d.%m.%Y') }}
+            </option>
+            {% endfor %}
+          </select>
+          <p class="muted">{{ 'Енгізу, апта, мерзім және орындаушылар бірге сақталады. Жоспардың басқа жолдарындағы өзгерістер бөлек сақталады.' if ui_language() == 'kk' else 'Включение, неделя, срок и исполнители сохраняются вместе. Изменения других строк плана сохраняются отдельно.' }}</p>
+        </section>
+        {% if is_active_plan %}
+        <div class="form-field" style="margin-bottom:16px">
+          <label for="assignment-correction-reason">Причина изменения / Өзгерту себебі</label>
+          <input id="assignment-correction-reason" name="correction_reason" class="input" maxlength="1000" required style="width:100%">
+        </div>
+        {% endif %}
 
         <section class="assignment-panel">
           <div class="section-heading">
             <div>
-              <div class="step-label">Шаг 1</div>
-              <h3>Основной исполнитель</h3>
+              <div class="step-label">{{ _('Шаг 1') }}</div>
+              <h3>{{ _('Основной исполнитель') }}</h3>
               <p>
-                Выберите одного сотрудника из ролей,
-                определённых годовым планом.
+                {{ _('Выберите одного сотрудника из ролей, определённых годовым планом.') }}
               </p>
             </div>
-            <span class="required-mark">Обязательно</span>
+            <span class="required-mark">{{ _('Обязательно') }}</span>
           </div>
 
           <div class="group-stack">
@@ -216,7 +204,7 @@
               <section class="role-group">
                 <header class="role-group__header">
                   <div>
-                    <h4>{{ group.label }}</h4>
+                    <h4>{{ _(group.label) }}</h4>
                     {% if group.role_context %}
                       <p>{{ group.role_context }}</p>
                     {% endif %}
@@ -244,32 +232,32 @@
                             {{ option.full_name }}
                           </span>
                           <span class="candidate-card__meta">
-                            {{ option.role_label }}
+                            {{ _(option.role_label) }}
                             {% if option.role_context %}
                               — {{ option.role_context }}
                             {% endif %}
                           </span>
                           {% if option.position_text %}
                             <span class="candidate-card__detail">
-                              {{ option.position_text }}
+                              {{ staff_position_label(option.position_text) }}
                             </span>
                           {% endif %}
                           {% if option.subject %}
                             <span class="candidate-card__detail">
-                              Предмет: {{ option.subject }}
+                              {{ _('Предмет:') }} {{ option.subject }}
                             </span>
                           {% endif %}
                         </span>
 
                         <span class="candidate-card__selection">
-                          Основной
+                          {{ _('Основной') }}
                         </span>
                       </label>
                     {% endfor %}
                   </div>
                 {% else %}
                   <div class="empty-box">
-                    Для этой роли нет активных сотрудников.
+                    {{ _('Для этой роли нет активных сотрудников.') }}
                   </div>
                 {% endif %}
               </section>
@@ -280,28 +268,30 @@
         <section class="assignment-panel">
           <div class="section-heading">
             <div>
-              <div class="step-label">Шаг 2</div>
-              <h3>Соисполнители по плановым ролям</h3>
+              <div class="step-label">{{ _('Шаг 2') }}</div>
+              <h3>{{ _('Соисполнители по плановым ролям') }}</h3>
               <p>
-                Выберите коллег из тех же ответственных ролей,
-                если объём задачи требует совместной работы.
+                {{ _('Выберите коллег из тех же ответственных ролей, если объём задачи требует совместной работы.') }}
               </p>
             </div>
-            <span class="optional-mark">Необязательно</span>
+            <span class="optional-mark">{{ _('Необязательно') }}</span>
           </div>
 
           {% if planned_co_executor_groups %}
             <div class="group-stack">
               {% for group in planned_co_executor_groups %}
-                <section class="role-group">
-                  <header class="role-group__header">
+                {% set selected_count = group.options|selectattr('selected_as_co_executor')|list|length %}
+                    <details class="role-group co-role-group" {% if selected_count %}open{% endif %}>
+
+                  <summary class="role-group__header">
                     <div>
-                      <h4>{{ group.label }}</h4>
+                      <h4>{{ _(group.label) }}</h4>
                       {% if group.role_context %}
                         <p>{{ group.role_context }}</p>
                       {% endif %}
                     </div>
-                  </header>
+                  <span class="co-selected">{{ 'Таңдалғаны' if ui_language() == 'kk' else 'Выбрано' }}: <span class="co-selected-count">{{ selected_count }}</span> / {{ group.options|length }}</span>
+                      </summary>
 
                   <div class="candidate-grid">
                     {% for option in group.options %}
@@ -319,26 +309,26 @@
                             {{ option.full_name }}
                           </span>
                           <span class="candidate-card__meta">
-                            {{ option.role_label }}
+                            {{ _(option.role_label) }}
                             {% if option.role_context %}
                               — {{ option.role_context }}
                             {% endif %}
                           </span>
                           {% if option.subject %}
                             <span class="candidate-card__detail">
-                              Предмет: {{ option.subject }}
+                              {{ _('Предмет:') }} {{ option.subject }}
                             </span>
                           {% endif %}
                         </span>
                       </label>
                     {% endfor %}
                   </div>
-                </section>
+                </details>
               {% endfor %}
             </div>
           {% else %}
             <div class="empty-box">
-              Дополнительных сотрудников по плановым ролям нет.
+              {{ _('Дополнительных сотрудников по плановым ролям нет.') }}
             </div>
           {% endif %}
         </section>
@@ -348,25 +338,24 @@
                    {% if selected_co_executor_staff_role_ids %}open{% endif %}>
             <summary>
               <span>
-                <span class="step-label">Шаг 3</span>
-                <strong>Добавить других соисполнителей</strong>
+                <span class="step-label">{{ _('Шаг 3') }}</span>
+                <strong>{{ _('Добавить других соисполнителей') }}</strong>
                 <small>
-                  Руководители МО, классные руководители,
-                  учителя и другие сотрудники школы
+                  {{ _('Руководители МО, классные руководители, учителя и другие сотрудники школы') }}
                 </small>
               </span>
-              <span class="summary-action">Открыть список</span>
+              <span class="summary-action">{{ _('Открыть список') }}</span>
             </summary>
 
             <div class="additional-assignees__body">
               <div class="staff-search">
                 <label for="staff-search-input">
-                  Поиск сотрудника
+                  {{ _('Поиск сотрудника') }}
                 </label>
                 <input
                   id="staff-search-input"
                   type="search"
-                  placeholder="Введите ФИО, должность или предмет"
+                  placeholder="{{ _('Введите ФИО, должность или предмет') }}"
                   autocomplete="off"
                 >
               </div>
@@ -374,18 +363,18 @@
               {% if additional_co_executor_groups %}
                 <div class="group-stack" id="additional-groups">
                   {% for group in additional_co_executor_groups %}
-                    <section class="role-group additional-role-group">
-                      <header class="role-group__header">
+                    {% set selected_count = group.options|selectattr('selected_as_co_executor')|list|length %}
+                    <details class="role-group additional-role-group co-role-group" {% if selected_count %}open{% endif %}>
+
+                      <summary class="role-group__header">
                         <div>
-                          <h4>{{ group.label }}</h4>
+                          <h4>{{ _(group.label) }}</h4>
                           {% if group.role_context %}
                             <p>{{ group.role_context }}</p>
                           {% endif %}
                         </div>
-                        <span class="count-badge">
-                          {{ group.options | length }}
-                        </span>
-                      </header>
+                      <span class="co-selected">{{ 'Таңдалғаны' if ui_language() == 'kk' else 'Выбрано' }}: <span class="co-selected-count">{{ selected_count }}</span> / {{ group.options|length }}</span>
+                      </summary>
 
                       <div class="candidate-grid">
                         {% for option in group.options %}
@@ -394,9 +383,9 @@
                             data-search-text="{{
                               (
                                 option.full_name ~ ' ' ~
-                                option.role_label ~ ' ' ~
+                                option.role_label ~ ' ' ~ _(option.role_label) ~ ' ' ~
                                 option.role_context ~ ' ' ~
-                                option.position_text ~ ' ' ~
+                                option.position_text ~ ' ' ~ staff_position_label(option.position_text) ~ ' ' ~
                                 option.subject
                               ) | lower
                             }}"
@@ -414,35 +403,35 @@
                                 {{ option.full_name }}
                               </span>
                               <span class="candidate-card__meta">
-                                {{ option.role_label }}
+                                {{ _(option.role_label) }}
                                 {% if option.role_context %}
                                   — {{ option.role_context }}
                                 {% endif %}
                               </span>
                               {% if option.position_text %}
                                 <span class="candidate-card__detail">
-                                  {{ option.position_text }}
+                                  {{ staff_position_label(option.position_text) }}
                                 </span>
                               {% endif %}
                               {% if option.subject %}
                                 <span class="candidate-card__detail">
-                                  Предмет: {{ option.subject }}
+                                  {{ _('Предмет:') }} {{ option.subject }}
                                 </span>
                               {% endif %}
                             </span>
                           </label>
                         {% endfor %}
                       </div>
-                    </section>
+                    </details>
                   {% endfor %}
                 </div>
 
                 <div class="empty-box search-empty" id="search-empty" hidden>
-                  По вашему запросу сотрудники не найдены.
+                  {{ _('По вашему запросу сотрудники не найдены.') }}
                 </div>
               {% else %}
                 <div class="empty-box">
-                  Других активных сотрудников для выбора нет.
+                  {{ _('Других активных сотрудников для выбора нет.') }}
                 </div>
               {% endif %}
             </div>
@@ -450,19 +439,19 @@
         </section>
 
         <div class="form-actions">
-          <a href="javascript:history.back()" class="btn btn-cancel">
-            ← Отмена
+          <a href="{{ return_to_plan_url }}" class="btn btn-cancel" data-sm-action="nav" data-sm-back="true">
+            {{ _('← Отмена') }}
           </a>
-          <button type="submit" class="btn btn-save">
-              💾 Сохранить назначения
+          <button type="submit" class="btn btn-save" data-sm-action="primary">
+              <span id="assignment-save-label">{{ ('Сохранить и включить задачу' if is_active_plan and selected_included and not is_included else 'Сохранить назначения и параметры') if ru else ('Сақтау және тапсырманы енгізу' if is_active_plan and selected_included and not is_included else 'Тағайындаулар мен параметрлерді сақтау') }}</span>
           </button>
         </div>
       </form>
 
       {% else %}
         <div class="form-actions">
-          <a href="javascript:history.back()" class="btn btn-cancel">
-            ← Назад
+          <a href="{{ return_to_plan_url }}" class="btn btn-cancel" data-sm-action="nav" data-sm-back="true">
+            {{ _('← Назад') }}
           </a>
         </div>
 
@@ -476,6 +465,29 @@ document.addEventListener("DOMContentLoaded", () => {
   const form = document.getElementById("assignee-form");
   if (!form) return;
 
+  const weekSelect = document.getElementById("assignment-week");
+  const inclusion = document.getElementById('include-task');
+  const preview = document.getElementById('inclusion-preview');
+  const savedIncluded = {{ 'true' if is_included else 'false' }};
+  const texts = {{ {'include': ('Будет включена при сохранении' if ru else 'Сақтағаннан кейін енгізіледі'), 'exclude': ('Будет исключена при сохранении' if ru else 'Сақтағаннан кейін алып тасталады'), 'included': ('Включена в месячный план' if ru else 'Айлық жоспарға енгізілген'), 'excluded': ('Не включена' if ru else 'Енгізілмеген'), 'save': ('Сохранить назначения и параметры' if ru else 'Тағайындаулар мен параметрлерді сақтау'), 'activate': ('Сохранить и включить задачу' if ru else 'Сақтау және тапсырманы енгізу')} | tojson }};
+  function syncInclusion() {
+    if (!inclusion) return;
+    const chosen = inclusion.checked;
+    weekSelect.required = chosen;
+    preview.textContent = chosen === savedIncluded ? (chosen ? texts.included : texts.excluded) : (chosen ? texts.include : texts.exclude);
+    preview.classList.toggle('status-pill--pending', chosen !== savedIncluded);
+    preview.classList.toggle('status-pill--success', chosen && savedIncluded);
+    preview.classList.toggle('status-pill--danger', !chosen && !savedIncluded);
+    const label = document.getElementById('assignment-save-label');
+    if (label) label.textContent = {{ 'true' if is_active_plan else 'false' }} && chosen && !savedIncluded ? texts.activate : texts.save;
+  }
+  inclusion?.addEventListener('change', syncInclusion);
+  syncInclusion();
+  weekSelect?.addEventListener("change", () => {
+    document.getElementById("week-preview").textContent = weekSelect.value || "—";
+    document.getElementById("date-preview").textContent = weekSelect.selectedOptions[0]?.dataset.range || "—";
+  });
+
   const primaryInputs = Array.from(
     form.querySelectorAll(
       'input[name="primary_staff_role_id"]'
@@ -487,6 +499,15 @@ document.addEventListener("DOMContentLoaded", () => {
       'input[name="co_executor_staff_role_ids"]'
     )
   );
+
+  function updateGroupCounts() {
+    form.querySelectorAll('.co-role-group').forEach(group => {
+      const selected = [...group.querySelectorAll('input[type="checkbox"]')].filter(input => input.checked && !input.disabled);
+      const count = group.querySelector('.co-selected-count');
+      if (count) count.textContent = String(selected.length);
+      group.classList.toggle('co-role-group--selected', selected.length > 0);
+    });
+  }
 
   function syncPrimaryAndCoExecutors() {
     const primary = primaryInputs.find((input) => input.checked);
@@ -509,11 +530,15 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  form.addEventListener("change", updateGroupCounts);
+  window.addEventListener("pageshow", updateGroupCounts);
+
   primaryInputs.forEach((input) => {
     input.addEventListener("change", syncPrimaryAndCoExecutors);
   });
 
   syncPrimaryAndCoExecutors();
+  updateGroupCounts();
 
   const removeCoexecutorButtons = Array.from(
     document.querySelectorAll(".js-remove-coexecutor")
@@ -534,8 +559,9 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!card || !button) return;
 
     card.classList.toggle("participant-card--pending-removal", pending);
-    button.textContent = pending ? "Вернуть" : "Убрать";
+    button.textContent = pending ? window.SchoolMonitorI18n.t("mp_5ae0e885f69d") : window.SchoolMonitorI18n.t("mp_07cb65087477");
     button.setAttribute("aria-pressed", pending ? "true" : "false");
+    updateGroupCounts();
   }
 
   removeCoexecutorButtons.forEach((button) => {
@@ -592,9 +618,12 @@ document.addEventListener("DOMContentLoaded", () => {
   );
   const emptyState = document.getElementById("search-empty");
 
+  let searching = false;
+  const savedOpen = new Map();
   if (searchInput && candidates.length) {
     searchInput.addEventListener("input", () => {
       const query = searchInput.value.trim().toLowerCase();
+      if (query && !searching) groups.forEach(group => savedOpen.set(group, group.open));
       let visibleCount = 0;
 
       candidates.forEach((candidate) => {
@@ -611,8 +640,12 @@ document.addEventListener("DOMContentLoaded", () => {
         ).some((candidate) => !candidate.hidden);
 
         group.hidden = !hasVisibleCandidate;
+        if (query) group.open = hasVisibleCandidate;
+        else if (searching) group.open = savedOpen.get(group) || Boolean(group.querySelector('input:checked'));
+
       });
 
+      searching = Boolean(query);
       if (emptyState) {
         emptyState.hidden = visibleCount !== 0;
       }

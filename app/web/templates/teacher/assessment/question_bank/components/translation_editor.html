@@ -1,0 +1,43 @@
+{% from 'teacher/assessment/question_bank/_segments.html' import render_segments with context %}
+<details class="qb-translation-panel" {% if pending or error or stale or not saved %}open{% endif %}>
+  <summary class="qb-workspace-button">{{ _('Просмотреть перевод') if readonly else _('Редактировать перевод') }}</summary>
+  <form class="qb-language-editor" data-translation-editor method="post" action="{{ url_for('teacher_question_languages_save',item_id=item.id) }}">
+    <input type="hidden" name="source_hash" value="{{ source_hash }}">
+    <input type="hidden" name="translation_attempt_token" value="{{ translation_attempt_token }}">
+    {% for row in rows %}<input type="hidden" name="{{ row.name }}" value="{{ row.value }}" data-translation-value>{% endfor %}
+    <div class="qb-language-editor__heading">
+      <h2>{{ _('Перевод') }} — {{ 'Қазақша' if target_language == 'kk' else 'Русский' }}</h2>
+      {% if not readonly and (not saved or stale) %}<div class="qb-workspace-actions"><button class="qb-workspace-button" type="submit" formaction="{{ url_for('teacher_question_languages_ai',item_id=item.id) }}" data-sm-action="primary">{{ _('Перевести с помощью AI') }}</button></div>{% endif %}
+    </div>
+    {% if not readonly %}<p class="qb-language-editor__hint">{{ _('Редактируйте текст перевода. Формулы и изображения остаются общими для обеих версий.') }}</p>{% endif %}
+    <noscript><p class="qb-language-alert qb-language-alert--warning">{{ _('Для редактирования перевода включите JavaScript в браузере.') }}</p></noscript>
+    {% for group in editor_groups %}
+    {% set group_id='translation-group-' ~ loop.index %}
+    <section class="qb-language-field">
+      <div class="qb-language-field__label" id="{{ group_id }}">{{ _(group.label) }}{% if group.detail %} {{ group.detail }}{% endif %}</div>
+      <div class="qb-language-field__columns">
+        {% if group.kind == 'rich' %}
+        <div class="qb-language-field__source qb-language-field__source--rich">{{ render_segments(group.source_segments) }}</div>
+        <div class="qb-translation-rich" role="group" aria-labelledby="{{ group_id }}" {% if group.statement_field %}data-statement-field="{{ group.statement_field }}"{% endif %}>
+          {%- for segment in group.target_segments -%}
+            {%- if segment.type == 'text' and segment.field is defined -%}
+              <span class="qb-translation-text" data-translation-field="{{ segment.field }}" {% if not readonly %}contenteditable="plaintext-only" role="textbox" tabindex="0"{% else %}aria-readonly="true"{% endif %} aria-labelledby="{{ group_id }}" spellcheck="true">{{ segment.text }}</span>
+            {%- elif segment.type == 'latex' -%}
+              <span class="qb-translation-token" contenteditable="false" data-statement-token="{{ segment.text }}">{{ render_segments([segment]) }}</span>
+            {%- elif segment.type == 'image' -%}
+              <span class="qb-translation-token" contenteditable="false" data-statement-token="[Сурет]">{{ render_segments([segment]) }}</span>
+            {%- else -%}
+              <span data-statement-token="{{ segment.text|default('') }}">{{ segment.text|default('') }}</span>
+            {%- endif -%}
+          {%- endfor -%}
+        </div>
+        {% else %}
+        <div class="qb-language-field__source">{{ group.source }}</div>
+        <textarea aria-labelledby="{{ group_id }}" data-translation-field="{{ group.name }}" rows="2" {% if readonly %}readonly{% endif %}>{{ group.value }}</textarea>
+        {% endif %}
+      </div>
+    </section>
+    {% endfor %}
+    {% if not readonly %}<div class="qb-workspace-actions qb-language-editor__footer"><button class="qb-workspace-button" type="submit" data-translation-save disabled data-sm-action="primary">{{ _('Сохранить перевод') }}</button></div>{% endif %}
+  </form>
+</details>

@@ -1,181 +1,53 @@
-{% extends "base.html" %}
-
-{% block title %}Панель администратора школы{% endblock %}
-
+{% extends 'base.html' %}
+{% import 'dashboards/components/organized_sections.html' as sections with context %}
+{% set ru=ui_language()=='ru' %}
+{% block title %}{{ "Панель администратора школы" if ru else "Мектеп әкімшісінің панелі" }}{% endblock %}
 {% block extra_css %}
-<link rel="stylesheet" href="{{ url_for('static', path='css/admin.css') }}">
+<link rel="stylesheet" href="{{ url_for('static',path='css/dashboards/organized_sections.css') }}?v=124">
+<script defer src="{{ url_for('static',path='js/assessment/navigation.js') }}?v=99"></script>
 {% endblock %}
-
 {% block content %}
-
-<div class="dashboard">
-
-  <!-- Администрирование -->
-<section class="dashboard-section">
-  <h3 class="section-title">Администрирование</h3>
-
-  {% set role = (user.role.value if user.role is not string else user.role) %}
-
-  <div class="card-grid">
-
-    {% if role in ["superuser", "region_admin", "district_admin"] %}
-    <a class="card" href=" ">
-      <div class="card__inner">
-        <div class="card__top">
-          <div class="card__icon">🔐</div>
-        </div>
-        <h3 class="card__title">Выдача кодов доступа</h3>
-        <p class="card__desc">Регистрация администраторов и сотрудников</p>
-        <div class="card__footer">
-          <span>Открыть</span><span class="card__arrow">→</span>
-        </div>
-      </div>
-    </a>
-    {% endif %}
-
-    <a class="card" href="{{ request.url_for('school_staff_page') }}">
-      <div class="card__inner">
-        <div class="card__top">
-          <div class="card__icon">👥</div>
-        </div>
-        <h3 class="card__title">Управление персоналом</h3>
-        <p class="card__desc">Администраторы, учителя, наблюдатели</p>
-        <div class="card__footer">
-          <span>Открыть</span><span class="card__arrow">→</span>
-        </div>
-      </div>
-    </a>
-
-    <a class="card" href="{{ request.url_for('school_method_association_settings_page') }}">
-      <div class="card__inner">
-        <div class="card__top">
-          <div class="card__icon">🧠</div>
-        </div>
-        <h3 class="card__title">Управление метод объединениями</h3>
-        <p class="card__desc">Утверждение, назначение, руководители</p>
-        <div class="card__footer">
-          <span>Открыть</span><span class="card__arrow">→</span>
-        </div>
-      </div>
-    </a>
-
-
-    <a class="card" href="{{ request.url_for('school_dashboard') }}">
-      <div class="card__inner">
-        <div class="card__top">
-          <div class="card__icon">📅</div>
-        </div>
-        {% if academic_year %}
-          <h3 class="card__title">
-            Планирование ВШК на {{ academic_year }} учебный год
-          </h3>
-        {% else %}
-          <h3 class="card__title">
-            Планирование ВШК (не выбран активный год)
-          </h3>
-        {% endif %}
-        <p class="card__desc">6 направлений, задачи и сроки, ответственные</p>
-        <div class="card__footer">
-          <span>Открыть</span><span class="card__arrow">→</span>
-        </div>
-      </div>
-    </a>
-
-  </div>
-</section>
-
-<section class="dashboard-section">
-  <h3 class="section-title">Школьный контроль</h3>
-
-  <div class="card-grid">
-
-    <a class="card" href="{{ request.url_for('school_monthly_page') }}">
-      <div class="card__inner">
-        <div class="card__top">
-          <div class="card__icon">📅</div>
-        </div>
-        <h3 class="card__title">Планирование месячного плана ВШК</h3>
-        <p class="card__desc">6 направлений, задачи и сроки, ответственные</p>
-        <div class="card__footer">
-          <span>Открыть</span><span class="card__arrow">→</span>
-        </div>
-      </div>
-    </a>
-
-    <a class="card" href="{{ request.url_for('task_review_selection_page') }}">
-      <div class="card__inner">
-        <div class="card__top">
-          <div class="card__icon">📋</div>
-        </div>
-        <h3 class="card__title">Рассмотрение задач</h3>
-        <p class="card__desc">Циклограмма и рассмотрение выполненных задач ВШК</p>
-        <div class="card__footer">
-          <span>Открыть</span><span class="card__arrow">→</span>
-        </div>
-      </div>
-    </a>
-
-    <a class="card" href="{{ url_for('review_result_list_page') }}">
-      <div class="card__inner">
-        <div class="card__top">
-          <div class="card__icon">🎓</div>
-        </div>
-        <h3 class="card__title">Просмотр рассмотрения задач</h3>
-        <p class="card__desc">Пртоколы, итоговые документы, отчеты</p>
-        <div class="card__footer">
-          <span>Открыть</span><span class="card__arrow">→</span>
-        </div>
-      </div>
-    </a>
-  </div>
-</section>
-
-  <!-- 📊 Отчёты -->
-  <section class="dashboard-section">
-    <h3>Отчёты и аналитика</h3>
-
-    <div class="card-grid">
-      <a class="card" href="{{ request.url_for('school_plan_statistics_page') }}">
-        <div class="card__inner">
-          <div class="card__top">
-            <div class="card__icon">📊</div>
-          </div>
-          <h3 class="card__title"> Статистика планирование ВШК </h3>
-          <p class="card__desc">Периоды и инстанция рассмотрения запланированных задач </p>
-          <div class="card__footer">
-            <span>Открыть</span><span class="card__arrow">→</span>
-          </div>
-        </div>
-      </a>
-
-      <a class="card" href="{{ request.url_for('school_execution_statistics_page') }}" >
-        <div class="card__inner">
-          <div class="card__top">
-            <div class="card__icon">📊</div>
-          </div>
-          <h3 class="card__title"> Статистика выполнение задач ВШК </h3>
-          <p class="card__desc">Выполнение годового и месячного плана по направлениям</p>
-          <div class="card__footer">
-            <span>Открыть</span><span class="card__arrow">→</span>
-          </div>
-        </div>
-      </a>
-
-      <a class="card"  href="{{ url_for('staff_monitoring_rating_page') }}" >
-        <div class="card__inner">
-          <div class="card__top">
-            <div class="card__icon">🏆</div>
-          </div>
-          <h3 class="card__title"> Рейтинг компетентности исполнителей </h3>
-          <p class="card__desc">Баллы за выполнение задач и подготовленные итоговые документы и отчёты</p>
-          <div class="card__footer">
-            <span>Открыть</span><span class="card__arrow">→</span>
-          </div>
-        </div>
-      </a>
-
-    </div>
-  </section>
-
+{% set role=user.role.value if user.role is not string else user.role %}
+<div class="role-dashboard">
+<header class="role-dashboard__heading"><h1>{{ "Панель администратора школы" if ru else "Мектеп әкімшісінің панелі" }}</h1></header>
+<nav class="role-dashboard__nav" aria-label="{{ 'Разделы панели' if ru else 'Панель бөлімдері' }}">
+<a href="#administration" data-sm-action="nav">{{ "Администрирование" if ru else "Әкімшілендіру" }}</a>
+<a href="#control" data-sm-action="nav">{{ "Внутришкольный контроль" if ru else "Мектепішілік бақылау" }}</a>
+{% if assessment_enabled() %}<a href="#assessment" data-sm-action="nav">{{ "Оценивание и аналитика" if ru else "Бағалау және талдау" }}</a>{% endif %}
+<a href="#statistics" data-sm-action="nav">{{ "Статистика школы" if ru else "Мектеп статистикасы" }}</a>
+</nav>
+<section class="role-dashboard__section" aria-labelledby="administration">
+{{ sections.heading("administration","Администрирование","Әкімшілендіру","Настройки школы, сотрудники и учебные данные.","Мектеп баптаулары, қызметкерлер және оқу деректері.") }}
+<div class="role-dashboard__grid">
+{% include 'components/access_recovery_card.html' %}
+{{ sections.card(url_for('school_staff_page'), "👥", "Сотрудники школы", "Мектеп қызметкерлері", "Сведения о сотрудниках и педагогах.", "Қызметкерлер мен педагогтер туралы мәліметтер.") }}
+{{ sections.card(url_for('school_method_association_settings_page'), "🧠", "Методические объединения", "Әдістемелік бірлестіктер", "Объединения и их руководители.", "Бірлестіктер және олардың жетекшілері.") }}
+{{ sections.card(url_for('school_teaching_load_page'), "📚", "Учебный процесс", "Оқу процесі", "Учебная нагрузка педагогов и организация учебного процесса.", "Педагогтердің оқу жүктемесі және оқу процесін ұйымдастыру.") }}
+{% if role in ['school_admin','superuser'] %}
+{{ sections.card(url_for('school_nobd_import_page'), "🏫", "Ученики и классы", "Оқушылар мен сыныптар", "Импорт НОБД и сведения о контингенте.", "ҰБДҚ импорты және оқушылар контингенті туралы мәліметтер.") }}
+{% endif %}
+{% if role in ['school_admin','superuser'] %}
+{{ sections.card(url_for('school_class_subjects_page'), "📘", "Предметы и подгруппы", "Пәндер мен кіші топтар", "Предметы классов, состав подгрупп и назначение учителей.", "Сынып пәндері, кіші топтар құрамы және мұғалімдерді тағайындау.") }}
+{% endif %}
+{% if role=='superuser' %}
+{{ sections.card(url_for('super_curriculum_page'), "⚙️", "Типовые наборы предметов", "Пәндердің үлгілік жиынтықтары", "Правила по языку обучения, классу и направлению.", "Оқыту тілі, сынып және бағыт бойынша ережелер.") }}
+{% endif %}
+</div></section>
+<section class="role-dashboard__section" aria-labelledby="control">
+{{ sections.heading("control","Внутришкольный контроль","Мектепішілік бақылау","Планирование, рассмотрение и документы ВШК.","МІБ жоспарлау, қарау және құжаттары.") }}
+<div class="role-dashboard__grid">
+{{ sections.card(url_for('school_dashboard'), "📅", "Годовой план ВШК", "МІБ жылдық жоспары", "Задачи, сроки и ответственные по направлениям контроля.", "Бақылау бағыттары бойынша міндеттер, мерзімдер және жауаптылар.") }}
+{{ sections.card(url_for('school_monthly_page'), "🗓️", "Месячный план ВШК", "МІБ айлық жоспары", "Планирование задач месяца и назначение исполнителей.", "Айлық міндеттерді жоспарлау және орындаушыларды тағайындау.") }}
+{{ sections.card(url_for('task_review_selection_page'), "📋", "Рассмотрение задач", "Тапсырмаларды қарау", "Рассмотрение выполненных задач по циклограмме.", "Орындалған тапсырмаларды циклограмма бойынша қарау.") }}
+{{ sections.card(url_for('review_result_list_page'), "✅", "Результаты рассмотрения", "Қарау нәтижелері", "Протоколы, итоговые документы и отчёты.", "Хаттамалар, қорытынды құжаттар және есептер.") }}
+</div></section>
+{{ sections.assessment('staff_assessment_analytics_page','staff_assessment_knowledge_quality_dynamics',results=role in ['school_admin','school_staff'],manual=role in ['school_admin','school_staff']) }}
+<section class="role-dashboard__section" aria-labelledby="statistics">
+{{ sections.heading("statistics","Статистика школы","Мектеп статистикасы","Сводные отчёты по планированию и выполнению ВШК.","МІБ жоспарлау мен орындау жөніндегі жиынтық есептер.") }}
+<div class="role-dashboard__grid">
+{{ sections.card(url_for('school_plan_statistics_page'), "📊", "Статистика планирования ВШК", "МІБ жоспарлау статистикасы", "Периоды задач и инстанции рассмотрения.", "Тапсырма кезеңдері және қарау орындары.") }}
+{{ sections.card(url_for('school_execution_statistics_page'), "📊", "Выполнение планов ВШК", "МІБ жоспарларының орындалуы", "Выполнение годовых и месячных планов по направлениям.", "Жылдық және айлық жоспарлардың бағыттар бойынша орындалуы.") }}
+{{ sections.card(url_for('staff_monitoring_rating_page'), "🏆", "Рейтинг исполнителей", "Орындаушылар рейтингі", "Результаты выполнения задач и подготовки документов.", "Тапсырмаларды орындау және құжаттарды дайындау нәтижелері.") }}
+</div></section>
 </div>
 {% endblock %}

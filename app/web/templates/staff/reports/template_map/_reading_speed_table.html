@@ -1,10 +1,5 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Title</title>
-</head>
-<body>
-
-</body>
-</html>
+{% set s=snapshot.summary %}<h2>{{ 'Сводные показатели' if ru else 'Жинақ көрсеткіштер' }}</h2>
+<p>{{ 'Дата чтения' if ru else 'Оқу күні' }}: {{ s.check_date }} · {{ snapshot.form.get('text_title','') }}</p><p>{{ 'Критерий' if ru else 'Критерий' }}: {{ snapshot.form.get('threshold') or '—' }} {{ 'слов/мин' if ru else 'сөз/мин' }} · {{ s.criteria }}</p>
+<table><thead><tr><th>{{ 'Учеников' if ru else 'Оқушылар' }}</th><th>{{ 'Проверено' if ru else 'Тексерілген' }}</th><th>{{ 'Отсутствовали / освобождены' if ru else 'Қатыспаған / босатылған' }}</th><th>{{ 'Ниже критерия' if ru else 'Критерийден төмен' }}</th><th>{{ 'Средняя скорость, слов/мин' if ru else 'Орташа жылдамдық, сөз/мин' }}</th></tr></thead><tbody><tr><td>{{ s.total }}</td><td>{{ s.checked }}</td><td>{{ s.absent }} / {{ s.excused }}</td><td>{{ s.below if s.below is not none else '—' }}</td><td>{{ s.average_wpm if s.average_wpm is not none else '—' }}</td></tr></tbody></table>
+<p>{{ 'Скорость = (слова − ошибки) × 60 / секунды. Отсутствующие и освобождённые не включаются в среднюю скорость.' if ru else 'Жылдамдық = (сөздер − қателер) × 60 / секунд. Қатыспаған және босатылған оқушылар орташа жылдамдыққа кірмейді.' }}</p>
+<table><thead><tr><th style="width:26%">{{ 'Ученик' if ru else 'Оқушы' }}</th><th>{{ 'Класс' if ru else 'Сынып' }}</th><th>{{ 'Участие' if ru else 'Қатысу' }}</th><th>{{ 'Слова / ошибки / сек.' if ru else 'Сөз / қате / сек.' }}</th><th>{{ 'Слов/мин' if ru else 'Сөз/мин' }}</th><th>{{ 'Понимание текста' if ru else 'Мәтінді түсіну' }}</th><th style="width:22%">{{ 'Примечание' if ru else 'Ескертпе' }}</th></tr></thead><tbody>{% for row in entries %}<tr><td>{{ row.name }}</td><td>{{ row.class_name }}</td><td>{{ snapshot.states[row.state][lang] }}</td><td>{% if row.state=='present' %}{{ row.words }} / {{ row.errors }} / {{ row.seconds }}{% else %}—{% endif %}</td><td{% if row.below %} style="color:#b42318"{% endif %}>{{ row.wpm if row.wpm is not none else '—' }}</td><td>{{ ('Понимает' if ru else 'Түсінеді') if row.comprehension=='yes' else ('Не понимает' if ru else 'Түсінбейді') if row.comprehension=='no' else ('Не проверено' if ru else 'Тексерілмеген') }}</td><td>{{ row.note }}</td></tr>{% endfor %}</tbody></table>

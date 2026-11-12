@@ -3,20 +3,40 @@
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse
 
-from app.modules.users.deps import require_roles
+from app.modules.users.deps import resolve_workspace_context, require_roles
 from app.modules.users.enums import UserRole
+from app.modules.users.models import User
+from app.modules.users.schemas import UserWorkspaceContextDTO
+from app.routers.web.dashboards.workspace_render import render_dashboard as render
+from app.modules.users.enums import UserWorkspace
 from app.routers.web.web_common import templates
 
 router = APIRouter()
 
 
-@router.get("/dashboards/l1", response_class=HTMLResponse)
+@router.get(
+    "/dashboards/l1",
+    name="dashboard_l1",
+    response_class=HTMLResponse,
+)
 async def dashboard_l1(
-        request: Request,
-        user=Depends(require_roles(UserRole.SUPERUSER, UserRole.REGION_ADMIN)),
+    request: Request,
+    user: User = Depends(
+        require_roles(
+            UserRole.SUPERUSER,
+            UserRole.REGION_ADMIN,
+        )
+    ),
+    _workspace_context: UserWorkspaceContextDTO = Depends(
+        resolve_workspace_context
+    ),
 ):
-    return templates.TemplateResponse(
+    return render(
+        templates,
         request,
         "dashboards/l1.html",
-        {"user": user},
+        {
+            "user": user,
+        },
+        workspace=UserWorkspace.PRIMARY,
     )

@@ -1,5 +1,4 @@
 # app/db/session.py (Подключение к PostgreSQL, создаётся соединение, настраивается пул. Сессия БД async)
-# app/db/session.py
 
 from __future__ import annotations
 
@@ -12,6 +11,8 @@ from sqlalchemy.ext.asyncio import (
 )
 
 from app.core.config import get_settings
+# Регистрируем все модели до использования ORM-сессий.
+import app.db.models  # noqa: F401
 
 
 # ---------------------------------

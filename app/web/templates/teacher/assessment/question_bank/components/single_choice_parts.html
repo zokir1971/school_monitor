@@ -1,0 +1,20 @@
+{% from 'teacher/assessment/question_bank/_segments.html' import render_segments with context %}
+{% macro render_single_choice_parts(item, show_answers=false) %}
+  {% for part in item.content.get('parts', []) %}
+    <section class="qb-sc-part">
+      <h4 class="qb-sc-part__heading">{{ 'Задача' if ui_language()=='ru' else 'Есеп' }} {{ loop.index }}. · {{ item.grading_settings.get('points_per_element',1) }} {{ _('балл') }}</h4>
+      <div class="qb-render-statement">{{ render_segments(part.get('segments', []) | part_statement_layout(loop.index)) }}</div>
+      {% set correct = item.answer_key.get('values', {}).get(part.get('id')) if show_answers else none %}
+      <div class="qb-render-options">
+        {% for option in part.get('options', []) %}
+          {% if not show_answers or option.get('value') == correct %}
+            <div class="qb-render-option{% if show_answers %} qb-answer-item--correct{% endif %}">
+              <strong class="qb-render-option__marker">{{ option.get('value') }}</strong>
+              <div class="qb-render-option__body">{{ render_segments(option.get('segments', [])) }}</div>
+            </div>
+          {% endif %}
+        {% endfor %}
+      </div>
+    </section>
+  {% endfor %}
+{% endmacro %}

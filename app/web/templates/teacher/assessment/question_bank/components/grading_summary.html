@@ -1,0 +1,53 @@
+{# Human-readable NUMBER / TRUE_FALSE grading summary; author/expert display. #}
+{% macro number_label(value) -%}
+  {%- set text = value | string -%}
+  {{- text.rstrip('0').rstrip('.') if '.' in text and 'e' not in text|lower else text -}}
+{%- endmacro %}
+
+{% macro render_grading_summary(item) %}
+{% if item.grading_settings.get('element_score_policy') == 'weighted_elements_v2' %}
+{% from 'teacher/assessment/question_bank/components/weighted_grading_summary.html' import render_weighted_grading with context %}{{ render_weighted_grading(item) }}
+{% else %}
+  {% set kind = item.question_type.value if item.question_type.value is defined else item.question_type %}
+  {% set content = item.content or {} %}
+  {% set grading = item.grading_settings or {} %}
+  {% set multipart = (kind in ['number','single_choice'] and 'parts' in content) or (kind == 'true_false' and 'statements' in content) %}
+  <div class="qb-grading-list">
+    <div class="qb-grading-row">
+      <span class="qb-grading-row__key">{{ _('Ең жоғары балл') }}</span>
+      <span class="qb-grading-row__value">{{ number_label(item.max_score) }} {{ _('балл') }}</span>
+    </div>
+    <div class="qb-grading-row">
+      <span class="qb-grading-row__key">{{ _('Әр дұрыс жауап үшін') }}</span>
+      <span class="qb-grading-row__value">{{ '1' if multipart else number_label(item.max_score) }} {{ _('балл') }}</span>
+    </div>
+    <div class="qb-grading-row">
+      <span class="qb-grading-row__key">{{ _('Қате немесе жауап берілмесе') }}</span>
+      <span class="qb-grading-row__value">{{ _('0 балл') }}</span>
+    </div>
+  </div>
+  {% if multipart %}
+    <p class="qb-text qb-muted">{{ 'Каждая задача оценивается отдельно. Общий балл равен числу правильных ответов.' if ui_language()=='ru' else 'Әр есеп жеке бағаланады. Жалпы балл дұрыс жауаптар санына тең.' }}</p>
+  {% endif %}
+  {% if kind == 'number' %}
+    <p class="qb-text" style="margin:12px 0 6px;font-weight:600;">{{ _('Рұқсат етілген ауытқу') }}</p>
+    <div class="qb-grading-list">
+      {% if 'parts' in content %}
+        {% for part in content.get('parts', []) %}
+          {% set tolerance = grading.get('tolerances', {}).get(part.get('id'), 0) %}
+          <div class="qb-grading-row">
+            <span class="qb-grading-row__key">{{ 'Задача' if ui_language()=='ru' else 'Есеп' }} {{ loop.index }}</span>
+            <span class="qb-grading-row__value">±{{ number_label(tolerance) }}{% if part.get('unit') %} {{ part.get('unit') }}{% endif %}</span>
+          </div>
+        {% endfor %}
+      {% else %}
+        <div class="qb-grading-row">
+          <span class="qb-grading-row__key">{{ _('Сандық жауап') }}</span>
+          <span class="qb-grading-row__value">±{{ number_label(grading.get('tolerance', 0)) }}{% if content.get('unit') %} {{ content.get('unit') }}{% endif %}</span>
+        </div>
+      {% endif %}
+    </div>
+    <p class="qb-text qb-muted">{{ _('Ауытқу 0 болса, дәл сандық жауап қажет. Оң ауытқу болса, сол шектегі жауап қабылданады.') }}</p>
+  {% endif %}
+{% endif %}
+{% endmacro %}

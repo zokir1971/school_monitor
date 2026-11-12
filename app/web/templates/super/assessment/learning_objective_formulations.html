@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+{% block title %}{{ _('Формулировки учебной цели') }}{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', path='css/learning_objective_rich.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', path='css/learning_objective_import.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', path='css/learning_objective_table_import.css') }}">
+{% endblock %}
+{% block content %}
+<div class="lo-import lo-table">
+  <a class="lo-button lo-secondary" href="{{ url_for('super_learning_objective_reference_list') }}" data-sm-action="nav" data-sm-back="true">{{ _('← Справочник') }}</a>
+  <h1>{{ row.code }} {{ _('· Формулировки / Тұжырымдар') }}</h1>
+  <p>{{ _('Каждый вариант сохраняется отдельно со своими четвертями. Код и класс менять нельзя. Исходный текст доступен в разделе «Раздел и источник».') }}</p>
+  {% if error %}<div class="lo-message lo-error" role="alert">{{ _(error) }}</div>{% endif %}
+  <form id="lo-confirm" method="post" action="{{ url_for('super_learning_objective_formulations_save', objective_id=row.id) }}">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <input type="hidden" name="version" value="{{ row.version }}">
+    <input type="hidden" id="lo-rows-json" name="rows_json">
+    <div class="lo-toolbar"><strong id="lo-count"></strong><button class="lo-button lo-secondary" id="lo-add" type="button" data-sm-action="nav">{{ _('+ Формулировка') }}</button>
+      <label>{{ _('Четверть') }} <select id="lo-quarter-filter"><option value="">{{ _('Все') }}</option>{% for q in range(1,5) %}<option value="{{ q }}">{{ q }}</option>{% endfor %}</select></label>
+      <span id="lo-quarter-summary"></span>
+    </div>
+    <div id="lo-rows"></div>
+    <button class="lo-button" type="submit" data-sm-action="primary">{{ _('Сохранить / Сақтау') }}</button>
+  </form>
+  <input type="hidden" id="lo-initial-rows" value="{{ rows|tojson|forceescape }}">
+  <input type="hidden" id="lo-source-rows" value="{{ sources|tojson|forceescape }}">
+  <input type="hidden" id="lo-selected-pages" value="{{ {'grade_from':row.grade_level, 'grade_to':row.grade_level, 'multiple_quarters':true, 'fixed_code':row.code}|tojson|forceescape }}">
+</div>
+{% include 'super/assessment/components/learning_objective_math_dialog.html' %}
+<script src="https://cdn.jsdelivr.net/npm/mathlive" defer></script>
+<script src="{{ url_for('static', path='js/learning_objective_math_editor.js') }}?v=i18n5" defer></script>
+<script src="{{ url_for('static', path='js/learning_objective_table_import.js') }}?v=i18n5" defer></script>
+{% endblock %}

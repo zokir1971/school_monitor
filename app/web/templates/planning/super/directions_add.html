@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Добавить направление{% endblock %}
+{% block title %}{{ _('Добавить направление') }}{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', path='css/admin.css') }}">
@@ -8,10 +8,10 @@
 {% block content %}
 <section class="dashboard-section">
   <div class="section-head">
-    <h2 class="section-title">Добавить направление</h2>
+    <h2 class="section-title">{{ _('Добавить направление') }}</h2>
 
     <div class="section-actions">
-      <a class="btn btn--primary" href="/planning/super/directions">← Назад</a>
+      <a class="btn btn--primary" href="/planning/super/directions" data-sm-action="nav" data-sm-back="true">{{ _('← Назад') }}</a>
     </div>
   </div>
 
@@ -20,42 +20,42 @@
   {# ✅ Блок: если нет активного шаблона — создать его #}
   {% if not active_template %}
     <div class="alert alert--error" style="margin: 12px 0;">
-      Нет активного шаблона плана (plan_templates). Сначала создайте шаблон учебного года.
+      {{ _('Нет активного шаблона плана (plan_templates). Сначала создайте шаблон учебного года.') }}
     </div>
 
     <div class="card card--large" style="margin-bottom:16px;">
       <div class="card__inner">
-        <h3 style="margin-top:0;">Создать шаблон плана ВШК</h3>
+        <h3 style="margin-top:0;">{{ _('Создать шаблон плана ВШК') }}</h3>
 
         <form method="post" action="/planning/super/templates/create" class="form">
           <div class="form-row">
-            <label class="form-label">Название шаблона <span class="req">*</span></label>
+            <label class="form-label">{{ _('Название шаблона') }} <span class="req">*</span></label>
             <input class="input" type="text" name="name" required maxlength="300"
-                   placeholder="Например: Общий план ВШК" />
+                   placeholder="{{ _('Например: Общий план ВШК') }}" />
           </div>
 
           <div class="form-row">
-            <label class="form-label">Учебный год <span class="req">*</span></label>
+            <label class="form-label">{{ _('Учебный год') }} <span class="req">*</span></label>
             <input class="input" type="text" name="academic_year" required maxlength="20"
-                   placeholder="Например: 2026-2027" />
-            <div class="hint">Формат: 2026-2027</div>
+                   placeholder="{{ _('Например: 2026-2027') }}" />
+            <div class="hint">{{ _('Формат: 2026-2027') }}</div>
           </div>
 
           <div class="form-actions">
-            <button type="submit" class="btn btn--primary">Создать и активировать</button>
+            <button type="submit" class="btn btn--primary" data-sm-action="primary">{{ _('Создать и активировать') }}</button>
           </div>
         </form>
       </div>
     </div>
   {% else %}
     <div class="alert alert--info" style="margin: 12px 0;">
-      Активный шаблон: <b>{{ active_template.name }}</b>
+      {{ _('Активный шаблон:') }} <b>{{ active_template.name }}</b>
       {% if active_template.academic_year %} ({{ active_template.academic_year }}){% endif %}
     </div>
   {% endif %}
 
   {% if error %}
-    <div class="alert alert--error">{{ error }}</div>
+    <div class="alert alert--error">{{ super_planning_message(error) }}</div>
   {% endif %}
 
   <div class="card card--large">
@@ -67,7 +67,7 @@
 
     <div class="form-row">
       <label class="form-label">
-        Короткое название (для карточек) <span class="req">*</span>
+        {{ _('Короткое название (для карточек)') }} <span class="req">*</span>
       </label>
       <input
         class="input"
@@ -76,38 +76,38 @@
         required
         minlength="3"
         maxlength="120"
-        placeholder="Например: I. Нормативтік құжаттар"
+        placeholder="{{ _('Например: I. Нормативтік құжаттар') }}"
         value="{{ form.short_title if form is defined else '' }}"
       />
-      <div class="hint">Будет показано в сетке карточек. Лучше коротко.</div>
+      <div class="hint">{{ _('Будет показано в сетке карточек. Лучше коротко.') }}</div>
     </div>
 
     <div class="form-row">
-      <label class="form-label">Полное название (для страницы/печати)</label>
+      <label class="form-label">{{ _('Полное название (для страницы/печати)') }}</label>
       <textarea
         class="textarea"
         name="full_title"
         rows="4"
         maxlength="800"
-        placeholder="Например: І. НОРМАТИВТІК ҚҰЖАТТАРДЫҢ ОРЫНДАЛУЫН ЖӘНЕ ТАЛАПТАРҒА СӘЙКЕС ...">{{ form.full_title if form is defined else '' }}</textarea>
+        placeholder="{{ _('Например: І. НОРМАТИВТІК ҚҰЖАТТАРДЫҢ ОРЫНДАЛУЫН ЖӘНЕ ТАЛАПТАРҒА СӘЙКЕС ...') }}">{{ form.full_title if form is defined else '' }}</textarea>
       <div class="hint">
-        Можно оставить пустым — тогда везде будет использоваться короткое название.
+        {{ _('Можно оставить пустым — тогда везде будет использоваться короткое название.') }}
       </div>
     </div>
 
     <div class="col">
-      <label class="form-label">Статус</label>
+      <label class="form-label">{{ _('Статус') }}</label>
       {% set is_active_val = (form.is_active if form is defined else 'true') %}
       <select class="select" name="is_active">
-        <option value="true"  {% if is_active_val == 'true' %}selected{% endif %}>Активно</option>
-        <option value="false" {% if is_active_val == 'false' %}selected{% endif %}>Не активно</option>
+        <option value="true"  {% if is_active_val == 'true' %}selected{% endif %}>{{ _('Активно') }}</option>
+        <option value="false" {% if is_active_val == 'false' %}selected{% endif %}>{{ _('Не активно') }}</option>
       </select>
-      <div class="hint">Неактивные можно скрывать.</div>
+      <div class="hint">{{ _('Неактивные можно скрывать.') }}</div>
     </div>
 
     <div class="form-actions">
-      <button type="submit" class="btn btn--primary">
-        Создать
+      <button type="submit" class="btn btn--primary" data-sm-action="primary">
+        {{ _('Создать') }}
       </button>
     </div>
 

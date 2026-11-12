@@ -1,7 +1,7 @@
 # app/modules/reports/services/execution_service.py
 from __future__ import annotations
-
 import json
+
 from datetime import date, datetime, timezone
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -15,6 +15,7 @@ from app.modules.reports.repositories.execution_document_repo import (
 )
 from app.modules.reports.repositories.execution_repo import ExecutionRepo
 from app.modules.reports.repositories.report_type_repo import ReportTypeRepo
+from app.modules.reports.rules.control_flow import build_algorithm_plan
 
 
 class ExecutionService:
@@ -31,130 +32,8 @@ class ExecutionService:
     в ExecutionDocumentService.
     """
 
-    @staticmethod
-    def _normalize_text(value) -> str:
-        """
-        Привести значение к строке для UI.
 
-        Почему нужно:
-        - шаблон и JS не должны получать None
-        - пустые строки нормализуются в ""
-        """
-        if value is None:
-            return ""
-        value = str(value).strip()
-        return value or ""
-
-    @classmethod
-    def build_execution_form_dto(
-            cls,
-            execution_data: TaskExecutionData | None,
-    ) -> ExecutionFormDTO:
-        """
-        Построить ExecutionFormDTO из ORM-модели TaskExecutionData.
-
-        Что переносим:
-        - control_scope / control_form / control_kind
-        - review_result
-        - generated_reports_json из relation selected_reports
-        - производные списки subjects / class_groups / parallel_classes / teacher_ids
-        - teacher_id как строку, если выбран ровно один учитель
-
-        Если execution_data отсутствует:
-        - возвращаем пустой DTO
-        """
-        if not execution_data:
-            return ExecutionFormDTO()
-
-        grouped: dict[tuple[int, str], dict] = {}
-
-        report_types: list[str] = []
-        subjects: list[str] = []
-        class_groups: list[str] = []
-        parallel_classes: list[str] = []
-        teacher_ids: list[str] = []
-
-        for item in getattr(execution_data, "selected_reports", []) or []:
-            report_type = getattr(item, "report_type", None)
-            if not report_type:
-                continue
-
-            report_type_id = getattr(report_type, "id", None)
-            report_code = getattr(report_type, "code", None)
-
-            if report_type_id is None or not report_code:
-                continue
-
-            report_code = str(report_code)
-            if report_code not in report_types:
-                report_types.append(report_code)
-
-            key = (int(report_type_id), report_code)
-
-            if key not in grouped:
-                grouped[key] = {
-                    "report_type_id": int(report_type_id),
-                    "report_code": str(report_code),
-                    "report_label": (
-                            getattr(report_type, "name_kz", None)
-                            or getattr(report_type, "name_ru", None)
-                            or str(report_code)
-                    ),
-                    "targets": [],
-                }
-
-            target_kind = cls._normalize_text(getattr(item, "target_kind", None))
-            target_value = cls._normalize_text(getattr(item, "target_value", None))
-            target_label = (
-                    cls._normalize_text(getattr(item, "target_label", None))
-                    or target_value
-            )
-
-            if not target_kind or not target_value:
-                continue
-
-            grouped[key]["targets"].append(
-                {
-                    "kind": target_kind,
-                    "value": target_value,
-                    "label": target_label,
-                }
-            )
-
-            if target_kind == "subject":
-                if target_value not in subjects:
-                    subjects.append(target_value)
-
-            elif target_kind == "class_group":
-                if target_value not in class_groups:
-                    class_groups.append(target_value)
-
-            elif target_kind == "parallel_class":
-                if target_value not in parallel_classes:
-                    parallel_classes.append(target_value)
-
-            elif target_kind == "teacher":
-                if target_value not in teacher_ids:
-                    teacher_ids.append(target_value)
-
-        teacher_id = teacher_ids[0] if len(teacher_ids) == 1 else ""
-
-        return ExecutionFormDTO(
-            control_scope=cls._normalize_text(getattr(execution_data, "control_scope", None)),
-            control_form=cls._normalize_text(getattr(execution_data, "control_form", None)),
-            control_kind=cls._normalize_text(getattr(execution_data, "control_kind", None)),
-            review_result=cls._normalize_text(getattr(execution_data, "review_result", None)),
-            report_types=report_types,
-            subjects=subjects,
-            class_groups=class_groups,
-            parallel_classes=parallel_classes,
-            teacher_id=teacher_id,
-            teacher_ids=teacher_ids,
-            generated_reports_json=json.dumps(
-                list(grouped.values()),
-                ensure_ascii=False,
-            ),
-        )
+    build_execution_form_dto = ExecutionFormDTO.from_model
 
     @classmethod
     async def save_execution_draft(
@@ -173,6 +52,10 @@ class ExecutionService:
             parallel_classes: list[str] | None = None,
             teacher_ids: list[str] | None = None,
             teacher_id: str | None = None,
+            report_teacher_ids: dict[str, list[str]] | None = None,
+            school_class_ids: list[str] | None = None,
+            algorithm_revision: int = 0,
+            report_areas_json: str | None = None,
     ) -> TaskExecutionData:
         task = await ExecutionRepo.get_executor_month_item_for_execution(
             db,
@@ -182,160 +65,42 @@ class ExecutionService:
         if not task:
             raise ValueError("Задача недоступна для сохранения черновика.")
 
-        report_types = report_types or []
-        subjects = subjects or []
-        class_groups = class_groups or []
-        parallel_classes = parallel_classes or []
-        teacher_ids = teacher_ids or []
-        teacher_id = (teacher_id or "").strip()
-
-        execution_data = await ExecutionRepo.get_or_create_execution_data(
-            db,
-            month_item_id=month_item_id,
-        )
-
+        catalog = await ExecutionRepo.get_algorithm_catalog(db, month_item_id=month_item_id, user_id=user_id)
+        report_type_map = await ReportTypeRepo.get_code_id_map(db)
+        areas = None
+        if report_areas_json is not None:
+            if len(report_areas_json)>524288:raise ValueError('Слишком много параметров областей. / Ауқым параметрлері тым көп.')
+            try:areas=json.loads(report_areas_json)
+            except (ValueError,TypeError):raise ValueError('Проверьте параметры областей. / Ауқым параметрлерін тексеріңіз.')
+        plan = build_algorithm_plan(catalog, scope=control_scope, report_types=report_types or [],
+                                    subject_ids=subjects or [], class_ids=school_class_ids or [],
+                                    parallels=parallel_classes or [], class_groups=class_groups or [],
+                                    teacher_ids=teacher_ids or ([teacher_id] if teacher_id else []),
+                                    report_teacher_ids=report_teacher_ids or {},
+                                    report_type_map=report_type_map, task_id=month_item_id, form=control_form, kind=control_kind,report_areas=areas)
+        execution_data = await ExecutionRepo.get_or_create_execution_data(db, month_item_id=month_item_id)
+        await ExecutionRepo.replace_selected_reports(db, execution_data_id=execution_data.id,
+                                                    selected_reports=plan['selected_reports'],
+                                                    algorithm_parameters=plan['parameters'], expected_revision=algorithm_revision)
         execution_data.control_scope = control_scope or None
         execution_data.control_form = control_form or None
         execution_data.control_kind = control_kind or None
         execution_data.review_result = review_result or None
-
-        report_type_map = await ReportTypeRepo.get_code_id_map(db)
-
-        # ✅ получаем map teacher_id -> full_name
-        teacher_label_map = await ExecutionRepo.get_teacher_labels_by_ids(
-            db,
-            teacher_ids=teacher_ids + ([teacher_id] if teacher_id else []),
-        )
-
-        selected_reports: list[dict] = []
-
-        for report_code in report_types:
-            report_type_id = report_type_map.get(str(report_code))
-            if not report_type_id:
-                continue
-
-            targets: list[dict] = []
-
-            if control_scope == "subject":
-                for subject in subjects:
-                    subject = str(subject).strip()
-                    if not subject:
-                        continue
-
-                    targets.append(
-                        {
-                            "target_kind": "subject",
-                            "target_value": subject,
-                            "target_label": subject,
-                        }
-                    )
-
-                for tid in teacher_ids:
-                    tid = str(tid).strip()
-                    if not tid:
-                        continue
-
-                    targets.append(
-                        {
-                            "target_kind": "teacher",
-                            "target_value": tid,
-                            "target_label": teacher_label_map.get(tid, tid),
-                        }
-                    )
-
-            elif control_scope == "teacher":
-                for tid in teacher_ids:
-                    tid = str(tid).strip()
-                    if not tid:
-                        continue
-
-                    targets.append(
-                        {
-                            "target_kind": "teacher",
-                            "target_value": tid,
-                            "target_label": teacher_label_map.get(tid, tid),
-                        }
-                    )
-
-            elif control_scope == "class":
-                for class_group in class_groups:
-                    class_group = str(class_group).strip()
-                    if not class_group:
-                        continue
-
-                    targets.append(
-                        {
-                            "target_kind": "class_group",
-                            "target_value": class_group,
-                            "target_label": class_group,
-                        }
-                    )
-
-                for tid in teacher_ids:
-                    tid = str(tid).strip()
-                    if not tid:
-                        continue
-
-                    targets.append(
-                        {
-                            "target_kind": "teacher",
-                            "target_value": tid,
-                            "target_label": teacher_label_map.get(tid, tid),
-                        }
-                    )
-
-            elif control_scope == "parallel":
-                for parallel_class in parallel_classes:
-                    parallel_class = str(parallel_class).strip()
-                    if not parallel_class:
-                        continue
-
-                    targets.append(
-                        {
-                            "target_kind": "parallel_class",
-                            "target_value": parallel_class,
-                            "target_label": parallel_class,
-                        }
-                    )
-
-                for tid in teacher_ids:
-                    tid = str(tid).strip()
-                    if not tid:
-                        continue
-
-                    targets.append(
-                        {
-                            "target_kind": "teacher",
-                            "target_value": tid,
-                            "target_label": teacher_label_map.get(tid, tid),
-                        }
-                    )
-
-            elif teacher_id:
-                targets.append(
-                    {
-                        "target_kind": "teacher",
-                        "target_value": teacher_id,
-                        "target_label": teacher_label_map.get(teacher_id, teacher_id),
-                    }
-                )
-
-            selected_reports.append(
-                {
-                    "report_type_id": int(report_type_id),
-                    "targets": targets,
-                }
-            )
-
-        await ExecutionRepo.replace_selected_reports(
-            db,
-            execution_data_id=execution_data.id,
-            selected_reports=selected_reports,
-        )
-
+        if areas and areas.get('save_school_scheme'):
+            if not plan['parameters'].get('report_areas'):
+                raise ValueError('Сначала подготовьте области отчётов. / Алдымен есеп ауқымдарын дайындаңыз.')
+            if areas.get('coverage_exclusions'):
+                raise ValueError('Сохраните алгоритм с исключениями отдельно от школьной схемы. / Ерекшеліктері бар алгоритмді мектеп сызбасынан бөлек сақтаңыз.')
+            from app.modules.reports.rules.report_area_scheme import school_layout
+            from app.modules.reports.repositories.report_area_scheme_repo import save as save_scheme
+            revision=areas.get('scheme_revision')
+            if type(revision) is not int or revision<0:
+                raise ValueError('Обновите версию школьной схемы. / Мектеп сызбасының нұсқасын жаңартыңыз.')
+            configuration=school_layout(plan['parameters']['report_areas'],catalog,catalog.get('area_scheme'))
+            await save_scheme(db,school_id=catalog['school_id'],task_id=month_item_id,user_id=user_id,
+                              expected_revision=revision,configuration=configuration)
         await db.commit()
         await db.refresh(execution_data)
-
         return execution_data
 
     @classmethod

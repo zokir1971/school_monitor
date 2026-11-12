@@ -1,0 +1,12 @@
+{% from 'teacher/assessment/question_bank/_segments.html' import render_segments with context %}
+{% if bilingual_item.bank_objectives %}
+<div class="bank-objectives">
+{% for goal in bilingual_item.bank_objectives %}
+<div style="display:flex;align-items:baseline;gap:8px;margin:8px 0;">
+<strong style="color:#2563eb;white-space:nowrap;">{{ goal.code }}</strong>
+<span>{{ render_segments(goal.get('segments_kz' if language=='kk' else 'segments_ru', []), fallback=goal.get('title_kz' if language=='kk' else 'title_ru') or '—') }}</span>
+</div>
+{% endfor %}
+</div>
+{% endif %}
+{% include 'teacher/assessment/question_bank/components/language_version.html' %}

@@ -1,5 +1,8 @@
 # app/modules/planning/services/month_plan_service.py
 from fastapi import HTTPException
+from app.modules.planning.repositories.month_correction_repo import MonthCorrectionRepo
+from app.modules.planning.services.month_correction_service import MonthCorrectionService
+from app.modules.planning.utils.month_plan_readiness import month_plan_readiness, enum_value
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.planning.constants import (
@@ -393,7 +396,16 @@ class SchoolMonthlyPlanningService:
             db: AsyncSession,
             *,
             month_plan_id: int,
+            school_id: int,
     ) -> None:
+        data = await MonthCorrectionRepo.snapshot(db, school_id=school_id, month_plan_id=month_plan_id, lock=True)
+        if not data:
+            raise HTTPException(404, 'Месячный план не найден / Айлық жоспар табылмады')
+        if enum_value(data['plan']['status']) != 'draft':
+            raise HTTPException(409, 'План уже отправлен или архивирован / Жоспар жіберілген немесе мұрағатталған')
+        readiness = month_plan_readiness(data, month_weeks_grid(data['plan']['year'], data['plan']['month']))
+        if not readiness['included'] or readiness['problems']:
+            raise HTTPException(400, 'План не отправлен. Проверьте недели и ответственных включённых задач. / Жоспар жіберілмеді. Енгізілген тапсырмалардың апталарын және жауаптыларын тексеріңіз.')
         month_plan = await _guard_month_plan_edit(
             db,
             month_plan_id=month_plan_id,
@@ -409,6 +421,7 @@ class SchoolMonthlyPlanningService:
             db,
             month_plan_id=month_plan_id,
             with_source=True,
+            refresh=True,
         )
 
         missing_week = [i for i in items if i.is_included and i.week_of_month is None]
@@ -520,8 +533,18 @@ class SchoolMonthlyPlanningService:
             *,
             month_plan_id: int,
             school_id: int,
+            plan_revision: str = "",
+            confirmed_plan_id: str = "",
     ):
 
+        data = await MonthCorrectionRepo.snapshot(db, school_id=school_id, month_plan_id=month_plan_id, lock=True)
+        if not data:
+            raise HTTPException(404, 'Месячный план не найден / Айлық жоспар табылмады')
+        readiness = month_plan_readiness(data, month_weeks_grid(data['plan']['year'], data['plan']['month']))
+        if not readiness['can_delete']:
+            raise HTTPException(409, 'Удаление запрещено: в плане есть назначения, сроки или данные задач либо план уже отправлен/архивирован. / Жоюға тыйым салынған: жоспарда тағайындаулар, мерзімдер немесе тапсырма деректері бар не жоспар жіберілген/мұрағатталған.')
+        if confirmed_plan_id != str(month_plan_id) or plan_revision != MonthCorrectionService.revision(data):
+            raise HTTPException(409, 'Подтвердите удаление на обновлённой странице плана. / Жаңартылған жоспар бетінде жоюды растаңыз.')
         month_plan = await SchoolMonthlyPlanRepo.get_month_plan_for_school_by_id(
             db,
             month_plan_id=month_plan_id,

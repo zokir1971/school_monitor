@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+{% block title %}{{ _('Две языковые версии задания') }}{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', path='css/teacher/assessment/question_bank/question_bank_renderer.css') }}?v=61">
+<link rel="stylesheet" href="{{ url_for('static', path='css/teacher/assessment/question_bank/bilingual_workspace.css') }}">
+{% endblock %}
+{% block content %}
+<div class="qb-language-page">
+  <header class="qb-language-heading">
+    <h1>{{ _('Две языковые версии задания') }}</h1>
+    <nav class="qb-workspace-actions">
+      {% if not readonly %}<a class="qb-workspace-button" href="{{ url_for('teacher_question_bank_item_edit_page',item_id=item.id) }}" data-sm-action="edit">{{ _('Өңдеу / Редактировать') }}</a>{% endif %}
+    <a class="qb-workspace-button" href="{{ url_for('teacher_question_bank_item_detail_page',item_id=item.id) }}" data-sm-action="nav" data-sm-back="true">{{ _('Назад к заданию') }}</a>
+    </nav>
+  </header>
+  <div class="qb-language-intro">
+    <p>{{ _('Один статус и одно решение эксперта для русской и казахской версий.') }}</p>
+    <p>{{ _('Баллы, формулы, изображения и структура ответов общие для обеих версий.') }}</p>
+  </div>
+  {% if translation_busy %}<p role="status" class="qb-language-alert qb-language-alert--warning">{{ _('Перевод выполняется. Обновите страницу позже.') }}</p>{% endif %}
+  {% if error %}<div role="alert" class="qb-language-alert qb-language-alert--error">{{ bilingual_feedback(error) }}</div>{% endif %}
+  {% if stale %}<div role="alert" class="qb-language-alert qb-language-alert--warning">{{ _('Исходное задание изменилось. Сверьте и сохраните перевод заново.') }}</div>{% endif %}
+  {% if pending %}<p role="status" class="qb-language-alert qb-language-alert--warning">{{ _('Изменения перевода ещё не сохранены.') }}</p>{% endif %}
+  {% if saved and not stale %}<p role="status" class="qb-language-alert qb-language-alert--success">{{ _('Перевод сохранён. Эксперт проверит обе версии вместе.') }}</p>{% endif %}
+  <div class="qb-language-versions">
+    <div>{% set bilingual_item=source_view %}{% include 'teacher/assessment/question_bank/components/language_version.html' %}</div>
+    {% if target_view %}<div>{% set bilingual_item=target_view %}{% include 'teacher/assessment/question_bank/components/language_version.html' %}</div>{% endif %}
+  </div>
+  {% include 'teacher/assessment/question_bank/components/translation_editor.html' %}
+</div>
+{% endblock %}
+{% block extra_js %}
+<script defer src="{{ url_for('static', path='js/teacher/assessment/question_bank/translation_editor.js') }}"></script>
+<script data-readable-prose-loader defer src="https://cdn.jsdelivr.net/npm/mathlive"></script>
+<script defer src="{{ url_for('static', path='js/teacher/assessment/question_bank/readable_math_prose.js') }}?v=144"></script>
+<script defer src="{{ url_for('static', path='js/teacher/assessment/question_bank/question_bank_readonly_formulas.js') }}"></script>
+{% endblock %}

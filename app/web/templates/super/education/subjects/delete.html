@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+{% block title %}{{ _('Удаление предмета') }}{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{{ url_for('static', path='css/education/subject_reference.css') }}">{% endblock %}
+{% block content %}
+<div class="subject-reference sr-form-page">
+<p><a class="sr-back" href="{{ request.url_for('super_subject_reference_list') }}" data-sm-action="nav" data-sm-back="true">{{ _('← К справочнику предметов') }}</a></p>
+<h1>{{ _('Пәнді жою / Удаление предмета') }}</h1>
+{% if error %}<div class="sr-message sr-error" role="alert">{{ _(error) }}</div>{% endif %}
+<section class="sr-panel">
+<h2>{{ preview.subject.name_kz }}</h2>
+<p>{{ preview.subject.name_ru or '' }}</p>
+<p>{{ _('Код:') }} <strong>{{ preview.subject.code }}</strong> · ID: {{ preview.subject.id }}</p>
+{% if preview.blockers %}
+<div class="sr-message sr-error">{{ _('Предмет используется. Удаление недоступно.') }}</div>
+<ul>{% for item in preview.blockers %}<li>{{ _(item.label) }}: {{ item.count }}</li>{% endfor %}</ul>
+<p>{{ _('При необходимости отключите предмет через редактирование. Связанные данные сохранятся.') }}</p>
+<a class="sr-button sr-secondary" href="{{ request.url_for('super_subject_reference_edit_page', subject_id=preview.subject.id) }}" data-sm-action="edit">{{ _('Редактировать предмет') }}</a>
+{% else %}
+<p>{{ _('Связанные записи не найдены. Предмет будет удалён из общего справочника всех школ. Удаление нельзя отменить.') }}</p>
+<form method="post" action="{{ request.url_for('super_subject_reference_delete', subject_id=preview.subject.id) }}">
+<input type="hidden" name="csrf" value="{{ csrf }}">
+<input type="hidden" name="fingerprint" value="{{ preview.fingerprint }}">
+<label>{{ _('Для подтверждения введите УДАЛИТЬ') }}<input name="confirmation" required pattern="УДАЛИТЬ" autocomplete="off"></label>
+<div class="sr-actions"><button class="sr-button" style="background:#b42318;border-color:#b42318" type="submit" data-sm-action="danger">{{ _('Жою / Удалить предмет') }}</button><a class="sr-button sr-secondary" href="{{ request.url_for('super_subject_reference_list') }}" data-sm-action="nav">{{ _('Отмена') }}</a></div>
+</form>
+{% endif %}
+</section></div>
+{% endblock %}

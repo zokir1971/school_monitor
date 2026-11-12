@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}{{ page_title }}{% endblock %}
+{% block title %}{{ _(page_title) }}{% endblock %}
 
 {% block content %}
 <style>
@@ -135,27 +135,27 @@
 
 <div class="page">
   <div class="title">
-    <h1>{{ page_title }}</h1>
+    <h1>{{ _(page_title) }}</h1>
     <div class="sub">
       {% if school %}
-        Изменение данных школы
+        {{ _('Изменение данных школы') }}
       {% else %}
-        Создание новой школы
+        {{ _('Создание новой школы') }}
       {% endif %}
     </div>
   </div>
 
   <div class="card">
     {% if error %}
-      <div class="error">{{ error }}</div>
+      <div class="error">{{ schools_feedback(error) }}</div>
     {% endif %}
 
     <form method="post" action="{{ form_action }}">
       <div class="grid">
         <div class="field">
-          <label for="region_id">Область</label>
+          <label for="region_id">{{ _('Область') }}</label>
           <select id="region_id" name="region_id" required>
-            <option value="">Выберите область</option>
+            <option value="">{{ _('Выберите область') }}</option>
             {% for region in regions %}
               <option
                 value="{{ region.id }}"
@@ -168,9 +168,9 @@
         </div>
 
         <div class="field">
-          <label for="district_id">Район</label>
+          <label for="district_id">{{ _('Район') }}</label>
           <select id="district_id" name="district_id" required>
-            <option value="">Выберите район</option>
+            <option value="">{{ _('Выберите район') }}</option>
             {% for district in districts %}
               <option
                 value="{{ district.id }}"
@@ -183,36 +183,36 @@
         </div>
 
         <div class="field field--full">
-          <label for="name">Название школы</label>
+          <label for="name">{{ _('Название школы') }}</label>
           <input
             id="name"
             name="name"
             type="text"
             value="{{ school_name }}"
-            placeholder="Введите название школы"
+            placeholder="{{ _('Введите название школы') }}"
             required
           >
         </div>
 
         <div class="field field--full">
-          <label for="address">Адрес</label>
+          <label for="address">{{ _('Адрес') }}</label>
           <input
             id="address"
             name="address"
             type="text"
             value="{{ school_address }}"
-            placeholder="Введите адрес школы"
+            placeholder="{{ _('Введите адрес школы') }}"
           >
         </div>
       </div>
 
       <div class="actions">
-        <button type="submit" class="btn btn--primary">
-          {% if school %}Сохранить изменения{% else %}Создать школу{% endif %}
+        <button type="submit" class="btn btn--primary" data-sm-action="primary">
+          {% if school %}{{ _('Сохранить изменения') }}{% else %}{{ _('Создать школу') }}{% endif %}
         </button>
 
-        <a href="{{ request.url_for('schools_page') }}" class="btn btn--secondary">
-          Назад к списку
+        <a href="{{ request.url_for('schools_page') }}" class="btn btn--secondary" data-sm-action="nav" data-sm-back="true">
+          {{ _('Назад к списку') }}
         </a>
       </div>
     </form>
@@ -225,10 +225,10 @@
   const initialDistrictId = "{{ current_district_id or '' }}";
 
   async function loadDistricts(regionId, selectedDistrictId = "") {
-    districtSelect.innerHTML = '<option value="">Загрузка...</option>';
+    districtSelect.innerHTML = {{ _('<option value="">Загрузка...</option>')|tojson }};
 
     if (!regionId) {
-      districtSelect.innerHTML = '<option value="">Выберите район</option>';
+      districtSelect.innerHTML = {{ _('<option value="">Выберите район</option>')|tojson }};
       return;
     }
 
@@ -236,12 +236,12 @@
       const response = await fetch(`/api/orgs/districts?region_id=${regionId}`);
 
       if (!response.ok) {
-        throw new Error("Не удалось загрузить районы");
+        throw new Error({{ _('Не удалось загрузить районы')|tojson }});
       }
 
       const data = await response.json();
 
-      districtSelect.innerHTML = '<option value="">Выберите район</option>';
+      districtSelect.innerHTML = {{ _('<option value="">Выберите район</option>')|tojson }};
 
       (data.items || []).forEach((district) => {
         const option = document.createElement("option");
@@ -255,7 +255,7 @@
         districtSelect.appendChild(option);
       });
     } catch (error) {
-      districtSelect.innerHTML = '<option value="">Ошибка загрузки</option>';
+      districtSelect.innerHTML = {{ _('<option value="">Ошибка загрузки</option>')|tojson }};
       console.error(error);
     }
   }

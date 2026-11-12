@@ -4,6 +4,8 @@ import secrets
 
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
+from app.modules.reports.repositories.lesson_observation_repo import LessonObservationRepo
+from app.modules.reports.repositories.checking_notebooks_repo import CheckingNotebooksRepo
 
 from app.modules.reports.models_template_reports import (
     LessonObservationReport,
@@ -14,27 +16,9 @@ from app.modules.reports.models_report_signature_token import ReportSignatureTok
 
 class ReportVerifyRepo:
 
-    @staticmethod
-    async def get_lesson_observation_by_id(
-            db: AsyncSession,
-            report_id: int,
-    ) -> LessonObservationReport | None:
-        result = await db.execute(
-            select(LessonObservationReport)
-            .where(LessonObservationReport.id == report_id)
-        )
-        return result.scalar_one_or_none()
+    get_lesson_observation_by_id = staticmethod(LessonObservationRepo.get_by_id)
 
-    @staticmethod
-    async def get_checking_notebooks_by_id(
-            db: AsyncSession,
-            report_id: int,
-    ) -> CheckingNotebooksReport | None:
-        result = await db.execute(
-            select(CheckingNotebooksReport)
-            .where(CheckingNotebooksReport.id == report_id)
-        )
-        return result.scalar_one_or_none()
+    get_checking_notebooks_by_id = staticmethod(CheckingNotebooksRepo.get_by_id)
 
     @staticmethod
     async def create_signature_token(
@@ -100,3 +84,14 @@ class ReportVerifyRepo:
             )
 
         await db.execute(stmt)
+
+
+    @staticmethod
+    async def get_active_signature_for_document(db, *, report_type, document_id):
+        result=await db.execute(select(ReportSignatureToken).where(
+            ReportSignatureToken.report_type==report_type,
+            ReportSignatureToken.report_id==document_id,
+            ReportSignatureToken.document_id==document_id,
+            ReportSignatureToken.is_active.is_(True))
+            .order_by(ReportSignatureToken.id.desc()).limit(1))
+        return result.scalar_one_or_none()

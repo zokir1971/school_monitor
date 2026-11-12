@@ -1,0 +1,651 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('Сарапшы туралы мәлімет') }}{% endblock %}
+
+
+{% block extra_css %}
+<link
+  rel="stylesheet"
+  href="{{ url_for(
+    'static',
+    path='css/region/question_bank_experts/detail.css'
+  ) }}"
+>
+{% endblock %}
+
+
+{% block content %}
+<p><a href="{{ url_for('region_expert_policy_page') }}" data-sm-action="nav">{{ _('Правила доступа экспертов по специальностям') }}</a></p>
+
+
+<div class="qb-experts-page">
+
+
+  <!-- =====================================================
+       PAGE HEADER
+       ===================================================== -->
+
+  <header class="qb-page-header">
+
+  <div class="qb-page-header__main">
+
+    <h1 class="qb-page-title">
+      {{ expert.full_name }}
+    </h1>
+
+    <div class="qb-page-statuses">
+
+      {% if expert.is_active %}
+
+        <span class="qb-badge qb-badge--success">
+          {{ _('Белсенді') }}
+        </span>
+
+      {% else %}
+
+        <span class="qb-badge qb-badge--secondary">
+          {{ _('Белсенді емес') }}
+        </span>
+
+      {% endif %}
+
+
+      {% if expert.has_account %}
+
+        <span class="qb-badge qb-badge--primary">
+          {{ _('School Monitor аккаунты бар') }}
+        </span>
+
+      {% else %}
+
+        <span class="qb-badge qb-badge--light">
+          {{ _('Аккаунт байланыстырылмаған') }}
+        </span>
+
+      {% endif %}
+
+    </div>
+
+  </div>
+
+
+  <div class="qb-page-actions">
+
+    <a
+      href="{{ url_for('region_question_bank_expert_list') }}"
+      class="qb-btn qb-btn--secondary"
+     data-sm-action="nav" data-sm-back="true">
+      {{ _('← Реестрге оралу') }}
+    </a>
+
+
+    <a
+      href="{{
+        url_for(
+          'region_question_bank_expert_edit_page',
+          expert_id=expert.expert_id
+        )
+      }}"
+      class="qb-btn qb-btn--outline-primary"
+     data-sm-action="edit">
+      {{ _('Өңдеу') }}
+    </a>
+
+
+    {% if expert.is_active %}
+
+      <form
+        method="post"
+        action="{{
+          url_for(
+            'region_question_bank_expert_deactivate',
+            expert_id=expert.expert_id
+          )
+        }}"
+        class="qb-inline-form"
+        onsubmit="
+          return confirm(
+            'Сарапшыны эксперттік қауымдастықтан уақытша шығаруға сенімдісіз бе?'
+          );
+        "
+      >
+
+        <button
+          type="submit"
+          class="qb-btn qb-btn--danger"
+         data-sm-action="danger">
+          {{ _('Белсенділігін тоқтату') }}
+        </button>
+
+      </form>
+
+    {% else %}
+
+      <form
+        method="post"
+        action="{{
+          url_for(
+            'region_question_bank_expert_activate',
+            expert_id=expert.expert_id
+          )
+        }}"
+        class="qb-inline-form"
+      >
+
+        <button
+          type="submit"
+          class="qb-btn qb-btn--success"
+         data-sm-action="primary">
+          {{ _('Қайта белсендіру') }}
+        </button>
+
+      </form>
+
+    {% endif %}
+
+  </div>
+
+</header>
+
+  <!-- =====================================================
+       1. EXPERT APPOINTMENT
+       ===================================================== -->
+
+  <section class="qb-card qb-detail-section">
+
+    <div class="qb-card-header">
+
+      <h2 class="qb-card-title">
+        {{ _('1. Сарапшылық тағайындау') }}
+      </h2>
+
+    </div>
+
+
+    <div class="qb-card-body">
+
+      <div class="qb-detail-grid qb-detail-grid--2">
+
+        <div class="qb-detail-item">
+
+          <div class="qb-detail-label">
+            {{ _('Мамандық / Специальность') }}
+          </div>
+
+          <div class="qb-detail-value qb-detail-value--strong">
+            {{ expert_specialty_name(expert) }}
+          </div>
+
+
+
+        </div>
+
+
+        <div class="qb-detail-item">
+
+          <div class="qb-detail-label">
+            {{ _('Мәртебе') }}
+          </div>
+
+          <div class="qb-detail-value">
+
+            {% if expert.is_active %}
+
+              <span class="qb-badge qb-badge--success">
+                {{ _('Белсенді сарапшы') }}
+              </span>
+
+            {% else %}
+
+              <span class="qb-badge qb-badge--secondary">
+                {{ _('Белсенді емес') }}
+              </span>
+
+            {% endif %}
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  </section>
+
+
+  <!-- =====================================================
+       2. ORGANIZATION
+       ===================================================== -->
+
+  <section class="qb-card qb-detail-section">
+
+    <div class="qb-card-header">
+
+      <h2 class="qb-card-title">
+        {{ _('2. Білім беру ұйымы') }}
+      </h2>
+
+    </div>
+
+
+    <div class="qb-card-body">
+
+      <div class="qb-detail-grid qb-detail-grid--organization">
+
+        <div class="qb-detail-item">
+
+          <div class="qb-detail-label">
+            {{ _('Білім беру ұйымы') }}
+          </div>
+
+          <div class="qb-detail-value qb-detail-value--strong">
+            {{ expert.school_name }}
+          </div>
+
+        </div>
+
+
+        <div class="qb-detail-item">
+
+          <div class="qb-detail-label">
+            {{ _('Аудан / қала') }}
+          </div>
+
+          <div class="qb-detail-value">
+            {{ expert.district_name }}
+          </div>
+
+        </div>
+
+
+        <div class="qb-detail-item">
+
+          <div class="qb-detail-label">
+            {{ _('Өңір') }}
+          </div>
+
+          <div class="qb-detail-value">
+            {{ expert.region_name }}
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  </section>
+
+
+  <!-- =====================================================
+       3. PERSONAL DATA
+       ===================================================== -->
+
+  <section class="qb-card qb-detail-section">
+
+    <div class="qb-card-header">
+
+      <h2 class="qb-card-title">
+        {{ _('3. Жеке мәліметтер') }}
+      </h2>
+
+    </div>
+
+
+    <div class="qb-card-body">
+
+      <div class="qb-detail-grid qb-detail-grid--3">
+
+        <div class="qb-detail-item">
+
+          <div class="qb-detail-label">
+            {{ _('Аты-жөні') }}
+          </div>
+
+          <div class="qb-detail-value qb-detail-value--strong">
+            {{ expert.full_name }}
+          </div>
+
+        </div>
+
+
+        <div class="qb-detail-item">
+
+          <div class="qb-detail-label">
+            {{ _('ЖСН') }}
+          </div>
+
+          <div class="qb-detail-value">
+            {{ expert.iin }}
+          </div>
+
+        </div>
+
+
+        <div class="qb-detail-item">
+
+          <div class="qb-detail-label">
+            {{ _('Телефон') }}
+          </div>
+
+          <div class="qb-detail-value">
+            {{ expert.phone or '—' }}
+          </div>
+
+        </div>
+
+
+        <div class="qb-detail-item">
+
+          <div class="qb-detail-label">
+            Email
+          </div>
+
+          <div class="qb-detail-value qb-detail-value--break">
+            {{ expert.email or '—' }}
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  </section>
+
+
+  <!-- =====================================================
+       4. PROFESSIONAL DATA
+       ===================================================== -->
+
+  <section class="qb-card qb-detail-section">
+
+    <div class="qb-card-header">
+
+      <h2 class="qb-card-title">
+        {{ _('4. Кәсіби мәліметтер') }}
+      </h2>
+
+    </div>
+
+
+    <div class="qb-card-body">
+
+      <div class="qb-detail-grid qb-detail-grid--2">
+
+        <div class="qb-detail-item">
+
+          <div class="qb-detail-label">
+            {{ _('Лауазымы') }}
+          </div>
+
+          <div class="qb-detail-value">
+            {{ expert.position_text or '—' }}
+          </div>
+
+        </div>
+
+
+        <div class="qb-detail-item">
+
+          <div class="qb-detail-label">
+            {{ _('Біліктілік санаты') }}
+          </div>
+
+          <div class="qb-detail-value">
+            {{ expert_standard_label(expert.qualification_category_text) or '—' }}
+          </div>
+
+        </div>
+
+
+        <div class="qb-detail-item">
+
+          <div class="qb-detail-label">
+            {{ _('Білімі') }}
+          </div>
+
+          <div class="qb-detail-value qb-detail-value--break">
+            {{ expert_standard_label(expert.education_text) or '—' }}
+          </div>
+
+        </div>
+
+
+        <div class="qb-detail-item">
+
+          <div class="qb-detail-label">
+            {{ _('Мамандығы') }}
+          </div>
+
+          <div class="qb-detail-value qb-detail-value--break">
+            {{ expert.specialty_text or '—' }}
+          </div>
+
+        </div>
+
+
+        <div class="qb-detail-item">
+
+          <div class="qb-detail-label">
+            {{ _('Педагогикалық өтілі') }}
+          </div>
+
+          <div class="qb-detail-value">
+
+            {% if expert.ped_experience_years is not none %}
+
+              {{ expert.ped_experience_years }} {{ _('жыл') }}
+
+            {% else %}
+
+              —
+
+            {% endif %}
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  </section>
+
+
+  <!-- =====================================================
+       5. SCHOOL MONITOR ACCOUNT
+       ===================================================== -->
+
+  <section class="qb-card qb-detail-section">
+
+    <div class="qb-card-header">
+
+      <h2 class="qb-card-title">
+        {{ _('5. School Monitor аккаунты') }}
+      </h2>
+
+    </div>
+
+
+    <div class="qb-card-body">
+
+      {% if expert.has_account %}
+
+        <div class="qb-info-box qb-info-box--success">
+
+          <div class="qb-info-box__title">
+            {{ _('Аккаунт сарапшымен байланыстырылған') }}
+          </div>
+
+          <div class="qb-info-box__text">
+            User ID:
+            <strong>{{ expert.user_id }}</strong>
+          </div>
+
+        </div>
+
+      {% else %}
+
+        <div class="qb-info-box qb-info-box--neutral">
+
+          <div class="qb-info-box__title">
+            {{ _('Аккаунт әлі байланыстырылмаған') }}
+          </div>
+
+          <div class="qb-info-box__text">
+            {{ _('Сарапшы реестрде сақталады. School Monitor жүйесінде осы ЖСН бойынша белсенді аккаунт пайда болғаннан кейін оны сарапшы жазбасымен байланыстыруға болады.') }}
+          </div>
+
+        </div>
+
+      {% endif %}
+
+    </div>
+
+  </section>
+
+
+  <!-- =====================================================
+       6. AUDIT
+       ===================================================== -->
+
+  <section class="qb-card qb-detail-section">
+
+    <div class="qb-card-header">
+
+      <h2 class="qb-card-title">
+        {{ _('6. Жүйелік ақпарат') }}
+      </h2>
+
+    </div>
+
+
+    <div class="qb-card-body">
+
+      <div class="qb-detail-grid qb-detail-grid--4">
+
+        <div class="qb-detail-item">
+
+          <div class="qb-detail-label">
+            {{ _('Сарапшы ID') }}
+          </div>
+
+          <div class="qb-detail-value">
+            {{ expert.expert_id }}
+          </div>
+
+        </div>
+
+
+        <div class="qb-detail-item">
+
+          <div class="qb-detail-label">
+            {{ _('Қосылған күні') }}
+          </div>
+
+          <div class="qb-detail-value">
+
+            {% if expert.created_at %}
+
+              {{ expert.created_at.strftime('%d.%m.%Y %H:%M') }}
+
+            {% else %}
+
+              —
+
+            {% endif %}
+
+          </div>
+
+        </div>
+
+
+        <div class="qb-detail-item">
+
+          <div class="qb-detail-label">
+            {{ _('Соңғы өзгеріс') }}
+          </div>
+
+          <div class="qb-detail-value">
+
+            {% if expert.updated_at %}
+
+              {{ expert.updated_at.strftime('%d.%m.%Y %H:%M') }}
+
+            {% else %}
+
+              —
+
+            {% endif %}
+
+          </div>
+
+        </div>
+
+
+        {% if not expert.is_active %}
+
+          <div class="qb-detail-item">
+
+            <div class="qb-detail-label">
+              {{ _('Белсенділік тоқтатылған') }}
+            </div>
+
+            <div class="qb-detail-value">
+
+              {% if expert.deactivated_at %}
+
+                {{ expert.deactivated_at.strftime('%d.%m.%Y %H:%M') }}
+
+              {% else %}
+
+                —
+
+              {% endif %}
+
+            </div>
+
+          </div>
+
+        {% endif %}
+
+      </div>
+
+    </div>
+
+  </section>
+
+
+  <!-- =====================================================
+       BOTTOM ACTIONS
+       ===================================================== -->
+
+  <div class="qb-bottom-actions">
+
+    <a
+      href="{{ url_for('region_question_bank_expert_list') }}"
+      class="qb-btn qb-btn--secondary"
+     data-sm-action="nav" data-sm-back="true">
+      {{ _('← Реестрге оралу') }}
+    </a>
+
+    <a
+      href="{{
+        url_for(
+          'region_question_bank_expert_edit_page',
+          expert_id=expert.expert_id
+        )
+      }}"
+      class="qb-btn qb-btn--primary"
+     data-sm-action="edit">
+      {{ _('Мәліметтерді өңдеу') }}
+    </a>
+
+  </div>
+
+</div>
+
+{% endblock %}

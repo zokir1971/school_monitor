@@ -1,0 +1,741 @@
+{% extends "base.html" %}
+
+{% block title %}
+{{ _('Тапсырмалар банкі') }}
+{% endblock %}
+
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static',path='css/teacher/assessment/question_bank/items_filters.css') }}?v=71">
+<style>
+  .qb-page {
+    max-width: 1380px;
+    margin: 0 auto;
+    padding: 24px 16px 48px;
+  }
+
+  /* =====================================================
+     HEADER
+     ===================================================== */
+
+  .qb-header {
+    margin-bottom: 24px;
+  }
+
+  .qb-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+
+    margin-bottom: 12px;
+
+    color: #475467;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  .qb-back:hover {
+    color: #101828;
+  }
+
+  .qb-header h1 {
+    margin: 0 0 8px;
+
+    color: #101828;
+    font-size: 28px;
+    font-weight: 700;
+  }
+
+  .qb-header p {
+    max-width: 780px;
+    margin: 0;
+
+    color: #667085;
+    font-size: 15px;
+    line-height: 1.6;
+  }
+
+  /* =====================================================
+     COUNTERS
+     ===================================================== */
+
+  .qb-counters {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 12px;
+
+    margin-bottom: 24px;
+  }
+
+  .qb-counter {
+    display: block;
+
+    padding: 16px;
+
+    background: #fff;
+
+    border: 1px solid #e4e7ec;
+    border-radius: 12px;
+
+    color: inherit;
+    text-decoration: none;
+
+    transition:
+      border-color 0.15s ease,
+      box-shadow 0.15s ease;
+  }
+
+  .qb-counter:hover {
+    border-color: #98a2b3;
+    box-shadow: 0 3px 10px rgba(16, 24, 40, 0.06);
+  }
+
+  .qb-counter--active {
+    border-color: #344054;
+    box-shadow: 0 0 0 1px #344054;
+  }
+
+  .qb-counter__label {
+    display: block;
+
+    margin-bottom: 8px;
+
+    color: #667085;
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  .qb-counter__value {
+    display: block;
+
+    color: #101828;
+    font-size: 26px;
+    font-weight: 700;
+  }
+
+  /* =====================================================
+     CONTENT CARD
+     ===================================================== */
+
+  .qb-content {
+    overflow: hidden;
+
+    background: #fff;
+
+    border: 1px solid #e4e7ec;
+    border-radius: 14px;
+  }
+
+  .qb-content__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+
+    padding: 18px 20px;
+
+    border-bottom: 1px solid #eaecf0;
+  }
+
+  .qb-content__title {
+    margin: 0;
+
+    color: #101828;
+    font-size: 17px;
+    font-weight: 700;
+  }
+
+  .qb-content__count {
+    color: #667085;
+    font-size: 14px;
+  }
+
+  /* =====================================================
+     TABLE
+     ===================================================== */
+
+  .qb-table-wrap {
+    overflow-x: auto;
+  }
+
+  .qb-table {
+    width: 100%;
+    min-width: 1050px;
+
+    border-collapse: collapse;
+  }
+
+  .qb-table th {
+    padding: 12px 16px;
+
+    background: #f9fafb;
+
+    border-bottom: 1px solid #eaecf0;
+
+    color: #475467;
+    text-align: left;
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  .qb-table td {
+    padding: 14px 16px;
+
+    border-bottom: 1px solid #eaecf0;
+
+    color: #344054;
+    font-size: 14px;
+    vertical-align: top;
+  }
+
+  .qb-table tbody tr:last-child td {
+    border-bottom: 0;
+  }
+
+  .qb-table tbody tr:hover {
+    background: #fcfcfd;
+  }
+
+  .qb-question {
+    min-width: 300px;
+    max-width: 440px;
+  }
+
+  .qb-question__title {
+    margin-bottom: 5px;
+
+    color: #101828;
+    font-weight: 700;
+  }
+
+  .qb-question__text {
+    display: -webkit-box;
+    overflow: hidden;
+
+    color: #667085;
+    line-height: 1.45;
+
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+
+  .qb-muted {
+    color: #667085;
+  }
+
+  .qb-question__link {
+    color: #0000ff;
+    text-decoration: none;
+    font-weight: 700;
+  }
+
+  .qb-question__link:hover {
+    text-decoration: underline;
+  }
+
+  /* =====================================================
+     BADGES
+     ===================================================== */
+
+  .qb-badge {
+    display: inline-flex;
+    align-items: center;
+
+    padding: 4px 8px;
+
+    border-radius: 999px;
+
+    background: #f2f4f7;
+    color: #344054;
+
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .qb-badge--draft {
+    background: #f2f4f7;
+    color: #344054;
+  }
+
+  .qb-badge--review {
+    background: #fffaeb;
+    color: #b54708;
+  }
+
+  .qb-badge--ready {
+    background: #ecfdf3;
+    color: #027a48;
+  }
+
+  .qb-badge--rejected {
+    background: #fef3f2;
+    color: #b42318;
+  }
+
+  .qb-badge--archived {
+    background: #f2f4f7;
+    color: #667085;
+  }
+
+  /* =====================================================
+     EMPTY STATE
+     ===================================================== */
+
+  .qb-empty {
+    padding: 56px 24px;
+
+    text-align: center;
+  }
+
+  .qb-empty__icon {
+    margin-bottom: 12px;
+    font-size: 34px;
+  }
+
+  .qb-empty__title {
+    margin: 0 0 6px;
+
+    color: #101828;
+    font-size: 17px;
+    font-weight: 700;
+  }
+
+  .qb-empty__text {
+    margin: 0;
+
+    color: #667085;
+    font-size: 14px;
+  }
+
+  /* =====================================================
+     RESPONSIVE
+     ===================================================== */
+
+  @media (max-width: 1100px) {
+    .qb-counters {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 640px) {
+    .qb-counters {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .qb-content__header {
+      align-items: flex-start;
+      flex-direction: column;
+    }
+  }
+
+  .qb-bank-heading {
+    display:flex; align-items:center; justify-content:space-between;
+    gap:16px; flex-wrap:wrap; margin-bottom:8px;
+  }
+  .qb-header .qb-bank-heading h1 { margin:0; }
+  .qb-bank-heading__back {
+    display:inline-flex; align-items:center; justify-content:center;
+    margin-left:auto; min-height:42px; box-sizing:border-box; padding:10px 18px;
+    border:1px solid #2563eb; border-radius:8px; background:#2563eb;
+    color:#fff; font:600 14px/1.5 system-ui,-apple-system,"Segoe UI",Arial,sans-serif;
+    text-align:center; text-decoration:none;
+  }
+  .qb-bank-heading__back:hover { background:#1d4ed8; border-color:#1d4ed8; color:#fff; text-decoration:none; }
+  .qb-bank-heading__back:focus-visible { outline:3px solid #93c5fd; outline-offset:3px; }
+</style>
+{% endblock %}
+
+
+{% block content %}
+
+<div class="qb-page">
+
+  <!-- ===================================================
+       HEADER
+       =================================================== -->
+
+  <header class="qb-header">
+
+    <div class="qb-bank-heading">
+      <h1>{{ _('Тапсырмалар банкі') }}</h1>
+      <a class="qb-bank-heading__back" href="{{ url_for('teacher_question_bank_page') }}" data-sm-action="nav" data-sm-back="true">
+        {{ _('← Тапсырмалар конструкторына қайту') }}
+      </a>
+    </div>
+
+    <p>
+      {{ _('Өзіңіз құрған тапсырмаларды, олардың мәртебесін және тексеру кезеңдерін осы жерден бақылай аласыз.') }}
+    </p>
+
+  </header>
+
+
+  <!-- ===================================================
+       COUNTERS / STATUS FILTERS
+       =================================================== -->
+
+  {% include 'teacher/assessment/question_bank/components/items_filters.html' %}
+  <section class="qb-counters">
+
+    <!-- ALL -->
+
+    <a
+      class="
+        qb-counter
+        {% if page.selected_status is none %}
+          qb-counter--active
+        {% endif %}
+      "
+      href="{{ request.url.remove_query_params('status') }}"
+     data-sm-action="nav">
+      <span class="qb-counter__label">
+        {{ _('Барлығы') }}
+      </span>
+
+      <span class="qb-counter__value">
+        {{ page.counters.total }}
+      </span>
+    </a>
+
+
+    <!-- DRAFT -->
+
+    <a
+      class="
+        qb-counter
+        {% if page.selected_status
+              and page.selected_status.value == 'draft' %}
+          qb-counter--active
+        {% endif %}
+      "
+      href="{{ request.url.include_query_params(status='draft') }}"
+     data-sm-action="nav">
+      <span class="qb-counter__label">
+        {{ _('Черновик') }}
+      </span>
+
+      <span class="qb-counter__value">
+        {{ page.counters.draft }}
+      </span>
+    </a>
+
+
+    <!-- REVIEW -->
+
+    <a
+      class="
+        qb-counter
+        {% if page.selected_status
+              and page.selected_status.value == 'review' %}
+          qb-counter--active
+        {% endif %}
+      "
+      href="{{ request.url.include_query_params(status='review') }}"
+     data-sm-action="nav">
+      <span class="qb-counter__label">
+        {{ _('Тексеруде') }}
+      </span>
+
+      <span class="qb-counter__value">
+        {{ page.counters.review }}
+      </span>
+    </a>
+
+
+    <!-- READY -->
+
+    <a
+      class="
+        qb-counter
+        {% if page.selected_status
+              and page.selected_status.value == 'ready' %}
+          qb-counter--active
+        {% endif %}
+      "
+      href="{{ request.url.include_query_params(status='ready') }}"
+     data-sm-action="nav">
+      <span class="qb-counter__label">
+        {{ _('Дайын') }}
+      </span>
+
+      <span class="qb-counter__value">
+        {{ page.counters.ready }}
+      </span>
+    </a>
+
+
+    <!-- REJECTED -->
+
+    <a
+      class="
+        qb-counter
+        {% if page.selected_status
+              and page.selected_status.value == 'rejected' %}
+          qb-counter--active
+        {% endif %}
+      "
+      href="{{ request.url.include_query_params(status='rejected') }}"
+     data-sm-action="nav">
+      <span class="qb-counter__label">
+        {{ _('Қайтарылған') }}
+      </span>
+
+      <span class="qb-counter__value">
+        {{ page.counters.rejected }}
+      </span>
+    </a>
+
+
+    <!-- ARCHIVED -->
+
+    <a
+      class="
+        qb-counter
+        {% if page.selected_status
+              and page.selected_status.value == 'archived' %}
+          qb-counter--active
+        {% endif %}
+      "
+      href="{{ request.url.include_query_params(status='archived') }}"
+     data-sm-action="edit">
+      <span class="qb-counter__label">
+        {{ _('Архив') }}
+      </span>
+
+      <span class="qb-counter__value">
+        {{ page.counters.archived }}
+      </span>
+    </a>
+
+  </section>
+
+
+  <!-- ===================================================
+       ITEMS
+       =================================================== -->
+
+  <section class="qb-content">
+
+    <div class="qb-content__header">
+
+      <h2 class="qb-content__title">
+        {{ _('Менің тапсырмаларым') }}
+      </h2>
+
+      <div class="qb-content__count">
+        {{ _('Көрсетілгені:') }}
+        <strong>{{ page.items | length }}</strong>
+      </div>
+
+    </div>
+
+
+    {% if page.items %}
+
+      <div class="qb-table-wrap">
+
+        <table class="qb-table">
+
+          <thead>
+            <tr>
+              <th>{{ _('Тапсырма') }}</th>
+              <th>{{ _('Пән') }}</th>
+              <th>{{ _('Сынып') }}</th>
+              <th>{{ _('Түрі') }}</th>
+              <th>{{ _('Қиындық') }}</th>
+              <th>{{ _('Оқу мақсаты') }}</th>
+              <th>{{ _('Жасалу тәсілі') }}</th>
+              <th>{{ _('Мәртебе') }}</th>
+              <th>{{ _('Жаңартылды') }}</th>
+            </tr>
+          </thead>
+
+          <tbody>
+
+            {% for item in page.items %}
+
+              <tr>
+
+                <!-- QUESTION -->
+
+                <td class="qb-question">
+
+  {% set status_value = item.status.value
+    if item.status.value is defined
+    else item.status %}
+
+  {% set question_route =
+    'teacher_question_bank_item_edit_page'
+    if status_value == 'rejected'
+    else 'teacher_question_bank_item_detail_page' %}
+
+  <div class="qb-question__title">
+
+    <a
+      class="qb-question__link"
+      href="{{ url_for(
+        question_route,
+        item_id=item.item_id
+      ) }}"
+     data-sm-action="nav">
+      {% if item.title %}
+        {{ item.title }}
+      {% else %}
+        {{ _('Тапсырма #') }}{{ item.item_id }}
+      {% endif %}
+    </a>
+
+  </div>
+
+  <div class="qb-question__text">
+    {{ item.text }}
+  </div>
+
+</td>
+
+                <!-- SUBJECT -->
+
+                <td>
+                  {{ item.subject_name }}
+                </td>
+
+
+                <!-- GRADE -->
+
+                <td>
+                  {{ item.grade_level }}
+                </td>
+
+
+                <!-- TYPE -->
+
+                <td>
+                  <span class="qb-badge">
+                    {{ _(item.question_type.label_kz) }}
+                  </span>
+                </td>
+
+
+                <!-- DIFFICULTY -->
+
+                <td>
+                  <span class="qb-badge">
+                    {{ _(item.difficulty.label_kz) }}
+                  </span>
+                </td>
+
+
+                <!-- OBJECTIVES -->
+
+                <td>
+                  {{ item.objective_count }}
+                </td>
+
+
+                <!-- ORIGIN -->
+
+                <td>
+                  {% set origin_value = item.origin.value if item.origin.value is defined else item.origin %}
+                  {% if origin_value == 'ai_generated' %}
+                    <span class="qb-badge">
+                      AI
+                    </span>
+                  {% elif origin_value == 'imported' %}
+                    <span class="qb-badge">{{ _('Импорт') }}</span>
+                  {% else %}
+                    <span class="qb-badge">
+                      {{ _('Қолмен') }}
+                    </span>
+                  {% endif %}
+                </td>
+
+
+                <!-- STATUS -->
+
+                <td>
+
+                  {% if item.status.value == 'draft' %}
+
+                    <span class="qb-badge qb-badge--draft">
+                      {{ _('Черновик') }}
+                    </span>
+
+                  {% elif item.status.value == 'review' %}
+
+                    <span class="qb-badge qb-badge--review">
+                      {{ _('Тексеруде') }}
+                    </span>
+
+                  {% elif item.status.value == 'ready' %}
+
+                    <span class="qb-badge qb-badge--ready">
+                      {{ _('Дайын') }}
+                    </span>
+
+                  {% elif item.status.value == 'rejected' %}
+
+                    <span class="qb-badge qb-badge--rejected">
+                      {{ _('Қайтарылған') }}
+                    </span>
+
+                  {% elif item.status.value == 'archived' %}
+
+                    <span class="qb-badge qb-badge--archived">
+                      {{ _('Архив') }}
+                    </span>
+
+                  {% else %}
+
+                    <span class="qb-badge">
+                      {{ item.status.value }}
+                    </span>
+
+                  {% endif %}
+
+                </td>
+
+
+                <!-- UPDATED -->
+
+                <td class="qb-muted">
+                  {{ item.updated_at.strftime('%d.%m.%Y %H:%M') }}
+                </td>
+
+              </tr>
+
+            {% endfor %}
+
+          </tbody>
+
+        </table>
+
+      </div>
+
+    {% else %}
+
+      <div class="qb-empty">
+
+        <div class="qb-empty__icon">
+          📚
+        </div>
+
+        <h3 class="qb-empty__title">
+          {{ _('Тапсырмалар табылмады') }}
+        </h3>
+
+        <p class="qb-empty__text">
+          {{ _('Таңдалған мәртебе бойынша тапсырмалар жоқ.') }}
+        </p>
+
+      </div>
+
+    {% endif %}
+
+  </section>
+
+</div>
+
+{% endblock %}

@@ -1,0 +1,95 @@
+{% extends 'base.html' %}
+{% block title %}{{ _('Оқу мақсаттарын XLS/XLSX арқылы жүктеу') }}{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{{ url_for('static', path='css/learning_objective_rich.css') }}"><link rel="stylesheet" href="{{ url_for('static', path='css/learning_objective_import.css') }}"><link rel="stylesheet" href="{{ url_for('static', path='css/learning_objective_table_import.css') }}"><link rel="stylesheet" href="{{ url_for('static', path='css/learning_objective_preview_compact.css') }}?v=2">{% endblock %}
+{% block content %}
+<div class="lo-import lo-table">
+  <p><a class="lo-button lo-secondary" href="{{ url_for('super_learning_objective_upload_choice') }}" data-sm-action="nav" data-sm-back="true">{{ _('← Таңдау / Выбор способа загрузки') }}</a></p>
+  <div class="lo-heading"><div><h1>{{ _('Оқу мақсаттары · XLS/XLSX') }}</h1><p>{{ _('Исходная выгрузка без ручной перестройки таблиц. Обязательные поля отмечены *.') }}</p></div>
+    <a class="lo-button lo-secondary" href="{{ url_for('super_learning_objective_import_page') }}" data-sm-action="primary">{{ _('PDF жүктеу') }}</a>
+    <a class="lo-button lo-secondary" href="{{ url_for('super_learning_objective_table_import_page') }}" data-sm-action="nav">{{ _('Жаңа импорт') }}</a></div>
+  {% if error %}<div class="lo-message lo-error" role="alert">{{ _(error) }}</div>{% endif %}
+  {% if result %}
+    <div class="lo-message lo-success">{{ _('Добавлено целей:') }} {{ result.created }}{{ _('. Уже существовали:') }} {{ result.skipped }}{{ _('. Добавлено четвертей к существующим целям:') }} {{ result.quarters_added }}.</div>
+  {% if payload is defined %}
+<details class="lo-panel"><summary>{{ _('Сақталған мақсаттар / Сохранённые цели') }}</summary>
+{% for row in payload.rows %}<div><strong>{{ row.code }}</strong>
+{% if row.get('formulations') %}
+{% for formulation in row.formulations %}<section><strong>{{ formulation.language|upper }} {{ _('· Четверти:') }} {{ formulation.quarters|join(', ') }}</strong><p>
+{% for segment in formulation.segments %}{% if segment.type == 'latex' %}<math-field read-only>{{ segment.text }}</math-field>{% else %}{{ segment.text }}{% endif %}{% endfor %}</p></section>{% endfor %}
+{% else %}
+{% for language in ['kz','ru'] %}<p>{{ language|upper }}: {{ row.get('title_'+language, '') }}</p>{% endfor %}
+{% endif %}</div>{% endfor %}
+</details><script src="https://cdn.jsdelivr.net/npm/mathlive" defer></script>
+{% endif %}
+{% elif payload is defined %}
+    <section class="lo-panel"><h2>{{ payload.metadata.program_title_kz }}</h2>
+      <p>{{ _('Предмет:') }} {{ payload.table_binding.subject_name }} {{ _('· Класс:') }} {{ payload.metadata.grade_from }} {{ _('· Приказ №') }}{{ payload.metadata.order_number }} {{ _('· Приложение') }} {{ payload.metadata.appendix_number }}</p>
+      {% for language in ['kz','ru'] %}{% if payload.get('file_key_' ~ language) %}<a class="lo-button lo-secondary" href="{{ url_for('super_learning_objective_table_import_file', draft_id=draft_id, language=language) }}" data-sm-action="nav">{{ _('Исходник') }} {{ language|upper }}: {{ payload.get('filename_' ~ language) }}</a>{% endif %}{% endfor %}
+    </section>
+    <div class="lo-message">{{ _('Все формулировки одного кода сохраняются отдельно со своими четвертями. Не удаляйте варианты с другими жанрами или содержанием. Предмет подтверждает суперадмин: без заголовка таблицы его нельзя доказать автоматически.') }}</div>
+    {% if payload.warnings %}<details class="lo-panel" open><summary>{{ _('Замечания (') }}{{ payload.warnings|length }})</summary><ul>{% for warning in payload.warnings %}<li>{{ _(warning) }}</li>{% endfor %}</ul></details>{% endif %}
+    {% if expired %}<div class="lo-message lo-error">{{ _('Предпросмотр истёк. Создайте новый импорт.') }}</div>{% else %}
+    <form id="lo-confirm" method="post" action="{{ url_for('super_learning_objective_table_import_confirm', draft_id=draft_id) }}">
+      <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" id="lo-rows-json" name="rows_json">
+      <div class="lo-toolbar"><strong id="lo-count"></strong><button class="lo-button lo-secondary" type="button" id="lo-add" data-sm-action="primary">{{ _('+ Мақсат қосу') }}</button></div>
+      <div class="lo-toolbar"><label>{{ _('Просмотр по четвертям') }} <select id="lo-quarter-filter"><option value="">{{ _('Все четверти') }}</option>{% for q in range(1,5) %}<option value="{{ q }}">{{ q }} {{ _('четверть') }}</option>{% endfor %}</select></label><span id="lo-quarter-summary"></span></div>
+      <p class="lo-hint">{{ _('Фильтр меняет только просмотр. Сохраняются все оставшиеся карточки. Исходные четверти относятся только к конкретной формулировке.') }}</p>
+      <div id="lo-rows"></div>
+      <div class="lo-panel"><label><input type="checkbox" name="reviewed" value="yes" required> {{ _('Проверены предмет, тексты, четверти и замечания по исходной выгрузке *') }}</label><button class="lo-button" type="submit" data-sm-action="primary">{{ _('Справочникке сақтау') }}</button></div>
+    </form>
+    <input type="hidden" id="lo-source-rows" value="{{ payload.rows|tojson|forceescape }}">
+    <input type="hidden" id="lo-initial-rows" value="{{ rows|tojson|forceescape }}">
+    {% set settings = {'grade_from': payload.metadata.grade_from, 'grade_to': payload.metadata.grade_to, 'multiple_quarters': true} %}
+    <input type="hidden" id="lo-selected-pages" value="{{ settings|tojson|forceescape }}">
+    {% endif %}
+  {% else %}
+    <form class="lo-panel" data-objective-autofill method="post" enctype="multipart/form-data" action="{{ url_for('super_learning_objective_table_import_preview') }}">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <h2>{{ _('Предмет и программа') }}</h2><div class="lo-grid">
+        <label>{{ _('Пән / Предмет *') }}<select name="subject_id" required><option value="">{{ _('Выберите предмет') }}</option>
+          {% for subject in subjects %}{% if form.get('subject_id','')|string == subject.id|string %}<option value="{{ subject.id }}" data-code="{{ subject.code }}" data-name-kz="{{ subject.name_kz }}" data-name-ru="{{ subject.name_ru or subject.name_kz }}" selected>{{ assessment_subject_name(subject) }}</option>{% else %}<option value="{{ subject.id }}" data-code="{{ subject.code }}" data-name-kz="{{ subject.name_kz }}" data-name-ru="{{ subject.name_ru or subject.name_kz }}">{{ assessment_subject_name(subject) }}</option>{% endif %}{% endfor %}
+        </select></label>
+        <label>{{ _('Сынып / Класс *') }}<select name="grade_level" required><option value="">{{ _('Выберите класс') }}</option>{% for grade in range(1,13) %}{% if form.get('grade_level','')|string == grade|string %}<option value="{{ grade }}" selected>{{ grade }}</option>{% else %}<option value="{{ grade }}">{{ grade }}</option>{% endif %}{% endfor %}</select></label>
+        <label>{{ _('Язык обучения *') }}<select name="instruction_language" required><option value="">{{ _('Выберите язык обучения') }}</option>{% for code,label in [('kz','Қазақша'),('ru','Русский'),('uz_ug_tg','Уйгурский / узбекский / таджикский')] %}{% if form.get('instruction_language') == code %}<option value="{{ code }}" selected>{{ _(label) }}</option>{% else %}<option value="{{ code }}">{{ _(label) }}</option>{% endif %}{% endfor %}</select></label>
+        <label data-track-wrap hidden>{{ _('Бағыт / Направление *') }}
+<select name="education_track" disabled><option value="">{{ _('Выберите направление') }}</option>
+{% for value,label in [('emn','Жаратылыстану-математикалық / ЕМН'),('ogn','Қоғамдық-гуманитарлық / ОГН')] %}
+{% if form.get('education_track') == value %}<option value="{{ value }}" selected>{{ _(label) }}</option>{% else %}<option value="{{ value }}">{{ _(label) }}</option>{% endif %}
+{% endfor %}</select></label>
+        <label>{{ _('Название программы KZ *') }}<input name="program_title_kz" required placeholder="{{ _('Заполнится автоматически; можно уточнить') }}" value="{{ form.get('program_title_kz','') }}"></label>
+        <label>{{ _('Название программы RU') }}<input name="program_title_ru" placeholder="{{ _('Заполнится автоматически; можно уточнить') }}" value="{{ form.get('program_title_ru','') }}"></label>
+        <label>{{ _('Ключ варианта *') }}<input name="variant_key" required placeholder="{{ _('Заполнится автоматически; можно уточнить') }}" value="{{ form.get('variant_key','') }}"></label>
+      </div>
+      <p class="lo-hint">{{ _('Названия и ключи формируются автоматически. При необходимости уточните их по программе. Если название предмета RU отсутствует в справочнике, проверьте русское название вручную.') }}</p>
+      <h2>{{ _('Официальный источник') }}</h2><div class="lo-grid">
+        <label>{{ _('Номер приказа *') }}<input name="order_number" required placeholder="467" value="{{ form.get('order_number','') }}"></label>
+        <label>{{ _('Дата приказа *') }}<input name="order_date" type="date" required value="{{ form.get('order_date','') }}"></label>
+        {% set edition_mode = form.get('edition_mode', 'revised' if form.get('edition_date') and form.get('edition_date') != form.get('order_date') else 'original') %}
+        <label>{{ _('Редакция документа *') }}<select name="edition_mode">{% if edition_mode == 'original' %}<option value="original" selected>{{ _('Исходная — дата приказа') }}</option><option value="revised">{{ _('Изменённая редакция') }}</option>{% else %}<option value="original">{{ _('Исходная — дата приказа') }}</option><option value="revised" selected>{{ _('Изменённая редакция') }}</option>{% endif %}</select></label>
+        <label>{{ _('Дата редакции документа *') }}<input type="date" name="edition_date" value="{{ form.get('edition_date','') }}" required><span class="lo-hint">{{ _('Для исходной версии подставляется дата приказа. Для изменённой — укажите дату редакции из официального источника. Это не дата загрузки файла.') }}</span></label>
+        <label>{{ _('Номер приложения *') }}<input name="appendix_number" required placeholder="{{ _('Номер приложения программы в приказе') }}" value="{{ form.get('appendix_number','') }}"></label>
+        <label>{{ _('Ключ источника *') }}<input name="document_key" required maxlength="100" placeholder="{{ _('Заполнится автоматически; можно уточнить') }}" value="{{ form.get('document_key','') }}"></label>
+        <label>{{ _('Название источника KZ *') }}<input name="source_title_kz" required placeholder="{{ _('Бұйрықтың ресми атауы') }}" value="{{ form.get('source_title_kz','') }}"></label>
+        <label>{{ _('Название источника RU') }}<input name="source_title_ru" placeholder="{{ _('Официальное название приказа') }}" value="{{ form.get('source_title_ru','') }}"></label>
+      </div>
+      <h2>{{ _('Исходные файлы') }}</h2><div class="lo-grid">
+        <label>{{ _('Выгрузка KZ *') }}<input type="file" name="export_kz" accept=".xls,.xlsx" required></label>
+        <label>{{ _('Выгрузка RU') }}<input type="file" name="export_ru" accept=".xls,.xlsx"></label>
+      </div>
+      <p>{{ _('Загрузите таблицу одного предмета и класса. Объединённые ячейки и строки «1-тоқсан» сохраняйте. Язык обучения и язык текста выгрузки — разные поля. Один код может повторяться в нескольких четвертях.') }}</p>
+      <label><input type="checkbox" name="source_confirmed" value="yes" required> {{ _('Подтверждаю: выгрузки относятся к выбранным предмету, классу и программе и получены из указанного официального источника *') }}</label>
+      <div class="lo-actions"><button class="lo-button lo-secondary" type="button" data-refresh-generated data-sm-action="primary">{{ _('Заново заполнить названия и ключи') }}</button>
+      <button class="lo-button" type="submit" data-sm-action="nav">{{ _('Алдын ала қарау / Предпросмотр') }}</button></div>
+      <script src="{{ url_for('static', path='js/learning_objective_import_autofill.js') }}" defer></script>
+      <script src="{{ url_for('static', path='js/learning_objective_import_group_language.js') }}?v=1" defer></script>
+    </form>
+  {% endif %}
+</div>
+{% if payload is defined and not result and not expired %}
+<script src="{{ url_for('static', path='js/learning_objective_table_import.js') }}?v=i18n5" defer></script>
+{% include 'super/assessment/components/learning_objective_math_dialog.html' %}
+<script src="https://cdn.jsdelivr.net/npm/mathlive" defer></script>
+<script src="{{ url_for('static', path='js/learning_objective_math_editor.js') }}?v=i18n5" defer></script>
+{% endif %}
+{% endblock %}
+

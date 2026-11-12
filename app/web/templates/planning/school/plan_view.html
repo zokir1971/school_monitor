@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 
 {% block title %}
-ВШК жоспары
+{{ _('МІБ жоспары') }}
 {% endblock %}
 
 
@@ -387,16 +387,15 @@
       <div>
 
         <div class="planning-hero__eyebrow">
-          Мектепішілік бақылау
+          {{ _('Мектепішілік бақылау') }}
         </div>
 
         <h1 class="planning-hero__title">
-          ВШК жоспары
+          {{ _('МІБ жоспары') }}
         </h1>
 
         <p class="planning-hero__description">
-          Жылдық жоспардың бағыттарын қарап,
-          қажетті бағыт бойынша жоспарды толтырыңыз.
+          {{ _('Жылдық жоспардың бағыттарын қарап, қажетті бағыт бойынша жоспарды толтырыңыз.') }}
         </p>
 
       </div>
@@ -407,8 +406,8 @@
           request.url_for('school_dashboard')
         }}?academic_year={{ plan.academic_year }}"
         class="planning-back-btn"
-      >
-        ← Жоспарларға қайту
+       data-sm-action="nav" data-sm-back="true">
+        {{ _('← Жоспарларға қайту') }}
       </a>
 
     </section>
@@ -423,7 +422,7 @@
       <div class="planning-info__item">
 
         <div class="planning-info__label">
-          Оқу жылы
+          {{ _('Оқу жылы') }}
         </div>
 
         <div class="planning-info__value">
@@ -436,7 +435,7 @@
       <div class="planning-info__item">
 
         <div class="planning-info__label">
-          Жоспар мәртебесі
+          {{ _('Жоспар мәртебесі') }}
         </div>
 
         <div class="planning-info__value">
@@ -450,11 +449,11 @@
             %}
 
             {% if plan_status == 'draft' %}
-              Жоба
+              {{ _('Жоба') }}
             {% elif plan_status == 'active' %}
-              Белсенді
+              {{ _('Белсенді') }}
             {% elif plan_status == 'archived' %}
-              Мұрағатталған
+              {{ _('Мұрағатталған') }}
             {% else %}
               {{ plan_status }}
             {% endif %}
@@ -477,11 +476,11 @@
       <div class="planning-directions__header">
 
         <h2 class="planning-directions__title">
-          Бақылау бағыттары
+          {{ _('Бақылау бағыттары') }}
         </h2>
 
         <p class="planning-directions__description">
-          Жоспарды толтыру үшін қажетті бағытты таңдаңыз.
+          {{ _('Жоспарды толтыру үшін қажетті бағытты таңдаңыз.') }}
         </p>
 
       </div>
@@ -508,7 +507,7 @@
                 <div class="planning-direction-card__content">
 
                   <div class="planning-direction-card__number">
-                    {{ loop.index }}-бағыт
+                    {{ loop.index }}{{ _('-бағыт') }}
                   </div>
 
                   <h3 class="planning-direction-card__title">
@@ -517,7 +516,7 @@
                       td.direction.short_title
                       if td.direction
                       else (
-                        "Direction #"
+                        _("Direction #")
                         ~ td.direction_id
                       )
                     }}
@@ -562,11 +561,11 @@
             </div>
 
             <div class="planning-empty__title">
-              Бағыттар табылмады
+              {{ _('Бағыттар табылмады') }}
             </div>
 
             <div class="planning-empty__text">
-              Таңдалған үлгіде бақылау бағыттары жоқ.
+              {{ _('Таңдалған үлгіде бақылау бағыттары жоқ.') }}
             </div>
 
           </div>

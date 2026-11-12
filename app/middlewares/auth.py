@@ -5,13 +5,14 @@ from starlette.requests import Request
 from starlette.responses import RedirectResponse
 
 from app.db.session import async_session_maker
-from app.modules.users.services.user_service import UserCrudService
+from app.modules.users.repo import UserRepo
+from app.core.access_session import session_user_id, session_matches
 
 # Какие страницы считаем "вебом" и защищаем редиректом на /login
 PUBLIC_PREFIXES = ("/static", "/login", "/setup")
 PUBLIC_EXACT = ("/",)  # корень
 
-PROTECTED_PREFIXES = ("/dashboard", "/dashboards", "/super", "/l1", "/l2", "/planning")
+PROTECTED_PREFIXES = ("/dashboard", "/dashboards", "/super", "/l1", "/l2", "/planning", "/access-recovery/manage", "/access-recovery/change-password")
 
 
 class AuthRedirectMiddleware(BaseHTTPMiddleware):
@@ -24,21 +25,17 @@ class AuthRedirectMiddleware(BaseHTTPMiddleware):
 
         # защищённые web-страницы
         if path.startswith(PROTECTED_PREFIXES):
-            user_id = request.cookies.get("user_id")
-            if not user_id:
-                return RedirectResponse(url="/login", status_code=302)
-
-            try:
-                uid = int(user_id)
-            except ValueError:
+            uid = session_user_id(request)
+            if not uid:
                 resp = RedirectResponse(url="/login", status_code=302)
                 resp.delete_cookie("user_id")
                 return resp
 
             async with async_session_maker() as db:
-                user = await UserCrudService.get_by_id(db, uid)
+                user = await UserRepo.get_by_id(db, uid)
 
-            if not user or not user.is_active:
+            if not session_matches(request, user):
+                request.session.clear()
                 resp = RedirectResponse(url="/login", status_code=302)
                 resp.delete_cookie("user_id")
                 return resp

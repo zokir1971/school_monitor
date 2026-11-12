@@ -1,0 +1,15 @@
+{% macro set_context(context) -%}
+{% set subject = namespace(name=none) %}
+{% for scope in create_context.teaching_scope %}
+  {% if scope.subject_id == context.subject_id %}{% set subject.name = qb_subject_name(scope) %}{% endif %}
+{% endfor %}
+<dl class="qb-set-context">
+  <div><dt>{{ _('Предмет') }}</dt><dd>{{ subject.name or (_('Предмет') ~ ' #' ~ context.subject_id) }}</dd></div>
+  <div><dt>{{ _('Класс') }}</dt><dd>{{ context.grade_level }}</dd></div>
+  <div><dt>{{ _('Четверть') }}</dt><dd>{{ context.quarter }}</dd></div>
+  <div class="qb-set-context__language"><dt>{{ _('Исходный язык') }}</dt><dd>{{ _({'kk':'Казахский','kz':'Казахский','ru':'Русский','en':'Английский'}.get(context.language, context.language)) }}</dd></div>
+  {% if context.grade_level in [10,11] and context.education_track %}
+  <div><dt>{{ _('Направление') }}</dt><dd>{{ _({'general':'Общее (без направления)','emn':'Естественно-математическое направление (ЕМН)','ogn':'Общественно-гуманитарное направление (ОГН)'}.get(context.education_track, context.education_track)) }}</dd></div>
+  {% endif %}
+</dl>
+{%- endmacro %}

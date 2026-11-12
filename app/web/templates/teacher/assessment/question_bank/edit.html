@@ -1,0 +1,382 @@
+{% from 'teacher/assessment/question_bank/components/objective_preview.html' import objective_preview, objective_language_select, objective_options, objective_choice_previews with context %}
+{# Edit uses the same question DTO and form component as the other pages. #}
+{% extends "base.html" %}
+
+{% block title %}{{ _('Тапсырманы өңдеу') }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet"
+      href="{{ url_for('static', path='css/teacher/assessment/question_bank/create.css') }}">
+
+<link rel="stylesheet"
+      href="{{ url_for('static', path='css/question_bank_objective_preview.css') }}">
+
+
+<link rel="stylesheet" href="{{ url_for('static',path='css/teacher/assessment/question_bank/page_heading.css') }}?v=40">
+{% endblock %}
+
+
+{% block content %}
+
+{% set status_value = item.status.value if item.status.value is defined else item.status %}
+{% set status_labels = {
+  'draft': 'Черновик',
+  'review': 'Тексеруде',
+  'rejected': 'Қабылданбаған',
+  'ready': 'Дайын',
+  'archived': 'Архивте'
+} %}
+
+<div class="qb-create-page">
+  <header class="qb-page-heading">
+    <h1>{{ _('Тапсырманы өңдеу #') }}{{ item.item_id }}</h1>
+    <nav class="qb-page-heading__actions" aria-label="{{ _('Тапсырманы өңдеу') }}">
+      {% if item.language.value in ['ru','kk'] %}
+      <a class="qb-page-heading__button" href="{{ url_for('teacher_question_languages',item_id=item.item_id) }}" data-sm-action="nav">{{ _('Русская и казахская версии') }}</a>
+      {% endif %}
+      <a class="qb-page-heading__button" href="{{ url_for('teacher_question_bank_item_detail_page',item_id=item.item_id) }}" data-sm-action="nav" data-sm-back="true">{{ _('← Тапсырмаға қайту') }}</a>
+    </nav>
+  </header>
+  <p class="qb-page-heading__description">{{ _('Оқу мақсатын, тапсырма мазмұнын және жауаптарын тексеріп, қажетті өзгерістерді енгізіңіз.') }}</p>
+
+  <section class="qb-create-card">
+    <div class="qb-create-card__header">
+      <h2 class="qb-create-card__title">{{ _('1. Тапсырманың контексті') }}</h2>
+      <p class="qb-create-card__description">{{ _('Тапсырма сақталған оқу контексті мен қазіргі күйі.') }}</p>
+    </div>
+
+    <div class="qb-create-summary">
+      <div class="qb-create-summary__item">
+        <span class="qb-create-summary__label">{{ _('Пән') }}</span>
+        <strong>{{ item.subject_name }}</strong>
+      </div>
+      <div class="qb-create-summary__item">
+        <span class="qb-create-summary__label">{{ _('Сынып') }}</span>
+        <strong>{{ item.grade_level }}</strong>
+      </div>
+      <div class="qb-create-summary__item">
+        <span class="qb-create-summary__label">{{ _('Тоқсан') }}</span>
+        <strong>{{ item.quarter }}</strong>
+      </div>
+      <div class="qb-create-summary__item">
+        <span class="qb-create-summary__label">{{ _('Күйі') }}</span>
+        <strong>{{ _(status_labels.get(status_value, status_value)) }}</strong>
+      </div>
+    </div>
+
+    {% if item.objectives %}
+    <div class="qb-selected-objectives">
+      <div class="qb-selected-objectives__header">
+        <h3 class="qb-selected-objectives__title">{{ _('Қазіргі оқу мақсаттары') }}</h3>
+      </div>
+      {% for objective in item.objectives %}
+      <div class="qb-selected-objective">
+        <div class="qb-selected-objective__body">
+          <div class="qb-selected-objective__code">{{ objective.code }}</div>
+          <div class="qb-selected-objective__title">{{ objective_preview(objective, item.language) }}</div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if status_value == 'rejected' %}
+    <div class="qb-form-help">
+      {{ _('Тапсырма қабылданбаған. Сарапшының ескертулерін ескеріңіз. Өзгерістер сақталғаннан кейін тапсырма черновик күйіне өтеді; оны қайта тексеруге жіберуге болады.') }}
+    </div>
+    {% endif %}
+  </section>
+
+  {% if item.reviews %}
+  <section class="qb-create-card">
+    <div class="qb-create-card__header">
+      <h2 class="qb-create-card__title">{{ _('Тексеру тарихы және сарапшы ескертулері') }}</h2>
+      <p class="qb-create-card__description">{{ _('Алдыңғы тексерулердің шешімдері мен түсіндірмелері.') }}</p>
+    </div>
+
+    {% for review in item.reviews | sort(attribute='created_at', reverse=true) %}
+    {% set decision_value = review.decision.value if review.decision.value is defined else review.decision %}
+    <div class="qb-selected-objective">
+      <div class="qb-selected-objective__number">{{ loop.index }}</div>
+      <div class="qb-selected-objective__body">
+        <div class="qb-selected-objective__code">
+          {% if decision_value == 'rejected' %}{{ _('Қабылданбаған') }}
+          {% elif decision_value == 'approved' %}{{ _('Мақұлданған') }}
+          {% else %}{{ decision_value }}{% endif %}
+          · {{ review.created_at.strftime('%d.%m.%Y %H:%M') }}
+        </div>
+        <div class="qb-selected-objective__title">{{ review.reviewer_name or _('Сарапшы') }}</div>
+        {% if review.comment %}
+        <div class="qb-form-help">
+          {% for line in review.comment.splitlines() %}{{ line }}{% if not loop.last %}<br>{% endif %}{% endfor %}
+        </div>
+        {% else %}
+        <div class="qb-form-help">{{ _('Түсіндірме көрсетілмеген.') }}</div>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </section>
+  {% endif %}
+
+  {% if status_value in ['draft', 'rejected'] and objectives %}
+  <form method="post" class="qb-question-form"
+        action="{{ url_for('teacher_question_bank_item_update', item_id=item.item_id) }}">
+
+    <input type="hidden" name="subject_id" value="{{ item.subject_id }}">
+    <input type="hidden" name="grade_level" value="{{ item.grade_level }}">
+    <input type="hidden" name="quarter" value="{{ item.quarter }}">
+
+    <section class="qb-create-card">
+      <div class="qb-create-card__header">
+        <h2 class="qb-create-card__title">{{ _('2. Оқу мақсаты') }}</h2>
+        <p class="qb-create-card__description">
+          {{ _('Осы пәнге, сыныпқа және тоқсанға қолжетімді оқу мақсатын таңдаңыз. Бір тапсырма бір оқу мақсатына сақталады.') }}
+        </p>
+      </div>
+
+      <div class="qb-objective-list">
+        {% for objective in objectives %}
+        <label class="qb-objective-option">
+          <input type="radio" name="objective_id"
+                 value="{{ objective.learning_objective_id }}"
+                 {% if objective.learning_objective_id == selected_objective_id %}checked{% endif %}
+                 required>
+          <span class="qb-objective-option__content">
+            <span class="qb-objective-option__main">
+              <span class="qb-objective-option__code">{{ objective.code }}</span>
+              <span class="qb-objective-option__title">{{ objective_preview(objective, item.language) }}</span>
+            </span>
+            <span class="qb-objective-option__check">✓</span>
+          </span>
+        </label>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section class="qb-create-card">
+      <div class="qb-create-card__header">
+        <h2 class="qb-create-card__title">{{ _('3. Тапсырманы өңдеу') }}</h2>
+        <p class="qb-create-card__description">{{ _('Мәтінді, жауаптарды және тапсырма параметрлерін өңдеңіз.') }}</p>
+      </div>
+      {% include "teacher/assessment/question_bank/components/question_form.html" %}
+    </section>
+
+  </form>
+  {% else %}
+  <section class="qb-create-card">
+    <div class="qb-empty">
+      {% if status_value not in ['draft', 'rejected'] %}
+      {{ _('Бұл күйдегі тапсырманы өңдеуге болмайды.') }}
+      {% else %}
+      {{ _('Осы контексте қолжетімді оқу мақсаттары жоқ. Өзгерістерді сақтау мүмкін емес.') }}
+      {% endif %}
+    </div>
+  </section>
+  {% endif %}
+
+    <div
+  id="qb-math-dialog"
+  class="qb-math-dialog"
+  hidden
+>
+
+  <!-- BACKDROP -->
+  <div
+    class="qb-math-dialog__backdrop"
+    data-math-dialog-cancel
+  ></div>
+
+
+  <!-- PANEL -->
+  <div
+    class="qb-math-dialog__panel"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="qb-math-dialog-title"
+  >
+
+    <!-- HEADER -->
+    <div class="qb-math-dialog__header">
+
+      <h3 id="qb-math-dialog-title">
+        {{ _('Формула енгізу') }}
+      </h3>
+
+      <button
+        type="button"
+        class="qb-math-dialog__close"
+        data-math-dialog-close
+        aria-label="{{ _('Жабу') }}"
+       data-sm-action="nav" data-sm-size="compact" data-sm-icon="true">
+        ×
+      </button>
+
+    </div>
+
+
+    <!-- BODY -->
+    <div class="qb-math-dialog__body">
+
+      <!-- =========================================
+           EXTRA MATH SYMBOLS
+           ========================================= -->
+
+      <div class="qb-math-tools">
+
+        <div class="qb-math-tools__label">
+          {{ _('Қосымша таңбалар') }}
+        </div>
+
+        <div class="qb-math-tools__buttons">
+
+          <!-- Нижний индекс -->
+          <button
+            type="button"
+            class="qb-math-tools__button"
+            data-math-action="subscript"
+            title="{{ _('Төменгі индекс') }}"
+           data-sm-action="nav" data-sm-size="compact">
+            x<sub>n</sub>
+          </button>
+          <!-- Математическая дробь -->
+          <button
+            type="button"
+            class="qb-math-tools__button"
+            data-math-action="fraction"
+            title="{{ _('Бөлшек') }}"
+           data-sm-action="nav" data-sm-size="compact">
+            <span class="qb-math-tools__fraction">
+              <span>a /</span>
+              <span>b</span>
+            </span>
+          </button>
+
+          <!-- Плюс-минус -->
+          <button
+            type="button"
+            class="qb-math-tools__button"
+            data-math-insert="\pm"
+            title="{{ _('Плюс-минус') }}"
+           data-sm-action="nav" data-sm-size="compact">
+            ±
+          </button>
+
+          <!-- Не равно -->
+          <button
+            type="button"
+            class="qb-math-tools__button"
+            data-math-insert="\ne"
+            title="{{ _('Тең емес') }}"
+           data-sm-action="nav" data-sm-size="compact">
+            ≠
+          </button>
+
+          <!-- Меньше или равно -->
+          <button
+            type="button"
+            class="qb-math-tools__button"
+            data-math-insert="\le"
+            title="{{ _('Кіші немесе тең') }}"
+           data-sm-action="nav" data-sm-size="compact">
+            ≤
+          </button>
+
+          <!-- Больше или равно -->
+          <button
+            type="button"
+            class="qb-math-tools__button"
+            data-math-insert="\ge"
+            title="{{ _('Үлкен немесе тең') }}"
+           data-sm-action="nav" data-sm-size="compact">
+            ≥
+          </button>
+
+          <!-- Pi -->
+          <button
+            type="button"
+            class="qb-math-tools__button"
+            data-math-insert="\pi"
+            title="{{ _('Пи саны') }}"
+           data-sm-action="nav" data-sm-size="compact">
+            π
+          </button>
+
+          <button
+            type="button"
+            class="qb-math-tools__button"
+            data-math-insert="\varnothing"
+            title="{{ _('Бос жиын / Пустое множество') }}"
+            aria-label="{{ _('Бос жиын / Пустое множество') }}"
+           data-sm-action="nav" data-sm-size="compact">
+            ∅
+          </button>
+
+        </div>
+
+      </div>
+
+
+      <!-- =========================================
+           MATHLIVE FIELD
+           ========================================= -->
+
+      <math-field
+        id="qb-math-field"
+        class="qb-math-field"
+        math-virtual-keyboard-policy="auto"
+      ></math-field>
+
+    </div>
+
+
+    <!-- ACTIONS -->
+    <div class="qb-math-dialog__actions">
+
+      <button
+        type="button"
+        class="qb-btn qb-btn--secondary"
+        data-math-dialog-cancel
+       data-sm-action="edit">
+        {{ _('Болдырмау') }}
+      </button>
+
+      <button
+        type="button"
+        class="qb-btn qb-btn--primary"
+        data-math-dialog-save
+       data-sm-action="primary">
+        {{ _('Қосу') }}
+      </button>
+
+    </div>
+
+  </div>
+
+</div>
+
+
+</div>
+<script
+  src="{{ url_for(
+    'static',
+    path='js/teacher/assessment/question_bank/create.js'
+  ) }}?v=61"
+  defer>
+</script>
+
+<script
+  defer
+  src="https://cdn.jsdelivr.net/npm/mathlive"
+></script>
+
+<script
+  defer
+  src="{{ url_for(
+    'static',
+    path='js/teacher/assessment/question_bank/math_editor.js'
+  ) }}?v=54"
+></script>
+
+<script src="{{ url_for('static',path='js/teacher/assessment/question_bank/question_bank_objective_preview.js') }}" defer></script>
+{% endblock %}

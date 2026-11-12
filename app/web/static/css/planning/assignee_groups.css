@@ -1,0 +1,13 @@
+/* Scoped disclosure groups; closed groups still submit checked inputs. */
+.assignee-page .co-role-group > summary {cursor:pointer; list-style:disclosure-closed; display:list-item; padding:14px 18px;}
+.assignee-page .co-role-group[open] > summary {list-style:disclosure-open; border-bottom:1px solid #dce5f1;}
+.assignee-page .co-role-group > summary > div {display:inline-block; vertical-align:middle; margin-right:16px;}
+.assignee-page .co-selected {display:inline-block; color:#5c6e88; font-size:13px; white-space:nowrap;}
+.assignee-page .co-role-group--selected > summary {background:#eff6ff;}
+.assignee-page .co-role-group > .candidate-grid {padding:14px;}
+.assignee-page .candidate-card[hidden], .assignee-page .co-role-group[hidden] {display:none !important;}
+.assignee-page #assignment-week {width:100%; max-width:480px; margin-top:8px; min-height:40px;}
+
+.assignee-page .status-pill--pending {background:#fff4da;color:#855419;}
+.assignee-page .inclusion-choice {display:flex;align-items:center;gap:10px;font-weight:600;}
+.assignee-page .inclusion-choice input {width:18px;height:18px;flex:0 0 auto;}

@@ -1,3 +1,4 @@
+from app.core.i18n import resolve_language
 # app/routers/web/codes/issue_l3.py
 from uuid import uuid4
 
@@ -169,6 +170,7 @@ async def l2_issue_l3_result(
 # --- GET: сохранить PDF со ВСЕМИ кодами одной выдачи и пометить как сохранённые ---
 @router.get("/l2/issue-l3/pdf/{batch_id}")
 async def l2_issue_l3_pdf(
+        request: Request,
         batch_id: str,
         db: AsyncSession = Depends(get_db),
         _user=Depends(require_roles(UserRole.DISTRICT_ADMIN)),
@@ -184,6 +186,7 @@ async def l2_issue_l3_pdf(
         raise HTTPException(404, "District not found")
 
     pdf_bytes = generate_codes_pdf(
+        ui_language=resolve_language(request),
         title="Коды регистрации администраторов школ (L3)",
         level_label="L3",
         issued=issued,

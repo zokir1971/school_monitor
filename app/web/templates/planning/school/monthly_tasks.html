@@ -1,24 +1,75 @@
 {% extends "base.html" %}
-{% block title %}Планирование задач на месяц{% endblock %}
+{% block title %}{{ _('Планирование задач на месяц') }}{% endblock %}
 
 {% block extra_css %}
   <link rel="stylesheet" href="{{ url_for('static', path='css/monthly_plan.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', path='css/monthly_plan_actions.css') }}?v=167">
+  <link rel="stylesheet" href="{{ url_for('static', path='css/monthly_direction_navigation.css') }}?v=127">
+  <style>
+.monthly-status {scroll-margin-top:145px;padding:18px 20px;margin:16px 0;border:1px solid #e9bb64;border-radius:12px;background:#fff8e8;color:#704717;}
+.monthly-status--active {background:#effcf3;border-color:#a7dfb8;color:#176137;}
+.monthly-status--archived {background:#f1f5f9;border-color:#cbd5e1;color:#475569;}
+.monthly-status p {margin:8px 0;}.monthly-status summary,.monthly-delete-zone summary {cursor:pointer;font-weight:600;}
+.monthly-problems {max-height:300px;overflow:auto;}.monthly-problems li {margin:8px 0;}
+.monthly-delete-zone {margin-top:16px;}.monthly-delete-zone form {display:grid;gap:12px;margin-top:12px;}
+.monthly-plan-page tr:target {outline:2px solid #e9bb64;scroll-margin-top:155px;}
+  </style>
 {% endblock %}
 
 {% block content %}
-<section class="dashboard-section">
+{% set ru = ui_language() == 'ru' %}
+<section class="dashboard-section monthly-plan-page">
   <div class="section-head">
-    <h2 class="section-title">Планирование задач на месяц</h2>
+    <h2 class="section-title">{{ _('Планирование задач на месяц') }}</h2>
   </div>
 
+  {% if error %}<div class="alert alert--warning">{{ monthly_message(error) }}</div>{% endif %}
   {% if success %}
-    <div class="alert alert--success">{{ success }}</div>
+    <div class="alert alert--success">{% if ' / ' in success %}{{ success.split(' / ')[0] if ru else success.split(' / ')[-1] }}{% else %}{{ monthly_message(success) }}{% endif %}</div>
   {% endif %}
   {% if info %}
-    <div class="alert alert--info">{{ info }}</div>
+    <div class="alert alert--info">{{ monthly_message(info) }}</div>
   {% endif %}
-  {% if warning %}
-    <div class="alert alert--warning">{{ warning }}</div>
+  {% if warning and not submission_failed %}
+    <div class="alert alert--warning">{% if ' / ' in warning %}{{ warning.split(' / ')[0] if ru else warning.split(' / ')[-1] }}{% else %}{{ monthly_message(warning) }}{% endif %}</div>
+  {% endif %}
+
+  {% if month_plan and monthly_state is defined %}
+  <section id="monthly-plan-status" class="monthly-status monthly-status--{{ month_plan.status.value }}" role="status" tabindex="-1" {% if submission_failed or success %}data-plan-outcome{% endif %}>
+    {% if month_plan.status.value == 'active' %}
+      <strong>{{ 'Статус месячного плана: отправлен на исполнение' if ru else 'Айлық жоспардың мәртебесі: орындауға жіберілген' }}</strong>
+      <p>{{ 'Исполнителям доступны только включённые задачи. Новая задача станет доступна после её включения с неделей и ответственным. Доставка уведомлений проверяется отдельно.' if ru else 'Орындаушыларға тек жоспарға енгізілген тапсырмалар қолжетімді. Жаңа тапсырма аптасы мен жауаптысы көрсетіліп, жоспарға енгізілгеннен кейін қолжетімді болады. Хабарламалардың жеткізілуі бөлек тексеріледі.' }}</p>
+      {% if monthly_state.unpublished %}<p>{{ 'Не включены и недоступны исполнителям' if ru else 'Жоспарға енгізілмеген және орындаушыларға қолжетімсіз' }}:
+        {% for item_id in monthly_state.unpublished %}<a href="#month-item-{{ item_id }}">№{{ item_id }}</a>{% if not loop.last %}, {% endif %}{% endfor %}.
+      </p>{% endif %}
+    {% elif month_plan.status.value == 'draft' %}
+      <strong>{{ ('План не отправлен на исполнение' if submission_failed else 'Черновик — ещё не отправлен на исполнение') if ru else ('Жоспар орындауға жіберілмеді' if submission_failed else 'Жоба — орындауға әлі жіберілмеген') }}</strong>
+      <p>{{ 'Назначение сотрудников само по себе не отправляет план. Кнопка «Сохранить и отправить» сохранит текущий выбор задач и недель и отправит план после проверки.' if ru else 'Қызметкерлерді тағайындау жоспарды жібермейді. «Сақтау және жіберу» батырмасы тапсырмалар мен апталар таңдауын сақтап, тексеруден кейін жоспарды жібереді.' }}</p>
+      <p>{{ 'Готовность по сохранённым данным' if ru else 'Сақталған деректер бойынша дайындық' }}: {{ monthly_state.ready }} / {{ monthly_state.included }}.</p>
+      {% if submission_failed and warning %}<p role="alert">{{ warning.split(' / ')[0] if ru else warning.split(' / ')[-1] }}</p>{% endif %}
+      {% if monthly_state.problems %}
+      <details {% if submission_failed %}open{% endif %}>
+        <summary>{{ 'Что нужно исправить' if ru else 'Нені түзету қажет' }} ({{ monthly_state.problems|length }})</summary>
+        <ul class="monthly-problems">
+        {% for problem in monthly_state.problems %}
+          <li><a href="#month-item-{{ problem.id }}">№{{ problem.id }} · {{ problem_topics.get(problem.id, '') }}</a> —
+          {% if 'week' in problem.issues %}{{ 'выберите неделю' if ru else 'аптаны таңдаңыз' }}{% endif %}{% if problem.issues|length > 1 %}; {% endif %}
+          {% if 'primary' in problem.issues %}{{ 'назначьте ответственного' if ru else 'жауаптыны тағайындаңыз' }}{% endif %}</li>
+        {% endfor %}
+        </ul>
+      </details>
+      {% endif %}
+    {% else %}<strong>{{ 'Архивный план' if ru else 'Мұрағат жоспары' }}</strong>{% endif %}
+  </section>
+  {% endif %}
+
+  {% if saved_task is defined and saved_task %}
+  <section class="monthly-status {% if saved_task.is_included %}monthly-status--active{% endif %}" role="status">
+    <strong>{{ 'Задача' if ru else 'Тапсырма' }} №{{ saved_task.id }} · {{ problem_topics.get(saved_task.id, '') }}</strong>
+    {% if not saved_task.is_included %}<p>{{ 'Назначения сохранены. Задача не включена в месячный план и недоступна исполнителям.' if ru else 'Тағайындаулар сақталды. Тапсырма айлық жоспарға енгізілмеген және орындаушыларға қолжетімсіз.' }}</p>
+    {% elif month_plan.status.value == 'active' %}<p>{{ 'Задача включена в действующий план и доступна назначенным исполнителям.' if ru else 'Тапсырма қолданыстағы жоспарға енгізілген және тағайындалған орындаушыларға қолжетімді.' }}</p>
+    {% else %}<p>{{ 'Задача включена в черновик. Для доступа исполнителей отправьте месячный план.' if ru else 'Тапсырма жобаға енгізілген. Орындаушыларға қолжетімді болуы үшін айлық жоспарды жіберіңіз.' }}</p>{% endif %}
+  </section>
   {% endif %}
 
   <div class="card card--large">
@@ -29,32 +80,32 @@
           action="/planning/school/monthly"
           style="display:flex; gap:10px; align-items:end; flex-wrap:wrap;">
           <div>
-            <label class="muted" for="month">Месяц</label><br>
+            <label class="muted" for="month">{{ _('Месяц') }}</label><br>
             <select id="month" name="month" class="input" style="min-width:220px;">
               {% for m in months %}
                 <option value="{{ m.num }}" {% if month == m.num %}selected{% endif %}>
-                  {{ m.label }}
+                  {{ _(m.label) }}
                 </option>
               {% endfor %}
             </select>
           </div>
 
           <input type="hidden" name="school_plan_id" value="{{ school_plan_id or '' }}">
-          <button class="btn btn--primary" type="submit">Открыть план</button>
+          <button class="btn btn--primary" type="submit" data-sm-action="nav">{{ _('Открыть план') }}</button>
         </form>
 
         {% if month %}
           {% if month_plan %}
             {% if month_plan.status.value == 'draft' %}
-              <span class="badge badge--draft">Черновик</span>
+              <span class="badge badge--draft">{{ _('Черновик') }}</span>
             {% elif month_plan.status.value == 'active' %}
-              <span class="badge badge--active">Задачи отправлены на исполнение</span>
+              <span class="badge badge--active">{{ _('Задачи отправлены на исполнение') }}</span>
             {% else %}
-              <span class="badge badge--arch">Архив</span>
+              <span class="badge badge--arch">{{ _('Архив') }}</span>
             {% endif %}
         <span class="muted">ID: {{ month_plan.id }}</span>
           {% else %}
-            <span class="badge badge--draft">Черновик не создан</span>
+            <span class="badge badge--draft">{{ _('Черновик не создан') }}</span>
           {% endif %}
         {% endif %}
       </div>
@@ -63,38 +114,66 @@
         {% if active_plan and can_build and month %}
           <form method="post" action="{{ request.url_for('school_monthly_build_draft', month=month) }}">
             <input type="hidden" name="school_plan_id" value="{{ school_plan_id or '' }}">
-            <button class="btn btn--primary" type="submit">Сформировать черновик</button>
+            <button class="btn btn--primary" type="submit" data-sm-action="primary">{{ _('Сформировать черновик') }}</button>
           </form>
         {% elif not month %}
-          <span class="muted">Выберите месяц и нажмите «Открыть».</span>
+          <span class="muted">{{ _('Выберите месяц и нажмите «Открыть».') }}</span>
         {% else %}
-          <span class="muted">Откройте месяц, чтобы увидеть/сформировать план.</span>
+          <span class="muted">{{ _('Откройте месяц, чтобы увидеть/сформировать план.') }}</span>
         {% endif %}
       </div>
     </div>
 
     <div>
       {% if month_plan and month_plan.status.value == 'draft' %}
-      <form method="post" action="{{ request.url_for('school_monthly_delete_draft') }}">
-        <input type="hidden" name="month_plan_id" value="{{ month_plan.id }}">
-        <input type="hidden" name="month" value="{{ month }}">
-        <button class="btn btn-danger" type="submit">
-          Удалить черновик
-        </button>
-      </form>
+      {% if monthly_state is defined and monthly_state.can_delete %}
+      <details class="monthly-delete-zone">
+        <summary>{{ 'Удаление пустого черновика' if ru else 'Бос жобаны жою' }}</summary>
+        <form method="post" action="{{ request.url_for('school_monthly_delete_draft') }}" data-no-draft-restore>
+          <input type="hidden" name="month_plan_id" value="{{ month_plan.id }}">
+          <input type="hidden" name="month" value="{{ month }}">
+          <input type="hidden" name="plan_revision" value="{{ plan_revision }}">
+          <label><input type="checkbox" name="confirmed_plan_id" value="{{ month_plan.id }}" required> {{ 'Подтверждаю удаление пустого черновика. Действие нельзя отменить.' if ru else 'Бос жобаны жоюды растаймын. Әрекетті кері қайтару мүмкін емес.' }}</label>
+          <button class="btn btn-danger" type="submit" data-sm-action="danger">{{ _('Удалить черновик') }}</button>
+        </form>
+      </details>
+      {% else %}
+      <p class="muted">{{ 'Удаление отключено: в плане уже есть назначения, сроки или данные задач.' if ru else 'Жою өшірілген: жоспарда тағайындаулар, мерзімдер немесе тапсырма деректері бар.' }}</p>
+      {% endif %}
       {% endif %}
     </div>
 
+    {% if month_plan and month_plan.status.value != 'archived' %}
+    <form method="post" action="{{ request.url_for('school_monthly_sync_review_places') }}" style="margin-top:12px">
+      <input type="hidden" name="month_plan_id" value="{{ month_plan.id }}">
+      <button type="submit" class="btn monthly-plan-assign" data-sm-action="edit">
+        {% if ui_language is defined and ui_language() == 'kk' %}Жылдық жоспардан қарау орындарын жаңарту{% else %}Обновить места рассмотрения из годового плана{% endif %}
+      </button>
+      <p class="muted">{% if ui_language is defined and ui_language() == 'kk' %}Мұрағат және қарау тарихы бар тапсырмалар өзгертілмейді.{% else %}Архивные задачи и задачи с историей рассмотрения не изменяются.{% endif %}</p>
+    </form>
+    {% endif %}
+
     <div class="muted" style="margin-top:10px;">
-      Правило: если задача включена — выбери неделю (1–6). Редактирование доступно только в статусе “Черновик”.
+      {{ 'Выберите задачи и недели. Исполнители назначаются кнопкой в строке задачи. Для отправки используйте «Сохранить и отправить на исполнение».' if ru else 'Тапсырмалар мен апталарды таңдаңыз. Орындаушылар тапсырма жолындағы батырма арқылы тағайындалады. Жіберу үшін «Сақтау және орындауға жіберу» батырмасын басыңыз.' }}
     </div>
   </div>
 
   {% if not month_plan %}
     <div class="alert alert--info" style="margin-top:12px;">
-      Сформируй черновик на выбранный месяц, чтобы увидеть список задач.
+      {{ _('Сформируй черновик на выбранный месяц, чтобы увидеть список задач.') }}
     </div>
   {% else %}
+
+    {% if blocks %}
+    <nav class="monthly-direction-nav" aria-label="{{ 'Направления месячного плана' if ui_language()=='ru' else 'Айлық жоспар бағыттары' }}" data-monthly-direction-nav>
+      <span class="monthly-direction-nav__label">{{ 'Направления' if ui_language()=='ru' else 'Бағыттар' }}</span>
+      <div class="monthly-direction-nav__links">
+        {% for block in blocks %}
+        <a class="monthly-direction-nav__link" href="#month-direction-{{ block.direction_id }}" title="{{ block.direction_name }}" data-sm-action="nav"><span>{{ block.direction_name }}</span></a>
+        {% endfor %}
+      </div>
+    </nav>
+    {% endif %}
 
     <form
       id="monthly-save-form"
@@ -104,12 +183,14 @@
       <input type="hidden" name="month_plan_id" value="{{ month_plan.id }}">
       <input type="hidden" name="school_plan_id" value="{{ month_plan.school_plan_id }}">
 
-      {% set readonly = (month_plan.status.value != 'draft') %}
+      {% set readonly = (month_plan.status.value == 'archived') %}
+      <input type="hidden" name="plan_revision" value="{{ plan_revision }}">
+      {% if month_plan.status.value == 'active' %}<div class="card" style="padding:12px;margin:12px 0"><label for="correction-reason">Причина исправления / Түзету себебі</label><input id="correction-reason" name="correction_reason" class="input" maxlength="1000" required style="width:100%"><p class="muted">Статусы выполнения и история сохраняются. / Орындалу мәртебесі мен тарихы сақталады.</p></div>{% endif %}
 
       {% for block in blocks %}
         {% set items = block.items %}
 
-        <div class="card dir-card">
+        <div class="card dir-card" id="month-direction-{{ block.direction_id }}" data-monthly-direction>
           <div class="dir-head">
             <h3 class="dir-title">
               {{ loop.index }}. {{ block.direction_name }}
@@ -118,7 +199,7 @@
 
           {% if items|length == 0 %}
             <div class="alert alert--info" style="margin-top:10px;">
-              Нет задач для этого направления.
+              {{ _('Нет задач для этого направления.') }}
             </div>
           {% else %}
             <div class="table-wrap direction-table" style="margin-top:10px;">
@@ -133,22 +214,22 @@
                           class="select-all"
                           {% if readonly %}disabled{% endif %}
                         >
-                        Выбрать все задачи
+                        {{ _('Выбрать все задачи') }}
                       </label>
                     </th>
-                    <th class="nowrap-weeks">Неделя</th>
-                    <th>Тақырып / Тема</th>
-                    <th>Мақсаты / Цель</th>
-                    <th class="nowrap">Мерзімі</th>
-                    <th class="nowrap">Жауаптылар</th>
-                    <th class="nowrap">Қарау орны / Место рассмотрения</th>
-                    <th>Жауаптыны тағайындау / Назначение ответственного</th>
+                    <th class="nowrap-weeks">{{ _('Неделя') }}</th>
+                    <th>{{ _('Тақырып / Тема') }}</th>
+                    <th>{{ _('Мақсаты / Цель') }}</th>
+                    <th class="nowrap">{{ _('Мерзімі') }}</th>
+                    <th class="nowrap">{{ _('Жауаптылар') }}</th>
+                    <th class="nowrap">{{ _('Қарау орны / Место рассмотрения') }}</th>
+                    <th>{{ _('Жауаптыны тағайындау / Назначение ответственного') }}</th>
                   </tr>
                 </thead>
 
                 <tbody>
                   {% for it in items %}
-                    <tr>
+                    <tr id="month-item-{{ it.id }}">
                       <td class="nowrap-num">
                         <input type="hidden" name="item_ids" value="{{ it.id }}">
                         <label>
@@ -160,7 +241,7 @@
                             {% if it.is_included %}checked{% endif %}
                             {% if readonly %}disabled{% endif %}
                           >
-                          в план
+                          {{ _('в план') }}
                         </label>
                       </td>
 
@@ -179,7 +260,7 @@
 
                         <div class="row-tags">
                           {% if it.period_type == 'month' and it.period_value_int %}
-                            <span class="tag">ай: {{ it.period_value_int }}</span>
+                            <span class="tag">{{ _('ай:') }} {{ it.period_value_int }}</span>
                           {% endif %}
                         </div>
                       </td>
@@ -199,7 +280,7 @@
                       </td>
 
                       <td class="nowrap">
-                        {{ it | row11_period(month) }}
+                        {{ it | planning_period(month) }}
                       </td>
 
                       <td class="nowrap">
@@ -208,7 +289,7 @@
 
     <div class="assignee-item">
       <span class="tag">
-        жауапты / ответственный
+        {{ _('жауапты / ответственный') }}
       </span>
       <strong>{{ it.primary_assignee_name }}</strong>
 
@@ -218,7 +299,7 @@
 
       <div class="assignee-item">
         <span class="tag tag--secondary">
-          бірлескен орындаушылар / соисполнители
+          {{ _('бірлескен орындаушылар / соисполнители') }}
         </span>
 
         <ul class="assignee-list">
@@ -239,7 +320,7 @@
                         {% if it.review_place_labels %}
                           {% for label in it.review_place_labels %}
                             <span class="review-badge">
-                              {{ label }}
+                              {{ _(label) }}
                             </span>
                           {% endfor %}
                         {% else %}
@@ -249,15 +330,17 @@
 
                       <td>
                         <a
-                          class="btn btn--sm{% if it.is_assigned %} btn--success{% endif %}"
+                          class="btn btn--sm monthly-plan-assign{% if it.is_assigned %} btn--success{% endif %}"
                           href="{{ request.url_for(
                             'school_month_item_assignees',
                             month_item_id=it.id
                           ) }}"
-                        >
+                         data-sm-action="nav">
                           {% if it.is_assigned %}✓ {% endif %}
-                          {{ it.assignment_label }}
+                          {{ monthly_assignment_label(it) }}
                         </a>
+                        <input type="hidden" name="item_{{ it.id }}_notes" value="{{ it.notes or '' }}">
+
                       </td>
                     </tr>
                   {% endfor %}
@@ -270,45 +353,22 @@
       {% endfor %}
     </form>
 
-    <div class="actions">
+    <div class="actions monthly-plan-actions" role="region" aria-label="Действия с планом / Жоспар әрекеттері">
 
   <button
       type="submit"
       form="monthly-save-form"
       class="btn btn--primary"
       {% if readonly %}disabled{% endif %}
-  >
-      💾 Сохранить черновик
+   data-sm-action="primary">
+      Сохранить план / Жоспарды сақтау
   </button>
 
-  <form
-      method="post"
-      action="{{ request.url_for(
-          'school_monthly_submit',
-          month=month
-      ) }}"
-      style="display:inline;"
-  >
-      <input
-          type="hidden"
-          name="month_plan_id"
-          value="{{ month_plan.id }}"
-      >
-
-      <input
-          type="hidden"
-          name="school_plan_id"
-          value="{{ month_plan.school_plan_id }}"
-      >
-
-      <button
-          type="submit"
-          class="btn btn--primary"
-          {% if readonly %}disabled{% endif %}
-      >
-          🚀 Отправить на исполнение
-      </button>
-  </form>
+  <button type="submit" form="monthly-save-form" name="intent" value="submit"
+      class="btn btn--primary" data-sm-action="success"
+      {% if month_plan.status.value != 'draft' %}disabled{% endif %}>
+    {{ 'Сохранить и отправить на исполнение' if ru else 'Сақтау және орындауға жіберу' }}
+  </button>
 
   <a
       href="{{ request.url_for(
@@ -316,8 +376,8 @@
           month_plan_id=month_plan.id
       ) }}"
       class="btn btn--secondary"
-  >
-      📲 Уведомления исполнителей
+   data-sm-action="nav">
+      {{ _('📲 Уведомления исполнителей') }}
 
       {% if notification_progress is defined
             and notification_progress.total_recipients > 0 %}
@@ -333,8 +393,7 @@
 
   {% if readonly %}
       <span class="muted">
-          Редактирование отключено,
-          потому что план не в статусе «Черновик».
+          Архивный план / Мұрағат жоспары
       </span>
   {% endif %}
 
@@ -384,4 +443,17 @@ document.addEventListener("DOMContentLoaded", function () {
   });
 });
 </script>
+{% endblock %}
+{% block extra_js %}
+{% if submission_failed or success %}<script>
+window.addEventListener('load', () => {
+  const status = document.getElementById('monthly-plan-status');
+  if (!status) return;
+  status.focus({preventScroll:true});
+  status.scrollIntoView({block:'start'});
+});
+</script>{% endif %}
+<script src="{{ url_for('static', path='js/monthly_plan_actions.js') }}?v=109" defer></script>
+<script src="{{ url_for('static', path='js/monthly_direction_navigation.js') }}?v=127" defer></script>
+<script src="{{ url_for('static', path='js/planning/assignment_schedule.js') }}?v=181" defer></script>
 {% endblock %}

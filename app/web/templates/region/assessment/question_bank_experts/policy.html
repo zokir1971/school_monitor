@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+{% block title %}{{ _('Специальности и права экспертов') }}{% endblock %}
+{% block content %}
+<style>
+.qb-policy {max-width:1200px;margin:24px auto;padding:0 16px;font:14px/1.5 system-ui;color:#344054}
+.qb-policy section {background:white;border:1px solid #d0d5dd;border-radius:10px;padding:20px;margin-bottom:20px}
+.qb-policy form {display:flex;gap:10px;align-items:end;flex-wrap:wrap;padding:10px 0;border-bottom:1px solid #eaecf0}
+.qb-policy label {display:flex;flex-direction:column;gap:5px}
+.qb-policy input,.qb-policy select,.qb-policy button {font:inherit;padding:8px;border:1px solid #d0d5dd;border-radius:6px;max-width:100%}
+.qb-policy input[type=number] {width:80px}
+.qb-policy button {background:#2563eb;color:white;cursor:pointer}
+.qb-policy table {width:100%;border-collapse:collapse}.qb-policy td,.qb-policy th {text-align:left;padding:8px;border-bottom:1px solid #eaecf0}
+</style>
+<div class="qb-policy">
+<h1>{{ _('Специальности и права экспертов') }}</h1>
+<p>{{ _('Язык обучения берётся из программы учебной цели. Язык текста задания не меняет права эксперта. Все цели задания должны соответствовать правилам.') }}</p>
+{% if not can_edit %}<p>{{ _('Изменять общие правила может супер администратор.') }}</p>{% endif %}
+{% macro csrf() %}<input type="hidden" name="csrf_token" value="{{ csrf_token }}">{% endmacro %}
+<section><h2>{{ _('Специальности') }}</h2>
+{% for specialty in specialties %}
+{% if can_edit %}
+<form method="post" action="{{ url_for('region_expert_policy_specialty_save') }}">
+{{ csrf() }}<input type="hidden" name="specialty_id" value="{{ specialty.id }}">
+<label>{{ _('Код') }}<input name="code" value="{{ specialty.code }}" required maxlength="80"></label>
+<label>{{ _('Название RU') }}<input name="name_ru" value="{{ specialty.name_ru }}" required maxlength="200"></label>
+<label>{{ _('Название KZ') }}<input name="name_kz" value="{{ specialty.name_kz }}" required maxlength="200"></label>
+<label>{{ _('Активна') }}{% if specialty.is_active %}<input type="checkbox" name="active" value="true" checked>{% else %}<input type="checkbox" name="active" value="true">{% endif %}</label>
+<button data-sm-action="primary">{{ _('Сохранить') }}</button></form>
+{% else %}<p>{{ assessment_subject_name(specialty) }}{% if not specialty.is_active %} {{ _('— отключена') }}{% endif %}</p>{% endif %}
+{% endfor %}
+{% if can_edit %}<h3>{{ _('Добавить специальность') }}</h3>
+<form method="post" action="{{ url_for('region_expert_policy_specialty_save') }}">{{ csrf() }}
+<label>{{ _('Код') }}<input name="code" required maxlength="80" pattern="[a-z][a-z0-9_]{0,79}"></label>
+<label>{{ _('Название RU') }}<input name="name_ru" required maxlength="200"></label>
+<label>{{ _('Название KZ') }}<input name="name_kz" required maxlength="200"></label>
+<input type="hidden" name="active" value="true"><button data-sm-action="primary">{{ _('Добавить') }}</button></form>{% endif %}
+</section>
+{% macro rule_form(rule=none) %}
+<form method="post" action="{{ url_for('region_expert_policy_rule_save') }}">{{ csrf() }}
+{% if rule %}<input type="hidden" name="rule_id" value="{{ rule.id }}">{% endif %}
+<label>{{ _('Специальность') }}<select name="specialty_id" required><option value="">{{ _('Выберите') }}</option>
+{% for specialty in specialties %}{% if rule and rule.specialty_id==specialty.id %}<option value="{{ specialty.id }}" selected>{{ assessment_subject_name(specialty) }}</option>{% else %}<option value="{{ specialty.id }}">{{ assessment_subject_name(specialty) }}</option>{% endif %}{% endfor %}</select></label>
+<label>{{ _('Предмет') }}<select name="subject_id" required><option value="">{{ _('Выберите') }}</option>
+{% for subject in subjects %}{% if rule and rule.subject_id==subject.id %}<option value="{{ subject.id }}" selected>{{ assessment_subject_name(subject) }}</option>{% else %}<option value="{{ subject.id }}">{{ assessment_subject_name(subject) }}</option>{% endif %}{% endfor %}</select></label>
+<label>{{ _('С класса') }}<input type="number" name="grade_from" min="1" max="12" value="{{ rule.grade_from if rule else 1 }}" required></label>
+<label>{{ _('По класс') }}<input type="number" name="grade_to" min="1" max="12" value="{{ rule.grade_to if rule else 11 }}" required></label>
+<label>{{ _('Язык обучения') }}<select name="instruction_language" required>{% for code,label in languages.items() %}{% if rule and rule.instruction_language==code %}<option value="{{ code }}" selected>{{ _(label) }}</option>{% else %}<option value="{{ code }}">{{ _(label) }}</option>{% endif %}{% endfor %}</select></label>
+<label>{{ _('Активно') }}{% if not rule or rule.is_active %}<input type="checkbox" name="active" value="true" checked>{% else %}<input type="checkbox" name="active" value="true">{% endif %}</label>
+<button data-sm-action="primary">{{ _('Сохранить' if rule else 'Добавить правило') }}</button></form>
+{% endmacro %}
+<section><h2>{{ _('Правила') }}</h2>
+<label>{{ _('Поиск') }}<input type="search" id="policy-search" placeholder="{{ _('Предмет или специальность') }}"></label>
+{% if can_edit %}<h3>{{ _('Новое правило') }}</h3>{{ rule_form() }}{% endif %}
+{% for rule in rules %}<div data-policy-row data-search="{{ expert_policy_name(specialties, rule.specialty_id) }} {{ expert_policy_name(subjects, rule.subject_id) }}">
+{% if can_edit %}{{ rule_form(rule) }}{% else %}
+<p>{{ expert_policy_name(specialties, rule.specialty_id) }} — {{ expert_policy_name(subjects, rule.subject_id) }}, {{ rule.grade_from }}–{{ rule.grade_to }} {{ _('классы,') }} {{ _(languages[rule.instruction_language]) }}{% if not rule.is_active %} {{ _('— отключено') }}{% endif %}</p>
+{% endif %}</div>{% endfor %}
+</section>
+</div>
+<script>document.getElementById('policy-search').addEventListener('input',function(){const q=this.value.toLocaleLowerCase();document.querySelectorAll('[data-policy-row]').forEach(row=>{row.hidden=!row.dataset.search.toLocaleLowerCase().includes(q);});});</script>
+{% endblock %}

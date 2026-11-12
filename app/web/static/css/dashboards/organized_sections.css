@@ -1,0 +1,20 @@
+/* Scoped dashboard layout; cards are ordinary links with no additional data queries. */
+.role-dashboard{max-width:1240px;margin:0 auto;padding:24px 18px 40px;color:#172b4d;min-width:0}
+.role-dashboard,.role-dashboard *{box-sizing:border-box}
+.role-dashboard__heading h1{font-size:25px;line-height:1.3;margin:0 0 16px}
+.role-dashboard__nav{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 24px}
+.role-dashboard__nav a{display:inline-flex;align-items:center;min-height:34px;padding:6px 12px;border:1px solid #cfdaeb;border-radius:8px;background:#fff;color:#244168;text-decoration:none;font-size:14px;line-height:20px}
+.role-dashboard__section{padding:20px;border:1px solid #dfe6ef;border-radius:14px;background:#f9fbfe;margin:0 0 20px;min-width:0}
+.role-dashboard__section-heading{margin:0 0 15px}
+.role-dashboard__section-heading h2{font-size:20px;line-height:1.35;margin:0 0 5px;scroll-margin-top:120px}
+.role-dashboard__section-heading p{font-size:14px;line-height:1.5;color:#586b84;margin:0}
+.role-dashboard__grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;align-items:stretch}
+.role-dashboard__card{display:flex;flex-direction:column;min-width:0;min-height:150px;padding:15px 16px;border:1px solid #dbe3ef;border-radius:11px;background:#fff;color:#172b4d;text-decoration:none!important;transition:border-color .15s,box-shadow .15s}
+.role-dashboard__card-top{display:flex;justify-content:space-between;align-items:center;color:#2563eb;font-size:21px;line-height:1.2;margin-bottom:10px}
+.role-dashboard__card h3{font-size:16px;line-height:1.35;margin:0 0 7px;font-weight:650;color:#172b4d;overflow-wrap:anywhere}
+.role-dashboard__card p{font-size:13px;line-height:1.5;color:#586b84;margin:0;overflow-wrap:anywhere}
+.role-dashboard__card:hover,.role-dashboard__nav a:hover{border-color:#2563eb;box-shadow:0 3px 12px #1d4ed810}
+.role-dashboard__card:focus-visible,.role-dashboard__nav a:focus-visible{outline:3px solid #93c5fd;outline-offset:3px}
+@media(max-width:980px){.role-dashboard__grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:620px){.role-dashboard{padding:16px 10px 28px}.role-dashboard__section{padding:14px}.role-dashboard__grid{grid-template-columns:minmax(0,1fr)}.role-dashboard__heading h1{font-size:22px}.role-dashboard__card{min-height:0}.role-dashboard__nav a{flex:1 1 170px;justify-content:center}}
+@media(prefers-reduced-motion:reduce){.role-dashboard__card{transition:none}}

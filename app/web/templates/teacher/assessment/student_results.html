@@ -1,0 +1,1118 @@
+{% extends "base.html" %}
+
+{% block title %}
+{{ title }} {{ _('— Оқушылар нәтижелері') }}
+{% endblock %}
+
+
+{% block extra_css %}
+<style>
+  .results-page {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 24px 16px 48px;
+  }
+
+  /* ===================================================== */
+  /* HEADER */
+  /* ===================================================== */
+
+  .results-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 20px;
+    margin-bottom: 22px;
+  }
+
+  .results-header__content {
+    min-width: 0;
+  }
+
+  .results-header h1 {
+    margin: 0 0 6px;
+    color: #101828;
+    font-size: 28px;
+    font-weight: 700;
+  }
+
+  .results-header p {
+    margin: 0;
+    color: #667085;
+    line-height: 1.5;
+  }
+
+  .results-header__actions {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  .results-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    box-sizing: border-box;
+
+    min-height: 42px;
+    padding: 0 16px;
+
+    border: 1px solid transparent;
+    border-radius: 8px;
+
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1;
+
+    text-decoration: none;
+    white-space: nowrap;
+
+    cursor: pointer;
+  }
+
+  .results-btn--secondary {
+    background: #f2f4f7;
+    border-color: #d0d5dd;
+    color: #344054;
+  }
+
+  .results-btn--secondary:hover {
+    background: #e4e7ec;
+    border-color: #98a2b3;
+  }
+
+  .results-btn--back {
+    min-width: 185px;
+  }
+
+  /* ===================================================== */
+  /* INFO CARDS */
+  /* ===================================================== */
+
+  .results-summary {
+    display: grid;
+
+    grid-template-columns: repeat(
+      4,
+      minmax(0, 1fr)
+    );
+
+    gap: 14px;
+    margin-bottom: 24px;
+  }
+
+  .results-summary-card {
+    padding: 16px;
+
+    background: #fff;
+    border: 1px solid #e4e7ec;
+    border-radius: 12px;
+  }
+
+  .results-summary-card__label {
+    display: block;
+    margin-bottom: 6px;
+
+    color: #667085;
+    font-size: 13px;
+  }
+
+  .results-summary-card__value {
+    display: block;
+
+    color: #101828;
+    font-size: 20px;
+    font-weight: 700;
+  }
+
+  /* ===================================================== */
+  /* SECTION */
+  /* ===================================================== */
+
+  .results-section {
+    margin-bottom: 28px;
+  }
+
+  .results-section:last-child {
+    margin-bottom: 0;
+  }
+
+  .results-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 14px;
+
+    margin-bottom: 12px;
+  }
+
+  .results-section-header h2 {
+    margin: 0;
+
+    color: #101828;
+    font-size: 20px;
+  }
+
+  .results-section-header p {
+    margin: 4px 0 0;
+
+    color: #667085;
+    font-size: 13px;
+  }
+
+  .results-count {
+    flex-shrink: 0;
+
+    color: #667085;
+    font-size: 13px;
+  }
+
+  /* ===================================================== */
+  /* TABLE */
+  /* ===================================================== */
+
+  .results-card {
+    overflow: hidden;
+
+    background: #fff;
+    border: 1px solid #e4e7ec;
+    border-radius: 14px;
+  }
+
+  .results-table-wrap {
+    width: 100%;
+    overflow-x: auto;
+  }
+
+  .results-table {
+    width: 100%;
+    min-width: 900px;
+
+    border-collapse: collapse;
+  }
+
+  .results-table th,
+  .results-table td {
+    padding: 13px 14px;
+
+    border-bottom: 1px solid #eaecf0;
+
+    vertical-align: middle;
+  }
+
+  .results-table th {
+    background: #f9fafb;
+
+    color: #475467;
+
+    font-size: 12px;
+    font-weight: 600;
+
+    text-align: center;
+    white-space: nowrap;
+  }
+
+  .results-table th:first-child,
+  .results-table td:first-child {
+    width: 50px;
+    text-align: center;
+  }
+
+  .results-table th:nth-child(2),
+  .results-table td:nth-child(2) {
+    text-align: left;
+  }
+
+  .results-table tbody tr:last-child td {
+    border-bottom: 0;
+  }
+
+  .results-table tbody tr:hover {
+    background: #fcfcfd;
+  }
+
+  /* ===================================================== */
+  /* STUDENT */
+  /* ===================================================== */
+
+  .student-name {
+    color: #101828;
+    font-weight: 600;
+  }
+
+  .student-subtext {
+    margin-top: 3px;
+
+    color: #667085;
+    font-size: 12px;
+  }
+
+  .metric-value {
+    text-align: center;
+
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  /* ===================================================== */
+  /* STATUS */
+  /* ===================================================== */
+
+  .participation-status {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    min-height: 28px;
+    padding: 4px 9px;
+
+    border-radius: 999px;
+
+    background: #f2f4f7;
+    color: #344054;
+
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .participation-status--completed {
+    background: #ecfdf3;
+    color: #067647;
+  }
+
+  .participation-status--absent {
+    background: #fef3f2;
+    color: #b42318;
+  }
+
+  .participation-status--excused {
+    background: #fffaeb;
+    color: #93370d;
+  }
+
+  .participation-status--not-completed {
+    background: #f2f4f7;
+    color: #475467;
+  }
+
+  /* ===================================================== */
+  /* GRADE */
+  /* ===================================================== */
+
+  .grade-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    min-width: 34px;
+    height: 30px;
+    padding: 0 8px;
+
+    border-radius: 8px;
+
+    background: #f2f4f7;
+    color: #344054;
+
+    font-size: 14px;
+    font-weight: 700;
+  }
+
+  /* ===================================================== */
+  /* REVIEW ACTION */
+  /* ===================================================== */
+
+  .review-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    min-height: 34px;
+    padding: 0 12px;
+
+    border: 1px solid #f79009;
+    border-radius: 7px;
+
+    background: #fffaeb;
+    color: #93370d;
+
+    font-size: 12px;
+    font-weight: 600;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .review-action:hover {
+    background: #fef0c7;
+    border-color: #dc6803;
+    color: #7a2e0e;
+  }
+
+  .review-action--view {
+    border-color: #d0d5dd;
+    background: #fff;
+    color: #344054;
+  }
+
+  .review-action--view:hover {
+    background: #f9fafb;
+    border-color: #98a2b3;
+    color: #101828;
+  }
+
+  .participation-status--submitted {
+    background: #fffaeb;
+    color: #93370d;
+  }
+
+  /* ===================================================== */
+  /* OBJECTIVES */
+  /* ===================================================== */
+
+  .objective-table {
+    width: 100%;
+    min-width: 900px;
+
+    border-collapse: collapse;
+  }
+
+  .objective-table th,
+  .objective-table td {
+    padding: 13px 14px;
+
+    border-bottom: 1px solid #eaecf0;
+    vertical-align: middle;
+  }
+
+  .objective-table th {
+    background: #f9fafb;
+
+    color: #475467;
+
+    font-size: 12px;
+    font-weight: 600;
+
+    text-align: center;
+    white-space: nowrap;
+  }
+
+  .objective-table th:first-child,
+  .objective-table td:first-child {
+    width: 50px;
+    text-align: center;
+  }
+
+  .objective-table th:nth-child(2),
+  .objective-table td:nth-child(2) {
+    text-align: left;
+  }
+
+  .objective-table tbody tr:last-child td {
+    border-bottom: 0;
+  }
+
+  .objective-table tbody tr:hover {
+    background: #fcfcfd;
+  }
+
+  .objective-code {
+    display: inline-flex;
+    align-items: center;
+
+    padding: 5px 8px;
+
+    border-radius: 7px;
+
+    background: #f2f4f7;
+    color: #344054;
+
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  .objective-title {
+    color: #101828;
+    font-weight: 600;
+    line-height: 1.4;
+  }
+
+  .objective-subtext {
+    margin-top: 4px;
+
+    color: #667085;
+    font-size: 12px;
+  }
+
+  .objective-percent {
+    font-weight: 700;
+    color: #101828;
+  }
+
+  .objective-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    min-height: 34px;
+    padding: 0 11px;
+
+    border: 1px solid #d0d5dd;
+    border-radius: 7px;
+
+    background: #fff;
+    color: #344054;
+
+    font-size: 12px;
+    font-weight: 600;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .objective-action:hover {
+    background: #f9fafb;
+    border-color: #98a2b3;
+  }
+
+  /* ===================================================== */
+  /* EMPTY */
+  /* ===================================================== */
+
+  .results-empty {
+    padding: 48px 20px;
+
+    text-align: center;
+    color: #667085;
+  }
+
+  .results-empty h3 {
+    margin: 0 0 8px;
+
+    color: #344054;
+  }
+
+  .results-empty p {
+    margin: 0;
+  }
+
+  /* ===================================================== */
+  /* RESPONSIVE */
+  /* ===================================================== */
+
+  @media (max-width: 1000px) {
+    .results-summary {
+      grid-template-columns: repeat(
+        2,
+        minmax(0, 1fr)
+      );
+    }
+  }
+
+  @media (max-width: 760px) {
+    .results-header {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 14px;
+    }
+
+    .results-header__actions {
+      width: 100%;
+    }
+
+    .results-btn--back {
+      width: 100%;
+    }
+
+    .results-section-header {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .results-summary {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  /* Compact action labels stay whole; the table wrapper handles narrow screens. */
+  .objective-table th:last-child,
+  .objective-table td:last-child {
+    width: 120px;
+    min-width: 120px;
+    white-space: nowrap;
+  }
+  html body .objective-table .objective-action[data-sm-action] {
+    white-space: nowrap !important;
+    overflow-wrap: normal !important;
+    word-break: normal !important;
+    min-width: max-content !important;
+    max-width: none !important;
+    flex-shrink: 0;
+  }
+
+</style>
+{% endblock %}
+
+
+{% block content %}
+
+<div class="results-page">
+
+  <!-- ================================================= -->
+  <!-- HEADER -->
+  <!-- ================================================= -->
+
+  <div class="results-header">
+
+    <div class="results-header__content">
+
+      <h1>
+        {{ title }}
+      </h1>
+
+      <p>
+        {{ class_name }} {{ _('сыныбы бойынша оқушылардың жеке Assessment нәтижелері.') }}
+      </p>
+
+    </div>
+
+    <div class="results-header__actions">
+
+      <a class=" results-btn results-btn--secondary"
+         href="{{ url_for('teacher_assessment_group_results_export_excel', assessment_group_id=assessment_group_id) }}" data-sm-action="primary">
+        {{ _('Excel жүктеу') }}
+      </a>
+
+      <a
+        class="
+          results-btn
+          results-btn--secondary
+          results-btn--back
+        "
+        href="
+          {{ url_for(
+            'teacher_assessment_class_assessments_page',
+            school_class_id=dto.school_class_id
+          ) }}?academic_year_start={{
+            selected_academic_year or ''
+          }}&subject_id={{
+            selected_subject_id or ''
+          }}
+        "
+       data-sm-action="nav" data-sm-back="true">
+        {{ _('← Assessment тізіміне оралу') }}
+      </a>
+
+    </div>
+
+  </div>
+
+
+  <!-- ================================================= -->
+  <!-- SUMMARY -->
+  <!-- ================================================= -->
+
+  <div class="results-summary">
+
+    <div class="results-summary-card">
+
+      <span class="results-summary-card__label">
+        {{ _('Сынып') }}
+      </span>
+
+      <span class="results-summary-card__value">
+        {{ class_name }}
+      </span>
+
+    </div>
+
+
+    <div class="results-summary-card">
+
+      <span class="results-summary-card__label">
+        {{ _('Пән') }}
+      </span>
+
+      <span class="results-summary-card__value">
+        {{ subject_name }}
+      </span>
+
+    </div>
+
+
+    <div class="results-summary-card">
+
+      <span class="results-summary-card__label">
+        {{ _('Максималды балл') }}
+      </span>
+
+      <span class="results-summary-card__value">
+        {{ max_score_display }}
+      </span>
+
+    </div>
+
+
+    <div class="results-summary-card">
+
+      <span class="results-summary-card__label">
+        {{ _('Оқушы саны') }}
+      </span>
+
+      <span class="results-summary-card__value">
+        {{ student_count }}
+      </span>
+
+    </div>
+
+  </div>
+
+
+  <!-- ================================================= -->
+  <!-- STUDENTS -->
+  <!-- ================================================= -->
+
+  <section class="results-section">
+
+    <div class="results-section-header">
+
+      <div>
+
+        <h2>
+          {{ _('Оқушылар нәтижелері') }}
+        </h2>
+
+        <p>
+          {{ _('Әр оқушының қатысу жағдайы, жинаған баллы, пайызы және бағасы.') }}
+        </p>
+
+      </div>
+
+      <div class="results-count">
+        {{ _('Барлығы:') }} {{ student_count }}
+      </div>
+
+    </div>
+
+
+    <div class="results-card">
+
+      {% if students %}
+
+        <div class="results-table-wrap">
+
+          <table class="results-table">
+
+            <thead>
+
+              <tr>
+
+                <th>
+                  №
+                </th>
+
+                <th>
+                  {{ _('Оқушы') }}
+                </th>
+
+                <th>
+                  {{ _('Қатысу') }}
+                </th>
+
+                <th>
+                  {{ _('Балл') }}
+                </th>
+
+                <th>
+                  {{ _('Нәтиже') }}
+                </th>
+
+                <th>
+                  {{ _('Баға') }}
+                </th>
+
+                <th>
+                  {{ _('Әрекет') }}
+                </th>
+
+              </tr>
+
+            </thead>
+
+
+            <tbody>
+
+              {% for student in students %}
+
+                {% set participation_value =
+                  (
+                    student.participation_status.value
+                    if student.participation_status.value is defined
+                    else student.participation_status
+                  )
+                %}
+
+                <tr>
+
+                  <!-- № -->
+
+                  <td class="metric-value">
+                    {{ loop.index }}
+                  </td>
+
+
+                  <!-- STUDENT -->
+
+                  <td>
+
+                    <div class="student-name">
+                      {{ student.student_name }}
+                    </div>
+
+                    <div class="student-subtext">
+                      ID: {{ student.student_id }}
+                    </div>
+
+                  </td>
+
+
+                  <!-- PARTICIPATION -->
+
+                  <td class="metric-value">
+
+                    <span
+                      class="
+                        participation-status
+
+                        {% if participation_value == 'completed' %}
+                          participation-status--completed
+
+                        {% elif participation_value == 'submitted' %}
+                          participation-status--submitted
+
+                        {% elif participation_value == 'absent' %}
+                          participation-status--absent
+
+                        {% elif participation_value == 'excused' %}
+                          participation-status--excused
+
+                        {% elif participation_value == 'not_completed' %}
+                          participation-status--not-completed
+                        {% endif %}
+                      "
+                    >
+                      {{ _(student.participation_status_display) }}
+                    </span>
+
+                  </td>
+
+
+                  <!-- SCORE -->
+
+                  <td class="metric-value">
+                    {{ student.score_display }}
+                  </td>
+
+
+                  <!-- PERCENT -->
+
+                  <td class="metric-value">
+                    {{ student.percent_display }}
+                  </td>
+
+
+                  <!-- GRADE -->
+
+                  <td class="metric-value">
+
+                    {% if student.grade is not none %}
+
+                      <span class="grade-badge">
+                        {{ student.grade_display }}
+                      </span>
+
+                    {% else %}
+                      —
+                    {% endif %}
+
+                  </td>
+
+                  <!-- REVIEW ACTION -->
+
+                  <td class="metric-value">
+
+                    {% if dto.is_online and participation_value == 'submitted' %}
+
+                      <a
+                        class="review-action"
+                        href="{{
+                          url_for(
+                            'teacher_online_assessment_student_review_page',
+                            assessment_student_id=student.assessment_student_id
+                          )
+                        }}?from=results"
+                       data-sm-action="nav">
+                        {{ _('Тексеру') }}
+                      </a>
+
+                    {% elif dto.is_online and participation_value == 'completed' %}
+
+                      <a
+                        class="review-action review-action--view"
+                        href="{{
+                          url_for(
+                            'teacher_online_assessment_student_review_page',
+                            assessment_student_id=student.assessment_student_id
+                          )
+                        }}?from=results"
+                       data-sm-action="nav">
+                        {{ _('Жауаптар') }}
+                      </a>
+
+                    {% else %}
+                      —
+                    {% endif %}
+
+                  </td>
+                </tr>
+
+              {% endfor %}
+
+            </tbody>
+
+          </table>
+
+        </div>
+
+      {% else %}
+
+        <div class="results-empty">
+
+          <h3>
+            {{ _('Оқушылар нәтижелері табылмады') }}
+          </h3>
+
+          <p>
+            {{ _('Осы Assessment бойынша оқушылардың нәтижелері әзірге жоқ.') }}
+          </p>
+
+        </div>
+
+      {% endif %}
+
+    </div>
+
+  </section>
+
+
+  <!-- ================================================= -->
+  <!-- LEARNING OBJECTIVES -->
+  <!-- ================================================= -->
+
+  {% if has_objectives and objective_analytics %}
+
+    <section class="results-section">
+
+      <div class="results-section-header">
+
+        <div>
+
+          <h2>
+            {{ _('Оқу мақсаттары') }}
+          </h2>
+
+          <p>
+            {{ _('Assessment құрамындағы оқу мақсаттары бойынша сыныптың меңгеру нәтижелері.') }}
+          </p>
+
+        </div>
+
+        <div class="results-count">
+          {{ _('Барлығы:') }}
+          {{ objective_analytics.objective_count }}
+        </div>
+
+      </div>
+
+
+      <div class="results-card">
+
+        {% if objective_analytics.objectives %}
+
+          <div class="results-table-wrap">
+
+            <table class="objective-table">
+
+              <thead>
+
+                <tr>
+
+                  <th>
+                    №
+                  </th>
+
+                  <th>
+                    {{ _('Оқу мақсаты') }}
+                  </th>
+
+                  <th>
+                    {{ _('Макс. балл') }}
+                  </th>
+
+                  <th>
+                    {{ _('Қатысқан') }}
+                  </th>
+
+                  <th>
+                    {{ _('Жиналған балл') }}
+                  </th>
+
+                  <th>
+                    {{ _('Мүмкін балл') }}
+                  </th>
+
+                  <th>
+                    {{ _('Меңгеру') }}
+                  </th>
+
+                  <th>
+                    {{ _('Әрекет') }}
+                  </th>
+
+                </tr>
+
+              </thead>
+
+
+              <tbody>
+
+                {% for objective in objective_analytics.objectives %}
+
+                  <tr>
+
+                    <!-- № -->
+
+                    <td class="metric-value">
+                      {{ loop.index }}
+                    </td>
+
+
+                    <!-- OBJECTIVE -->
+
+                    <td>
+
+                      <div class="objective-code">
+                        {{ objective.objective_code }}
+                      </div>
+
+                      <div class="objective-title">
+                        {{ objective.objective_title }}
+                      </div>
+
+                      <div class="objective-subtext">
+                        {{ _('Оқу мақсаты ID:') }}
+                        {{ objective.learning_objective_id }}
+                      </div>
+
+                    </td>
+
+
+                    <!-- OBJECTIVE MAX SCORE -->
+
+                    <td class="metric-value">
+                      {{ objective.objective_max_score_display }}
+                    </td>
+
+
+                    <!-- PARTICIPATED -->
+
+                    <td class="metric-value">
+                      {{ objective.participated_students }}
+                    </td>
+
+
+                    <!-- SCORE SUM -->
+
+                    <td class="metric-value">
+                      {{ objective.score_sum_display }}
+                    </td>
+
+
+                    <!-- MAX SCORE SUM -->
+
+                    <td class="metric-value">
+                      {{ objective.max_score_sum_display }}
+                    </td>
+
+
+                    <!-- MASTERY -->
+
+                    <td class="metric-value">
+
+                      <span class="objective-percent">
+                        {{ objective.mastery_percent_display }}
+                      </span>
+
+                    </td>
+
+
+                    <!-- ACTION -->
+
+                    <td class="metric-value">
+
+                      <a
+                        class="objective-action"
+                        href="
+                          {{ url_for(
+                            'teacher_assessment_objective_students_page',
+                            assessment_group_id=assessment_group_id,
+                            assessment_objective_id=objective.assessment_objective_id
+                          ) }}?academic_year_start={{
+                            selected_academic_year or ''
+                          }}&subject_id={{
+                            selected_subject_id or ''
+                          }}
+                        "
+                       data-sm-action="nav">
+                        {{ _('Оқушылар') }}
+                      </a>
+
+                    </td>
+
+                  </tr>
+
+                {% endfor %}
+
+              </tbody>
+
+            </table>
+
+          </div>
+
+        {% else %}
+
+          <div class="results-empty">
+
+            <h3>
+              {{ _('Оқу мақсаттары табылмады') }}
+            </h3>
+
+            <p>
+              {{ _('Осы Assessment бойынша оқу мақсаттарының нәтижелері жоқ.') }}
+            </p>
+
+          </div>
+
+        {% endif %}
+
+      </div>
+
+    </section>
+
+  {% endif %}
+
+</div>
+
+{% endblock %}

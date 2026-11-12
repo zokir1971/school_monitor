@@ -1,0 +1,34 @@
+{% extends 'teacher/assessment/from_bank/base.html' %}
+{% block bank_content %}
+<header class="bank-heading"><h1>{{ assessment.title }}</h1><a class="bank-button" href="{{ url_for('teacher_assessment_bank_page') }}" data-sm-action="nav">{{ _('Мои работы из банка') }}</a></header>
+<p>{{ _('Язык заданий') }}: <strong>{{ 'Қазақша' if language=='kk' else 'Русский' }}</strong> · {{ _('Класс') }}: {{ grade_level }} · {{ assessment_enum_label(assessment.status) }}</p>
+<p class="bank-note">{{ _('Добавляются только проверенные задания на выбранном языке. Сохранённая копия не меняется при последующем редактировании банка.') }}</p>
+<p class="bank-note">{{ _('Язык работы фиксируется при создании. Для другого языка создайте отдельный черновик.') }}</p>
+{% if error %}<p class="bank-error" role="alert">{{ bank_feedback(error) }}</p>{% endif %}
+<section class="bank-panel"><h2>{{ _('Добавленные задания') }} ({{ saved|length }})</h2>
+<p>{{ _('Максимальный балл') }}: {{ assessment.max_score or 0 }}</p>
+{% for row in saved %}
+<article>
+<h3>{{ loop.index }}. {{ _('Задание') }}</h3>
+{% with bilingual_item=row.view %}{% include 'teacher/assessment/from_bank/version.html' %}{% endwith %}
+{% if editable %}<form method="post" action="{{ url_for('teacher_assessment_bank_remove', assessment_id=assessment.id, question_id=row.question.id) }}"><div class="bank-actions"><button class="bank-button bank-button--secondary" type="submit" data-sm-action="danger">{{ _('Убрать из Assessment') }}</button></div></form>{% endif %}
+</article>
+{% else %}<p>{{ _('Выберите задания из списка ниже.') }}</p>{% endfor %}
+</section>
+{% if editable %}
+<section><h2>{{ _('Проверенные задания банка') }}</h2>
+<form method="post" action="{{ url_for('teacher_assessment_bank_add', assessment_id=assessment.id) }}">
+{% for row in rows %}<article class="bank-panel">
+{% if row.id in used %}<p class="bank-disabled">№{{ row.id }} · {{ _('Уже добавлено') }}</p>
+{% elif row.view %}<label class="bank-choice"><input type="checkbox" name="item_ids" value="{{ row.id }}">№{{ row.id }} · {{ _('Добавить в Assessment') }}</label>
+{% else %}<p class="bank-disabled">№{{ row.id }} · {{ bank_feedback(row.error) }}</p>{% endif %}
+{% if row.view %}{% with bilingual_item=row.view %}{% include 'teacher/assessment/from_bank/version.html' %}{% endwith %}{% endif %}
+</article>{% else %}<p>{{ _('Проверенных заданий для этого предмета и класса пока нет.') }}</p>{% endfor %}
+{% if rows %}<div class="bank-actions"><button class="bank-button" type="submit" data-sm-action="primary">{{ _('Добавить выбранные задания') }}</button></div>{% endif %}
+</form>
+<nav class="bank-actions" aria-label="{{ _('Страницы заданий') }}">
+{% if after %}<a class="bank-button bank-button--secondary" href="{{ url_for('teacher_assessment_bank_workspace', assessment_id=assessment.id) }}" data-sm-action="nav">{{ _('В начало списка') }}</a>{% endif %}
+{% if next_after %}<a class="bank-button bank-button--secondary" href="{{ url_for('teacher_assessment_bank_workspace', assessment_id=assessment.id) }}?after={{ next_after }}" data-sm-action="nav">{{ _('Следующие задания') }}</a>{% endif %}
+</nav></section>
+{% endif %}
+{% endblock %}

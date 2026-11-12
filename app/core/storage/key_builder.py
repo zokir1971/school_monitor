@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from uuid import uuid4
 from datetime import date
 from pathlib import Path
 
@@ -12,6 +13,12 @@ from app.core.storage.schemas import SchoolStorageContext
 
 class SchoolObjectKeyBuilder:
     ROOT_PREFIX = "schools"
+
+    @classmethod
+    def build_correction_key(cls, *, context, original_file_name):
+        cls._validate_context(context, require_school_plan=True, require_month_item=False)
+        name = uuid4().hex + cls.get_extension(original_file_name)
+        return f"{cls._school_prefix(context)}/school-plan-{context.school_plan_id}/corrections/{name}", name
 
     @classmethod
     def build_task_report_key(
@@ -34,11 +41,22 @@ class SchoolObjectKeyBuilder:
             report_code
         )
 
-        stored_file_name = (
-            f"{safe_report_code}_"
-            f"document-{document_id}"
-            f"{extension}"
-        )
+        generated_pdf = re.fullmatch(
+            r"(class_summary|knowledge_quality_table|reading_speed_table|document_analysis|teacher_analysis|analytical_reference)_pdf_([0-9a-f]{32})",
+            safe_report_code,
+        ) if extension == ".pdf" else None
+
+        if generated_pdf:
+            # The caller's full UUID already gives each PDF revision a unique key.
+            # Keep it once in the filename, under the stable report-type directory.
+            safe_report_code, revision_id = generated_pdf.groups()
+            stored_file_name = f"document-{document_id}_{revision_id}{extension}"
+        else:
+            stored_file_name = (
+                f"{safe_report_code}_"
+                f"document-{document_id}_{uuid4().hex}"
+                f"{extension}"
+            )
 
         object_key = (
             f"{cls._school_prefix(context)}/"
@@ -72,7 +90,7 @@ class SchoolObjectKeyBuilder:
         stored_file_name = (
             f"final_document_"
             f"month-item-{context.month_item_id}_"
-            f"document-{document_id}"
+            f"document-{document_id}_{uuid4().hex}"
             f"{extension}"
         )
 

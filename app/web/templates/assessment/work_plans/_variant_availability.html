@@ -1,0 +1,19 @@
+{% if row.error %}{{ _(row.error) }}
+{% elif state in ['ready','common','partial','check'] %}
+  {% if state=='ready' %}
+    <strong class="work-plan-match">{{ 'Доступны задания для ' ~ plan.variant_count ~ ' вариантов' if ru else plan.variant_count ~ ' нұсқаға арналған тапсырмалар қолжетімді' }}</strong>
+  {% elif state=='common' %}
+    <strong class="work-plan-warning">{{ 'Одна карточка — можно использовать во всех вариантах' if ru else 'Бір карточка — барлық нұсқаларда қолдануға болады' }}</strong>
+  {% elif state=='partial' %}
+    <strong class="work-plan-warning">{{ 'Разных карточек: ' ~ row.availability.count ~ ' из ' ~ plan.variant_count ~ ' необходимых' if ru else 'Қажетті карточкалар: ' ~ plan.variant_count ~ '. Қолжетімді: ' ~ row.availability.count }}</strong>
+  {% else %}
+    <span>{{ 'Доступность остальных карточек нужно проверить на следующем шаге' if ru else 'Қалған карточкалардың қолжетімділігін келесі қадамда тексеру қажет' }}</span>
+  {% endif %}
+  {% if row.availability.choices is defined and row.availability.choices %}
+    <div class="bank-note">{{ 'Для подбора к №' ~ row.item.id ~ ':' if ru else '№' ~ row.item.id ~ ' үшін сәйкес карточкалар:' }} {% for candidate in row.availability.choices[:5] %}№{{ candidate.source.id }}{% if not loop.last %}, {% endif %}{% endfor %}{% if row.availability.choices|length > 5 %} · {{ 'ещё ' if ru else 'тағы ' }}{{ row.availability.choices|length - 5 }}{% endif %}</div>
+    {% if row.availability.choices|length > 5 %}<details><summary>{{ 'Все доступные карточки' if ru else 'Барлық қолжетімді карточкалар' }}</summary>{% for candidate in row.availability.choices %}№{{ candidate.source.id }}{% if not loop.last %}, {% endif %}{% endfor %}</details>{% endif %}
+    <small>{{ 'Распределение по вариантам — после нажатия «Далее».' if ru else 'Нұсқаларға бөлу — «Әрі қарай» түймесін басқаннан кейін.' }}</small>
+  {% endif %}
+{% elif state=='dirty' %}{{ _('Источник изменился — обновите сохранённое задание.') }}
+{% elif state=='complete' %}{{ _('Уже распределено по вариантам') }}
+{% else %}{{ _('Уже используется') }}{% endif %}

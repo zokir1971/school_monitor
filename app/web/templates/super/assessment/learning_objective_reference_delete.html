@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+{% block title %}{{ _('Удаление учебных целей') }}{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static',path='css/learning_objective_reference.css') }}">
+<style>
+.lo-delete{max-width:1000px;margin:28px auto;padding:0 20px;color:#172b4d;font-family:Arial,sans-serif}
+.lo-delete .lo-box{margin:20px 0;padding:24px;border:1px solid #dce5ef;border-radius:12px;background:#fff}
+.lo-delete .lo-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+.lo-delete label{display:flex;flex-direction:column;gap:8px;font-size:14px;font-weight:600}
+.lo-delete select,.lo-delete input{width:100%;min-height:44px;padding:10px;border:1px solid #cbd5e1;border-radius:8px;font:inherit;box-sizing:border-box}
+.lo-delete button{padding:12px 18px;border:1px solid #2563eb;border-radius:8px;background:#2563eb;color:#fff;font:inherit;cursor:pointer;margin-top:18px}
+.lo-delete .lo-danger{background:#b42318;border-color:#b42318}
+.lo-delete .lo-error{padding:16px;border-radius:8px;background:#fff1f0;color:#912018}
+.lo-delete .lo-success{padding:16px;background:#ecfdf3;color:#166534;border-radius:8px}
+.lo-delete :focus-visible{outline:3px solid #93c5fd;outline-offset:3px}
+.lo-delete dl{display:grid;grid-template-columns:180px 1fr;gap:12px}.lo-delete dd{margin:0;overflow-wrap:anywhere}
+@media(max-width:600px){.lo-delete .lo-fields{grid-template-columns:1fr}.lo-delete dl{grid-template-columns:1fr}.lo-delete dt{font-weight:600}}
+</style>
+{% endblock %}
+{% block content %}
+<div class="lo-delete">
+<p><a href="{{ request.url_for('super_learning_objective_reference_list') }}" data-sm-action="nav" data-sm-back="true">{{ _('← К справочнику целей') }}</a></p>
+<h1>{{ _('Удаление учебных целей') }}</h1>
+<p>{{ _('Выберите предмет и область удаления. Параллель — это, например, все 1-е классы, а не отдельный 1А.') }}</p>
+{% if deleted %}<p class="lo-success">{{ _('Удалено учебных целей:') }} {{ deleted }}.</p>{% endif %}
+{% if error %}<p class="lo-error" role="alert">{{ _(error) }}</p>{% endif %}
+<form method="get" class="lo-box">
+<div class="lo-fields">
+<input type="hidden" name="instruction_language" value="{{ scope.get('instruction_language', '') }}">
+<label>{{ _('Предмет') }}<select name="subject_id" required><option value="">{{ _('Выберите предмет') }}</option>
+{% for subject in subjects %}<option value="{{ subject.id }}" {% if scope.get('subject_id') == subject.id %}selected{% endif %}>{{ assessment_subject_name(subject) }}</option>{% endfor %}
+</select></label>
+<label>{{ _('Параллель') }}<select name="grade"><option value="">{{ _('Все параллели предмета') }}</option>
+{% for grade in range(1,13) %}<option value="{{ grade }}" {% if scope.get('grade') == grade %}selected{% endif %}>{{ grade }}</option>{% endfor %}
+</select></label>
+</div><button type="submit" data-sm-action="nav">{{ _('Показать область удаления') }}</button>
+</form>
+{% if preview %}
+<form method="get" class="lo-box">
+<input type="hidden" name="subject_id" value="{{ scope.subject_id }}">
+<input type="hidden" name="grade" value="{{ scope.grade or '' }}">
+<label>{{ _('Язык обучения') }}<select name="instruction_language"><option value="">{{ _('Все языки обучения') }}</option>
+{% for value,label in preview.languages.items() %}<option value="{{ value }}" {% if scope.instruction_language == value %}selected{% endif %}>{{ _(label) }}</option>{% endfor %}
+</select></label><button type="submit" data-sm-action="primary">{{ _('Применить язык обучения') }}</button>
+</form>
+<section class="lo-box"><h2>{{ _('Предварительный просмотр') }}</h2>
+<p>{{ _('Язык определяется по программе. Общий вариант «Уйгурский / узбекский / таджикский» включает uz, ug, tg и uz_ug_tg. Выбор отдельного языка включает только программы с этим отдельным кодом.') }}</p>
+<dl><dt>{{ _('Предмет') }}</dt><dd>{{ preview.subject.name_kz }}</dd>
+<dt>{{ _('Параллель') }}</dt><dd>{{ scope.grade or _('Все') }}</dd>
+<dt>{{ _('Язык обучения') }}</dt><dd>{{ _(preview.language_label) }}</dd>
+<dt>{{ _('Количество целей') }}</dt><dd><strong>{{ preview.count }}</strong></dd></dl>
+<p>{{ _('Область включает все программы выбранного языка обучения, все четверти, направления, активные и неактивные цели, тексты KZ/RU и точные формулировки. Фильтры списка справочника здесь не применяются.') }}</p>
+{% if preview.blockers %}
+<p class="lo-error">{{ _('Удаление заблокировано: цели используются в связанных записях. Ни одна цель выбранной области не будет удалена.') }}</p>
+<ul>{% for blocker in preview.blockers %}<li>{{ blocker.table }} {{ _('— используется целей:') }} {{ blocker.count }}</li>{% endfor %}</ul>
+{% elif preview.count %}
+<p>{{ _('Будут удалены цели, их формулировки и связи с четвертями. Программы, источники и исходные файлы сохранятся.') }}</p>
+<form method="post" action="{{ request.url_for('super_learning_objective_delete_confirm') }}">
+<input type="hidden" name="csrf" value="{{ csrf }}">
+<input type="hidden" name="subject_id" value="{{ scope.subject_id }}">
+<input type="hidden" name="grade" value="{{ scope.grade or '' }}">
+<input type="hidden" name="instruction_language" value="{{ scope.instruction_language }}">
+<input type="hidden" name="fingerprint" value="{{ preview.fingerprint }}">
+<label>{{ _('Для подтверждения введите УДАЛИТЬ') }}<input name="confirmation" required autocomplete="off" pattern="УДАЛИТЬ"></label>
+<button type="submit" class="lo-danger" data-sm-action="danger">{{ _('Удалить') }} {{ preview.count }} {{ _('целей') }}</button>
+</form>
+{% else %}<p>{{ _('Целей для удаления нет.') }}</p>{% endif %}
+</section>{% endif %}
+</div>
+{% endblock %}

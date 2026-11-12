@@ -1,12 +1,14 @@
 {% extends "base.html" %}
 
-{% block title %}Пользовательский шаблон отчета лист наблюдение урока{% endblock %}
+{% block title %}{{ _('Пользовательский шаблон отчета лист наблюдение урока') }}{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', path='css/template_report.css') }}">
 {% endblock %}
 
 {% block content %}
+{% set error = error|default(request.query_params.get('error'), true) %}
+{% set success = success|default(request.query_params.get('success'), true) %}
 
 {% set raw_month_item_id = month_item_id or request.query_params.get('month_item_id') %}
 {% set raw_selected_report_id = selected_report_id or request.query_params.get('selected_report_id') %}
@@ -15,41 +17,41 @@
 {% set selected_report_id = raw_selected_report_id if raw_selected_report_id and raw_selected_report_id != "None" else none %}
 <div class="page-header">
   <div>
-    <h2>Мои шаблоны</h2>
-    <div class="muted">Личные шаблоны отчетов для повторного использования.</div>
+    <h2>{{ _('Мои шаблоны') }}</h2>
+    <div class="muted">{{ _('Личные шаблоны отчетов для повторного использования.') }}</div>
   </div>
 
   <div class="page-actions">
 
     {% if month_item_id %}
   <a href="{{ url_for('staff_report_templates_page', month_item_id=month_item_id) }}"
-     class="btn btn-secondary">
-    ← Назад к отчетам задачи
+     class="btn btn-secondary" data-sm-action="nav" data-sm-back="true">
+    {{ _('← Назад к отчетам задачи') }}
   </a>
 {% endif %}
 
 
    <a href="{{ url_for('staff_user_template_create_page') }}?report_code={{ report_code }}{% if month_item_id and selected_report_id %}&month_item_id={{ month_item_id }}&selected_report_id={{ selected_report_id }}{% endif %}"
-   class="btn btn-primary">
-  + Создать новый шаблон
+   class="btn btn-primary" data-sm-action="primary">
+  {{ _('+ Создать новый шаблон') }}
 </a>
   </div>
 </div>
 
 {% if error %}
-  <div class="alert alert-danger">{{ error }}</div>
+  <div class="alert alert-danger">{{ reports_feedback(error) }}</div>
 {% endif %}
 
 {% if success %}
-  <div class="alert alert-success">{{ success }}</div>
+  <div class="alert alert-success">{{ reports_feedback(success) }}</div>
 {% endif %}
 
 <div class="card report-card">
   <div class="card-title-row">
     <div>
-      <h3>Список личных шаблонов</h3>
+      <h3>{{ _('Список личных шаблонов') }}</h3>
       <div class="muted">
-        Вы можете использовать, редактировать или удалить шаблон.
+        {{ _('Вы можете использовать, редактировать или удалить шаблон.') }}
       </div>
     </div>
   </div>
@@ -66,15 +68,15 @@
               </div>
 
               <div class="template-item__meta">
-                <strong>Тип отчета:</strong>
-                {{ t.report_label or t.report_code or "—" }}
+                <strong>{{ _('Тип отчета:') }}</strong>
+                {{ _(t.report_label or t.report_code or "—") }}
               </div>
             </div>
           </div>
 
           {% if t.description %}
             <div class="template-item__description">
-              <strong>Описание:</strong>
+              <strong>{{ _('Описание:') }}</strong>
               {{ t.description }}
             </div>
           {% endif %}
@@ -90,22 +92,22 @@
                     ) }}">
                 <input type="hidden" name="template_id" value="{{ t.id }}">
 
-                <button type="submit" class="btn btn-success">
-                  Использовать этот шаблон
+                <button type="submit" class="btn btn-success" data-sm-action="success">
+                  {{ _('Использовать этот шаблон') }}
                 </button>
               </form>
             {% endif %}
 
             <a href="{{ url_for('staff_user_template_edit_page', template_id=t.id) }}{% if month_item_id and selected_report_id %}?month_item_id={{ month_item_id }}&selected_report_id={{ selected_report_id }}{% endif %}"
-               class="btn btn-secondary">
-              Редактировать
+               class="btn btn-secondary" data-sm-action="edit">
+              {{ _('Редактировать') }}
             </a>
 
             <form method="post"
                   action="{{ url_for('staff_user_template_delete', template_id=t.id) }}{% if month_item_id and selected_report_id %}?month_item_id={{ month_item_id }}&selected_report_id={{ selected_report_id }}{% endif %}"
-                  onsubmit="return confirm('Удалить этот шаблон?');">
-              <button type="submit" class="btn btn-danger">
-                Удалить
+                  data-confirm="{{ _('Удалить этот шаблон?') }}" onsubmit="return confirm(this.dataset.confirm);">
+              <button type="submit" class="btn btn-danger" data-sm-action="danger">
+                {{ _('Удалить') }}
               </button>
             </form>
 
@@ -116,7 +118,7 @@
     </div>
   {% else %}
     <div class="empty-box">
-      У вас пока нет личных шаблонов.
+      {{ _('У вас пока нет личных шаблонов.') }}
     </div>
   {% endif %}
 </div>

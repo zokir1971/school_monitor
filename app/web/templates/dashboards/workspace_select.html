@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+{% set ru=ui_language()=='ru' %}
+{% block title %}{{ 'Выбор панели' if ru else 'Панельді таңдау' }}{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{{ url_for('static',path='css/dashboards/organized_sections.css') }}?v=124"><link rel="stylesheet" href="{{ url_for('static',path='css/dashboards/workspace_select.css') }}?v=125">{% endblock %}
+{% block content %}
+<div class="role-dashboard"><header class="role-dashboard__heading"><h1>{{ 'Выбор панели' if ru else 'Панельді таңдау' }}</h1></header>
+<p>{{ 'Выберите рабочую панель. Переход по логотипу вернёт вас в выбранную панель.' if ru else 'Жұмыс панелін таңдаңыз. Логотип арқылы таңдалған панельге ораласыз.' }}</p>
+<div class="role-dashboard__grid">
+{% for item in workspace_context.items %}
+{% if item.is_active %}<div class="role-dashboard__card workspace-choice--active"><h3>{{ _(item.label) }}</h3><p>{{ 'Текущая панель' if ru else 'Ағымдағы панель' }}</p><a href="{{ url_for('dashboard_redirect') }}" data-sm-action="nav">{{ 'Открыть' if ru else 'Ашу' }} →</a></div>
+{% else %}<form class="workspace-choice__form" method="post" action="{{ url_for('workspace_switch') }}"><input type="hidden" name="workspace" value="{{ item.code.value }}"><button class="role-dashboard__card workspace-choice__button" type="submit" data-sm-action="nav"><span class="workspace-choice__title">{{ _(item.label) }}</span><span>{{ 'Переключиться на эту панель' if ru else 'Осы панельге ауысу' }} →</span></button></form>{% endif %}
+{% endfor %}</div></div>
+{% endblock %}

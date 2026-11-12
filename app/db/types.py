@@ -25,6 +25,19 @@ from app.modules.reports.enums import (
     TaskDocumentStatus,
 )
 
+from app.modules.assessment.enums import (
+    AssessmentAnswerStatus,
+    AssessmentGrade,
+    AssessmentInputMode,
+    AssessmentParticipationStatus,
+    AssessmentQuestionType,
+    AssessmentStatus,
+    AssessmentTaskLinkType,
+    AssessmentType, AssessmentMode, AssessmentCheckpoint, AssessmentBlueprintStatus, AssessmentLanguage,
+    QuestionBankItemStatus, QuestionBankItemOrigin, AssessmentQuestionDifficulty, AIQuestionGenerationRunStatus,
+    QuestionBankReviewDecision,
+)
+
 
 # =========================================================
 # ENUM HELPERS
@@ -214,4 +227,153 @@ REPORT_ASSIGNMENT_STATUS_ENUM = SAEnum(
     native_enum=True,
     validate_strings=True,
     create_type=False,
+)
+
+
+# =========================================================
+# ASSESSMENT
+# =========================================================
+
+ASSESSMENT_STATUS_ENUM = SAEnum(
+    AssessmentStatus,
+    name="assessment_status",
+    values_callable=enum_values,
+    native_enum=True,
+    validate_strings=True,
+)
+
+
+ASSESSMENT_BLUEPRINT_STATUS_ENUM = SAEnum(
+    AssessmentBlueprintStatus,
+    name="assessment_blueprint_status",
+    values_callable=enum_values,
+    native_enum=True,
+    validate_strings=True,
+)
+
+
+ASSESSMENT_LANGUAGE_ENUM = SAEnum(
+    AssessmentLanguage,
+    name="assessment_language",
+    values_callable=enum_values,
+    native_enum=True,
+    validate_strings=True,
+)
+
+
+ASSESSMENT_INPUT_MODE_ENUM = SAEnum(
+    AssessmentInputMode,
+    name="assessment_input_mode",
+    values_callable=enum_values,
+    native_enum=True,
+    validate_strings=True,
+)
+
+ASSESSMENT_TYPE_ENUM = SAEnum(
+    AssessmentType,
+    name="assessment_type",
+    values_callable=enum_values,
+    native_enum=True,
+    validate_strings=True,
+)
+
+ASSESSMENT_PARTICIPATION_STATUS_ENUM = SAEnum(
+    AssessmentParticipationStatus,
+    name="assessment_participation_status",
+    values_callable=enum_values,
+    native_enum=True,
+    validate_strings=True,
+)
+
+ASSESSMENT_GRADE_ENUM = SAEnum(
+    AssessmentGrade,
+    name="assessment_grade",
+    values_callable=enum_values,
+    native_enum=True,
+    validate_strings=True,
+)
+
+ASSESSMENT_QUESTION_TYPE_ENUM = SAEnum(
+    AssessmentQuestionType,
+    name="assessment_question_type",
+    values_callable=enum_values,
+    native_enum=True,
+    validate_strings=True,
+)
+
+ASSESSMENT_ANSWER_STATUS_ENUM = SAEnum(
+    AssessmentAnswerStatus,
+    name="assessment_answer_status",
+    values_callable=enum_values,
+    native_enum=True,
+    validate_strings=True,
+)
+
+ASSESSMENT_TASK_LINK_TYPE_ENUM = SAEnum(
+    AssessmentTaskLinkType,
+    name="assessment_task_link_type",
+    values_callable=enum_values,
+    native_enum=True,
+    validate_strings=True,
+)
+
+ASSESSMENT_MODE_ENUM = SAEnum(
+    AssessmentMode,
+    name="assessment_mode",
+    values_callable=enum_values,
+    native_enum=True,
+    validate_strings=True,
+)
+
+ASSESSMENT_CHECKPOINT_ENUM = SAEnum(
+    AssessmentCheckpoint,
+    name="assessment_checkpoint",
+    values_callable=enum_values,
+    native_enum=True,
+    validate_strings=True,
+)
+
+ASSESSMENT_QUESTION_DIFFICULTY_ENUM = SAEnum(
+    AssessmentQuestionDifficulty,
+    name="assessment_question_difficulty",
+    values_callable=enum_values,
+    native_enum=True,
+    validate_strings=True,
+)
+
+
+QUESTION_BANK_ITEM_ORIGIN_ENUM = SAEnum(
+    QuestionBankItemOrigin,
+    name="question_bank_item_origin",
+    values_callable=enum_values,
+    native_enum=True,
+    validate_strings=True,
+)
+
+
+QUESTION_BANK_ITEM_STATUS_ENUM = SAEnum(
+    QuestionBankItemStatus,
+    name="question_bank_item_status",
+    values_callable=enum_values,
+    native_enum=True,
+    validate_strings=True,
+)
+
+AI_QUESTION_GENERATION_RUN_STATUS_ENUM = SAEnum(
+    AIQuestionGenerationRunStatus,
+    name="ai_question_generation_run_status",
+    values_callable=lambda enum_cls: [
+        item.value
+        for item in enum_cls
+    ],
+    native_enum=True,
+    validate_strings=True,
+)
+
+QUESTION_BANK_REVIEW_DECISION_ENUM = SAEnum(
+    QuestionBankReviewDecision,
+    name="question_bank_review_decision",
+    values_callable=enum_values,
+    native_enum=True,
+    validate_strings=True,
 )

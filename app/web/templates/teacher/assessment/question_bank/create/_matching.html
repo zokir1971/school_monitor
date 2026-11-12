@@ -1,0 +1,121 @@
+<!-- =============================================
+     MATCHING
+     ============================================= -->
+
+<div
+  id="matching-fields"
+  class="qb-answer-builder"
+  data-question-fields="matching"
+  hidden
+>
+
+  <div class="qb-answer-builder__header">
+    <h3>
+      {{ _('Сәйкестендіру жұптары') }}
+    </h3>
+
+    <p>
+      {{ _('Сол және оң жақтағы өзара сәйкес элементтерді енгізіңіз.') }}
+    </p>
+  </div>
+
+
+  <div data-matching-legacy>
+  <div
+    id="matching-pairs-container"
+    class="qb-matching-pairs"
+  >
+
+    <div
+      class="qb-matching-row"
+      data-matching-row
+    >
+
+      <div class="qb-matching-field">
+        <label class="qb-form-label">
+          {{ _('Сол жақ') }}
+        </label>
+
+        <input
+          type="text"
+          name="matching_left"
+          class="qb-form-control"
+          placeholder="{{ _('Мысалы: Процессор') }}"
+          data-type-input
+          disabled
+        >
+      </div>
+
+
+      <div
+        class="qb-matching-arrow"
+        aria-hidden="true"
+      >
+        ↔
+      </div>
+
+
+      <div class="qb-matching-field">
+        <label class="qb-form-label">
+          {{ _('Оң жақ') }}
+        </label>
+
+        <input
+          type="text"
+          name="matching_right"
+          class="qb-form-control"
+          placeholder="{{ _('Мысалы: Ақпаратты өңдеу') }}"
+          data-type-input
+          disabled
+        >
+      </div>
+
+
+      <button
+        type="button"
+        class="qb-remove-answer qb-matching-remove"
+        data-remove-matching
+        hidden
+        aria-label="{{ _('Жұпты жою') }}"
+       data-sm-action="danger" data-sm-icon="true">
+        ×
+      </button>
+
+    </div>
+
+  </div>
+
+
+  <button
+    type="button"
+    id="add-matching-pair"
+    class="qb-add-answer"
+   data-sm-action="primary">
+    {{ _('+ Жұп қосу') }}
+  </button>
+
+  </div>
+  <div data-scored-matching-rows></div>
+  <p data-scored-matching-status role="status" aria-live="polite"></p>
+  <input type="hidden" name="matching_pairs_payload" data-scored-matching-payload data-type-input disabled>
+  <template data-scored-matching-template>
+    <section data-scored-matching-row style="border:1px solid #eaecf0;border-radius:8px;padding:12px;margin-top:12px;">
+      <h4 data-scored-matching-label style="margin:0 0 8px;"></h4>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(220px,100%),1fr));gap:12px;">
+        {% for side, label in [('left', 'Сол жақ / Левый элемент'), ('right', 'Оң жақ / Соответствующий правый элемент')] %}
+          <div>
+            <label data-matching-editor-label="{{ side }}">{{ label }}</label>
+            <div class="qb-rich-editor" data-rich-editor data-matching-side="{{ side }}">
+              <div class="qb-rich-editor__toolbar"><button type="button" data-rich-add-math data-sm-action="nav">{{ _('+ Формула') }}</button></div>
+              <div class="qb-rich-editor__content" data-rich-content contenteditable="true" role="textbox" aria-multiline="true"></div>
+              <input type="hidden" data-rich-plain-value data-type-input>
+              <input type="hidden" data-rich-segments data-type-input>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    </section>
+  </template>
+</div>
+
+<script defer src="{{ url_for('static', path='js/teacher/assessment/question_bank/matching_editor.js') }}?v=63"></script>

@@ -1,4 +1,4 @@
-# app/modules/org/models_documents.py (Таблицы)
+# app/modules/org/models.py (Таблицы справочник регион, район, организация образования)
 
 from __future__ import annotations
 
@@ -11,6 +11,7 @@ from app.db.base import Base
 if TYPE_CHECKING:
     from app.modules.planning.models_school import SchoolPlan
     from app.modules.staff.models_staff_school import SchoolStaffMember, SchoolStaffRole
+    from app.modules.assessment.models_question_bank_experts import QuestionBankExpert
 
 
 class Region(Base):
@@ -123,4 +124,10 @@ class School(Base):
         cascade="all, delete-orphan",
         passive_deletes=True,
         lazy="selectin",
+    )
+
+    question_bank_experts: Mapped[list["QuestionBankExpert"]] = relationship(
+        "QuestionBankExpert",
+        back_populates="school",
+        lazy="raise",
     )

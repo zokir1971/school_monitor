@@ -53,3 +53,6 @@ class BaseStorage(ABC):
         expires_in: int = 300,
     ) -> str:
         raise NotImplementedError
+
+    async def read(self, *, object_key: str, max_bytes: int = 8_000_000) -> bytes:
+        raise NotImplementedError('Storage does not support bounded reads')

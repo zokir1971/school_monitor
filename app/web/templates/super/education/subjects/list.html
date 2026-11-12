@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+{% block title %}{{ _('Пәндер анықтамалығы') }}{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{{ url_for('static', path='css/education/subject_reference.css') }}">{% endblock %}
+{% block content %}
+<div class="subject-reference">
+  <p><a class="sr-back" href="/planning/super/education/curriculum" data-sm-action="nav">{{ _('Пәндер жиынтығы және МО профильдері →') }}</a></p>
+  <p><a class="sr-back" href="{{ url_for('super_subject_categories') }}" data-sm-action="nav">{{ _('Санаттар / Категории предметов →') }}</a></p>
+  <header class="sr-heading"><div><h1>{{ _('Пәндер анықтамалығы') }}</h1><p>{{ _('Глобальный справочник предметов для всех школ') }}</p></div>
+    <a class="sr-button" href="{{ url_for('super_subject_reference_create_page') }}" data-sm-action="primary">{{ _('+ Пән қосу / Добавить предмет') }}</a>
+  </header>
+  {% if saved %}<div class="sr-message sr-success" role="status">{{ _('Сақталды / Изменения сохранены.') }}</div>{% endif %}
+  {% if deleted %}<div class="sr-message sr-success" role="status">{{ _('Пән жойылды / Предмет удалён.') }}</div>{% endif %}
+  <form class="sr-filters" method="get" action="{{ url_for('super_subject_reference_list') }}">
+    <label>{{ _('Іздеу / Поиск') }}<input type="search" name="q" maxlength="200" placeholder="{{ _('Код или название KZ/RU') }}" value="{{ page.query }}"></label>
+    <label>{{ _('Күйі / Статус') }}<select name="state">
+      {% for value,label in [('all','Барлығы / Все'),('active','Белсенді / Активные'),('inactive','Белсенді емес / Неактивные')] %}
+      {% if page.state == value %}<option value="{{ value }}" selected>{{ _(label) }}</option>{% else %}<option value="{{ value }}">{{ _(label) }}</option>{% endif %}
+      {% endfor %}
+    </select></label>
+    <label>{{ _('Санат / Категория') }}<select name="category_id">
+      <option value="">{{ _('Все категории') }}</option>
+      <option value="0"{% if page.category_id == 0 %} selected{% endif %}>{{ _('Без категории — требуется настройка') }}</option>
+      {% for c in categories %}<option value="{{ c.id }}"{% if page.category_id == c.id %} selected{% endif %}>{{ assessment_subject_name(c) }}</option>{% endfor %}
+    </select></label>
+    <button class="sr-button" type="submit" data-sm-action="primary">{{ _('Қолдану / Применить') }}</button>
+    <a class="sr-button sr-secondary" href="{{ url_for('super_subject_reference_list') }}" data-sm-action="nav">{{ _('Тазарту / Сбросить') }}</a>
+  </form>
+  <p class="sr-total">{{ _('Пәндер / Предметов:') }} <strong>{{ page.total }}</strong></p>
+  <div class="sr-table-wrap"><table class="sr-table">
+    <thead><tr><th>{{ _('Код') }}</th><th>{{ _('Санат / Категория') }}</th><th>{{ _('Атауы KZ') }}</th><th>{{ _('Название RU') }}</th><th>{{ _('Күйі / Статус') }}</th><th>{{ _('Реті / Порядок') }}</th><th>{{ _('Әрекет / Действие') }}</th></tr></thead>
+    <tbody>{% for subject in page.rows %}<tr>
+      <td><code>{{ subject.code }}</code></td><td>{% set cat = category_by_id.get(subject.category_id) %}{{ assessment_subject_name(cat) if cat else _('Требуется настройка') }}{% if not subject.curriculum_role %}<small> {{ _('· Проверьте правила преподавания') }}</small>{% endif %}</td><td>{{ subject.name_kz }}</td><td>{{ subject.name_ru or '—' }}</td>
+      <td>{% if subject.is_active %}<span class="sr-badge sr-active">{{ _('Белсенді / Активен') }}</span>{% else %}<span class="sr-badge sr-inactive">{{ _('Белсенді емес / Неактивен') }}</span>{% endif %}</td>
+      <td>{{ subject.sort_order }}</td><td><div style="display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center"><a class="sr-edit" href="{{ url_for('super_subject_reference_edit_page', subject_id=subject.id) }}" data-sm-action="edit">{{ _('Өзгерту / Редактировать') }}</a><a href="{{ request.url_for('super_subject_reference_delete_page', subject_id=subject.id) }}" style="color:#b42318" data-sm-action="danger">{{ _('Жою / Удалить') }}</a></div></td>
+    </tr>{% else %}<tr><td colspan="7" class="sr-empty">{{ _('Пәндер табылмады / Предметы не найдены.') }}</td></tr>{% endfor %}</tbody>
+  </table></div>
+  <nav class="sr-pagination" aria-label="{{ _('Страницы справочника') }}">
+    {% if previous_url %}<a class="sr-button sr-secondary" href="{{ previous_url }}" data-sm-action="nav" data-sm-back="true">{{ _('← Алдыңғы / Назад') }}</a>{% endif %}
+    <span>{{ page.page }} / {{ page.pages }}</span>
+    {% if next_url %}<a class="sr-button sr-secondary" href="{{ next_url }}" data-sm-action="nav">{{ _('Келесі / Далее →') }}</a>{% endif %}
+  </nav>
+</div>
+{% endblock %}

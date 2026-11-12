@@ -1,0 +1,12 @@
+{% extends 'teacher/assessment/from_bank/base.html' %}
+{% block title %}{{ _('Комплекты оценивания') }}{% endblock %}
+{% block extra_css %}{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static',path='css/assessment/navigation.css') }}?v=99">
+<script defer src="{{ url_for('static',path='js/assessment/navigation.js') }}?v=99"></script>
+<link rel="stylesheet" href="{{ url_for('static',path='css/assessment/work_plans.css') }}?v=86">
+<link rel="stylesheet" href="{{ url_for('static',path='css/question_bank_objective_preview.css') }}">
+<link rel="stylesheet" href="{{ url_for('static',path='css/teacher/assessment/question_bank/question_bank_objective_picker.css') }}">
+{% endblock %}
+{% block extra_js %}{{ super() }}<script defer src="{{ url_for('static',path='js/teacher/assessment/question_bank/question_bank_objective_picker.js') }}"></script>{% endblock %}
+
+{% block content %}<div class="bank-page assessment-workflow" data-assessment-ui data-user="{{ user.id }}">{% include 'assessment/components/navigation.html' %}{% block bank_content %}{% endblock %}</div>{% endblock %}

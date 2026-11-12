@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Список школ{% endblock %}
+{% block title %}{{ _('Список школ') }}{% endblock %}
 
 {% block extra_css %}
   <link rel="stylesheet" href="{{ url_for('static', path='css/schools.css') }}">
@@ -12,27 +12,27 @@
 <div class="page">
   <div class="page-head">
     <div class="page-title">
-      <h1>Список школ</h1>
+      <h1>{{ _('Список школ') }}</h1>
       <div class="sub">
-        Управление школами, фильтрация и импорт из Excel
+        {{ _('Управление школами, фильтрация и импорт из Excel') }}
       </div>
     </div>
   </div>
 
   <div class="toolbar-card">
     {% if error %}
-      <div class="alert alert--error">{{ error }}</div>
+      <div class="alert alert--error">{{ schools_feedback(error) }}</div>
     {% endif %}
 
     {% if success %}
-      <div class="alert alert--success">{{ success }}</div>
+      <div class="alert alert--success">{{ schools_feedback(success) }}</div>
     {% endif %}
 
     <div class="toolbar-top">
 
   <div class="toolbar-left">
-    <a href="{{ request.url_for('school_create_page') }}" class="btn btn--success">
-      Добавить школу
+    <a href="{{ request.url_for('school_create_page') }}" class="btn btn--success" data-sm-action="primary">
+      {{ _('Добавить школу') }}
     </a>
   </div>
 
@@ -43,10 +43,10 @@
       enctype="multipart/form-data"
       class="import-form">
       <span id="file-name" class="file-name">
-        Файл не выбран
+        {{ _('Файл не выбран') }}
       </span>
       <label for="schools-file" class="btn btn--secondary">
-        Выбрать файл
+        {{ _('Выбрать файл') }}
       </label>
 
       <input
@@ -56,8 +56,8 @@
         accept=".xlsx"
         required
         class="file-input">
-      <button type="submit" class="btn btn--primary">
-        Импорт
+      <button type="submit" class="btn btn--primary" data-sm-action="primary">
+        {{ _('Импорт') }}
       </button>
 
     </form>
@@ -66,9 +66,9 @@
 <form method="get" action="{{ request.url_for('schools_page') }}">
   <div class="filters">
     <div class="field">
-      <label for="region_id">Область</label>
+      <label for="region_id">{{ _('Область') }}</label>
       <select id="region_id" name="region_id" class="select">
-        <option value="">Выберите область</option>
+        <option value="">{{ _('Выберите область') }}</option>
         {% for region in regions %}
           <option value="{{ region.id }}" {% if selected_region_id == region.id %}selected{% endif %}>
             {{ region.name }}
@@ -78,9 +78,9 @@
     </div>
 
     <div class="field">
-      <label for="district_id">Район</label>
+      <label for="district_id">{{ _('Район') }}</label>
       <select id="district_id" name="district_id" class="select">
-        <option value="">Выберите район</option>
+        <option value="">{{ _('Выберите район') }}</option>
         {% for district in districts %}
           <option value="{{ district.id }}" {% if selected_district_id == district.id %}selected{% endif %}>
             {{ district.name }}
@@ -90,9 +90,9 @@
     </div>
 
     <div class="field">
-      <label for="settlement">Елді мекен</label>
+      <label for="settlement">{{ _('Елді мекен') }}</label>
       <select id="settlement" name="settlement" class="select">
-        <option value="">Выберите населенный пункт</option>
+        <option value="">{{ _('Выберите населенный пункт') }}</option>
         {% for item in settlements %}
           <option value="{{ item }}" {% if selected_settlement == item %}selected{% endif %}>
             {{ item }}
@@ -102,20 +102,20 @@
     </div>
 
     <div class="field">
-      <label for="q">Поиск школы</label>
+      <label for="q">{{ _('Поиск школы') }}</label>
       <input
         id="q"
         type="text"
         name="q"
         class="input"
         value="{{ q or '' }}"
-        placeholder="Название школы"
+        placeholder="{{ _('Название школы') }}"
       >
     </div>
 
     <div class="toolbar-actions">
-      <button type="submit" class="btn btn--primary">Применить</button>
-      <a href="{{ request.url_for('schools_page') }}" class="btn btn--secondary">Сбросить</a>
+      <button type="submit" class="btn btn--primary" data-sm-action="primary">{{ _('Применить') }}</button>
+      <a href="{{ request.url_for('schools_page') }}" class="btn btn--secondary" data-sm-action="nav">{{ _('Сбросить') }}</a>
     </div>
   </div>
 </form>
@@ -131,11 +131,11 @@
                 <input type="checkbox" id="check-all">
               </th>
               <th class="nowrap">ID</th>
-              <th>Область</th>
-              <th>Район</th>
-              <th>Название школы</th>
-              <th>Адрес</th>
-              <th class="nowrap">Действия</th>
+              <th>{{ _('Область') }}</th>
+              <th>{{ _('Район') }}</th>
+              <th>{{ _('Название школы') }}</th>
+              <th>{{ _('Адрес') }}</th>
+              <th class="nowrap">{{ _('Действия') }}</th>
             </tr>
           </thead>
           <tbody>
@@ -143,7 +143,7 @@
 {% if not should_show_schools %}
   <tr>
     <td colspan="7" class="empty">
-      Выберите область, район и населенный пункт, затем нажмите «Применить»
+      {{ _('Выберите область, район и населенный пункт, затем нажмите «Применить»') }}
     </td>
   </tr>
 
@@ -177,8 +177,8 @@
             <a
               href="{{ request.url_for('school_edit_page', school_id=school.id) }}"
               class="btn btn--secondary btn--sm"
-            >
-              Редактировать
+             data-sm-action="edit">
+              {{ _('Редактировать') }}
             </a>
 
             <button
@@ -188,8 +188,8 @@
               value="{{ school.id }}"
               formaction="{{ request.url_for('school_delete', school_id=school.id) }}"
               formmethod="post"
-            >
-              Удалить
+             data-sm-action="danger">
+              {{ _('Удалить') }}
             </button>
 
           </div>
@@ -201,7 +201,7 @@
 
     <tr>
       <td colspan="7" class="empty">
-        В выбранном населенном пункте школы не найдены
+        {{ _('В выбранном населенном пункте школы не найдены') }}
       </td>
     </tr>
 
@@ -215,16 +215,16 @@
 
       <div class="footer-bar">
         <div class="muted">
-          Всего школ: <span class="badge">{{ schools|length }}</span>
+          {{ _('Всего школ:') }} <span class="badge">{{ schools|length }}</span>
         </div>
 
         <div class="toolbar-actions">
           <button
             type="submit"
             class="btn btn--danger"
-            onclick="return confirm('Удалить выбранные школы?');"
-          >
-            Удалить выбранные
+            onclick="return confirm({{ _('Удалить выбранные школы?')|tojson|forceescape }});"
+           data-sm-action="danger">
+            {{ _('Удалить выбранные') }}
           </button>
         </div>
       </div>
@@ -266,7 +266,7 @@ if (schoolFileInput && schoolFileName) {
       schoolFileName.textContent = this.files[0].name;
       schoolFileName.title = this.files[0].name;
     } else {
-      schoolFileName.textContent = "Файл не выбран";
+      schoolFileName.textContent = {{ _('Файл не выбран')|tojson }};
       schoolFileName.title = "";
     }
   });
@@ -279,7 +279,7 @@ if (schoolFileInput && schoolFileName) {
 
 document.querySelectorAll(".single-delete-btn").forEach(btn => {
   btn.addEventListener("click", function (e) {
-    const ok = confirm("Удалить эту школу?");
+    const ok = confirm({{ _('Удалить эту школу?')|tojson }});
 
     if (!ok) {
       e.preventDefault();
@@ -295,11 +295,11 @@ document.querySelectorAll(".single-delete-btn").forEach(btn => {
 async function loadDistricts(regionId, selectedDistrictId = "") {
   if (!districtSelect || !settlementSelect) return;
 
-  districtSelect.innerHTML = '<option value="">Загрузка...</option>';
-  settlementSelect.innerHTML = '<option value="">Выберите населенный пункт</option>';
+  districtSelect.innerHTML = {{ _('<option value="">Загрузка...</option>')|tojson }};
+  settlementSelect.innerHTML = {{ _('<option value="">Выберите населенный пункт</option>')|tojson }};
 
   if (!regionId) {
-    districtSelect.innerHTML = '<option value="">Выберите район</option>';
+    districtSelect.innerHTML = {{ _('<option value="">Выберите район</option>')|tojson }};
     return;
   }
 
@@ -307,12 +307,12 @@ async function loadDistricts(regionId, selectedDistrictId = "") {
     const response = await fetch(`/api/orgs/districts?region_id=${regionId}`);
 
     if (!response.ok) {
-      throw new Error("Ошибка загрузки районов");
+      throw new Error({{ _('Ошибка загрузки районов')|tojson }});
     }
 
     const data = await response.json();
 
-    districtSelect.innerHTML = '<option value="">Выберите район</option>';
+    districtSelect.innerHTML = {{ _('<option value="">Выберите район</option>')|tojson }};
 
     (data.items || []).forEach((district) => {
       const option = document.createElement("option");
@@ -328,7 +328,7 @@ async function loadDistricts(regionId, selectedDistrictId = "") {
     });
 
   } catch (error) {
-    districtSelect.innerHTML = '<option value="">Ошибка загрузки</option>';
+    districtSelect.innerHTML = {{ _('<option value="">Ошибка загрузки</option>')|tojson }};
     console.error(error);
   }
 }
@@ -341,10 +341,10 @@ async function loadDistricts(regionId, selectedDistrictId = "") {
 async function loadSettlements(districtId, selectedSettlement = "") {
   if (!settlementSelect) return;
 
-  settlementSelect.innerHTML = '<option value="">Загрузка...</option>';
+  settlementSelect.innerHTML = {{ _('<option value="">Загрузка...</option>')|tojson }};
 
   if (!districtId) {
-    settlementSelect.innerHTML = '<option value="">Выберите населенный пункт</option>';
+    settlementSelect.innerHTML = {{ _('<option value="">Выберите населенный пункт</option>')|tojson }};
     return;
   }
 
@@ -352,12 +352,12 @@ async function loadSettlements(districtId, selectedSettlement = "") {
     const response = await fetch(`/api/orgs/settlements?district_id=${districtId}`);
 
     if (!response.ok) {
-      throw new Error("Ошибка загрузки населенных пунктов");
+      throw new Error({{ _('Ошибка загрузки населенных пунктов')|tojson }});
     }
 
     const data = await response.json();
 
-    settlementSelect.innerHTML = '<option value="">Выберите населенный пункт</option>';
+    settlementSelect.innerHTML = {{ _('<option value="">Выберите населенный пункт</option>')|tojson }};
 
     (data.items || []).forEach((item) => {
       const option = document.createElement("option");
@@ -373,7 +373,7 @@ async function loadSettlements(districtId, selectedSettlement = "") {
     });
 
   } catch (error) {
-    settlementSelect.innerHTML = '<option value="">Ошибка загрузки</option>';
+    settlementSelect.innerHTML = {{ _('<option value="">Ошибка загрузки</option>')|tojson }};
     console.error(error);
   }
 }
@@ -388,11 +388,11 @@ if (regionSelect) {
     const regionId = this.value;
 
     if (districtSelect) {
-      districtSelect.innerHTML = '<option value="">Выберите район</option>';
+      districtSelect.innerHTML = {{ _('<option value="">Выберите район</option>')|tojson }};
     }
 
     if (settlementSelect) {
-      settlementSelect.innerHTML = '<option value="">Выберите населенный пункт</option>';
+      settlementSelect.innerHTML = {{ _('<option value="">Выберите населенный пункт</option>')|tojson }};
     }
 
     await loadDistricts(regionId);
@@ -409,7 +409,7 @@ if (districtSelect) {
     const districtId = this.value;
 
     if (settlementSelect) {
-      settlementSelect.innerHTML = '<option value="">Выберите населенный пункт</option>';
+      settlementSelect.innerHTML = {{ _('<option value="">Выберите населенный пункт</option>')|tojson }};
     }
 
     await loadSettlements(districtId);
@@ -424,7 +424,7 @@ if (districtSelect) {
 window.addEventListener("DOMContentLoaded", async function () {
   const selectedRegionId = "{{ selected_region_id or '' }}";
   const selectedDistrictId = "{{ selected_district_id or '' }}";
-  const selectedSettlement = "{{ selected_settlement or '' }}";
+  const selectedSettlement = {{ (selected_settlement or '')|tojson }};
 
   if (selectedRegionId) {
     await loadDistricts(selectedRegionId, selectedDistrictId);

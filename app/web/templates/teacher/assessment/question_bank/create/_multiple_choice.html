@@ -1,0 +1,153 @@
+<!-- =============================================
+     SINGLE CHOICE ANSWERS
+     ============================================= -->
+
+<div
+  id="multiple-choice-fields"
+  class="qb-answer-builder"
+  data-question-fields="multiple_choice"
+  hidden
+>
+
+  <div class="qb-answer-builder__header">
+
+    <h3>
+      {{ _('Жауап нұсқалары') }}
+    </h3>
+
+    <p>
+      {{ _('Жауаптарды енгізіп, бір немесе бірнеше дұрыс жауапты таңдаңыз. Формуланы курсор тұрған жерге енгізуге болады.') }}
+    </p>
+
+  </div>
+
+
+  {% for value in ["A", "B", "C", "D"] %}
+
+    {% set suffix = value | lower %}
+
+    <div class="qb-answer-row">
+
+      <!-- CORRECT ANSWER -->
+
+      <label class="qb-answer-correct">
+
+        <input
+          type="checkbox"
+          name="correct_answers"
+          value="{{ value }}"
+          data-type-input
+        >
+
+        <span>
+          {{ value }}
+        </span>
+
+      </label>
+
+
+      <!-- RICH CONTENT -->
+
+      <div
+        class="qb-rich-editor"
+        data-rich-editor
+      >
+
+        <div class="qb-rich-editor__toolbar">
+
+  <!-- Добавить новую формулу -->
+  <button
+    type="button"
+    class="qb-rich-editor__formula-btn"
+    data-rich-add-math
+   data-sm-action="nav" data-sm-size="compact">
+    {{ _('+ Формула') }}
+  </button>
+
+
+  <!-- Редактировать выбранную формулу -->
+  <button
+    type="button"
+    class="qb-rich-editor__tool"
+    data-rich-edit-math
+    disabled
+   data-sm-action="edit" data-sm-size="compact">
+    {{ _('Өңдеу') }}
+  </button>
+
+
+  <!-- Копировать выбранную формулу -->
+  <button
+    type="button"
+    class="qb-rich-editor__tool"
+    data-rich-copy-math
+    disabled
+   data-sm-action="nav" data-sm-size="compact">
+    {{ _('Көшіру') }}
+  </button>
+
+
+  <!-- Вставить скопированную формулу -->
+  <button
+    type="button"
+    class="qb-rich-editor__tool"
+    data-rich-paste-math
+    disabled
+   data-sm-action="nav" data-sm-size="compact">
+    {{ _('Қою') }}
+  </button>
+
+
+  <!-- Удалить выбранную формулу -->
+  <button
+    type="button"
+    class="
+      qb-rich-editor__tool
+      qb-rich-editor__tool--danger
+    "
+    data-rich-delete-math
+    disabled
+   data-sm-action="danger" data-sm-size="compact">
+    {{ _('Жою') }}
+  </button>
+
+</div>
+
+        <div
+          class="qb-rich-editor__content"
+          contenteditable="true"
+          role="textbox"
+          aria-multiline="true"
+          data-placeholder="{{ value }} жауабы"
+          data-rich-content
+          data-type-input
+        ></div>
+
+
+        <!-- Fallback plain text.
+             Нужен для существующего web-helper. -->
+
+        <input
+          type="hidden"
+          name="option_{{ suffix }}"
+          data-rich-plain-value
+          data-type-input
+        >
+
+
+        <!-- Основной rich-content transport -->
+
+        <input
+          type="hidden"
+          name="option_{{ suffix }}_segments"
+          data-rich-segments
+          data-type-input
+        >
+
+      </div>
+
+    </div>
+
+  {% endfor %}
+
+</div>

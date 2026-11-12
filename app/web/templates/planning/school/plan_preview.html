@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}План ВШК — просмотр{% endblock %}
+{% block title %}{{ _('План ВШК — просмотр') }}{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', path='css/admin.css') }}">
@@ -392,10 +392,10 @@
        ===================================================== -->
 
   <div class="plan-preview__school">
-    Мектеп:
+    {{ _('Мектеп:') }}
     <strong>{{ meta.school_name }}</strong>
 
-    · Директор:
+    {{ _('· Директор:') }}
     <strong>{{ meta.director_fio }}</strong>
   </div>
 
@@ -410,15 +410,15 @@
 
       <div>
         <h2 class="plan-header__title">
-          ВШК жоспары
+          {{ _('МІБ жоспары') }}
         </h2>
 
         <div class="plan-header__meta">
-          Оқу жылы:
+          {{ _('Оқу жылы:') }}
           <strong>{{ plan.academic_year }}</strong>
 
-          · Күйі:
-          <strong>{{ plan.status }}</strong>
+          {{ _('· Күйі:') }}
+          <strong>{{ planning_status_label(plan.status) }}</strong>
         </div>
       </div>
 
@@ -428,15 +428,15 @@
         <a
           class="btn btn--primary"
           href="{{ request.url_for('school_plan_pdf', plan_id=plan.id) }}"
-        >
-          PDF жүктеу
+         data-sm-action="primary">
+          {{ _('PDF жүктеу') }}
         </a>
 
         <a
           class="plan-header__back"
           href="{{ request.url_for('school_dashboard') }}?academic_year={{ plan.academic_year }}"
-        >
-          ← Артқа
+         data-sm-action="nav" data-sm-back="true">
+          {{ _('← Артқа') }}
         </a>
 
       </div>
@@ -488,15 +488,15 @@
                   </th>
 
                   <th class="col-object">
-                    Бақылау нысаны
+                    {{ _('Бақылау нысаны') }}
                   </th>
 
                   <th class="col-risk">
-                    Мәселелер, тәуекелдер
+                    {{ _('Мәселелер, тәуекелдер') }}
                   </th>
 
                   <th class="col-decision">
-                    Басшылық шешімі
+                    {{ _('Басшылық шешімі') }}
                   </th>
                 </tr>
               </thead>
@@ -573,43 +573,43 @@
                   </th>
 
                   <th class="col-topic">
-                    Тақырып
+                    {{ _('Тақырып') }}
                   </th>
 
                   <th class="col-goal">
-                    Мақсаты
+                    {{ _('Мақсаты') }}
                   </th>
 
                   <th class="col-object">
-                    Бақылау нысаны
+                    {{ _('Бақылау нысаны') }}
                   </th>
 
                   <th class="col-type">
-                    Бақылау түрі
+                    {{ _('Бақылау түрі') }}
                   </th>
 
                   <th class="col-methods">
-                    Әдістер
+                    {{ _('Әдістер') }}
                   </th>
 
                   <th class="col-period">
-                    Мерзімі
+                    {{ _('Мерзімі') }}
                   </th>
 
                   <th class="col-responsible">
-                    Жауаптылар
+                    {{ _('Жауаптылар') }}
                   </th>
 
                   <th class="col-review">
-                    Қарау орны
+                    {{ _('Қарау орны') }}
                   </th>
 
                   <th class="col-document">
-                    Басшылық шешімі
+                    {{ _('Басшылық шешімі') }}
                   </th>
 
                   <th class="col-second">
-                    Екінші бақылау
+                    {{ _('Екінші бақылау') }}
                   </th>
 
                 </tr>
@@ -650,7 +650,7 @@
                     <!-- PERIOD -->
 
                     <td>
-                      {{ r | row11_period }}
+                      {{ r | planning_period }}
                     </td>
 
 
@@ -669,10 +669,7 @@
                             else a.role
                           ) %}
 
-                          {{ ROLE_LABELS.get(key, key)
-                             if ROLE_LABELS is defined
-                             else key
-                          }}{% if not loop.last %}, {% endif %}
+                          {{ _(ROLE_LABELS.get(key, key)) if ROLE_LABELS is defined else key }}{% if not loop.last %}, {% endif %}
 
                         {% endfor %}
 

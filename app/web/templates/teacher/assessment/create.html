@@ -1,0 +1,1095 @@
+{% extends "base.html" %}
+
+{% block title %}
+{{ _('Жаңа Assessment') }}
+{% endblock %}
+
+
+{% block extra_css %}
+<style>
+  .assessment-create-page {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 24px 16px 48px;
+  }
+
+  .create-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 20px;
+    margin-bottom: 22px;
+  }
+
+  .create-header h1 {
+    margin: 0 0 6px;
+    color: #101828;
+    font-size: 28px;
+    font-weight: 700;
+  }
+
+  .create-header p {
+    margin: 0;
+    color: #667085;
+    line-height: 1.5;
+  }
+
+  .create-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 42px;
+    padding: 0 16px;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+  }
+
+  .create-btn--secondary {
+    background: #f2f4f7;
+    border-color: #d0d5dd;
+    color: #344054;
+  }
+
+  .create-btn--primary {
+    background: #344054;
+    color: #fff;
+  }
+
+  .create-form {
+    display: grid;
+    gap: 18px;
+  }
+
+  .create-card {
+    padding: 20px;
+    background: #fff;
+    border: 1px solid #e4e7ec;
+    border-radius: 14px;
+  }
+
+  .create-card h2 {
+    margin: 0 0 5px;
+    color: #101828;
+    font-size: 18px;
+  }
+
+  .create-card__description {
+    margin: 0 0 18px;
+    color: #667085;
+    font-size: 13px;
+  }
+
+  .form-grid {
+    display: grid;
+    grid-template-columns: repeat(
+      2,
+      minmax(0, 1fr)
+    );
+    gap: 16px;
+  }
+
+  .form-field {
+    min-width: 0;
+  }
+
+  .form-field--full {
+    grid-column: 1 / -1;
+  }
+
+  .form-label {
+    display: block;
+    margin-bottom: 7px;
+    color: #344054;
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  .form-control {
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 42px;
+    padding: 9px 11px;
+    border: 1px solid #d0d5dd;
+    border-radius: 8px;
+    background: #fff;
+    color: #101828;
+    font: inherit;
+  }
+
+  textarea.form-control {
+    min-height: 96px;
+    resize: vertical;
+  }
+
+  .form-hint {
+    margin-top: 5px;
+    color: #667085;
+    font-size: 12px;
+  }
+
+  .class-list {
+    display: grid;
+    grid-template-columns: repeat(
+      3,
+      minmax(0, 1fr)
+    );
+    gap: 10px;
+  }
+
+  .class-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 42px;
+    padding: 9px 11px;
+    border: 1px solid #e4e7ec;
+    border-radius: 8px;
+    background: #fff;
+  }
+
+  .class-option.is-hidden {
+    display: none;
+  }
+
+  .objective-list {
+    display: grid;
+    gap: 10px;
+  }
+
+  .objective-item {
+    display: grid;
+    grid-template-columns:
+      auto
+      minmax(0, 1fr)
+      130px;
+    gap: 12px;
+    align-items: center;
+    padding: 12px;
+    border: 1px solid #e4e7ec;
+    border-radius: 9px;
+  }
+
+  .objective-code {
+    display: inline-block;
+    margin-bottom: 3px;
+    color: #344054;
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  .objective-title {
+    color: #101828;
+    font-size: 13px;
+    line-height: 1.4;
+  }
+
+  .objectives-empty {
+    padding: 18px;
+    border: 1px dashed #d0d5dd;
+    border-radius: 9px;
+    color: #667085;
+    text-align: center;
+    font-size: 13px;
+  }
+
+  .objectives-summary {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 12px;
+    color: #344054;
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  .create-error {
+    margin-bottom: 18px;
+    padding: 12px 14px;
+    border: 1px solid #fecdca;
+    border-radius: 9px;
+    background: #fef3f2;
+    color: #b42318;
+  }
+
+  .create-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+  }
+
+  .is-hidden {
+    display: none !important;
+  }
+
+  @media (max-width: 800px) {
+    .create-header {
+      flex-direction: column;
+    }
+
+    .form-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .class-list {
+      grid-template-columns: 1fr;
+    }
+
+    .objective-item {
+      grid-template-columns: auto 1fr;
+    }
+
+    .objective-score {
+      grid-column: 2;
+    }
+  }
+</style>
+{% endblock %}
+
+
+{% block content %}
+
+<div class="assessment-create-page">
+
+  <div class="create-header">
+
+    <div>
+      <h1>
+        {{ _('Жаңа Assessment') }}
+      </h1>
+
+      <p>
+        {{ _('Өз пәндеріңіз бен сыныптарыңыз үшін жаңа бақылау жұмысын құру.') }}
+      </p>
+    </div>
+
+    <a
+      class="create-btn create-btn--secondary"
+      href="{{ url_for(
+        'teacher_assessment_analytics_page'
+      ) }}"
+     data-sm-action="nav" data-sm-back="true">
+      {{ _('← Артқа') }}
+    </a>
+
+  </div>
+
+
+  {% if error %}
+    <div class="create-error">
+      {{ assessment_error(error) }}
+    </div>
+  {% endif %}
+
+
+  <form
+    method="post"
+    action="{{ url_for(
+      'teacher_assessment_create'
+    ) }}"
+    class="create-form"
+    id="assessmentCreateForm"
+  >
+
+    <!-- =============================================== -->
+    <!-- BASIC -->
+    <!-- =============================================== -->
+
+    <section class="create-card">
+
+      <h2>
+        {{ _('1. Негізгі ақпарат') }}
+      </h2>
+
+      <p class="create-card__description">
+        {{ _('Assessment атауы мен негізгі параметрлерін көрсетіңіз.') }}
+      </p>
+
+
+      <div class="form-grid">
+
+        <div class="form-field form-field--full">
+
+          <label
+            class="form-label"
+            for="title"
+          >
+            {{ 'Название сформируется автоматически на двух языках' if ui_language()=='ru' else 'Атау екі тілде автоматты түрде құрылады' }}
+          </label>
+
+          
+<div class="form-grid"><div class="form-field"><label for="naming_quarter">{{ 'Четверть работы (для СОР и СОЧ)' if ui_language()=='ru' else 'Жұмыс тоқсаны (БЖБ және ТЖБ үшін)' }}</label><select class="form-control" id="naming_quarter" name="naming_quarter"><option value="">—</option>{% for q in range(1,5) %}<option value="{{ q }}" {% if form_data is defined and form_data and form_data.get('naming_quarter')==q|string %}selected{% endif %}>{{ q }}</option>{% endfor %}</select></div><div class="form-field"><label for="section_number">{{ 'Номер СОР (если используется)' if ui_language()=='ru' else 'БЖБ нөмірі (қолданылса)' }}</label><input class="form-control" id="section_number" name="section_number" type="number" min="1" max="99" value="{{ form_data.get('section_number','') if form_data is defined and form_data else '' }}"></div></div>
+<div class="form-field"><label for="checkpoint">{{ 'Контрольная точка для динамики' if ui_language()=='ru' else 'Динамика үшін бақылау нүктесі' }}</label><select class="form-control" id="checkpoint" name="checkpoint"><option value="">{{ 'Не включать в годовую динамику' if ui_language()=='ru' else 'Жылдық динамикаға қоспау' }}</option><option value="baseline">{{ 'Нулевой контроль' if ui_language()=='ru' else 'Нөлдік бақылау' }}</option>{% for q in range(1,5) %}<option value="quarter_{{ q }}">{{ q }} {{ 'четверть' if ui_language()=='ru' else 'тоқсан' }}</option>{% endfor %}</select></div><input type="hidden" id="title" name="title" value="">
+
+        </div>
+
+
+        <div class="form-field">
+
+          <label
+            class="form-label"
+            for="subject_id"
+          >
+            {{ _('Пән') }}
+          </label>
+
+          <select
+            class="form-control"
+            id="subject_id"
+            name="subject_id"
+            required
+          >
+
+            <option value="">
+              {{ _('Пәнді таңдаңыз') }}
+            </option>
+
+            {% for subject in subjects %}
+
+              <option value="{{ subject.id }}">
+                {{ assessment_subject_name(subject) }}
+              </option>
+
+            {% endfor %}
+
+          </select>
+
+        </div>
+
+
+        <div class="form-field">
+
+          <label
+            class="form-label"
+            for="assessment_type"
+          >
+            {{ _('Assessment түрі') }}
+          </label>
+
+          <select
+            class="form-control"
+            id="assessment_type"
+            name="assessment_type"
+            required
+          >
+
+            <option value="">{{ 'Выберите тип работы' if ui_language()=='ru' else 'Жұмыс түрін таңдаңыз' }}</option><option value="sor" {% if form_data is defined and form_data and form_data.get('assessment_mode')=='assessment_by_section' %}selected{% endif %}>{{ 'СОР' if ui_language()=='ru' else 'БЖБ' }}</option><option value="soch" {% if form_data is defined and form_data and form_data.get('assessment_mode')=='assessment_by_quarter' %}selected{% endif %}>{{ 'СОЧ' if ui_language()=='ru' else 'ТЖБ' }}</option>{% for item in assessment_types if item.value!='summative' %}
+              <option value="{{ item.value }}">
+                {{ ({'baseline':'Нулевой контроль','diagnostic':'Диагностическая работа','monitoring':'Мониторинг','control':'Контрольная работа','custom':'Другое'}.get(item.value,item.label_kz)) if ui_language()=='ru' else item.label_kz }}
+              </option>
+            {% endfor %}
+
+          </select>
+
+        </div>
+
+
+        <div class="form-field">
+
+          <label
+            class="form-label"
+            for="assessment_mode"
+          >
+            {{ _('Assessment режимі') }}
+          </label>
+
+          <select
+            class="form-control"
+            id="assessment_mode"
+            name="assessment_mode"
+            required
+          >
+
+            <option value="without_objectives">{{ 'Только общий балл' if ui_language()=='ru' else 'Тек жалпы балл' }}</option><option value="by_objectives" {% if form_data is defined and form_data and form_data.get('assessment_mode') in ['by_objectives','assessment_by_section','assessment_by_quarter'] %}selected{% endif %}>{{ 'Баллы по учебным целям' if ui_language()=='ru' else 'Оқу мақсаттары бойынша балдар' }}</option>
+
+          </select>
+
+        </div>
+
+
+        <div class="form-field">
+
+          <label
+            class="form-label"
+            for="duration_minutes"
+          >
+            {{ _('Ұзақтығы, минут') }}
+          </label>
+
+          <input
+            class="form-control"
+            id="duration_minutes"
+            name="duration_minutes"
+            type="number"
+            min="1"
+            step="1"
+          >
+
+          <div class="form-hint">
+            {{ _('Ұзақтығын мұғалім өзі анықтайды.') }}
+          </div>
+
+        </div>
+
+
+        <div class="form-field">
+
+          <label
+            class="form-label"
+            for="max_score"
+          >
+            {{ _('Максималды балл') }}
+          </label>
+
+          <input
+            class="form-control"
+            id="max_score"
+            name="max_score"
+            type="number"
+            min="0.01"
+            step="0.01"
+            required
+          >
+
+        </div>
+
+
+        <div class="form-field">
+
+          <label class="form-label">
+            {{ _('Оқу жылы') }}
+          </label>
+
+          <input
+            class="form-control"
+            type="text"
+            value="{{ academic_year_label }}"
+            readonly
+          >
+
+        </div>
+
+
+        <div class="form-field form-field--full">
+
+          <label
+            class="form-label"
+            for="description"
+          >
+            {{ _('Сипаттама') }}
+          </label>
+
+          <textarea
+            class="form-control"
+            id="description"
+            name="description"
+          ></textarea>
+
+        </div>
+
+      </div>
+
+    </section>
+
+
+    <!-- =============================================== -->
+    <!-- CLASSES -->
+    <!-- =============================================== -->
+
+    <section class="create-card">
+
+      <h2>
+        {{ _('2. Сыныптар') }}
+      </h2>
+
+      <p class="create-card__description">
+        {{ _('Таңдалған пән бойынша өзіңіз сабақ беретін сыныптарды таңдаңыз.') }}
+      </p>
+
+
+      <div
+        id="classList"
+        class="class-list"
+      >
+
+        {% for school_class in classes %}
+
+          <label
+            class="class-option"
+            data-class-id="{{ school_class.id }}"
+          >
+
+            <input
+              type="checkbox"
+              name="school_class_ids"
+              value="{{ school_class.id }}" data-grade-level="{{ school_class.grade_level }}"
+            >
+
+            <span>
+              {{ school_class.name }}
+            </span>
+
+          </label>
+
+        {% endfor %}
+
+      </div>
+
+
+      <div
+        id="classEmpty"
+        class="objectives-empty is-hidden"
+      >
+        {{ _('Бұл пән бойынша сізге бекітілген сынып жоқ.') }}
+      </div>
+
+    </section>
+
+
+    <!-- =============================================== -->
+    <!-- OBJECTIVES -->
+    <!-- =============================================== -->
+
+    <section
+      class="create-card"
+      id="objectivesCard"
+    >
+
+      <h2>
+        {{ _('3. Оқу мақсаттары') }}
+      </h2>
+
+      <p class="create-card__description">
+        {{ _('БЖБ немесе ТЖБ режимінде оқу мақсаттарын және әр мақсаттың максималды баллын көрсетіңіз.') }}
+      </p>
+
+
+      <div
+        id="objectivesList"
+        class="objective-list"
+      >
+
+        <div class="objectives-empty">
+          {{ _('Алдымен пәнді және сыныпты таңдаңыз.') }}
+        </div>
+
+      </div>
+
+
+      <div class="objectives-summary">
+
+        <span>
+          {{ _('Таңдалған мақсаттар баллы:') }}
+        </span>
+
+        <span id="objectiveScoreTotal">
+          0
+        </span>
+
+        <span>
+          /
+        </span>
+
+        <span id="assessmentMaxScoreDisplay">
+          0
+        </span>
+
+      </div>
+
+    </section>
+
+
+    <!-- =============================================== -->
+    <!-- ACTIONS -->
+    <!-- =============================================== -->
+
+    <div class="create-actions">
+
+      <a
+        class="create-btn create-btn--secondary"
+        href="{{ url_for(
+          'teacher_assessment_analytics_page'
+        ) }}"
+       data-sm-action="edit">
+        {{ _('Болдырмау') }}
+      </a>
+
+      <button
+        class="create-btn create-btn--primary"
+        type="submit"
+       data-sm-action="primary">
+        {{ _('Assessment құру') }}
+      </button>
+
+    </div>
+
+  </form>
+
+</div>
+
+
+<script>
+  (() => {
+
+    const subjectClassMap = {{ subject_class_map | tojson }};
+
+    const subjectSelect =
+      document.getElementById("subject_id");
+
+    const modeSelect =
+      document.getElementById("assessment_mode");
+
+    const maxScoreInput =
+      document.getElementById("max_score");
+
+    const classOptions =
+      Array.from(
+        document.querySelectorAll(
+          ".class-option"
+        )
+      );
+
+    const classEmpty =
+      document.getElementById("classEmpty");
+
+    const objectivesCard =
+      document.getElementById(
+        "objectivesCard"
+      );
+
+    const objectivesList =
+      document.getElementById(
+        "objectivesList"
+      );
+
+    const objectiveScoreTotal =
+      document.getElementById(
+        "objectiveScoreTotal"
+      );
+
+    const assessmentMaxScoreDisplay =
+      document.getElementById(
+        "assessmentMaxScoreDisplay"
+      );
+
+
+    const objectiveModes = new Set([
+      "by_objectives",
+      "assessment_by_section",
+      "assessment_by_quarter"
+    ]);
+
+
+    function selectedSubjectId() {
+      const value = Number(
+        subjectSelect.value
+      );
+
+      return Number.isFinite(value)
+        ? value
+        : null;
+    }
+
+
+    function selectedClassInputs() {
+      return classOptions
+        .map(option => {
+          return option.querySelector(
+            'input[name="school_class_ids"]'
+          );
+        })
+        .filter(input => input.checked);
+    }
+
+
+    function updateClasses() {
+
+      const subjectId =
+        selectedSubjectId();
+
+      const allowed = new Set(
+        (
+          subjectClassMap[
+            String(subjectId)
+          ]
+          ||
+          subjectClassMap[
+            subjectId
+          ]
+          ||
+          []
+        ).map(Number)
+      );
+
+      let visibleCount = 0;
+
+      for (const option of classOptions) {
+
+        const classId = Number(
+          option.dataset.classId
+        );
+
+        const input = option.querySelector(
+          'input[name="school_class_ids"]'
+        );
+
+        const visible =
+          subjectId !== null
+          &&
+          allowed.has(classId);
+
+        option.classList.toggle(
+          "is-hidden",
+          !visible
+        );
+
+        if (!visible) {
+          input.checked = false;
+        } else {
+          visibleCount += 1;
+        }
+      }
+
+      classEmpty.classList.toggle(
+        "is-hidden",
+        visibleCount > 0
+      );
+
+      updateObjectives();
+    }
+
+
+    function objectivesEnabled() {
+      return objectiveModes.has(
+        modeSelect.value
+      );
+    }
+
+
+    function updateObjectiveVisibility() {
+
+      const enabled =
+        objectivesEnabled();
+
+      objectivesCard.classList.toggle(
+        "is-hidden",
+        !enabled
+      );
+
+      if (!enabled) {
+        objectivesList.innerHTML = "";
+
+        objectiveScoreTotal.textContent =
+          "0";
+      } else {
+        updateObjectives();
+      }
+    }
+
+
+    function getSingleGradeLevel() {
+
+      const selectedInputs =
+        selectedClassInputs();
+
+      if (!selectedInputs.length) {
+        return null;
+      }
+
+      const classById = {};
+
+      {% for school_class in classes %}
+        classById[
+          {{ school_class.id }}
+        ] = {{ school_class.grade_level }};
+      {% endfor %}
+
+      const grades = new Set(
+        selectedInputs.map(
+          input => classById[
+            Number(input.value)
+          ]
+        )
+      );
+
+      if (grades.size !== 1) {
+        return null;
+      }
+
+      return Array.from(grades)[0];
+    }
+
+
+    let objectiveLoadVersion=0;
+    async function updateObjectives() {
+      const loadVersion=++objectiveLoadVersion;
+      const quarterField=document.getElementById('naming_quarter');
+      const quarterRequired=['sor','soch'].includes(document.getElementById('assessment_type').value);
+      const selectedQuarter=quarterRequired ? quarterField.value : '';
+      if(quarterRequired&&!selectedQuarter){
+        objectivesList.innerHTML='';
+        const message=document.createElement('p');message.textContent={{ ('Выберите четверть для загрузки учебных целей.' if ui_language()=='ru' else 'Оқу мақсаттарын жүктеу үшін тоқсанды таңдаңыз.')|tojson }};
+        objectivesList.appendChild(message);objectivesList.hidden=false;
+        return;
+      }
+
+
+      if (!objectivesEnabled()) {
+        return;
+      }
+
+      const subjectId =
+        selectedSubjectId();
+
+      const participantGrade=getSingleGradeLevel();
+      const gradeLevel=participantGrade ? participantGrade-(document.getElementById('assessment_type').value==='baseline'?1:0):null;
+
+      if (!subjectId || !gradeLevel) {
+
+        objectivesList.innerHTML = window.SchoolMonitorI18n.t("as_2e19ac119ce5", {});
+
+        objectiveScoreTotal.textContent =
+          "0";
+
+        return;
+      }
+
+      objectivesList.innerHTML = window.SchoolMonitorI18n.t("as_8fd60a07b9ac", {});
+
+      const url = new URL(
+        "{{ url_for(
+          'teacher_assessment_learning_objectives'
+        ) }}",
+        window.location.origin
+      );
+
+      url.searchParams.set(
+        "subject_id",
+        subjectId
+      );
+
+      url.searchParams.set(
+        "grade_level",
+        gradeLevel
+      );
+
+      if(selectedQuarter)url.searchParams.set('quarter',selectedQuarter);
+
+      const response = await fetch(
+        url.toString(),
+        {
+          credentials: "same-origin"
+        }
+      );
+
+      if (!response.ok) {
+
+        objectivesList.innerHTML = window.SchoolMonitorI18n.t("as_712bdb9e4248", {});
+
+        return;
+      }
+
+      const payload = await response.json();
+      if(loadVersion!==objectiveLoadVersion)return;
+
+      renderObjectives(
+        payload.items || []
+      );
+    }
+
+
+    function renderObjectives(items) {
+
+      if (!items.length) {
+
+        objectivesList.innerHTML = window.SchoolMonitorI18n.t("as_90296334784e", {});
+
+        objectiveScoreTotal.textContent =
+          "0";
+
+        return;
+      }
+
+      objectivesList.innerHTML = "";
+
+      for (const item of items) {
+
+        const wrapper =
+          document.createElement("label");
+
+        wrapper.className =
+          "objective-item";
+
+        wrapper.innerHTML = window.SchoolMonitorI18n.t("as_659814f2c926", {p0: (item.id), p1: (escapeHtml(item.code || "")), p2: (escapeHtml(item.title || "")), p3: (item.id)});
+
+        objectivesList.appendChild(
+          wrapper
+        );
+      }
+
+      bindObjectiveEvents();
+      recalculateObjectiveTotal();
+    }
+
+
+    function bindObjectiveEvents() {
+
+      const checkboxes =
+        objectivesList.querySelectorAll(
+          'input[name="learning_objective_ids"]'
+        );
+
+      for (const checkbox of checkboxes) {
+
+        checkbox.addEventListener(
+          "change",
+          () => {
+
+            const row =
+              checkbox.closest(
+                ".objective-item"
+              );
+
+            const scoreInput =
+              row.querySelector(
+                ".objective-score"
+              );
+
+            scoreInput.disabled =
+              !checkbox.checked;
+
+            if (!checkbox.checked) {
+              scoreInput.value = "";
+            }
+
+            recalculateObjectiveTotal();
+          }
+        );
+      }
+
+
+      const scoreInputs =
+        objectivesList.querySelectorAll(
+          ".objective-score"
+        );
+
+      for (const input of scoreInputs) {
+        input.addEventListener(
+          "input",
+          recalculateObjectiveTotal
+        );
+      }
+    }
+
+
+    function recalculateObjectiveTotal() {
+
+      let total = 0;
+
+      const selected =
+        objectivesList.querySelectorAll(
+          'input[name="learning_objective_ids"]:checked'
+        );
+
+      for (const checkbox of selected) {
+
+        const row =
+          checkbox.closest(
+            ".objective-item"
+          );
+
+        const scoreInput =
+          row.querySelector(
+            ".objective-score"
+          );
+
+        const value =
+          Number(scoreInput.value);
+
+        if (Number.isFinite(value)) {
+          total += value;
+        }
+      }
+
+      objectiveScoreTotal.textContent =
+        formatNumber(total);
+    }
+
+
+    function updateMaxScore() {
+
+      const value =
+        Number(maxScoreInput.value);
+
+      assessmentMaxScoreDisplay.textContent =
+        Number.isFinite(value)
+        ? formatNumber(value)
+        : "0";
+    }
+
+
+    function formatNumber(value) {
+
+      return value.toLocaleString(
+        "kk-KZ",
+        {
+          maximumFractionDigits: 2
+        }
+      );
+    }
+
+
+    function escapeHtml(value) {
+
+      const div =
+        document.createElement("div");
+
+      div.textContent =
+        String(value);
+
+      return div.innerHTML;
+    }
+
+
+    subjectSelect.addEventListener(
+      "change",
+      updateClasses
+    );
+
+    modeSelect.addEventListener(
+      "change",
+      updateObjectiveVisibility
+    );
+
+    maxScoreInput.addEventListener(
+      "input",
+      updateMaxScore
+    );
+
+    for (const option of classOptions) {
+
+      const input =
+        option.querySelector(
+          'input[name="school_class_ids"]'
+        );
+
+      input.addEventListener(
+        "change",
+        updateObjectives
+      );
+    }
+
+
+    updateClasses();
+    updateObjectiveVisibility();
+    updateMaxScore();
+
+  })();
+</script>
+
+<script defer src="{{ url_for('static',path='js/assessment/manual_work_parameters.js') }}?v=122"></script>
+{% endblock %}

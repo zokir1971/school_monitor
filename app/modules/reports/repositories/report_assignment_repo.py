@@ -23,7 +23,7 @@ from app.modules.planning.models_school import (
     SchoolPlan,
     SchoolPlanRow11,
 )
-from app.modules.reports.control_flow import is_report_target_assignable
+from app.modules.reports.rules.control_flow import is_report_target_assignable
 from app.modules.reports.enums import ReportAssignmentStatus
 from app.modules.reports.models_documents import (
     ReportTypeModel,
@@ -61,6 +61,19 @@ class ReportAssignmentRepo:
     # =========================================================
     # PAGE DATA
     # =========================================================
+
+    @staticmethod
+    async def lock_report_selection(db: AsyncSession, *, month_item_id: int) -> None:
+        """Serialize assignment changes against concurrent saves of the algorithm.
+
+        One batch lock, in selected ID order, including rows without assignments.
+        Call after the existing school/PRIMARY/task checks, before reading rows.
+        """
+        selected = TaskExecutionSelectedReport.__table__
+        execution = TaskExecutionData.__table__
+        await db.execute(select(selected.c.id).join(execution, execution.c.id == selected.c.execution_data_id)
+                         .where(execution.c.month_item_id == month_item_id)
+                         .order_by(selected.c.id).with_for_update(of=selected))
 
     @staticmethod
     async def list_executor_choices(
@@ -248,6 +261,8 @@ class ReportAssignmentRepo:
 
         stmt = (
             select(
+                TaskExecutionData.algorithm_parameters.label('algorithm_parameters'),
+                ReportTypeModel.name_kz.label('report_name_kk'),
                 TaskExecutionSelectedReport.id.label(
                     "selected_report_id"
                 ),
@@ -363,6 +378,17 @@ class ReportAssignmentRepo:
         rows = (
             await db.execute(stmt)
         ).all()
+        from app.modules.reports.repositories.execution_repo import ExecutionRepo
+        from app.modules.reports.rules.control_flow import algorithm_context_label
+        catalog = await ExecutionRepo.get_algorithm_catalog(db,month_item_id=month_item_id) if rows else None
+        context_labels = {}
+        area_names = {}
+        subject_labels = {}
+        for subject in (catalog['subjects'] if catalog else []):
+            labels = dict(ru=subject['name_ru'] or subject['name_kz'],kk=subject['name_kz'] or subject['name_ru'])
+            for key in (subject['id'],subject['name_ru'],subject['name_kz']):
+                if key is not None:subject_labels[str(key)] = labels
+
 
         result: list[ReportAssignmentRowDTO] = []
 
@@ -375,14 +401,21 @@ class ReportAssignmentRepo:
                 row.target_kind or ""
             )
 
-            # Родительская или неподходящая строка отчёта
-            # не участвует в распределении.
-            if not is_report_target_assignable(
-                    report_code=report_code,
-                    target_kind=target_kind,
-            ):
-                continue
+            if target_kind == 'report_area':
+                area = next((a for a in (row.algorithm_parameters or {}).get('report_areas',[]) if a['id'] == str(row.target_value)),None)
+                if area:area_names[str(row.target_value)] = dict(ru=area['name_ru'],kk=area['name_kk'])
+            target_key = (target_kind,str(row.target_value))
+            if target_key not in context_labels:
+                context_labels[target_key] = {lang:algorithm_context_label(row.algorithm_parameters,target_kind,row.target_value,catalog,lang) if catalog else '' for lang in ('ru','kk')}
 
+            assignable = is_report_target_assignable(report_code=report_code, target_kind=target_kind)
+            target_error = None if assignable else (
+                "Не выбран проверяемый учитель. Исправьте объект этого отчёта в алгоритме. / Тексерілетін мұғалім таңдалмаған. Алгоритмдегі есеп нысанын түзетіңіз."
+                if report_code in ("lesson_observation", "checking_notebooks_table") else
+                "Объект не подходит этому отчёту. Исправьте алгоритм. / Нысан есепке сәйкес келмейді. Алгоритмді түзетіңіз.")
+
+            from app.core.feature_flags import report_enabled
+            if not report_enabled(report_code):target_error='Раздел качества знаний временно отключён. / Білім сапасы бөлімі уақытша өшірілген.'
             assignment_status = (
                 row.assignment_status
                 if isinstance(
@@ -407,6 +440,13 @@ class ReportAssignmentRepo:
                     selected_report_id=int(
                         row.selected_report_id
                     ),
+                    assignable=assignable,
+                    target_error=target_error,
+                    context_label=context_labels[target_key]['ru'],
+                    context_label_kk=context_labels[target_key]['kk'],
+                    report_name_kk=str(row.report_name_kk or row.report_name or row.report_code or '—'),
+                    target_label_kk=(area_names.get(str(row.target_value),{}).get('kk',row.target_label) if target_kind == 'report_area' else subject_labels.get(str(row.target_value),{}).get('kk',row.target_label) if target_kind == 'subject' else row.target_label) or str(row.target_value or '—'),
+
 
                     report_type_id=int(
                         row.report_type_id
@@ -415,7 +455,7 @@ class ReportAssignmentRepo:
                     report_code=report_code,
 
                     report_name=str(
-                        row.report_name or "—"
+                        row.report_name or row.report_name_kk or row.report_code or "—"
                     ),
 
                     target_kind=target_kind,
@@ -425,7 +465,7 @@ class ReportAssignmentRepo:
                     ),
 
                     target_label=str(
-                        row.target_label
+                        (area_names.get(str(row.target_value),{}).get('ru',row.target_label) if target_kind == 'report_area' else subject_labels.get(str(row.target_value),{}).get('ru',row.target_label) if target_kind == 'subject' else row.target_label)
                         or row.target_value
                         or "—"
                     ),
@@ -896,6 +936,7 @@ class ReportAssignmentRepo:
             selected_report_id: int,
             staff_member_id: int,
             assigned_by_user_id: int,
+            flush: bool = True,
     ) -> TaskSelectedReportAssignment:
         """
         Создать назначение исполнителя выбранному отчёту.
@@ -915,7 +956,8 @@ class ReportAssignmentRepo:
 
         db.add(assignment)
 
-        await db.flush()
+        if flush:
+            await db.flush()
 
         return assignment
 
@@ -926,6 +968,7 @@ class ReportAssignmentRepo:
             assignment: TaskSelectedReportAssignment,
             staff_member_id: int,
             assigned_by_user_id: int,
+            flush: bool = True,
     ) -> TaskSelectedReportAssignment:
         """
         Переназначить выбранный отчёт другому исполнителю.
@@ -959,7 +1002,8 @@ class ReportAssignmentRepo:
         assignment.waived_by_user_id = None
         assignment.waived_at = None
 
-        await db.flush()
+        if flush:
+            await db.flush()
 
         return assignment
 

@@ -1,6 +1,9 @@
 # app/modules/reports/services/checking_notebooks_service.py
 from __future__ import annotations
 
+from app.core.i18n import resolve_language
+from app.core.report_pdf_i18n import select_document_language, saved_report_language, report_pdf_context
+
 from datetime import datetime, timezone
 from typing import Any
 import logging
@@ -209,6 +212,10 @@ class CheckingNotebooksService(BaseReportService):
                 "Отчет уже подписан. Редактирование запрещено."
             )
 
+        document_language = select_document_language(
+            form.get("document_language"), saved_report_language(report), resolve_language(request, user)
+        )
+
         # =========================================================
         # RESOLVE TEMPLATE / SNAPSHOT
         # =========================================================
@@ -374,6 +381,7 @@ class CheckingNotebooksService(BaseReportService):
             )
 
         rows_json = {
+            "document_language": document_language,
             "info": saved_info,
             "scores": scores,
             "total_score": total_score,
@@ -502,6 +510,7 @@ class CheckingNotebooksService(BaseReportService):
                 report=report,
                 schema=schema,
                 qr_data_uri=qr_data_uri,
+                document=document,
             )
 
             storage_context = (
@@ -733,6 +742,7 @@ class CheckingNotebooksService(BaseReportService):
             report,
             schema: dict | None = None,
             qr_data_uri: str,
+            document=None,
     ) -> bytes:
         html = templates.get_template(
             "staff/reports/user_templates/checking_notebooks_pdf.html"
@@ -741,6 +751,7 @@ class CheckingNotebooksService(BaseReportService):
             report=report,
             schema=schema or {},
             qr_file=qr_data_uri,
+            **report_pdf_context(request, report, document),
         )
 
         async with async_playwright() as p:

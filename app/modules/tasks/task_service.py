@@ -12,7 +12,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.planning.enums import AssignmentKind, PlanItemStatus
 from app.modules.planning.services.month_plan_notification_service import MonthPlanNotificationService
-from app.modules.reports.control_flow import build_control_flow_for_ui
+from app.modules.reports.rules.control_flow import build_control_flow_for_ui
+from app.modules.reports.repositories.execution_repo import ExecutionRepo
+from app.modules.reports.repositories.report_type_repo import ReportTypeRepo
 from app.modules.reports.report_repo import ReportRepo
 from app.modules.reports.report_schemas import (
     CurrentDraftDTO,
@@ -24,6 +26,7 @@ from app.modules.reports.repositories.report_assignment_repo import ReportAssign
 from app.modules.staff.staff_repo import SchoolStaffRepo
 from app.modules.tasks.schemas import MyTaskDTO, CoExecutorTaskDTO
 from app.modules.tasks.task_repo import StaffTasksRepo
+from app.modules.tasks.task_display import review_place_text, execution_fields
 from app.modules.users.models import User
 
 logger = logging.getLogger(__name__)
@@ -681,29 +684,7 @@ class StaffTasksService:
         Использует только заранее загруженную коллекцию
         SchoolMonthPlanItem.review_places.
         """
-        labels: list[str] = []
-
-        for review_place_item in getattr(task, "review_places", None) or []:
-            review_place = getattr(
-                review_place_item,
-                "review_place",
-                None,
-            )
-            if review_place is None:
-                continue
-
-            label = (
-                getattr(review_place, "label_kz", None)
-                or getattr(review_place, "label_ru", None)
-                or getattr(review_place, "value", None)
-                or str(review_place)
-            )
-
-            label_text = str(label).strip()
-            if label_text and label_text not in labels:
-                labels.append(label_text)
-
-        return ", ".join(labels) if labels else "—"
+        return review_place_text(task)
 
     @staticmethod
     def _has_loaded_selected_reports(task) -> bool:
@@ -1063,13 +1044,14 @@ class StaffTasksService:
             month_item_id=month_item_id,
         )
 
-        selected_task = StaffTasksService._build_staff_execution_task_dto(task_model)
+        selected_task = StaffTasksService._build_staff_execution_task_dto(task_model, execution_data=bundle.execution_data)
         execution = StaffTasksService._build_execution_form_dto(bundle.execution_data)
         current_draft = StaffTasksService._build_current_draft_dto(bundle.current_draft)
 
         control_flow = await StaffTasksService._get_control_flow_for_school(
             db,
             school_id=cast(int, school_id),
+            month_item_id=month_item_id,
         )
 
         return StaffExecutionPagePayloadDTO(
@@ -1080,7 +1062,7 @@ class StaffTasksService:
         )
 
     @staticmethod
-    def _build_staff_execution_task_dto(task) -> StaffExecutionTaskDTO:
+    def _build_staff_execution_task_dto(task, execution_data=None) -> StaffExecutionTaskDTO:
         """
         Собрать DTO выбранной задачи для execution-страницы.
 
@@ -1118,13 +1100,7 @@ class StaffTasksService:
                 or getattr(task, "control_type", None)
                 or "—"
         )
-        control_form = (
-                getattr(source_row11, "control_form", None)
-                or getattr(task, "control_form", None)
-                or "—"
-        )
-
-        review_place = StaffTasksService._build_review_place_text(task)
+        display = execution_fields(task, execution_data)
 
         school_id = None
         month_plan = getattr(task, "month_plan", None)
@@ -1144,8 +1120,7 @@ class StaffTasksService:
             goal=goal,
             control_object=control_object,
             control_type=control_type,
-            control_form=control_form,
-            review_place=review_place,
+            **display,
             status=raw_status,
             status_label=StaffTasksService._status_label(raw_status),
             status_color=StaffTasksService._status_color(raw_status),
@@ -1180,87 +1155,22 @@ class StaffTasksService:
         )
 
     @staticmethod
-    async def _get_control_flow_for_school(
-            db: AsyncSession,
-            *,
-            school_id: int | None,
-    ) -> dict[str, object] | None:
-        """
-        Построить полный control_flow для task_execute.js на основе сотрудников школы.
-
-        Что делает:
-        - получает staff members школы
-        - собирает динамические данные:
-            - subjects
-            - all_teachers
-            - teachers_by_subject
-            - primary_teachers
-        - передает их в build_control_flow_for_ui(), где уже хранятся:
-            - scopes
-            - kinds
-            - forms_by_scope
-            - reports_by_scope
-            - details_by_scope
-
-        Почему так:
-        - service не дублирует бизнес-правила control-flow
-        - единый источник конфигурации остается в reports.control_config
-        """
-        if not school_id:
-            return None
-
-        staff_members = await SchoolStaffRepo.get_school_staff_members(
-            db,
-            school_id=school_id,
-        )
-
-        subjects_set: set[str] = set()
-        teachers_by_subject_map: dict[str, list[dict[str, str]]] = defaultdict(list)
-        primary_teachers_map: dict[str, dict[str, str]] = {}
-        all_teachers_map: dict[str, dict[str, str]] = {}
-
-        primary_subject_names = {
-            "бастауыш оқуы",
-            "начальные классы",
-            "начальное обучение",
-            "бастауыш сынып",
-        }
-
-        for item in staff_members:
-            full_name = (getattr(item, "full_name", None) or "").strip()
-            subject_raw = (getattr(item, "subject", None) or "").strip()
-
-            if not full_name:
-                continue
-
-            teacher_item = {
-                "code": str(getattr(item, "id")),
-                "label": full_name,
-            }
-
-            all_teachers_map[teacher_item["code"]] = teacher_item
-
-            if not subject_raw:
-                continue
-
-            normalized_raw = subject_raw.replace(";", ",").replace("/", ",")
-            subject_list = [s.strip() for s in normalized_raw.split(",") if s.strip()]
-
-            for subject_name in subject_list:
-                subjects_set.add(subject_name)
-                teachers_by_subject_map[subject_name].append(teacher_item)
-
-                if subject_name.lower() in primary_subject_names:
-                    primary_teachers_map[teacher_item["code"]] = teacher_item
-
-        subjects = [
-            {"code": subject_name, "label": subject_name}
-            for subject_name in sorted(subjects_set)
-        ]
-
-        return build_control_flow_for_ui(
-            subjects=subjects,
-            all_teachers=list(all_teachers_map.values()),
-            teachers_by_subject=dict(teachers_by_subject_map),
-            primary_teachers=list(primary_teachers_map.values()),
-        )
+    async def _get_control_flow_for_school(db: AsyncSession, *, school_id: int, month_item_id: int):
+        catalog = await ExecutionRepo.get_algorithm_catalog(db, month_item_id=month_item_id, school_id=school_id)
+        subjects = [dict(code=str(row['id']), label=row['name_ru'] or row['name_kz'], label_kk=row['name_kz'] or row['name_ru']) for row in catalog['subjects']]
+        teachers = {}
+        by_subject = {}
+        primary = {}
+        grades = {row['id']: row['grade_level'] for row in catalog['classes']}
+        for row in catalog['teaching']:
+            teacher = dict(code=str(row['teacher_id']), label=row['full_name'])
+            teachers[teacher['code']] = teacher
+            by_subject.setdefault(str(row['subject_id']), {})[teacher['code']] = teacher
+            if grades.get(row['class_id'], 99) <= 4:
+                primary[teacher['code']] = teacher
+        result = build_control_flow_for_ui(subjects=subjects, all_teachers=list(teachers.values()),
+                                           teachers_by_subject={key: list(values.values()) for key, values in by_subject.items()},
+                                           primary_teachers=list(primary.values()))
+        result['report_labels'] = await ReportTypeRepo.get_labels(db)
+        result['algorithm_catalog'] = catalog
+        return result

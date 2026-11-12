@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+{% import 'dashboards/components/organized_sections.html' as sections with context %}
+{% set ru=ui_language()=='ru' %}
+{% block title %}{{ 'Панель учителя' if ru else 'Мұғалім панелі' }}{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{{ url_for('static',path='css/dashboards/organized_sections.css') }}?v=124"><script defer src="{{ url_for('static',path='js/assessment/navigation.js') }}?v=99"></script>{% endblock %}
+{% block content %}
+<div class="role-dashboard" data-assessment-ui data-user="{{ user.id }}">
+<header class="role-dashboard__heading"><h1>{{ 'Панель учителя' if ru else 'Мұғалім панелі' }}</h1></header>
+{% if assessment_enabled() %}<nav class="role-dashboard__nav" aria-label="{{ 'Разделы панели' if ru else 'Панель бөлімдері' }}"><a href="#preparation" data-sm-action="primary">{{ 'Подготовка заданий' if ru else 'Тапсырмаларды дайындау' }}</a><a href="#assessment" data-sm-action="nav">{{ 'Оценивание' if ru else 'Бағалау' }}</a><a href="#results" data-sm-action="nav">{{ 'Результаты и аналитика' if ru else 'Нәтижелер және талдау' }}</a></nav>
+<section class="role-dashboard__section" aria-labelledby="preparation">
+{{ sections.heading('preparation','Подготовка заданий','Тапсырмаларды дайындау','Готовые задания, собственные разработки и проверка.','Дайын тапсырмалар, өз әзірлемелеріңіз және тексеру.') }}
+<div class="role-dashboard__grid">
+{{ sections.card(url_for('shared_question_bank_catalog'),'📚','Банк готовых заданий','Дайын тапсырмалар банкі','Проверенные задания по предмету, классу и учебной цели.','Пән, сынып және оқу мақсаты бойынша тексерілген тапсырмалар.') }}
+{{ sections.card(url_for('teacher_question_bank_page'),'🧩','Конструктор заданий','Тапсырмалар құрастырушысы','Создание и редактирование своих заданий по учебным целям.','Оқу мақсаттары бойынша өз тапсырмаларыңызды құру және өңдеу.') }}
+{{ sections.card(url_for('question_bank_expert_review_page'),'🔎','Проверка заданий','Тапсырмаларды тексеру','Проверка заданий других авторов в пределах доступных полномочий.','Қолжетімді өкілеттіктер шегінде басқа авторлардың тапсырмаларын тексеру.') }}
+</div></section>
+<section class="role-dashboard__section" aria-labelledby="assessment">
+{{ sections.heading('assessment','Оценивание','Бағалау','Подготовьте комплект и выберите способ проведения.','Жинақты дайындап, өткізу тәсілін таңдаңыз.') }}
+<div class="role-dashboard__grid">
+{{ sections.card(url_for('assessment_work_plan_index'),'🗂️','Комплекты оценивания','Бағалау жинақтары','Подбор заданий и подготовка вариантов для печати или онлайн.','Тапсырмаларды таңдау және баспаға не онлайн өткізуге арналған нұсқаларды дайындау.',remember=true) }}
+{{ sections.card(url_for('teacher_assessment_list_page'),'📝','Ручной ввод результатов','Нәтижелерді қолмен енгізу','Создание бумажных работ, ввод баллов и завершение оценивания.','Қағаз жұмыстарын құру, балдарды енгізу және бағалауды аяқтау.') }}
+{{ sections.card(url_for('diagnostic_sessions'),'▶','Проведение онлайн-оценивания','Онлайн бағалауды өткізу','Назначение участников, сроки, коды входа и ход сессии.','Қатысушыларды тағайындау, мерзімдер, кіру кодтары және сессия барысы.') }}
+{{ sections.card(url_for('teacher_online_assessment_list_page'),'💻','Онлайн-работы и проверка','Онлайн жұмыстар және тексеру','Просмотр результатов и проверка ответов, требующих участия учителя.','Нәтижелерді қарау және мұғалім тексеретін жауаптарды бағалау.') }}
+</div></section>
+<section class="role-dashboard__section" aria-labelledby="results">
+{{ sections.heading('results','Результаты и аналитика','Нәтижелер және талдау','Показатели по классам и динамика учебных результатов.','Сыныптар бойынша көрсеткіштер және оқу нәтижелерінің динамикасы.') }}
+<div class="role-dashboard__grid">
+{{ sections.card(url_for('teacher_assessment_analytics_page'),'📊','Аналитика и динамика','Талдау және динамика','Качество знаний, успеваемость и сравнение контрольных точек учебного года.','Білім сапасы, үлгерім және оқу жылының бақылау нүктелерін салыстыру.') }}
+</div>
+<div class="role-dashboard__section-heading"><p>{{ 'Результаты отдельного ученика и разбор по учебным целям открываются из соответствующей оценочной работы.' if ru else 'Жеке оқушының нәтижелері мен оқу мақсаттары бойынша талдау тиісті бағалау жұмысынан ашылады.' }}</p></div>
+</section>{% else %}<p>{{ 'Оценивание временно отключено.' if ru else 'Бағалау уақытша өшірілген.' }}</p>{% endif %}</div>
+{% endblock %}

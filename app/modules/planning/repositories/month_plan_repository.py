@@ -136,7 +136,7 @@ class SchoolMonthlyPlanRepo:
     # -----------------------------------------------------
     @staticmethod
     async def list_items(
-            db: AsyncSession, *, month_plan_id: int, with_source: bool = False
+            db: AsyncSession, *, month_plan_id: int, with_source: bool = False, refresh: bool = False
     ) -> list[SchoolMonthPlanItem]:
 
         stmt = (
@@ -157,6 +157,8 @@ class SchoolMonthlyPlanRepo:
                 .selectinload(SchoolPlanRow11.role_assignments),
             )
 
+        if refresh:
+            stmt = stmt.execution_options(populate_existing=True)
         res = await db.execute(stmt)
         return list(res.scalars().unique().all())
 

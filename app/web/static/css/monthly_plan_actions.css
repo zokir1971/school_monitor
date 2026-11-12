@@ -1,0 +1,96 @@
+/* Scoped to monthly planning; the last row stays above the fixed action bar. */
+.monthly-plan-page {
+  padding-bottom: calc(var(--monthly-plan-actions-height, 100px) + 24px);
+}
+.monthly-plan-page tr[id] {
+  scroll-margin-bottom: calc(var(--monthly-plan-actions-height, 100px) + 24px);
+  scroll-margin-top: 76px;
+}
+.monthly-plan-page .monthly-plan-assign,
+.monthly-plan-actions .btn {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: auto;
+  max-width: 100%;
+  min-height: 36px;
+  padding: 7px 13px;
+  border: 1px solid #b9cbed;
+  border-radius: 9px;
+  background: #fff;
+  color: #2458b8;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.3;
+  text-decoration: none;
+  text-align: center;
+  cursor: pointer;
+  transition: background-color .15s, border-color .15s;
+}
+.monthly-plan-page .monthly-plan-assign:hover,
+.monthly-plan-actions .btn--secondary:hover {
+  background: #eff5ff;
+  border-color: #719ae0;
+}
+.monthly-plan-page .monthly-plan-assign.btn--success {
+  background: #edf9f1;
+  border-color: #a6d7b4;
+  color: #176436;
+}
+.monthly-plan-page .monthly-plan-assign.btn--success:hover {
+  background: #dcf2e3;
+}
+.monthly-plan-page .monthly-plan-assign:focus-visible,
+.monthly-plan-actions .btn:focus-visible {
+  outline: 3px solid #94b9fb;
+  outline-offset: 3px;
+}
+.actions.monthly-plan-actions {
+  position: fixed;
+  inset-inline: 14px;
+  bottom: max(10px, env(safe-area-inset-bottom, 0px));
+  z-index: 80;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 12px;
+  border: 1px solid #d4deec;
+  border-radius: 13px;
+  background: #fff;
+  box-shadow: 0 -3px 18px rgba(22, 48, 88, .12);
+}
+.monthly-plan-actions > form {
+  display: flex !important;
+  margin: 0;
+}
+.monthly-plan-actions .btn--primary {
+  background: #2563eb;
+  border-color: #2563eb;
+  color: #fff;
+}
+.monthly-plan-actions .btn--primary:hover:not(:disabled) {
+  background: #1d4ed8;
+  border-color: #1d4ed8;
+}
+.monthly-plan-actions .btn:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+}
+@media (max-width: 700px) {
+  .actions.monthly-plan-actions { inset-inline: 8px; padding: 9px; }
+  .monthly-plan-actions > .btn,
+  .monthly-plan-actions > form { flex: 1 1 190px; min-width: 0; }
+  .monthly-plan-actions > form .btn { width: 100%; }
+  .monthly-plan-actions .btn { min-height: 40px; white-space: normal; }
+}
+@media print {
+  .monthly-plan-actions { display: none !important; }
+  .monthly-plan-page { padding-bottom: 0; }
+}

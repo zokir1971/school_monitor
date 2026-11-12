@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Замена документов / Құжаттарды ауыстыру{% endblock %}
+{% block content %}
+<section class="dashboard-section" style="max-width:1000px;margin:24px auto;padding:16px">
+  <h2>Замена документов / Құжаттарды ауыстыру · №{{ month_item_id }}</h2>
+  <a class="btn btn--secondary" href="{{ request.url_for('review_result_task_detail_page', month_item_id=month_item_id) }}" data-sm-action="nav">К задаче / Тапсырмаға</a>
+  {% for kind in ['success', 'warning', 'error'] %}{% if request.query_params.get(kind) %}
+  <p role="status" class="alert">{{ request.query_params.get(kind) }}</p>
+  {% endif %}{% endfor %}
+  <p>Итоговый документ и отчёты после замены нужно рассмотреть повторно. История рассмотрений сохраняется.</p>
+  <p>Қорытынды құжат пен есептер ауыстырылғаннан кейін қайта қаралады. Қарау тарихы сақталады.</p>
+  <p><strong>Общий протокол заменяется сразу для всех связанных задач. / Ортақ хаттама барлық байланысқан тапсырмалар үшін ауыстырылады.</strong></p>
+  {% for doc in documents %}
+  <article class="card" style="margin-top:12px;padding:16px">
+    <h3>{{ doc.title or doc.report_label or doc.original_file_name }}</h3>
+    <p>{{ doc.original_file_name }} · <a href="{{ request.url_for('staff_report_document_view', document_id=doc.id) }}" target="_blank" rel="noopener" data-sm-action="nav">Открыть / Ашу</a></p>
+    <form method="post" enctype="multipart/form-data" action="{{ request.url_for('task_document_correction_save', month_item_id=month_item_id) }}" id="replace-document-{{ doc.id }}">
+      <input type="hidden" name="document_id" value="{{ doc.id }}">
+      <input type="hidden" name="expected_key" value="{{ doc.file_path }}">
+      <label for="reason-{{ doc.id }}">Причина замены / Ауыстыру себебі</label>
+      <input id="reason-{{ doc.id }}" class="input" name="reason" required maxlength="1000" style="width:100%;margin:8px 0">
+      <label for="file-{{ doc.id }}">Новый файл, до 20 МБ / Жаңа файл, 20 МБ-қа дейін</label>
+      <input id="file-{{ doc.id }}" type="file" name="replacement_file" required accept=".pdf,.doc,.docx,.xlsx,.xls,.png,.jpg,.jpeg" style="display:block;margin:10px 0">
+      <button type="submit" class="btn btn--primary" data-sm-action="primary">Заменить файл / Файлды ауыстыру</button>
+    </form>
+  </article>
+  {% else %}<p>Загруженных файлов для замены нет / Ауыстыратын жүктелген файлдар жоқ.</p>{% endfor %}
+</section>
+{% endblock %}

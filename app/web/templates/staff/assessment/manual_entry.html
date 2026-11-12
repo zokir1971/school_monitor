@@ -1,0 +1,2442 @@
+{% extends "base.html" %}
+
+{% block title %}
+{{ _('Assessment нәтижелерін енгізу') }}
+{% endblock %}
+
+
+{% block extra_css %}
+<style>
+  .assessment-page {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 24px 16px 48px;
+  }
+
+
+  /* ===================================================== */
+  /* HEADER */
+  /* ===================================================== */
+
+  .assessment-header {
+    margin-bottom: 22px;
+  }
+
+  .assessment-header h1 {
+    margin: 0 0 6px;
+
+    font-size: 28px;
+    font-weight: 700;
+  }
+
+  .assessment-header p {
+    margin: 0;
+
+    color: #667085;
+  }
+
+
+  /* ===================================================== */
+  /* META */
+  /* ===================================================== */
+
+  .assessment-meta {
+    display: grid;
+
+    grid-template-columns: repeat(
+      auto-fit,
+      minmax(190px, 1fr)
+    );
+
+    gap: 12px;
+    margin-bottom: 22px;
+  }
+
+  .assessment-meta__item {
+    padding: 14px;
+
+    background: #fff;
+
+    border: 1px solid #e4e7ec;
+    border-radius: 12px;
+  }
+
+  .assessment-meta__label {
+    display: block;
+
+    margin-bottom: 5px;
+
+    color: #667085;
+    font-size: 12px;
+  }
+
+  .assessment-meta__value {
+    color: #101828;
+    font-weight: 700;
+  }
+
+
+  /* ===================================================== */
+  /* MESSAGE */
+  /* ===================================================== */
+
+  .assessment-message {
+    padding: 12px 14px;
+    margin-bottom: 18px;
+
+    border-radius: 10px;
+  }
+
+  .assessment-message--success {
+    border: 1px solid #abefc6;
+
+    background: #ecfdf3;
+    color: #067647;
+  }
+
+  .assessment-message--error {
+    border: 1px solid #fda29b;
+
+    background: #fef3f2;
+    color: #b42318;
+  }
+
+  .assessment-message--info {
+    border: 1px solid #b2ddff;
+
+    background: #eff8ff;
+    color: #175cd3;
+  }
+
+
+  /* ===================================================== */
+  /* OBJECTIVE STRUCTURE */
+  /* ===================================================== */
+
+  .objective-info {
+    margin-bottom: 22px;
+
+    background: #fff;
+
+    border: 1px solid #e4e7ec;
+    border-radius: 14px;
+
+    overflow: hidden;
+  }
+
+  .objective-info__header {
+    padding: 14px 16px;
+
+    background: #f9fafb;
+
+    border-bottom: 1px solid #e4e7ec;
+  }
+
+  .objective-info__header h2 {
+    margin: 0 0 4px;
+
+    font-size: 17px;
+  }
+
+  .objective-info__header p {
+    margin: 0;
+
+    color: #667085;
+    font-size: 13px;
+  }
+
+  .objective-info__list {
+    display: grid;
+
+    grid-template-columns: repeat(
+      auto-fit,
+      minmax(240px, 1fr)
+    );
+
+    gap: 0;
+  }
+
+  .objective-info__item {
+    padding: 14px 16px;
+
+    border-right: 1px solid #eaecf0;
+    border-bottom: 1px solid #eaecf0;
+  }
+
+  .objective-info__code {
+    display: block;
+
+    margin-bottom: 4px;
+
+    color: #344054;
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  .objective-info__title {
+    margin-bottom: 6px;
+
+    color: #101828;
+    font-size: 13px;
+    line-height: 1.4;
+  }
+
+  .objective-info__score {
+    color: #667085;
+    font-size: 12px;
+  }
+
+
+  /* ===================================================== */
+  /* GROUP */
+  /* ===================================================== */
+
+  .assessment-group {
+    margin-bottom: 22px;
+
+    background: #fff;
+
+    border: 1px solid #e4e7ec;
+    border-radius: 14px;
+
+    overflow: hidden;
+  }
+
+  .assessment-group__header {
+    display: flex;
+
+    justify-content: space-between;
+    align-items: center;
+
+    gap: 14px;
+
+    padding: 16px 18px;
+
+    background: #f9fafb;
+
+    border-bottom: 1px solid #e4e7ec;
+  }
+
+  .assessment-group__title {
+    margin: 0;
+
+    font-size: 19px;
+    font-weight: 700;
+  }
+
+  .assessment-group__teacher {
+    color: #667085;
+    font-size: 13px;
+  }
+
+
+  /* ===================================================== */
+  /* TABLE */
+  /* ===================================================== */
+
+  .assessment-table-wrap {
+    width: 100%;
+
+    overflow-x: auto;
+  }
+
+  .assessment-table {
+    width: 100%;
+
+    min-width: 1000px;
+
+    border-collapse: collapse;
+  }
+
+  .assessment-table--objectives {
+    min-width: 1250px;
+  }
+
+  .assessment-table th,
+  .assessment-table td {
+    padding: 11px 12px;
+
+    border-bottom: 1px solid #eaecf0;
+
+    vertical-align: middle;
+  }
+
+  .assessment-table th {
+    background: #fcfcfd;
+
+    color: #475467;
+
+    font-size: 12px;
+    font-weight: 600;
+
+    text-align: center;
+
+    white-space: nowrap;
+  }
+
+  .assessment-table tbody tr:last-child td {
+    border-bottom: 0;
+  }
+
+  .assessment-table tbody tr:hover {
+    background: #fcfcfd;
+  }
+
+  .assessment-table td:first-child,
+  .assessment-table th:first-child {
+    width: 52px;
+
+    text-align: center;
+  }
+
+  .assessment-table th:nth-child(2),
+  .assessment-table td:nth-child(2) {
+    text-align: left;
+  }
+
+
+  /* ===================================================== */
+  /* STUDENT */
+  /* ===================================================== */
+
+  .student-name {
+    font-weight: 600;
+  }
+
+  .student-status {
+    min-width: 180px;
+  }
+
+  .student-score {
+    width: 120px;
+  }
+
+
+  /* ===================================================== */
+  /* OBJECTIVE COLUMN */
+  /* ===================================================== */
+
+  .objective-column {
+    min-width: 145px;
+
+    text-align: center;
+  }
+
+  .objective-column__code {
+    display: block;
+
+    margin-bottom: 3px;
+
+    color: #344054;
+    font-weight: 700;
+  }
+
+  .objective-column__max {
+    display: block;
+
+    color: #667085;
+    font-size: 11px;
+    font-weight: 400;
+  }
+
+  .objective-score-cell {
+    min-width: 130px;
+  }
+
+  .objective-score-wrap {
+    display: flex;
+
+    align-items: center;
+
+    gap: 6px;
+  }
+
+  .objective-score-wrap .assessment-input {
+    min-width: 82px;
+  }
+
+  .objective-max-inline {
+    flex-shrink: 0;
+
+    color: #667085;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+
+
+  /* ===================================================== */
+  /* TOTAL */
+  /* ===================================================== */
+
+  .student-total {
+    min-width: 105px;
+
+    text-align: center;
+
+    font-weight: 700;
+
+    white-space: nowrap;
+  }
+
+  .student-total.is-empty {
+    color: #98a2b3;
+    font-weight: 400;
+  }
+
+
+  /* ===================================================== */
+  /* INPUTS */
+  /* ===================================================== */
+
+  .assessment-select,
+  .assessment-input {
+    width: 100%;
+
+    box-sizing: border-box;
+
+    padding: 8px 10px;
+
+    border: 1px solid #d0d5dd;
+    border-radius: 8px;
+
+    background: #fff;
+
+    font: inherit;
+  }
+
+  .assessment-select:focus,
+  .assessment-input:focus {
+    outline: none;
+
+    border-color: #98a2b3;
+
+    box-shadow:
+      0 0 0 3px
+      rgba(152, 162, 179, 0.14);
+  }
+
+  .assessment-input:disabled,
+  .assessment-select:disabled {
+    background: #f2f4f7;
+    color: #98a2b3;
+  }
+
+  .assessment-input.is-invalid {
+    border-color: #f04438;
+
+    box-shadow:
+      0 0 0 3px
+      rgba(240, 68, 56, 0.10);
+  }
+
+
+  /* ===================================================== */
+  /* RESULT */
+  /* ===================================================== */
+
+  .result-value {
+    white-space: nowrap;
+
+    font-weight: 600;
+  }
+
+  .result-empty {
+    color: #98a2b3;
+  }
+
+  .grade-badge {
+    display: inline-flex;
+
+    align-items: center;
+
+    gap: 5px;
+
+    padding: 5px 9px;
+
+    border-radius: 999px;
+
+    background: #f2f4f7;
+
+    font-size: 13px;
+    font-weight: 600;
+
+    white-space: nowrap;
+  }
+
+
+  /* ===================================================== */
+  /* ACTIONS */
+  /* ===================================================== */
+
+  .assessment-actions {
+    position: sticky;
+
+    bottom: 0;
+
+    display: flex;
+
+    justify-content: flex-end;
+
+    gap: 10px;
+
+    padding: 14px 0;
+
+    background: rgba(
+      255,
+      255,
+      255,
+      0.94
+    );
+
+    backdrop-filter: blur(6px);
+  }
+
+  .assessment-btn {
+    display: inline-flex;
+
+    align-items: center;
+    justify-content: center;
+
+    padding: 11px 18px;
+
+    border: 0;
+    border-radius: 9px;
+
+    font: inherit;
+    font-weight: 600;
+
+    cursor: pointer;
+
+    text-decoration: none;
+  }
+
+  .assessment-btn--primary {
+    background: #344054;
+
+    color: #fff;
+  }
+
+  .assessment-btn--primary:hover {
+    background: #1d2939;
+
+    color: #fff;
+
+    text-decoration: none;
+  }
+
+  .assessment-btn--secondary {
+    gap: 6px;
+
+    background: #f2f4f7;
+
+    color: #344054;
+
+    border: 1px solid #d0d5dd;
+
+    transition:
+      background 0.15s ease,
+      border-color 0.15s ease;
+  }
+
+  .assessment-btn--secondary:hover {
+    background: #e4e7ec;
+
+    border-color: #98a2b3;
+
+    color: #1d2939;
+
+    text-decoration: none;
+  }
+
+
+  /* ===================================================== */
+  /* HELP */
+  /* ===================================================== */
+
+  .assessment-help {
+    margin-top: 8px;
+
+    color: #667085;
+
+    font-size: 13px;
+  }
+
+
+  /* ===================================================== */
+  /* RESPONSIVE */
+  /* ===================================================== */
+
+  @media (max-width: 760px) {
+    .assessment-header h1 {
+      font-size: 23px;
+    }
+
+    .assessment-group__header {
+      flex-direction: column;
+
+      align-items: flex-start;
+    }
+
+    .assessment-actions {
+      justify-content: stretch;
+    }
+
+    .assessment-btn {
+      flex: 1;
+    }
+  }
+</style>
+{% endblock %}
+
+
+{% block content %}
+
+{% set is_completed =
+  assessment.status == "completed"
+%}
+
+{% set objective_mode =
+  assessment.has_objectives
+%}
+
+
+<div class="assessment-page">
+
+  <!-- ================================================= -->
+  <!-- HEADER -->
+  <!-- ================================================= -->
+
+  <div class="assessment-header">
+
+    <h1>
+      {{ assessment.title }}
+    </h1>
+
+    {% if assessment.description %}
+
+      <p>
+        {{ assessment.description }}
+      </p>
+
+    {% else %}
+
+      <p>
+        {{ _('Оқушылардың нәтижелерін енгізіңіз.') }}
+      </p>
+
+    {% endif %}
+
+  </div>
+
+
+  <!-- ================================================= -->
+  <!-- MESSAGES -->
+  <!-- ================================================= -->
+
+  {% if success == "saved" %}
+
+    <div
+      class="
+        assessment-message
+        assessment-message--success
+      "
+    >
+      {{ _('Нәтижелер сәтті сақталды.') }}
+    </div>
+
+  {% endif %}
+
+
+  {% if error %}
+
+    <div
+      class="
+        assessment-message
+        assessment-message--error
+      "
+    >
+      {{ assessment_error(error) }}
+    </div>
+
+  {% endif %}
+
+
+  {% if is_completed %}
+
+    <div
+      class="
+        assessment-message
+        assessment-message--success
+      "
+    >
+      {{ _('Assessment аяқталған. Нәтижелер тек көру режимінде көрсетіледі.') }}
+    </div>
+
+  {% endif %}
+
+
+  {% if objective_mode %}
+
+    <div
+      class="
+        assessment-message
+        assessment-message--info
+      "
+    >
+      {{ _('Бұл Assessment оқу мақсаттары бойынша бағаланады. Әр оқушы үшін әр оқу мақсаты бойынша жинаған балды енгізіңіз. Жалпы балл автоматты түрде есептеледі.') }}
+    </div>
+
+  {% endif %}
+
+
+  <!-- ================================================= -->
+  <!-- BACK -->
+  <!-- ================================================= -->
+
+  <div style="margin-bottom: 16px;">
+    <a
+      class="
+       assessment-btn
+        assessment-btn--secondary
+      "
+      href="{{ back_url }}"
+     data-sm-action="nav" data-sm-back="true">
+      {{ _('← Артқа') }}
+    </a>
+  </div>
+
+  <!-- ================================================= -->
+  <!-- META -->
+  <!-- ================================================= -->
+
+  <div class="assessment-meta">
+
+    <div class="assessment-meta__item">
+
+      <span class="assessment-meta__label">
+        {{ _('Пән') }}
+      </span>
+
+      <span class="assessment-meta__value">
+        {{ assessment.subject_name }}
+      </span>
+
+    </div>
+
+
+    <div class="assessment-meta__item">
+
+      <span class="assessment-meta__label">
+        {{ _('Максималды балл') }}
+      </span>
+
+      <span class="assessment-meta__value">
+        {{ assessment.max_score_display }}
+      </span>
+
+    </div>
+
+
+    <div class="assessment-meta__item">
+
+      <span class="assessment-meta__label">
+        {{ _('Assessment түрі') }}
+      </span>
+
+      <span class="assessment-meta__value">
+        {{ _(assessment.assessment_type_label) }}
+      </span>
+
+    </div>
+
+
+    <div class="assessment-meta__item">
+
+      <span class="assessment-meta__label">
+        {{ _('Assessment режимі') }}
+      </span>
+
+      <span class="assessment-meta__value">
+
+        {% if
+          assessment.assessment_mode
+            == "without_objectives"
+        %}
+
+          {{ _('Диагностикалық бақылау') }}
+
+        {% elif
+          assessment.assessment_mode
+            == "assessment_by_section"
+        %}
+
+          {{ _('БЖБ / СОР') }}
+
+        {% elif assessment.assessment_mode == "by_objectives" %}
+          {{ 'По учебным целям' if ui_language()=='ru' else 'Оқу мақсаттары бойынша' }}
+        {% elif
+          assessment.assessment_mode
+            == "assessment_by_quarter"
+        %}
+
+          {{ _('ТЖБ / СОЧ') }}
+
+        {% else %}
+
+          {{ assessment.assessment_mode }}
+
+        {% endif %}
+
+      </span>
+
+    </div>
+
+
+    <div class="assessment-meta__item">
+
+      <span class="assessment-meta__label">
+        {{ _('Ұзақтығы') }}
+      </span>
+
+      <span class="assessment-meta__value">
+        {% if assessment.duration_minutes %}
+          {{ assessment.duration_minutes }} {{ _('мин.') }}
+        {% else %}
+          —
+        {% endif %}
+      </span>
+
+    </div>
+
+
+    <div class="assessment-meta__item">
+
+      <span class="assessment-meta__label">
+        {{ _('Күйі') }}
+      </span>
+
+      <span class="assessment-meta__value">
+        {{ _(assessment.status_label) }}
+      </span>
+
+    </div>
+
+  </div>
+
+
+  <!-- ================================================= -->
+  <!-- OBJECTIVE STRUCTURE -->
+  <!-- ================================================= -->
+
+  {% if objective_mode and assessment.objectives %}
+
+    <section class="objective-info">
+
+      <div class="objective-info__header">
+
+        <h2>
+          {{ _('Оқу мақсаттары') }}
+        </h2>
+
+        <p>
+          {{ _('Assessment бойынша таңдалған оқу мақсаттары және олардың максималды балдары.') }}
+        </p>
+
+      </div>
+
+
+      <div class="objective-info__list">
+
+        {% for objective in assessment.objectives %}
+
+          <div class="objective-info__item">
+
+            <span class="objective-info__code">
+              {{ objective.code }}
+            </span>
+
+            <div class="objective-info__title">
+              {{ objective.title }}
+            </div>
+
+            <div class="objective-info__score">
+              {{ _('Максималды балл:') }}
+              <strong>
+                {{ objective.max_score_display }}
+              </strong>
+            </div>
+
+          </div>
+
+        {% endfor %}
+
+      </div>
+
+    </section>
+
+  {% endif %}
+
+
+  <!-- ================================================= -->
+  <!-- FORM -->
+  <!-- ================================================= -->
+
+  <form
+    method="post"
+    action="{{ form_action }}"
+    id="manual-assessment-form"
+    data-max-score="{{ assessment.max_score or '' }}"
+    data-mode="{{ assessment.assessment_mode }}"
+    data-readonly="{{ '1' if is_completed else '0' }}"
+  >
+
+    {% for group in groups %}
+
+      <section class="assessment-group">
+
+        <!-- ============================================= -->
+        <!-- GROUP HEADER -->
+        <!-- ============================================= -->
+
+        <div class="assessment-group__header">
+
+          <h2 class="assessment-group__title">
+            {{ group.class_name }}
+          </h2>
+
+          <<div class="assessment-help">
+            <{{ group.academic_year_start }}/{{ group.academic_year_start + 1 }}
+          </div>
+
+
+          <div class="assessment-group__teacher">
+            {% if group.teacher_name %}
+              {{ _('Мұғалім:') }}
+              <strong>
+                {{ group.teacher_name }}
+              </strong>
+            {% else %}
+              {{ _('Мұғалім көрсетілмеген') }}
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- ============================================= -->
+        <!-- STUDENTS -->
+        <!-- ============================================= -->
+
+        <div class="assessment-table-wrap">
+
+          <table
+            class="
+              assessment-table
+              {% if objective_mode %}
+                assessment-table--objectives
+              {% endif %}
+            "
+          >
+
+            <thead>
+
+              <tr>
+
+                <th>
+                  №
+                </th>
+
+                <th>
+                  {{ _('Оқушы') }}
+                </th>
+
+                <th>
+                  {{ _('Қатысу күйі') }}
+                </th>
+
+
+                <!-- ===================================== -->
+                <!-- WITHOUT OBJECTIVES -->
+                <!-- ===================================== -->
+
+                {% if not objective_mode %}
+
+                  <th>
+                    {{ _('Балл') }}
+                  </th>
+
+
+                <!-- ===================================== -->
+                <!-- SECTION / QUARTER -->
+                <!-- ===================================== -->
+
+                {% else %}
+
+                  {% for objective in assessment.objectives %}
+
+                    <th class="objective-column">
+
+                      <span class="objective-column__code">
+                        {{ objective.code }}
+                      </span>
+
+                      <span class="objective-column__max">
+                        {{ _('макс.') }}
+                        {{ objective.max_score_display }}
+                      </span>
+
+                    </th>
+
+                  {% endfor %}
+
+
+                  <th>
+                    {{ _('Жалпы балл') }}
+                  </th>
+
+                {% endif %}
+
+
+                <th>
+                  %
+                </th>
+
+                <th>
+                  {{ _('Баға') }}
+                </th>
+
+              </tr>
+
+            </thead>
+
+
+            <tbody>
+
+              {% for student in group.students %}
+
+                <tr
+                  data-student-row
+                  data-student-id="{{
+                    student.assessment_student_id
+                  }}"
+                >
+
+                  <!-- =================================== -->
+                  <!-- № -->
+                  <!-- =================================== -->
+
+                  <td>
+                    {{ loop.index }}
+                  </td>
+
+
+                  <!-- =================================== -->
+                  <!-- STUDENT -->
+                  <!-- =================================== -->
+
+                  <td>
+
+                    <span class="student-name">
+                      {{ student.student_name }}
+                    </span>
+
+                  </td>
+
+
+                  <!-- =================================== -->
+                  <!-- STATUS -->
+                  <!-- =================================== -->
+
+                  <td class="student-status">
+
+                    <select
+                      class="
+                        assessment-select
+                        participation-status-select
+                      "
+                      name="status_{{
+                        student.assessment_student_id
+                      }}"
+                      data-status-select
+
+                      {% if is_completed %}
+                        disabled
+                      {% endif %}
+                    >
+
+                      {% for item in participation_statuses %}
+
+                        <option
+                          value="{{ item.value }}"
+
+                          {% if
+                            student.participation_status
+                              == item.value
+                          %}
+                            selected
+                          {% endif %}
+                        >
+                          {{ _(item.label_kz) }}
+                        </option>
+
+                      {% endfor %}
+
+                    </select>
+
+                  </td>
+
+
+                  <!-- =================================== -->
+                  <!-- WITHOUT OBJECTIVES -->
+                  <!-- =================================== -->
+
+                  {% if not objective_mode %}
+
+                    <td class="student-score">
+
+                      <input
+                        class="
+                          assessment-input
+                          score-input
+                        "
+                        type="number"
+
+                        name="score_{{
+                          student.assessment_student_id
+                        }}"
+
+                        min="0"
+
+                        max="{{
+                          assessment.max_score
+                        }}"
+
+                        step="0.01"
+
+                        value="{{
+                          student.score_display
+                          if student.score is not none
+                          else ''
+                        }}"
+
+                        data-score-input
+
+                        {% if is_completed %}
+                          disabled
+                        {% endif %}
+                      >
+
+                    </td>
+
+
+                  <!-- =================================== -->
+                  <!-- OBJECTIVE SCORES -->
+                  <!-- =================================== -->
+
+                  {% else %}
+
+                    {% for objective in assessment.objectives %}
+
+                      {% set objective_result =
+                        student.objective_results
+                        | selectattr(
+                            'assessment_objective_id',
+                            'equalto',
+                            objective.assessment_objective_id
+                          )
+                        | first
+                      %}
+
+                      <td class="objective-score-cell">
+
+                        <div class="objective-score-wrap">
+
+                          <input
+                            class="
+                              assessment-input
+                              objective-score-input
+                            "
+                            type="number"
+
+                            name="objective_score_{{
+                              student.assessment_student_id
+                            }}_{{
+                              objective.assessment_objective_id
+                            }}"
+
+                            min="0"
+
+                            max="{{
+                              objective.max_score
+                            }}"
+
+                            step="0.01"
+
+                            value="{{
+                              objective_result.score_display
+                              if objective_result
+                                 and objective_result.score
+                                     is not none
+                              else ''
+                            }}"
+
+                            data-objective-score-input
+
+                            data-objective-id="{{
+                              objective.assessment_objective_id
+                            }}"
+
+                            data-objective-max="{{
+                              objective.max_score
+                            }}"
+
+                            {% if is_completed %}
+                              disabled
+                            {% endif %}
+                          >
+
+                          <span class="objective-max-inline">
+                            / {{
+                              objective.max_score_display
+                            }}
+                          </span>
+
+                        </div>
+
+                      </td>
+
+                    {% endfor %}
+
+
+                    <!-- TOTAL SCORE -->
+
+                    <td>
+
+                      <span
+                        class="
+                          student-total
+                          {% if student.score is none %}
+                            is-empty
+                          {% endif %}
+                        "
+                        data-total-score-output
+                      >
+
+                        {% if student.score is not none %}
+
+                          {{
+                            student.score_display
+                          }}
+                          /
+                          {{
+                            assessment.max_score_display
+                          }}
+
+                        {% else %}
+
+                          —
+
+                        {% endif %}
+
+                      </span>
+
+                    </td>
+
+                  {% endif %}
+
+
+                  <!-- =================================== -->
+                  <!-- PERCENT -->
+                  <!-- =================================== -->
+
+                  <td>
+
+                    <span
+                      class="
+                        {% if student.percent is not none %}
+                          result-value
+                        {% else %}
+                          result-empty
+                        {% endif %}
+                      "
+                      data-percent-output
+                    >
+
+                      {% if student.percent is not none %}
+
+                        {{ student.percent_display }}
+
+                      {% else %}
+
+                        —
+
+                      {% endif %}
+
+                    </span>
+
+                  </td>
+
+
+                  <!-- =================================== -->
+                  <!-- GRADE -->
+                  <!-- =================================== -->
+
+                  <td>
+
+                    <span
+                      class="
+                        {% if student.grade %}
+                          grade-badge
+                        {% else %}
+                          result-empty
+                        {% endif %}
+                      "
+                      data-grade-output
+                    >
+
+                      {% if student.grade %}
+
+                        {{ student.grade_display }}
+
+                      {% else %}
+
+                        —
+
+                      {% endif %}
+
+                    </span>
+
+                  </td>
+
+                </tr>
+
+              {% endfor %}
+
+            </tbody>
+
+          </table>
+
+        </div>
+
+      </section>
+
+    {% endfor %}
+
+
+    <!-- ================================================= -->
+    <!-- ACTIONS -->
+    <!-- ================================================= -->
+    <div class="assessment-actions">
+      <a
+        class="
+          assessment-btn
+          assessment-btn--secondary
+        "
+        href="{{ back_url }}"
+       data-sm-action="nav" data-sm-back="true">
+        {{ _('← Артқа') }}
+      </a>
+
+      {% if not is_completed %}
+        <a
+          class="
+            assessment-btn
+            assessment-btn--secondary
+          "
+          href="{{ create_url }}"
+         data-sm-action="nav">
+          {{ _('Жаңа Assessment') }}
+        </a>
+
+        <button
+          class="
+            assessment-btn
+            assessment-btn--primary
+          "
+          type="submit"
+         data-sm-action="primary">
+          {{ _('Нәтижелерді сақтау') }}
+        </button>
+
+      {% endif %}
+
+    </div>
+
+  </form>
+
+</div>
+
+
+<script>
+document.addEventListener(
+  "DOMContentLoaded",
+  () => {
+
+    // =====================================================
+    // CONSTANTS
+    // =====================================================
+
+    const completedValue =
+      "completed";
+
+
+    const form =
+      document.getElementById(
+        "manual-assessment-form"
+      );
+
+
+    if (!form) {
+      return;
+    }
+
+
+    const readonly =
+      form.dataset.readonly
+      === "1";
+
+
+    const assessmentMode =
+      form.dataset.mode
+      || "without_objectives";
+
+
+    const objectiveMode =
+      (
+        assessmentMode === "by_objectives" ||
+        assessmentMode
+          === "assessment_by_section"
+        ||
+        assessmentMode
+          === "assessment_by_quarter"
+      );
+
+
+    const maxScore =
+      Number(
+        String(
+          form.dataset.maxScore
+          || ""
+        ).replace(
+          ",",
+          "."
+        )
+      );
+
+
+    const rows =
+      document.querySelectorAll(
+        "[data-student-row]"
+      );
+
+
+    // =====================================================
+    // GRADE
+    // =====================================================
+
+    function resolveGrade(
+      percent
+    ) {
+
+      if (
+        percent >= 85
+      ) {
+
+        return {
+          value:
+            "5",
+
+          label:
+            window.SchoolMonitorI18n.t("as_1c424ffc3e08"),
+        };
+
+      }
+
+
+      if (
+        percent >= 65
+      ) {
+
+        return {
+          value:
+            "4",
+
+          label:
+            window.SchoolMonitorI18n.t("as_24b8f4d6c08e"),
+        };
+
+      }
+
+
+      if (
+        percent >= 40
+      ) {
+
+        return {
+          value:
+            "3",
+
+          label:
+            window.SchoolMonitorI18n.t("as_372e76a1dec1"),
+        };
+
+      }
+
+
+      return {
+        value:
+          "2",
+
+        label:
+          window.SchoolMonitorI18n.t("as_dc656b329fd1"),
+      };
+
+    }
+
+
+    // =====================================================
+    // OUTPUT
+    // =====================================================
+
+    function clearResult(
+      row
+    ) {
+
+      const totalOutput =
+        row.querySelector(
+          "[data-total-score-output]"
+        );
+
+
+      const percentOutput =
+        row.querySelector(
+          "[data-percent-output]"
+        );
+
+
+      const gradeOutput =
+        row.querySelector(
+          "[data-grade-output]"
+        );
+
+
+      if (
+        totalOutput
+      ) {
+
+        totalOutput.textContent =
+          "—";
+
+        totalOutput.classList.add(
+          "is-empty"
+        );
+
+      }
+
+
+      if (
+        percentOutput
+      ) {
+
+        percentOutput.textContent =
+          "—";
+
+        percentOutput.classList.remove(
+          "result-value"
+        );
+
+        percentOutput.classList.add(
+          "result-empty"
+        );
+
+      }
+
+
+      if (
+        gradeOutput
+      ) {
+
+        gradeOutput.textContent =
+          "—";
+
+        gradeOutput.classList.remove(
+          "grade-badge"
+        );
+
+        gradeOutput.classList.add(
+          "result-empty"
+        );
+
+      }
+
+    }
+
+
+    function setCalculatedResult(
+      row,
+      score
+    ) {
+
+      if (
+        !Number.isFinite(score)
+        ||
+        !Number.isFinite(maxScore)
+        ||
+        maxScore <= 0
+        ||
+        score < 0
+        ||
+        score > maxScore
+      ) {
+
+        clearResult(
+          row
+        );
+
+        return;
+      }
+
+
+      const percent =
+        score * 100 / maxScore;
+
+
+      const grade =
+        resolveGrade(
+          percent
+        );
+
+
+      const totalOutput =
+        row.querySelector(
+          "[data-total-score-output]"
+        );
+
+
+      const percentOutput =
+        row.querySelector(
+          "[data-percent-output]"
+        );
+
+
+      const gradeOutput =
+        row.querySelector(
+          "[data-grade-output]"
+        );
+
+
+      if (
+        totalOutput
+      ) {
+
+        totalOutput.textContent =
+          (
+            formatNumber(score)
+            +
+            " / "
+            +
+            formatNumber(maxScore)
+          );
+
+        totalOutput.classList.remove(
+          "is-empty"
+        );
+
+      }
+
+
+      if (
+        percentOutput
+      ) {
+
+        percentOutput.textContent =
+          percent
+            .toFixed(2)
+            .replace(
+              ".",
+              ","
+            )
+          +
+          "%";
+
+
+        percentOutput.classList.remove(
+          "result-empty"
+        );
+
+
+        percentOutput.classList.add(
+          "result-value"
+        );
+
+      }
+
+
+      if (
+        gradeOutput
+      ) {
+
+        gradeOutput.textContent =
+          (
+            `${grade.value} `
+            +
+            `(${grade.label})`
+          );
+
+
+        gradeOutput.classList.remove(
+          "result-empty"
+        );
+
+
+        gradeOutput.classList.add(
+          "grade-badge"
+        );
+
+      }
+
+    }
+
+
+    // =====================================================
+    // FORMAT
+    // =====================================================
+
+    function formatNumber(
+      value
+    ) {
+
+      if (
+        !Number.isFinite(
+          value
+        )
+      ) {
+        return "0";
+      }
+
+
+      if (
+        Number.isInteger(
+          value
+        )
+      ) {
+        return String(
+          value
+        );
+      }
+
+
+      return String(
+        Math.round(
+          value * 100
+        ) / 100
+      ).replace(
+        ".",
+        ","
+      );
+
+    }
+
+
+    // =====================================================
+    // WITHOUT OBJECTIVES
+    // =====================================================
+
+    function calculateDirectResult(
+      row
+    ) {
+
+      const statusSelect =
+        row.querySelector(
+          "[data-status-select]"
+        );
+
+
+      const scoreInput =
+        row.querySelector(
+          "[data-score-input]"
+        );
+
+
+      if (
+        !statusSelect
+        ||
+        !scoreInput
+      ) {
+        return;
+      }
+
+
+      if (
+        statusSelect.value
+          !== completedValue
+      ) {
+
+        clearResult(
+          row
+        );
+
+        return;
+
+      }
+
+
+      const rawScore =
+        String(
+          scoreInput.value
+          || ""
+        )
+        .trim()
+        .replace(
+          ",",
+          "."
+        );
+
+
+      if (
+        !rawScore
+      ) {
+
+        clearResult(
+          row
+        );
+
+        return;
+
+      }
+
+
+      const score =
+        Number(
+          rawScore
+        );
+
+
+      setCalculatedResult(
+        row,
+        score
+      );
+
+    }
+
+
+    // =====================================================
+    // OBJECTIVE MODE
+    // =====================================================
+
+    function calculateObjectiveResult(
+      row
+    ) {
+
+      const statusSelect =
+        row.querySelector(
+          "[data-status-select]"
+        );
+
+
+      if (
+        !statusSelect
+      ) {
+        return;
+      }
+
+
+      if (
+        statusSelect.value
+          !== completedValue
+      ) {
+
+        clearResult(
+          row
+        );
+
+        return;
+
+      }
+
+
+      const inputs =
+        Array.from(
+          row.querySelectorAll(
+            "[data-objective-score-input]"
+          )
+        );
+
+
+      if (
+        inputs.length === 0
+      ) {
+
+        clearResult(
+          row
+        );
+
+        return;
+
+      }
+
+
+      let total =
+        0;
+
+
+      let allFilled =
+        true;
+
+
+      let allValid =
+        true;
+
+
+      inputs.forEach(
+        input => {
+
+          input.classList.remove(
+            "is-invalid"
+          );
+
+
+          const raw =
+            String(
+              input.value
+              || ""
+            )
+            .trim()
+            .replace(
+              ",",
+              "."
+            );
+
+
+          if (
+            !raw
+          ) {
+
+            allFilled =
+              false;
+
+            return;
+
+          }
+
+
+          const score =
+            Number(
+              raw
+            );
+
+
+          const objectiveMax =
+            Number(
+              String(
+                input.dataset.objectiveMax
+                || ""
+              ).replace(
+                ",",
+                "."
+              )
+            );
+
+
+          if (
+            !Number.isFinite(
+              score
+            )
+            ||
+            !Number.isFinite(
+              objectiveMax
+            )
+            ||
+            score < 0
+            ||
+            score > objectiveMax
+          ) {
+
+            allValid =
+              false;
+
+
+            input.classList.add(
+              "is-invalid"
+            );
+
+
+            return;
+
+          }
+
+
+          total +=
+            score;
+
+        }
+      );
+
+
+      if (
+        !allFilled
+        ||
+        !allValid
+      ) {
+
+        clearResult(
+          row
+        );
+
+        return;
+
+      }
+
+
+      setCalculatedResult(
+        row,
+        total
+      );
+
+    }
+
+
+    // =====================================================
+    // UPDATE ROW
+    // =====================================================
+
+    function updateRow(
+      row
+    ) {
+
+      const statusSelect =
+        row.querySelector(
+          "[data-status-select]"
+        );
+
+
+      if (
+        !statusSelect
+      ) {
+        return;
+      }
+
+
+      const isCompleted =
+        (
+          statusSelect.value
+            === completedValue
+        );
+
+
+      // ===================================================
+      // WITHOUT OBJECTIVES
+      // ===================================================
+
+      if (
+        !objectiveMode
+      ) {
+
+        const scoreInput =
+          row.querySelector(
+            "[data-score-input]"
+          );
+
+
+        if (
+          !scoreInput
+        ) {
+          return;
+        }
+
+
+        if (
+          readonly
+        ) {
+
+          statusSelect.disabled =
+            true;
+
+          scoreInput.disabled =
+            true;
+
+          scoreInput.required =
+            false;
+
+          return;
+
+        }
+
+
+        scoreInput.disabled =
+          !isCompleted;
+
+
+        scoreInput.required =
+          isCompleted;
+
+
+        if (
+          !isCompleted
+        ) {
+
+          scoreInput.value =
+            "";
+
+          clearResult(
+            row
+          );
+
+          return;
+
+        }
+
+
+        calculateDirectResult(
+          row
+        );
+
+
+        return;
+
+      }
+
+
+      // ===================================================
+      // OBJECTIVE MODE
+      // ===================================================
+
+      const objectiveInputs =
+        Array.from(
+          row.querySelectorAll(
+            "[data-objective-score-input]"
+          )
+        );
+
+
+      if (
+        readonly
+      ) {
+
+        statusSelect.disabled =
+          true;
+
+
+        objectiveInputs.forEach(
+          input => {
+
+            input.disabled =
+              true;
+
+            input.required =
+              false;
+
+          }
+        );
+
+
+        return;
+
+      }
+
+
+      objectiveInputs.forEach(
+        input => {
+
+          input.disabled =
+            !isCompleted;
+
+
+          input.required =
+            isCompleted;
+
+
+          if (
+            !isCompleted
+          ) {
+
+            input.value =
+              "";
+
+            input.classList.remove(
+              "is-invalid"
+            );
+
+          }
+
+        }
+      );
+
+
+      if (
+        !isCompleted
+      ) {
+
+        clearResult(
+          row
+        );
+
+        return;
+
+      }
+
+
+      calculateObjectiveResult(
+        row
+      );
+
+    }
+
+
+    // =====================================================
+    // EVENTS
+    // =====================================================
+
+    rows.forEach(
+      row => {
+
+        const statusSelect =
+          row.querySelector(
+            "[data-status-select]"
+          );
+
+
+        const scoreInput =
+          row.querySelector(
+            "[data-score-input]"
+          );
+
+
+        const objectiveInputs =
+          row.querySelectorAll(
+            "[data-objective-score-input]"
+          );
+
+
+        if (
+          statusSelect
+        ) {
+
+          statusSelect.addEventListener(
+            "change",
+            () => {
+
+              updateRow(
+                row
+              );
+
+            }
+          );
+
+        }
+
+
+        if (
+          scoreInput
+        ) {
+
+          scoreInput.addEventListener(
+            "input",
+            () => {
+
+              calculateDirectResult(
+                row
+              );
+
+            }
+          );
+
+        }
+
+
+        objectiveInputs.forEach(
+          input => {
+
+            input.addEventListener(
+              "input",
+              () => {
+
+                calculateObjectiveResult(
+                  row
+                );
+
+              }
+            );
+
+          }
+        );
+
+
+        updateRow(
+          row
+        );
+
+      }
+    );
+
+
+    // =====================================================
+    // SUBMIT
+    // =====================================================
+
+    form.addEventListener(
+      "submit",
+      event => {
+
+        if (
+          readonly
+        ) {
+          return;
+        }
+
+
+        let valid =
+          true;
+
+
+        rows.forEach(
+          row => {
+
+            const statusSelect =
+              row.querySelector(
+                "[data-status-select]"
+              );
+
+
+            if (
+              !statusSelect
+              ||
+              statusSelect.value
+                !== completedValue
+            ) {
+              return;
+            }
+
+
+            // ===============================================
+            // WITHOUT OBJECTIVES
+            // ===============================================
+
+            if (
+              !objectiveMode
+            ) {
+
+              const scoreInput =
+                row.querySelector(
+                  "[data-score-input]"
+                );
+
+
+              if (
+                !scoreInput
+                ||
+                !scoreInput.value
+              ) {
+
+                valid =
+                  false;
+
+              }
+
+
+              return;
+
+            }
+
+
+            // ===============================================
+            // OBJECTIVE MODE
+            // ===============================================
+
+            const objectiveInputs =
+              Array.from(
+                row.querySelectorAll(
+                  "[data-objective-score-input]"
+                )
+              );
+
+
+            objectiveInputs.forEach(
+              input => {
+
+                const raw =
+                  String(
+                    input.value
+                    || ""
+                  )
+                  .trim()
+                  .replace(
+                    ",",
+                    "."
+                  );
+
+
+                const score =
+                  Number(
+                    raw
+                  );
+
+
+                const objectiveMax =
+                  Number(
+                    String(
+                      input.dataset.objectiveMax
+                      || ""
+                    ).replace(
+                      ",",
+                      "."
+                    )
+                  );
+
+
+                if (
+                  !raw
+                  ||
+                  !Number.isFinite(
+                    score
+                  )
+                  ||
+                  score < 0
+                  ||
+                  score > objectiveMax
+                ) {
+
+                  valid =
+                    false;
+
+
+                  input.classList.add(
+                    "is-invalid"
+                  );
+
+                }
+
+              }
+            );
+
+          }
+        );
+
+
+        if (
+          !valid
+        ) {
+
+          event.preventDefault();
+
+
+          window.alert(
+            (
+              window.SchoolMonitorI18n.t("as_2fa396a4e597")
+              +
+              (
+                objectiveMode
+                  ? window.SchoolMonitorI18n.t("as_379dbe88f5a5")
+                  : window.SchoolMonitorI18n.t("as_c09a4baa9a30")
+              )
+            )
+          );
+
+        }
+
+      }
+    );
+
+  }
+);
+</script>
+
+{% endblock %}

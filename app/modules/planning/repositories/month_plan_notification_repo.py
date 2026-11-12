@@ -5,6 +5,12 @@ from __future__ import annotations
 from datetime import datetime
 from typing import cast
 
+from sqlalchemy import update, exists
+from sqlalchemy.dialects.postgresql import insert as pg_insert
+from app.modules.planning.models_month_plan import SchoolMonthPlan
+from app.modules.planning.models_school import SchoolPlan
+from app.modules.planning.models_month_plan_notification import SchoolMonthPlanInternalNotice
+
 from sqlalchemy import (
     String,
     and_,
@@ -58,6 +64,7 @@ class SchoolMonthPlanNotificationRepo:
         *,
         month_plan_id: int,
         school_id: int,
+        staff_member_id: int | None = None,
     ) -> list[MonthPlanNotificationAssignmentRowDTO]:
         """
         Получить плоские строки назначений включённых задач
@@ -83,6 +90,7 @@ class SchoolMonthPlanNotificationRepo:
                 SchoolStaffMember.id.label("staff_member_id"),
                 SchoolStaffMember.full_name.label("full_name"),
                 User.id.label("user_id"),
+                User.is_active.label("account_active"),
                 User.phone.label("phone"),
                 SchoolMonthPlanItemAssignee.assignment_kind.label(
                     "assignment_kind"
@@ -132,6 +140,8 @@ class SchoolMonthPlanNotificationRepo:
             )
         )
 
+        if staff_member_id is not None:
+            stmt = stmt.where(SchoolStaffMember.id == staff_member_id)
         result = await db.execute(stmt)
         rows = result.all()
 
@@ -144,7 +154,8 @@ class SchoolMonthPlanNotificationRepo:
                     if row.phone
                     else None
                 ),
-                is_registered=row.user_id is not None,
+                is_registered=row.user_id is not None and bool(row.account_active),
+                user_id=row.user_id, is_account_active=bool(row.account_active),
                 assignment_kind=str(
                     getattr(
                         row.assignment_kind,
@@ -239,6 +250,43 @@ class SchoolMonthPlanNotificationRepo:
 
         result = await db.execute(stmt)
         return result.scalar_one_or_none()
+
+    @classmethod
+    async def ensure_for_update(
+        cls,
+        db: AsyncSession,
+        *,
+        month_plan_id: int,
+        staff_member_id: int,
+    ) -> SchoolMonthPlanNotification:
+        """Create an unsent state atomically, then lock it for acceptance/opening.
+
+        Authorization is performed by the caller before this method. The existing
+        unique (plan, staff) key prevents duplicate rows on concurrent requests.
+        No WhatsApp sending or opening is recorded by this operation.
+        """
+        if db.bind.dialect.name == "postgresql":
+            from sqlalchemy.dialects.postgresql import insert
+        elif db.bind.dialect.name == "sqlite":
+            from sqlalchemy.dialects.sqlite import insert
+        else:
+            raise ValueError("Unsupported notification database dialect")
+        table = SchoolMonthPlanNotification.__table__
+        statement = insert(table).values(
+            month_plan_id=month_plan_id,
+            staff_member_id=staff_member_id,
+            status=MonthPlanNotificationStatus.PENDING,
+            open_count=0,
+        ).on_conflict_do_nothing(
+            index_elements=[table.c.month_plan_id, table.c.staff_member_id],
+        )
+        await db.execute(statement)
+        notification = await cls.get_by_month_plan_and_staff_for_update(
+            db, month_plan_id=month_plan_id, staff_member_id=staff_member_id,
+        )
+        if notification is None:
+            raise RuntimeError("Notification state missing after atomic creation")
+        return notification
 
     @staticmethod
     async def list_by_month_plan(
@@ -785,3 +833,62 @@ class SchoolMonthPlanNotificationRepo:
                 row.accepted_count or 0
             ),
         )
+
+
+    @staticmethod
+    async def internal_plan(db, *, school_id, month_plan_id, lock=False):
+        m, p = SchoolMonthPlan.__table__, SchoolPlan.__table__
+        stmt = select(m, p.c.status.label('annual_status')).join(p, p.c.id == m.c.school_plan_id).where(m.c.id == month_plan_id, p.c.school_id == school_id)
+        if lock:
+            stmt = stmt.with_for_update(of=m)
+        return (await db.execute(stmt)).mappings().first()
+
+    @staticmethod
+    async def internal_parents(db, *, month_plan_id, staff_ids):
+        n = SchoolMonthPlanNotification.__table__
+        if staff_ids:
+            await db.execute(pg_insert(n).on_conflict_do_nothing(index_elements=['month_plan_id','staff_member_id']), [dict(month_plan_id=month_plan_id, staff_member_id=s, status=MonthPlanNotificationStatus.PENDING, open_count=0) for s in sorted(staff_ids)])
+        return list((await db.execute(select(n).where(n.c.month_plan_id == month_plan_id).order_by(n.c.id).with_for_update())).mappings())
+
+    @staticmethod
+    async def internal_latest(db, *, month_plan_id):
+        e, n = SchoolMonthPlanInternalNotice.__table__, SchoolMonthPlanNotification.__table__
+        stmt = select(e, n.c.staff_member_id).join(n, n.c.id == e.c.notification_id).where(n.c.month_plan_id == month_plan_id).distinct(e.c.notification_id).order_by(e.c.notification_id, e.c.id.desc())
+        return list((await db.execute(stmt)).mappings())
+
+    @staticmethod
+    async def internal_insert(db, rows):
+        if rows:
+            await db.execute(SchoolMonthPlanInternalNotice.__table__.insert(), rows)
+
+    @staticmethod
+    def internal_access(user):
+        # Only current, active assignments of this user's own school/staff profile.
+        e, n = SchoolMonthPlanInternalNotice.__table__, SchoolMonthPlanNotification.__table__
+        i, a = SchoolMonthPlanItem.__table__, SchoolMonthPlanItemAssignee.__table__
+        r, s = SchoolStaffRole.__table__, SchoolStaffMember.__table__
+        m, p = SchoolMonthPlan.__table__, SchoolPlan.__table__
+        live_assignment = exists(select(a.c.id).join(i, i.c.id == a.c.month_item_id).join(r, r.c.id == a.c.staff_role_id).join(s, s.c.id == r.c.staff_member_id).where(i.c.month_plan_id == n.c.month_plan_id, i.c.is_included.is_(True), r.c.staff_member_id == user.staff_member_id, r.c.school_id == user.school_id, r.c.is_active.is_(True), s.c.is_active.is_(True), s.c.school_id == user.school_id))
+        return select(e, n.c.month_plan_id, m.c.year, m.c.month).join(n,n.c.id == e.c.notification_id).join(m,m.c.id == n.c.month_plan_id).join(p,p.c.id == m.c.school_plan_id).where(e.c.recipient_user_id == user.id, n.c.staff_member_id == user.staff_member_id, p.c.school_id == user.school_id, m.c.status == 'active', p.c.status != 'archived', live_assignment)
+
+    @classmethod
+    async def internal_inbox(cls, db, *, user, page=1, count_only=False):
+        # Latest version per parent, scoped before aggregation.
+        accessible = cls.internal_access(user).subquery()
+        latest = select(accessible.c.notification_id, func.max(accessible.c.id).label('id')).group_by(accessible.c.notification_id).subquery()
+        stmt = select(accessible).join(latest, latest.c.id == accessible.c.id)
+        if count_only:
+            return int((await db.scalar(select(func.count()).select_from(stmt.where(accessible.c.read_at.is_(None)).subquery()))) or 0)
+        return list((await db.execute(stmt.order_by(accessible.c.sent_at.desc(),accessible.c.id.desc()).limit(21).offset((page-1)*20))).mappings())
+
+    @classmethod
+    async def internal_detail(cls, db, *, user, notice_id):
+        e = SchoolMonthPlanInternalNotice.__table__
+        return (await db.execute(cls.internal_access(user).where(e.c.id == notice_id))).mappings().first()
+
+    @classmethod
+    async def internal_mark_read(cls, db, *, user, notice_id):
+        e = SchoolMonthPlanInternalNotice.__table__
+        allowed = cls.internal_access(user).with_only_columns(e.c.id)
+        result = await db.execute(update(e).where(e.c.id == notice_id, e.c.id.in_(allowed)).values(read_at=func.coalesce(e.c.read_at,func.now())))
+        return bool(result.rowcount)

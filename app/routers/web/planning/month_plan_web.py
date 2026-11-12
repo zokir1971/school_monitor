@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+from app.core.i18n import resolve_language
+from app.modules.planning.utils.month_plan_readiness import month_plan_readiness
+
 from typing import Any
 from urllib.parse import urlencode
 
@@ -11,6 +14,8 @@ from starlette import status
 from starlette.responses import HTMLResponse, RedirectResponse
 
 from app.db.session import get_db
+from app.modules.planning.repositories.month_correction_repo import MonthCorrectionRepo
+from app.modules.planning.services.month_correction_service import MonthCorrectionService
 from app.modules.planning.constants import ACADEMIC_MONTHS, MONTH_LABELS
 from app.modules.planning.enums import PlanStatus
 from app.modules.planning.repositories.month_plan_repository import (
@@ -130,8 +135,14 @@ def _month_page_redirect(
         success: str | None = None,
         warning: str | None = None,
         info: str | None = None,
+        reset_form: bool = False,
+        submission_failed: bool = False,
 ) -> RedirectResponse:
     query: dict[str, str | int] = {"month": month}
+    if submission_failed:
+        query["submission_failed"] = 1
+    if reset_form:
+        query["reset_form"] = 1
 
     if success:
         query["success"] = success
@@ -265,6 +276,18 @@ async def school_monthly_page(
             )
         )
 
+    assignment_data = (await MonthCorrectionRepo.snapshot(db, school_id=school_id, month_plan_id=month_plan.id)) if month_plan else None
+    assignment_editors, plan_revision = MonthCorrectionService.editor(assignment_data)
+    base_context.update(assignment_editors=assignment_editors, plan_revision=plan_revision)
+    base_context['monthly_state'] = month_plan_readiness(assignment_data, month_weeks_grid(year, month))
+    base_context['problem_topics'] = {item.id: item.topic for block in blocks for item in block.items}
+    saved_id = request.query_params.get('task_saved', '')
+    base_context['saved_task'] = next((dict(item) for item in assignment_data['items'] if str(item['id']) == saved_id), None) if assignment_data else None
+
+    base_context['submission_failed'] = (request.query_params.get('submission_failed') == '1'
+        or bool(warning and ('Проблемные item_id' in warning or warning.startswith('У всех включённых задач'))))
+
+
     base_context.update(
         {
             "month_plan": month_plan,
@@ -384,6 +407,8 @@ async def school_monthly_save_draft(
 
     _validate_academic_month(month)
 
+    submitted_form = await request.form()
+    publishing = submitted_form.get("intent") == "submit"
     try:
         school_plan = (
             await SchoolMonthlyPlanRepo.get_school_plan_for_school(
@@ -453,15 +478,6 @@ async def school_monthly_save_draft(
                 detail=(
                     "Мұрағатталған айлық жоспарды "
                     "өзгертуге болмайды."
-                ),
-            )
-
-        if month_plan.status != PlanStatus.DRAFT:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=(
-                    "Редактирование доступно только "
-                    "для черновика месячного плана."
                 ),
             )
 
@@ -554,11 +570,16 @@ async def school_monthly_save_draft(
                 )
             )
 
-        await SchoolMonthlyPlanRepo.upsert_item_flags_bulk(
-            db,
-            updates=updates,
+        audit = await MonthCorrectionService.save(
+            db, school_id=school_id, month_plan_id=month_plan_id,
+            school_plan_id=school_plan_id, month=month, updates=updates,
+            form=form, actor_id=user.id,
         )
+        if publishing:
+            await SchoolMonthlyPlanningService.submit_month_plan(
+                db, month_plan_id=month_plan_id, school_id=school_id)
         await db.commit()
+        MonthCorrectionService.log_committed(audit)
 
     except HTTPException as exc:
         await db.rollback()
@@ -566,6 +587,8 @@ async def school_monthly_save_draft(
             request,
             month=month,
             warning=str(exc.detail),
+            reset_form=(exc.status_code == 409),
+            submission_failed=publishing,
         )
     except Exception:
         await db.rollback()
@@ -574,7 +597,7 @@ async def school_monthly_save_draft(
     return _month_page_redirect(
         request,
         month=month,
-        success="Черновик месячного плана сохранён.",
+        success=("План отправлен на исполнение / Жоспар орындауға жіберілді" if publishing else "Месячный план и назначения сохранены / Айлық жоспар мен тағайындаулар сақталды."),
     )
 
 
@@ -633,6 +656,7 @@ async def school_monthly_submit(
         await SchoolMonthlyPlanningService.submit_month_plan(
             db,
             month_plan_id=month_plan_id,
+            school_id=school_id,
         )
 
         await db.commit()
@@ -644,20 +668,15 @@ async def school_monthly_submit(
             request,
             month=month,
             warning=str(exc.detail),
+            submission_failed=True,
         )
 
     except Exception:
         await db.rollback()
         raise
 
-    # После успешной отправки открываем страницу уведомлений
-    return RedirectResponse(
-        url=request.url_for(
-            "school_monthly_notifications",
-            month_plan_id=month_plan_id,
-        ),
-        status_code=status.HTTP_303_SEE_OTHER,
-    )
+    return _month_page_redirect(request, month=month,
+        success="План отправлен на исполнение / Жоспар орындауға жіберілді")
 
 
 @router.post(
@@ -668,6 +687,8 @@ async def school_monthly_delete_draft(
         request: Request,
         month_plan_id: int = Form(...),
         month: int = Form(...),
+        plan_revision: str = Form(default=""),
+        confirmed_plan_id: str = Form(default=""),
         db: AsyncSession = Depends(get_db),
         user: User = Depends(
             require_roles(UserRole.SCHOOL_ADMIN)
@@ -690,6 +711,7 @@ async def school_monthly_delete_draft(
                 db,
                 month_plan_id=month_plan_id,
                 school_id=school_id,
+                plan_revision=plan_revision, confirmed_plan_id=confirmed_plan_id,
             )
         )
         await db.commit()
@@ -768,13 +790,7 @@ async def school_monthly_notifications(
         for item in notification_statuses
     }
 
-    notification_progress = await (
-        MonthPlanNotificationService.get_notification_progress(
-            db,
-            month_plan_id=month_plan_id,
-            school_id=school_id,
-        )
-    )
+    internal_rows = await MonthPlanNotificationService.internal_statuses(db, school_id=school_id, month_plan_id=month_plan_id, recipients=recipients)
 
     return render(
         templates,
@@ -787,8 +803,11 @@ async def school_monthly_notifications(
             "recipients": recipients,
             "notification_statuses": notification_statuses,
             "notification_status_map": notification_status_map,
-            "notification_progress": notification_progress,
+            "internal_summary": MonthPlanNotificationService.internal_summary(recipients,internal_rows),
+            "whatsapp_opened": sum(row.open_count > 0 for row in notification_statuses),
             "error": error,
+            "internal_status_map": {row['staff_member_id']: row for row in internal_rows},
+            "internal_success": request.query_params.get('internal_success'),
         },
     )
 
@@ -855,6 +874,7 @@ async def school_monthly_whatsapp(
                 platform_url=platform_url,
                 opened_by_user_id=user.id,
                 school_name=school_name,
+                language=resolve_language(request, user),
             )
         )
 
@@ -872,3 +892,46 @@ async def school_monthly_whatsapp(
         url=whatsapp_url,
         status_code=status.HTTP_303_SEE_OTHER,
     )
+
+
+@router.post('/monthly/review-places/sync', name='school_monthly_sync_review_places')
+async def school_monthly_sync_review_places(
+    request: Request,
+    month_plan_id: int = Form(...),
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_roles(UserRole.SCHOOL_ADMIN)),
+):
+    from app.modules.planning.services.review_place_sync_service import ReviewPlaceSyncService
+    try:
+        context, stats = await ReviewPlaceSyncService.sync_month(db, school_id=require_school_id(user), month_plan_id=month_plan_id)
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        raise
+    import logging
+    logging.getLogger(__name__).info('MONTH_REVIEW_PLACES_SYNC actor=%s plan=%s stats=%s', user.id, month_plan_id, stats)
+    query = dict(month=context['month'], school_plan_id=context['school_plan_id'], restore_plan_draft=1,
+        success=f"Места рассмотрения обновлены. Задач: {stats['updated']}. / Қарау орындары жаңартылды. Тапсырмалар: {stats['updated']}.")
+    if stats['unrecognized']:
+        query['warning'] = f"Проверьте место рассмотрения в годовом плане: не распознано задач {stats['unrecognized']}. / Жылдық жоспардағы қарау орнын тексеріңіз: {stats['unrecognized']}."
+    return RedirectResponse(str(request.url_for('school_monthly_page')) + '?' + urlencode(query), status_code=303)
+
+
+@router.post('/monthly/{month_plan_id}/notifications/internal', name='school_monthly_notify_internal')
+async def school_monthly_notify_internal(request: Request, month_plan_id: int,
+        db: AsyncSession = Depends(get_db), user: User = Depends(require_roles(UserRole.SCHOOL_ADMIN))):
+    school_id = require_school_id(user)
+    try:
+        result = await MonthPlanNotificationService.send_internal(db,school_id=school_id,
+            month_plan_id=month_plan_id,actor_id=user.id)
+        await db.commit()
+    except HTTPException as exc:
+        await db.rollback()
+        return RedirectResponse(str(request.url_for('school_monthly_notifications',month_plan_id=month_plan_id))+'?'+urlencode({'error':str(exc.detail)}),status_code=303)
+    except Exception:
+        await db.rollback()
+        raise
+    ru = resolve_language(request,user) == 'ru'
+    message = (f"Создано: {result['created']}. Обновлено: {result['changed']}. Без изменений: {result['unchanged']}. Нет активной учётной записи: {result['unregistered']}." if ru else
+        f"Жасалды: {result['created']}. Жаңартылды: {result['changed']}. Өзгеріссіз: {result['unchanged']}. Белсенді тіркелгісі жоқ: {result['unregistered']}.")
+    return RedirectResponse(str(request.url_for('school_monthly_notifications',month_plan_id=month_plan_id))+'?'+urlencode({'internal_success':message}),status_code=303)

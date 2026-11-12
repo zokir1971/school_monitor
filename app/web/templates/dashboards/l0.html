@@ -1,158 +1,188 @@
+{% from 'dashboards/components/assessment_section.html' import assessment_section with context %}
 {% extends "base.html" %}
 
-{% block title %}Панель администратора{% endblock %}
+{% block title %}{{ _('Панель администратора') }}{% endblock %}
 
 {% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static',path='css/assessment/navigation.css') }}?v=99">
+<script defer src="{{ url_for('static',path='js/assessment/navigation.js') }}?v=99"></script>
   <link rel="stylesheet" href="{{ url_for('static', path='css/admin.css') }}">
 {% endblock %}
 
 {% block content %}
 
 <div class="dashboard">
+{{ assessment_section() }}
 
   <!-- Администрирование -->
 <section class="dashboard-section">
-  <h3 class="section-title">Администрирование</h3>
+  <h3 class="section-title">{{ _('Администрирование') }}</h3>
 
   {% set role = (user.role.value if user.role is not string else user.role) %}
+  {% set subject_card_role = user.role.value if user.role is not string else user.role %}
 
   <div class="card-grid">
-    <a class="card" href="{{ request.url_for('schools_page') }}">
+{% include 'components/access_recovery_card.html' %}
+      
+    {% if feature_link_available(request.url_for('schools_page')) %}<a class="card" href="{{ request.url_for('schools_page') }}">
       <div class="card__inner">
         <div class="card__top">
           <div class="card__icon">🏫</div>
         </div>
 
-        <h3 class="card__title">Сформировать список школ</h3>
-        <p class="card__desc">Загрузка или добавления школы</p>
+        <h3 class="card__title">{{ _('Сформировать список школ') }}</h3>
+        <p class="card__desc">{{ _('Загрузка или добавления школы') }}</p>
 
         <div class="card__footer">
-          <span>Открыть</span>
+          <span>{{ _('Открыть') }}</span>
           <span class="card__arrow">→</span>
         </div>
       </div>
-    </a>
+    </a>{% endif %}
     {% if role in ["superuser", "region_admin"] %}
-    <a class="card" href="/super/issue-l1">
+    {% if feature_link_available('/super/issue-l1') %}<a class="card" href="/super/issue-l1">
       <div class="card__inner">
         <div class="card__top">
           <div class="card__icon">🔐</div>
         </div>
-        <h3 class="card__title">Выдача кодов доступа</h3>
-        <p class="card__desc">Регистрация администраторов и сотрудников</p>
+        <h3 class="card__title">{{ _('Выдача кодов доступа') }}</h3>
+        <p class="card__desc">{{ _('Регистрация администраторов и сотрудников') }}</p>
         <div class="card__footer">
-          <span>Открыть</span><span class="card__arrow">→</span>
+          <span>{{ _('Открыть') }}</span><span class="card__arrow">→</span>
         </div>
       </div>
-    </a>
+    </a>{% endif %}
     {% endif %}
 
-    <a class="card" href="/planning/super/directions">
+    {% if feature_link_available('/planning/super/directions') %}<a class="card" href="/planning/super/directions">
       <div class="card__inner">
         <div class="card__top">
           <div class="card__icon">📅</div>
         </div>
-        <h3 class="card__title">Планирования ВШК</h3>
-        <p class="card__desc">Планирования 6 направлений внутри школьного контроля</p>
+        <h3 class="card__title">{{ _('Планирования ВШК') }}</h3>
+        <p class="card__desc">{{ _('Планирования 6 направлений внутри школьного контроля') }}</p>
         <div class="card__footer">
-          <span>Открыть</span><span class="card__arrow">→</span>
+          <span>{{ _('Открыть') }}</span><span class="card__arrow">→</span>
         </div>
       </div>
-    </a>
+    </a>{% endif %}
+
+    {% if role == "superuser" %}
+    {% if feature_link_available(request.url_for('super_learning_objective_upload_choice')) %}<a class="card" href="{{ request.url_for('super_learning_objective_upload_choice') }}">
+      <div class="card__inner"><div class="card__top"><div class="card__icon">📚</div></div>
+        <h3 class="card__title">{{ _('Учебные цели') }}</h3>
+        <p class="card__desc">{{ _('Импорт учебных целей из PDF на казахском и русском языках') }}</p>
+        <div class="card__footer"><span>{{ _('Открыть') }}</span><span class="card__arrow">→</span></div>
+      </div>
+    </a>{% endif %}
+    {% endif %}
+
+    {% if subject_card_role == 'superuser' %}
+    {% if feature_link_available(request.url_for('super_subject_reference_list')) %}<a class="card" href="{{ request.url_for('super_subject_reference_list') }}">
+      <div class="card__inner">
+        <div class="card__top"><div class="card__icon">📚</div></div>
+        <h3 class="card__title">{{ _('Предметы') }}</h3>
+        <p class="card__desc">{{ _('Добавление, редактирование и управление активностью предметов.') }}</p>
+        <div class="card__footer"><span>{{ _('Открыть') }}</span><span class="card__arrow">→</span></div>
+      </div>
+    </a>{% endif %}
+    {% endif %}
+
   </div>
 </section>
 
 <section class="dashboard-section">
-  <h3 class="section-title">Школьный контроль</h3>
+  <h3 class="section-title">{{ _('Школьный контроль') }}</h3>
 
   <div class="card-grid">
-    <a class="card" href="/lessons/observations">
+    {% if feature_link_available('/lessons/observations') %}<a class="card" href="/lessons/observations">
       <div class="card__inner">
         <div class="card__top">
           <div class="card__icon">📋</div>
         </div>
-        <h3 class="card__title">Наблюдение уроков</h3>
-        <p class="card__desc">Планирование и проведение наблюдений</p>
+        <h3 class="card__title">{{ _('Наблюдение уроков') }}</h3>
+        <p class="card__desc">{{ _('Планирование и проведение наблюдений') }}</p>
         <div class="card__footer">
-          <span>Открыть</span><span class="card__arrow">→</span>
+          <span>{{ _('Открыть') }}</span><span class="card__arrow">→</span>
         </div>
       </div>
-    </a>
+    </a>{% endif %}
 
-    <a class="card" href="/assessments">
+    {% if feature_link_available('/assessments') %}<a class="card" href="/assessments">
       <div class="card__inner">
         <div class="card__top">
           <div class="card__icon">🧠</div>
         </div>
-        <h3 class="card__title">Оценка качества урока</h3>
-        <p class="card__desc">Критерии, шкалы, результаты</p>
+        <h3 class="card__title">{{ _('Оценка качества урока') }}</h3>
+        <p class="card__desc">{{ _('Критерии, шкалы, результаты') }}</p>
         <div class="card__footer">
-          <span>Открыть</span><span class="card__arrow">→</span>
+          <span>{{ _('Открыть') }}</span><span class="card__arrow">→</span>
         </div>
       </div>
-    </a>
+    </a>{% endif %}
 
-    <a class="card" href="/staff_school">
+    {% if feature_link_available('/staff_school') %}<a class="card" href="/staff_school">
       <div class="card__inner">
         <div class="card__top">
           <div class="card__icon">🎓</div>
         </div>
-        <h3 class="card__title">Развитие педагогов</h3>
-        <p class="card__desc">Анализ, рекомендации, рост</p>
+        <h3 class="card__title">{{ _('Развитие педагогов') }}</h3>
+        <p class="card__desc">{{ _('Анализ, рекомендации, рост') }}</p>
         <div class="card__footer">
-          <span>Открыть</span><span class="card__arrow">→</span>
+          <span>{{ _('Открыть') }}</span><span class="card__arrow">→</span>
         </div>
       </div>
-    </a>
+    </a>{% endif %}
   </div>
 </section>
 
   <!-- 📊 Отчёты -->
   <section class="dashboard-section">
-    <h3>Отчёты и аналитика</h3>
+    <h3>{{ _('Отчёты и аналитика') }}</h3>
 
     <div class="card-grid">
-      <a class="card" href="/reports/schools" >
+      {% if feature_link_available('/reports/schools') %}<a class="card" href="/reports/schools" >
         <div class="card__inner">
           <div class="card__top">
             <div class="card__icon">📊</div>
           </div>
-          <h3 class="card__title"> Отчёты по школам </h3>
-          <p class="card__desc">Справки и протоколы</p>
+          <h3 class="card__title"> {{ _('Отчёты по школам') }} </h3>
+          <p class="card__desc">{{ _('Справки и протоколы') }}</p>
           <div class="card__footer">
-            <span>Открыть</span><span class="card__arrow">→</span>
+            <span>{{ _('Открыть') }}</span><span class="card__arrow">→</span>
           </div>
         </div>
-      </a>
+      </a>{% endif %}
 
-      <a class="card" href="/reports/schools" >
+      {% if feature_link_available('/reports/schools') %}<a class="card" href="/reports/schools" >
         <div class="card__inner">
           <div class="card__top">
             <div class="card__icon">📊</div>
           </div>
-          <h3 class="card__title"> Отчёты по предметам </h3>
-          <p class="card__desc">Справки и протоколы</p>
+          <h3 class="card__title"> {{ _('Отчёты по предметам') }} </h3>
+          <p class="card__desc">{{ _('Справки и протоколы') }}</p>
           <div class="card__footer">
-            <span>Открыть</span><span class="card__arrow">→</span>
+            <span>{{ _('Открыть') }}</span><span class="card__arrow">→</span>
           </div>
         </div>
-      </a>
+      </a>{% endif %}
 
-      <a class="card" href="/reports/schools" >
+      {% if feature_link_available('/reports/schools') %}<a class="card" href="/reports/schools" >
         <div class="card__inner">
           <div class="card__top">
             <div class="card__icon">📊</div>
           </div>
-          <h3 class="card__title"> Отчёты по учителям </h3>
-          <p class="card__desc">Справки и протоколы</p>
+          <h3 class="card__title"> {{ _('Отчёты по учителям') }} </h3>
+          <p class="card__desc">{{ _('Справки и протоколы') }}</p>
           <div class="card__footer">
-            <span>Открыть</span><span class="card__arrow">→</span>
+            <span>{{ _('Открыть') }}</span><span class="card__arrow">→</span>
           </div>
         </div>
-      </a>
+      </a>{% endif %}
 
     </div>
   </section>
 
 </div>
 {% endblock %}
+

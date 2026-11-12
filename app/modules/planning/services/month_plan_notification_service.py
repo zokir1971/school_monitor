@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone, timedelta
+from types import SimpleNamespace
+import hashlib
+import json
 from urllib.parse import quote_plus
 
 from fastapi import HTTPException, status
@@ -61,92 +64,13 @@ class MonthPlanNotificationService:
         recipient: MonthPlanNotificationRecipientDTO,
         platform_url: str,
         school_name: str | None = None,
+        language: str = "kk",
     ) -> str:
-        """
-        Сформировать персональное WhatsApp-сообщение
-        исполнителю задач месячного плана.
-        """
-
-        lines: list[str] = [
-            f"Сәлеметсіз бе, {recipient.full_name}!",
-            "",
-            (
-                "School Monitor жүйесінде Сізге "
-                "жаңа тапсырмалар тағайындалды."
-            ),
-        ]
-
-        if school_name:
-            lines.extend(
-                [
-                    "",
-                    f"🏫 Мектеп: {school_name}",
-                ]
-            )
-
-        if recipient.primary_tasks:
-            lines.extend(
-                [
-                    "",
-                    "📌 Жауапты ретінде:",
-                ]
-            )
-
-            for task in recipient.primary_tasks:
-                lines.extend(
-                    [
-                        f"• {task.title}",
-                        (
-                            "  🕒 Орындау мерзімі: "
-                            f"{task.deadline_text}"
-                        ),
-                    ]
-                )
-
-        if recipient.co_executor_tasks:
-            lines.extend(
-                [
-                    "",
-                    "👥 Бірлескен орындаушы ретінде:",
-                ]
-            )
-
-            for task in recipient.co_executor_tasks:
-                lines.extend(
-                    [
-                        f"• {task.title}",
-                        (
-                            "  🕒 Орындау мерзімі: "
-                            f"{task.deadline_text}"
-                        ),
-                    ]
-                )
-
-        lines.extend(
-            [
-                "",
-                (
-                    "📊 Барлық тапсырмалар саны: "
-                    f"{recipient.task_count}"
-                ),
-                "",
-                "🔗 School Monitor жүйесіне кіру:",
-                platform_url.rstrip("/"),
-                "",
-                (
-                    "Егер жүйеде алғаш рет жұмыс жасайтын "
-                    "болсаңыз, алдымен тіркеліп, кейін "
-                    "жүйеге кіріңіз."
-                ),
-                "",
-                (
-                    "Бұл хабарлама School Monitor жүйесі "
-                    "арқылы автоматты түрде жіберілді."
-                ),
-            ]
+        from app.core.monthly_notification_message import build_monthly_notification_message
+        return build_monthly_notification_message(
+            recipient=recipient, platform_url=platform_url,
+            school_name=school_name, language=language,
         )
-
-        return "\n".join(lines)
 
     @staticmethod
     def build_whatsapp_url(
@@ -218,6 +142,7 @@ class MonthPlanNotificationService:
                     full_name=assignment_row.full_name,
                     is_registered=assignment_row.is_registered,
                     phone=assignment_row.phone,
+                    user_id=assignment_row.user_id,
                 )
 
                 recipients_by_staff[staff_member_id] = recipient
@@ -377,6 +302,7 @@ class MonthPlanNotificationService:
             platform_url: str,
             opened_by_user_id: int,
             school_name: str | None = None,
+            language: str = "kk",
     ) -> str:
         """
         Подготовить WhatsApp-сообщение и зафиксировать отправку.
@@ -419,51 +345,34 @@ class MonthPlanNotificationService:
             recipient=recipient,
             platform_url=platform_url,
             school_name=school_name,
+            language=language,
         )
 
         opened_at = datetime.now(timezone.utc)
 
         notification = await (
             SchoolMonthPlanNotificationRepo
-            .get_by_month_plan_and_staff_for_update(
+            .ensure_for_update(
                 db,
                 month_plan_id=month_plan_id,
                 staff_member_id=staff_member_id,
             )
         )
 
-        if notification is None:
-            await SchoolMonthPlanNotificationRepo.create(
-                db,
-                month_plan_id=month_plan_id,
-                staff_member_id=staff_member_id,
-                phone=normalized_phone,
-                status=MonthPlanNotificationStatus.SENT,
-                message_text=message,
-                open_count=1,
-                opened_at=opened_at,
-                opened_by_user_id=opened_by_user_id,
-            )
-
-        else:
-            next_status = (
-                MonthPlanNotificationStatus.ACCEPTED
-                if (
-                        notification.status
-                        == MonthPlanNotificationStatus.ACCEPTED
-                )
-                else MonthPlanNotificationStatus.SENT
-            )
-
-            await SchoolMonthPlanNotificationRepo.register_open(
-                db,
-                notification=notification,
-                status=next_status,
-                opened_at=opened_at,
-                opened_by_user_id=opened_by_user_id,
-                phone=normalized_phone,
-                message_text=message,
-            )
+        next_status = (
+            MonthPlanNotificationStatus.ACCEPTED
+            if notification.status == MonthPlanNotificationStatus.ACCEPTED
+            else MonthPlanNotificationStatus.SENT
+        )
+        await SchoolMonthPlanNotificationRepo.register_open(
+            db,
+            notification=notification,
+            status=next_status,
+            opened_at=opened_at,
+            opened_by_user_id=opened_by_user_id,
+            phone=normalized_phone,
+            message_text=message,
+        )
 
         return cls.build_whatsapp_url(
             phone=normalized_phone,
@@ -482,6 +391,7 @@ class MonthPlanNotificationService:
         platform_url: str,
         opened_by_user_id: int,
         school_name: str | None = None,
+        language: str = "kk",
     ) -> str:
         """
         Совместимое имя старого метода.
@@ -500,6 +410,7 @@ class MonthPlanNotificationService:
             platform_url=platform_url,
             opened_by_user_id=opened_by_user_id,
             school_name=school_name,
+            language=language,
         )
 
     # =========================================================
@@ -535,21 +446,12 @@ class MonthPlanNotificationService:
 
         notification = await (
             SchoolMonthPlanNotificationRepo
-            .get_by_month_plan_and_staff_for_update(
+            .ensure_for_update(
                 db,
                 month_plan_id=month_plan_id,
                 staff_member_id=staff_member_id,
             )
         )
-
-        if notification is None:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=(
-                    "Уведомление этому исполнителю "
-                    "ещё не было отправлено."
-                ),
-            )
 
         if (
                 notification.status
@@ -685,3 +587,108 @@ class MonthPlanNotificationService:
             notification=notification,
             status=MonthPlanNotificationStatus.PENDING,
         )
+
+
+    @staticmethod
+    def internal_payload(rows, plan):
+        tasks = sorted([dict(id=r.month_item_id, title=r.task_title, kind=r.assignment_kind,
+            start=r.planned_start.isoformat() if r.planned_start else None,
+            end=r.planned_end.isoformat() if r.planned_end else None) for r in rows], key=lambda t:(t['id'],t['kind']))
+        # A person can have several role records; a task/kind occurs only once.
+        tasks = list({(t['id'],t['kind']):t for t in tasks}.values())
+        payload = dict(month=plan['month'],year=plan['year'],tasks=tasks)
+        digest = hashlib.sha256(json.dumps(payload,sort_keys=True,ensure_ascii=False,separators=(',',':')).encode()).hexdigest()
+        return payload, digest
+
+    @classmethod
+    async def send_internal(cls, db, *, school_id, month_plan_id, actor_id):
+        repo = SchoolMonthPlanNotificationRepo
+        plan = await repo.internal_plan(db,school_id=school_id,month_plan_id=month_plan_id,lock=True)
+        if not plan:
+            raise HTTPException(404,'План не найден / Жоспар табылмады')
+        if str(getattr(plan['status'],'value',plan['status'])) != 'active' or str(getattr(plan['annual_status'],'value',plan['annual_status'])) == 'archived':
+            raise HTTPException(409,'Сначала отправьте месячный план на исполнение / Алдымен айлық жоспарды орындауға жіберіңіз')
+        source = await repo.list_notification_assignment_rows(db,school_id=school_id,month_plan_id=month_plan_id)
+        groups, unregistered = {}, set()
+        for row in source:
+            if not row.is_registered or not row.is_account_active or not row.user_id:
+                unregistered.add(row.staff_member_id)
+            else:
+                groups.setdefault(row.staff_member_id,[]).append(row)
+        parents = {n['staff_member_id']:n for n in await repo.internal_parents(db,month_plan_id=month_plan_id,staff_ids=set(groups))}
+        previous = {n['staff_member_id']:n for n in await repo.internal_latest(db,month_plan_id=month_plan_id)}
+        inserts, created, changed, unchanged = [], 0, 0, 0
+        for staff_id, rows in groups.items():
+            payload,digest = cls.internal_payload(rows,plan)
+            old = previous.get(staff_id)
+            if old and old['digest'] == digest and old['recipient_user_id'] == rows[0].user_id:
+                unchanged += 1
+                continue
+            created += int(old is None); changed += int(old is not None)
+            inserts.append(dict(notification_id=parents[staff_id]['id'],recipient_user_id=rows[0].user_id,
+                revision=old['revision']+1 if old else 1,digest=digest,payload=payload,sent_by_user_id=actor_id))
+        await repo.internal_insert(db,inserts)
+        return dict(created=created,changed=changed,unchanged=unchanged,unregistered=len(unregistered))
+
+    @staticmethod
+    def internal_identity(user):
+        if not user.school_id or not user.staff_member_id:
+            raise HTTPException(403,'Нет профиля сотрудника школы / Мектеп қызметкерінің профилі жоқ')
+
+    @classmethod
+    async def internal_notice(cls, db, *, user, notice_id):
+        cls.internal_identity(user)
+        row = await SchoolMonthPlanNotificationRepo.internal_detail(db,user=user,notice_id=notice_id)
+        if not row:
+            raise HTTPException(404,'Уведомление не найдено / Хабарлама табылмады')
+        current = await SchoolMonthPlanNotificationRepo.list_notification_assignment_rows(db,
+            school_id=user.school_id,month_plan_id=row['month_plan_id'],staff_member_id=user.staff_member_id)
+        allowed = {t.month_item_id for t in current}
+        result = dict(row)
+        result['payload'] = dict(row['payload'],tasks=[t for t in row['payload']['tasks'] if t['id'] in allowed])
+        return cls.internal_display(result)
+
+
+    @staticmethod
+    async def internal_statuses(db, *, school_id, month_plan_id, recipients):
+        plan = await SchoolMonthPlanNotificationRepo.internal_plan(db,school_id=school_id,month_plan_id=month_plan_id)
+        if not plan:
+            raise HTTPException(404,'План не найден / Жоспар табылмады')
+        rows = await SchoolMonthPlanNotificationRepo.internal_latest(db,month_plan_id=month_plan_id)
+        current = {r.staff_member_id:r for r in recipients}
+        result = []
+        for row in rows:
+            recipient = current.get(row['staff_member_id'])
+            tasks = []
+            if recipient:
+                for kind, group in [('primary',recipient.primary_tasks),('co_executor',recipient.co_executor_tasks)]:
+                    tasks.extend(SimpleNamespace(month_item_id=t.month_item_id,task_title=t.title,
+                        assignment_kind=kind,planned_start=t.planned_start,planned_end=t.planned_end) for t in group)
+            _, digest = MonthPlanNotificationService.internal_payload(tasks,plan)
+            notice = MonthPlanNotificationService.internal_display(dict(row))
+            notice['stale'] = not recipient or digest != row['digest'] or row['recipient_user_id'] != recipient.user_id
+            result.append(notice)
+        return result
+
+    @staticmethod
+    def internal_display(row):
+        result = dict(row)
+        for key in ('sent_at','read_at'):
+            if result.get(key):
+                result[key] = result[key].astimezone(timezone(timedelta(hours=5)))
+        if 'payload' in result:
+            result['payload'] = dict(result['payload'],tasks=[dict(t,
+                start_text=date.fromisoformat(t['start']).strftime('%d.%m.%Y') if t.get('start') else '—',
+                end_text=date.fromisoformat(t['end']).strftime('%d.%m.%Y') if t.get('end') else '—') for t in result['payload']['tasks']])
+        return result
+
+
+    @staticmethod
+    def internal_summary(recipients, notices):
+        people = {r.staff_member_id:r for r in recipients}
+        registered = {sid for sid,r in people.items() if r.is_registered}
+        latest = {n['staff_member_id']:n for n in notices}
+        current = [latest[sid] for sid in registered if sid in latest and not latest[sid].get('stale',False)]
+        read = sum(n['read_at'] is not None for n in current)
+        return dict(total=len(people),registered=len(registered),notified=len(current),read=read,
+            unread=len(current)-read,pending=len(registered)-len(current),no_account=len(people)-len(registered))

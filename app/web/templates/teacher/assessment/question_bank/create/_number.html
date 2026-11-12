@@ -1,0 +1,128 @@
+<!-- =============================================
+     NUMBER
+     ============================================= -->
+
+<div
+  id="number-fields"
+  class="qb-answer-builder"
+  data-question-fields="number"
+  hidden
+>
+
+  <div class="qb-answer-builder__header">
+
+    <h3>
+      {{ _('Сандық жауап') }}
+    </h3>
+
+    <p>
+      {{ _('Дұрыс сандық мәнді және қажет болса өлшем бірлігі мен рұқсат етілген ауытқуды көрсетіңіз.') }}
+    </p>
+
+  </div>
+
+
+  <div class="qb-number-grid" data-number-legacy>
+
+    <div class="qb-form-field">
+
+      <label
+        for="number_answer"
+        class="qb-form-label"
+      >
+        {{ _('Дұрыс жауап') }}
+        <span class="qb-required">*</span>
+      </label>
+
+      <input
+        type="text"
+        inputmode="decimal"
+        id="number_answer"
+        name="number_answer"
+        class="qb-form-control"
+        placeholder="{{ _('Мысалы: 3.14') }}"
+        data-type-input
+        disabled
+      >
+
+    </div>
+
+
+    <div class="qb-form-field">
+
+      <label
+        for="number_unit"
+        class="qb-form-label"
+      >
+        {{ _('Өлшем бірлігі') }}
+      </label>
+
+      <input
+        type="text"
+        id="number_unit"
+        name="number_unit"
+        class="qb-form-control"
+        placeholder="{{ _('Мысалы: м, кг, см²') }}"
+        data-type-input
+        disabled
+      >
+
+    </div>
+
+
+    <div class="qb-form-field">
+
+      <label
+        for="number_tolerance"
+        class="qb-form-label"
+      >
+        {{ _('Рұқсат етілген ауытқу') }}
+      </label>
+
+      <input
+        type="text"
+        inputmode="decimal"
+        id="number_tolerance"
+        name="number_tolerance"
+        class="qb-form-control"
+        placeholder="{{ _('Мысалы: 0.01') }}"
+        data-type-input
+        disabled
+      >
+
+      <div class="qb-form-help">
+        {{ _('Дәл жауап қажет болса, бос қалдыруға болады.') }}
+      </div>
+
+    </div>
+
+  </div>
+
+<div data-number-parts></div>
+<p data-number-status role="status" aria-live="polite"></p>
+<input type="hidden" name="number_parts" data-number-payload data-type-input disabled>
+<template data-number-row-template>
+  <section class="qb-number-part" style="border:1px solid #eaecf0;border-radius:8px;padding:12px;margin-top:12px;">
+    <label class="qb-form-label" data-number-label></label>
+    <div class="qb-rich-editor" data-rich-editor>
+      <div class="qb-rich-editor__toolbar"><button type="button" data-rich-add-math data-sm-action="nav">{{ _('+ Формула') }}</button></div>
+      <div class="qb-rich-editor__content" data-rich-content contenteditable="true" role="textbox" aria-multiline="true"></div>
+      <input type="hidden" data-rich-plain-value data-type-input>
+      <input type="hidden" data-rich-segments data-type-input>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:10px;">
+      <label>{{ _('Дұрыс жауап / Правильный ответ') }}
+        <input class="qb-form-control" type="text" inputmode="decimal" data-number-answer data-type-input>
+      </label>
+      <label>{{ _('Өлшем бірлігі / Единица измерения') }}
+        <input class="qb-form-control" type="text" data-number-unit data-type-input>
+      </label>
+      <label>{{ _('Рұқсат етілген ауытқу / Допуск') }}
+        <input class="qb-form-control" type="text" inputmode="decimal" placeholder="0" data-number-tolerance data-type-input>
+      </label>
+    </div>
+  </section>
+</template>
+</div>
+
+<script defer src="{{ url_for('static', path='js/teacher/assessment/question_bank/number_editor.js') }}?v=63"></script>

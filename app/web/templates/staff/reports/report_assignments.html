@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 
 {% block title %}
-Распределение отчётов
+{{ _('Распределение отчётов') }}
 {% endblock %}
 
 
@@ -940,6 +940,7 @@
       width: 100%;
     }
   }
+.assignment-table tr[id^="assignment-report-"] { scroll-margin-top: 100px; }
 </style>
 {% endblock %}
 
@@ -953,17 +954,15 @@
     <div class="assignment-header__content">
 
       <div class="assignment-eyebrow">
-        📋 Распределение системных отчётов
+        {{ _('📋 Распределение системных отчётов') }}
       </div>
 
       <h1 class="assignment-title">
-        Назначение исполнителей отчётов
+        {{ _('Назначение исполнителей отчётов') }}
       </h1>
 
       <p class="assignment-subtitle">
-        Назначьте каждому выбранному отчёту конкретного исполнителя.
-        В список доступны только ответственный исполнитель и
-        соисполнители этой задачи.
+        {{ _('Назначьте каждому выбранному отчёту конкретного исполнителя. В список доступны только ответственный исполнитель и соисполнители этой задачи.') }}
       </p>
 
     </div>
@@ -977,16 +976,26 @@
 
   <!-- ALERTS -->
   {% if success %}
-    <div class="assignment-alert assignment-alert--success">
+    <div class="assignment-alert assignment-alert--success" role="status" aria-live="polite">
       <span class="assignment-alert__icon">✅</span>
-      <div>{{ success }}</div>
+      <div>
+        {% set success_text = success|string|trim %}
+        {% set feedback_ru = ui_language() == 'ru' %}
+        {% if success_text == 'Исполнитель отчёта назначен.' %}
+          {{ 'Исполнитель отчёта назначен.' if feedback_ru else 'Есеп орындаушысы тағайындалды.' }}
+        {% elif success_text == 'Отчёт освобождён от обязательного выполнения. Причина сохранена.' %}
+          {{ 'Отчёт освобождён от обязательного выполнения. Причина сохранена.' if feedback_ru else 'Есепті міндетті түрде орындау талабы алынып тасталды. Себебі сақталды.' }}
+        {% else %}
+          {{ 'Действие успешно выполнено.' if feedback_ru else 'Әрекет сәтті орындалды.' }}
+        {% endif %}
+      </div>
     </div>
   {% endif %}
 
   {% if error %}
     <div class="assignment-alert assignment-alert--error">
       <span class="assignment-alert__icon">⚠️</span>
-      <div>{{ error }}</div>
+      <div>{{ reports_feedback(error) }}</div>
     </div>
   {% endif %}
 
@@ -995,14 +1004,14 @@
   <section class="assignment-task-card">
 
     <h2 class="assignment-task-card__title">
-      🗂️ Информация о задаче
+      {{ _('🗂️ Информация о задаче') }}
     </h2>
 
     <div class="assignment-task-grid">
 
       <div class="assignment-info-item">
         <span class="assignment-info-item__label">
-          Тема
+          {{ _('Тема') }}
         </span>
 
         <div class="assignment-info-item__value">
@@ -1012,7 +1021,7 @@
 
       <div class="assignment-info-item">
         <span class="assignment-info-item__label">
-          Цель
+          {{ _('Цель') }}
         </span>
 
         <div class="assignment-info-item__value">
@@ -1022,7 +1031,7 @@
 
       <div class="assignment-info-item">
         <span class="assignment-info-item__label">
-          Срок выполнения
+          {{ _('Срок выполнения') }}
         </span>
 
         <div class="assignment-info-item__value">
@@ -1038,42 +1047,42 @@
   <section class="assignment-summary">
 
     <span class="assignment-summary__label">
-      Состояние распределения:
+      {{ _('Состояние распределения:') }}
     </span>
 
     <span class="assignment-badge assignment-badge--total">
-      📄 Всего отчётов:
+      {{ _('📄 Всего отчётов:') }}
       {{ page_data.report_count }}
     </span>
 
     <span class="assignment-badge assignment-badge--assigned">
-      ✅ Назначено:
+      {{ _('✅ Назначено:') }}
       {{ page_data.assigned_count }}
     </span>
 
     <span class="assignment-badge assignment-badge--unassigned">
-      ⏳ Без исполнителя:
+      {{ _('⏳ Без исполнителя:') }}
       {{ page_data.unassigned_count }}
     </span>
 
     <span class="assignment-badge assignment-badge--unassigned">
-      🟡 Ожидают:
+      {{ _('🟡 Ожидают:') }}
       {{ page_data.pending_count }}
     </span>
 
     <span class="assignment-badge assignment-badge--assigned">
-      🟢 Выполнено:
+      {{ _('🟢 Выполнено:') }}
       {{ page_data.completed_count }}
     </span>
 
     <span class="assignment-badge assignment-badge--total">
-      ⚪ Освобождено:
+      {{ _('⚪ Освобождено:') }}
       {{ page_data.waived_count }}
     </span>
 
     {% if page_data.all_assigned %}
       <span class="assignment-badge assignment-badge--complete">
-        ✓ Распределение завершено
+        {{ _('✓ Распределение завершено') }}
       </span>
     {% endif %}
 
@@ -1103,18 +1112,17 @@
 
         <div class="assignment-card__heading">
           <h2 class="assignment-card__title">
-            Выбранные системные отчёты
+            {{ _('Выбранные системные отчёты') }}
           </h2>
 
           <p class="assignment-card__description">
-            Для каждого отчёта выберите одного сотрудника,
-            который будет отвечать за его заполнение.
+            {{ _('Для каждого отчёта выберите одного сотрудника, который будет отвечать за его заполнение.') }}
           </p>
         </div>
 
         <div class="assignment-card__status">
           <span class="assignment-badge assignment-badge--total">
-            Исполнителей:
+            {{ _('Исполнителей:') }}
             {{ page_data.executors|length }}
           </span>
         </div>
@@ -1131,13 +1139,13 @@
             <thead>
             <tr>
               <th style="width: 64px;">№</th>
-              <th>Отчёт</th>
-              <th>Объект заполнения</th>
+              <th>{{ _('Отчёт') }}</th>
+              <th>{{ _('Объект заполнения') }}</th>
               <th style="width: 340px;">
-                Исполнитель
+                {{ _('Исполнитель') }}
               </th>
-              <th style="width: 190px;">Статус</th>
-              <th style="width: 260px;">Действия</th>
+              <th style="width: 190px;">{{ _('Статус') }}</th>
+              <th style="width: 260px;">{{ _('Действия') }}</th>
             </tr>
             </thead>
 
@@ -1145,7 +1153,7 @@
 
             {% for report in page_data.reports %}
 
-              <tr>
+              <tr id="assignment-report-{{ report.selected_report_id }}">
 
                 <td>
                   <div class="assignment-index">
@@ -1155,7 +1163,7 @@
 
                 <td>
                   <div class="assignment-report-name">
-                    {{ report.report_name or "—" }}
+                    {{ (report.report_name_kk or report.report_name or '—') if ui_language() == 'kk' else (report.report_name or report.report_name_kk or '—') }}
                   </div>
 
                   {% if report.report_code %}
@@ -1170,16 +1178,17 @@
 
                     <span class="assignment-target__label">
                       {{
-                        report.target_label
+                        ((report.target_label_kk or report.target_label) if ui_language() == 'kk' else (report.target_label or report.target_label_kk))
                         or report.target_value
                         or "—"
                       }}
                     </span>
 
+                    {% if report.context_label %}<div class="assignment-target-hint">{{ (report.context_label_kk or report.context_label) if ui_language() == 'kk' else report.context_label }}</div>{% endif %}
                     {% if report.target_kind %}
                       <span class="assignment-target__kind">
-                        Тип объекта:
-                        {{ report.target_kind }}
+                        {{ _('Тип объекта:') }}
+                        {{ report_target_label(report.target_kind) }}
                       </span>
                     {% endif %}
 
@@ -1198,13 +1207,13 @@
                         {% endif %}
                       "
                       required
-                      {% if report.is_completed %}
+                      {% if report.is_completed or not report.assignable %}
                         disabled
                       {% endif %}
                     >
 
                       <option value="">
-                        — Выберите исполнителя —
+                        {{ _('— Выберите исполнителя —') }}
                       </option>
 
                       {% for executor in page_data.executors %}
@@ -1220,7 +1229,7 @@
                         >
                           {{ executor.full_name }}
                           —
-                          {{ executor.assignment_kind_label }}
+                          {{ _(executor.assignment_kind_label) }}
 
                           {% if executor.position_text %}
                             ({{ executor.position_text }})
@@ -1231,7 +1240,7 @@
 
                     </select>
 
-                    {% if report.is_completed and report.assigned_staff_member_id %}
+                    {% if report.is_completed and report.assigned_staff_member_id and report.assignable %}
                       <input
                         type="hidden"
                         name="assignment_{{ report.selected_report_id }}"
@@ -1245,7 +1254,7 @@
                           class="assignment-current-executor__dot"
                         ></span>
 
-                        Сейчас назначен:
+                        {{ _('Сейчас назначен:') }}
                         {{ report.assigned_staff_full_name }}
                       </div>
                     {% endif %}
@@ -1259,7 +1268,7 @@
                       assignment-status-badge
                       assignment-status-badge--completed
                     ">
-                      ✅ Выполнен
+                      {{ _('✅ Выполнен') }}
                     </span>
 
                   {% elif report.is_waived %}
@@ -1267,12 +1276,12 @@
                       assignment-status-badge
                       assignment-status-badge--waived
                     ">
-                      ⚪ Освобождён
+                      {{ _('⚪ Освобождён') }}
                     </span>
 
                     {% if report.waived_reason %}
                       <div class="assignment-waived-reason">
-                        <strong>Причина:</strong>
+                        <strong>{{ _('Причина:') }}</strong>
                         {{ report.waived_reason }}
                       </div>
                     {% endif %}
@@ -1282,7 +1291,7 @@
                       assignment-status-badge
                       assignment-status-badge--pending
                     ">
-                      ⏳ Ожидается
+                      {{ _('⏳ Ожидается') }}
                     </span>
 
                   {% else %}
@@ -1290,7 +1299,7 @@
                       assignment-status-badge
                       assignment-status-badge--unassigned
                     ">
-                      — Не назначен
+                      {{ _('— Не назначен') }}
                     </span>
                   {% endif %}
                 </td>
@@ -1298,9 +1307,12 @@
                 <td>
                   <div class="assignment-row-actions">
 
-                    {% if report.is_completed %}
+                    {% if not report.assignable %}
+                      <div role="status">{{ ('Раздел временно отключён.' if ui_language()=='ru' else 'Бөлім уақытша өшірілген.') if not feature_report_available(report.report_code) else report.target_error }}</div>
+                      <a class="assignment-row-btn" href="/staff/tasks/execute?month={{ page_data.month }}&selected_task_id={{ page_data.month_item_id }}#report-teacher-targets" data-sm-action="nav">{{ 'Выбрать учителя в алгоритме' if ui_language()=='ru' else 'Алгоритмде мұғалімді таңдау' }}</a>
+                    {% elif report.is_completed %}
                       <span class="assignment-row-note">
-                        Отчёт уже выполнен.
+                        {{ _('Отчёт уже выполнен.') }}
                       </span>
 
                     {% else %}
@@ -1311,11 +1323,12 @@
                           assignment-row-btn--reassign
                         "
                         data-action="reassign"
+                        data-is-assigned="{{ 'true' if report.is_assigned else 'false' }}"
                         data-report-id="{{ report.selected_report_id }}"
                         data-month-item-id="{{ page_data.month_item_id }}"
                         data-month="{{ page_data.month }}"
-                      >
-                        🔄 Переназначить
+                       data-sm-action="edit">
+                        {{ ('Переназначить' if ui_language()=='ru' else 'Қайта тағайындау') if report.is_assigned else ('Назначить' if ui_language()=='ru' else 'Тағайындау') }}
                       </button>
 
                       {% if not report.is_waived %}
@@ -1329,12 +1342,12 @@
                           data-report-id="{{ report.selected_report_id }}"
                           data-month-item-id="{{ page_data.month_item_id }}"
                           data-month="{{ page_data.month }}"
-                        >
-                          ⏭ Завершить без отчёта
+                         data-sm-action="edit">
+                          {{ _('⏭ Завершить без отчёта') }}
                         </button>
                       {% else %}
                         <span class="assignment-row-note">
-                          Можно переназначить и вернуть в работу.
+                          {{ _('Можно переназначить и вернуть в работу.') }}
                         </span>
                       {% endif %}
                     {% endif %}
@@ -1356,21 +1369,21 @@
         <div class="assignment-role-legend">
 
           <span class="assignment-role-legend__title">
-            Доступные роли:
+            {{ _('Доступные роли:') }}
           </span>
 
           <span class="
             assignment-role-badge
             assignment-role-badge--primary
           ">
-            ⭐ Ответственный
+            {{ _('⭐ Ответственный') }}
           </span>
 
           <span class="
             assignment-role-badge
             assignment-role-badge--coexecutor
           ">
-            👥 Соисполнитель
+            {{ _('👥 Соисполнитель') }}
           </span>
 
         </div>
@@ -1384,13 +1397,11 @@
           </div>
 
           <h3 class="assignment-empty__title">
-            Отчёты пока не выбраны
+            {{ _('Отчёты пока не выбраны') }}
           </h3>
 
           <p class="assignment-empty__text">
-            Вернитесь к алгоритму выполнения задачи и выберите
-            системные отчёты. После этого они появятся на странице
-            распределения.
+            {{ _('Вернитесь к алгоритму выполнения задачи и выберите системные отчёты. После этого они появятся на странице распределения.') }}
           </p>
 
         </div>
@@ -1407,8 +1418,8 @@
 
         <a
           href="/staff/tasks/execute?month={{ page_data.month }}&selected_task_id={{ page_data.month_item_id }}"
-          class="assignment-btn assignment-btn--secondary">
-          ← Вернуться к алгоритму
+          class="assignment-btn assignment-btn--secondary" data-sm-action="nav" data-sm-back="true">
+          {{ _('← Вернуться к алгоритму') }}
         </a>
 
       </div>
@@ -1416,19 +1427,20 @@
 
       <div class="assignment-actions__group">
 
+        <a class="assignment-btn assignment-btn--secondary" href="{{ url_for('staff_my_reports_page') }}?month={{ page_data.month }}" data-sm-action="nav">{{ 'Мои отчёты' if ui_language()=='ru' else 'Менің есептерім' }}</a>
         {% if page_data.reports %}
 
           <button
             type="submit"
             class="assignment-btn assignment-btn--primary"
-          >
-            💾 Сохранить распределение
+           data-sm-action="primary">
+            {{ _('💾 Сохранить распределение') }}
           </button>
 
           {% if page_data.all_assigned %}
             <a href="{{ url_for('staff_report_templates_page', month_item_id=page_data.month_item_id) }}?month={{ page_data.month }}"
-               class="assignment-btn assignment-btn--success">
-              Перейти к заполнению отчётов →
+               class="assignment-btn assignment-btn--success" data-sm-action="nav">
+              {{ _('Перейти к заполнению отчётов →') }}
             </a>
           {% endif %}
 
@@ -1444,10 +1456,8 @@
         class="assignment-help"
         style="margin-top: 12px;"
       >
-        <strong>Важно:</strong>
-        соисполнитель получит доступ только к тем отчётам,
-        которые назначены именно ему. Ответственный исполнитель
-        сохраняет контроль над общей задачей и её завершением.
+        <strong>{{ _('Важно:') }}</strong>
+        {{ _('соисполнитель получит доступ только к тем отчётам, которые назначены именно ему. Ответственный исполнитель сохраняет контроль над общей задачей и её завершением.') }}
       </div>
     {% endif %}
 
@@ -1462,7 +1472,8 @@ document.addEventListener("DOMContentLoaded", function () {
   // Восстанавливаем положение после redirect/reload.
   const savedScroll = sessionStorage.getItem(scrollKey);
 
-  if (savedScroll !== null) {
+  if (window.location.hash) { sessionStorage.removeItem(scrollKey); }
+  if (savedScroll !== null && !window.location.hash) {
     sessionStorage.removeItem(scrollKey);
 
     requestAnimationFrame(function () {
@@ -1539,7 +1550,7 @@ document.addEventListener("DOMContentLoaded", function () {
         });
 
         alert(
-          "Назначьте исполнителя каждому выбранному отчёту."
+          window.SchoolMonitorI18n.t("rp_97529b37595a")
         );
       }
     );
@@ -1561,6 +1572,7 @@ document.addEventListener("DOMContentLoaded", function () {
         actionForm.appendChild(input);
       });
 
+      sessionStorage.setItem("report-page-scroll:" + window.location.pathname, String(window.scrollY));
       document.body.appendChild(actionForm);
       actionForm.submit();
     };
@@ -1579,7 +1591,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
         if (!executorSelect || !executorSelect.value) {
           alert(
-            "Сначала выберите нового исполнителя отчёта."
+            window.SchoolMonitorI18n.t("rp_344d0238501c")
           );
 
           if (executorSelect) {
@@ -1589,9 +1601,10 @@ document.addEventListener("DOMContentLoaded", function () {
           return;
         }
 
-        if (!confirm(
-          "Переназначить этот отчёт выбранному сотруднику?"
-        )) {
+        const question = button.dataset.isAssigned === "true"
+          ? {{ ('Переназначить этот отчёт выбранному исполнителю?' if ui_language()=='ru' else 'Осы есепті таңдалған орындаушыға қайта тағайындау керек пе?')|tojson }}
+          : {{ ('Назначить этот отчёт выбранному исполнителю?' if ui_language()=='ru' else 'Осы есепті таңдалған орындаушыға тағайындау керек пе?')|tojson }};
+        if (!confirm(question)) {
           return;
         }
 
@@ -1616,7 +1629,7 @@ document.addEventListener("DOMContentLoaded", function () {
         const month = button.dataset.month;
 
         const reason = prompt(
-          "Укажите причину завершения задачи без этого отчёта:"
+          window.SchoolMonitorI18n.t("rp_12af52549d9e")
         );
 
         if (reason === null) {
@@ -1626,19 +1639,19 @@ document.addEventListener("DOMContentLoaded", function () {
         const normalizedReason = reason.trim();
 
         if (!normalizedReason) {
-          alert("Причина обязательна.");
+          alert(window.SchoolMonitorI18n.t("rp_ca4d11c9930c"));
           return;
         }
 
         if (normalizedReason.length > 2000) {
           alert(
-            "Причина слишком длинная. Максимум 2000 символов."
+            window.SchoolMonitorI18n.t("rp_2be5654b59bf")
           );
           return;
         }
 
         if (!confirm(
-          "Освободить этот отчёт от обязательного выполнения?"
+          window.SchoolMonitorI18n.t("rp_6463303999bc")
         )) {
           return;
         }

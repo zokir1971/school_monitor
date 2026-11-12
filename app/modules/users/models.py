@@ -28,6 +28,8 @@ class User(Base):
     __tablename__ = "users"
 
     __table_args__ = (
+        CheckConstraint("ui_language IS NULL OR ui_language IN ('ru', 'kk')",
+                        name="ck_users_ui_language"),
         CheckConstraint(
             """
             (
@@ -44,6 +46,8 @@ class User(Base):
 
     username: Mapped[str] = mapped_column(String(50), unique=True, nullable=False, index=True)
     iin: Mapped[str] = mapped_column(String(12), unique=True, nullable=False, index=True)
+
+    ui_language: Mapped[str | None] = mapped_column(String(2), nullable=True)
 
     full_name: Mapped[str] = mapped_column(String(120), nullable=False)
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)

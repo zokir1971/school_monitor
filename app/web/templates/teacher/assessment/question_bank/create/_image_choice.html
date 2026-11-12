@@ -1,0 +1,60 @@
+{# Scoped component styles also work when the cached create.css has no IMAGE_CHOICE rules. #}
+<style>
+#image-choice-fields { font-family:system-ui,-apple-system,"Segoe UI",Arial,sans-serif; font-size:14px; line-height:1.5; color:#1e293b; margin:20px 0; }
+#image-choice-fields, #image-choice-fields * { box-sizing:border-box; }
+#image-choice-fields .qb-section-title { margin:0 0 8px; font:600 18px/1.4 system-ui,-apple-system,"Segoe UI",Arial,sans-serif; color:#0f172a; }
+#image-choice-fields .qb-help-text { margin:0 0 16px; font:inherit; color:#64748b; }
+#image-choice-fields .qb-image-choice-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; }
+#image-choice-fields .qb-image-choice-card { min-width:0; padding:16px; border:1px solid #dbe3ee; border-radius:12px; background:#fff; }
+#image-choice-fields .qb-image-choice-correct { display:flex; align-items:center; gap:10px; margin:0 0 12px; font:inherit; cursor:pointer; }
+#image-choice-fields .qb-image-choice-correct input { flex:0 0 auto; width:17px; height:17px; margin:0; accent-color:#2563eb; }
+#image-choice-fields .qb-image-choice-correct strong { display:inline-flex; align-items:center; justify-content:center; width:30px; height:30px; border-radius:7px; background:#eff6ff; color:#1d4ed8; font-weight:700; }
+#image-choice-fields .qb-image-choice-correct span { font-size:14px; }
+#image-choice-fields .qb-image-choice-preview { display:flex; align-items:center; justify-content:center; width:100%; height:180px; margin:0 0 14px; padding:8px; overflow:hidden; border:1px dashed #cbd5e1; border-radius:8px; background:#f8fafc; color:#94a3b8; }
+#image-choice-fields .qb-image-choice-preview img { display:block; width:auto; height:auto; max-width:100%; max-height:100%; object-fit:contain; }
+#image-choice-fields [hidden] { display:none !important; }
+#image-choice-fields .qb-form-label { display:block; width:auto; margin:12px 0 6px; font:500 13px/1.5 system-ui,-apple-system,"Segoe UI",Arial,sans-serif; color:#475569; }
+#image-choice-fields .qb-form-control { display:block; width:100%; min-width:0; height:40px; padding:8px 10px; border:1px solid #cbd5e1; border-radius:8px; background:#fff; color:#1e293b; font:inherit; }
+#image-choice-fields .qb-form-control:focus { outline:2px solid #bfdbfe; outline-offset:1px; border-color:#3b82f6; }
+#image-choice-fields input[type="file"] { height:auto; min-height:40px; padding:6px; font-size:12px; }
+#image-choice-fields input[type="file"]::file-selector-button { padding:6px 10px; margin-right:8px; border:0; border-radius:5px; background:#eff6ff; color:#1d4ed8; font:inherit; cursor:pointer; }
+#image-choice-fields .qb-image-choice-actions { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-top:14px; }
+#image-choice-fields .qb-remove-answer { display:inline-flex; align-items:center; justify-content:center; flex:0 0 auto; width:auto; max-width:100%; height:auto; min-height:36px; margin:0; padding:7px 12px; border:1px solid #fecaca; border-radius:8px; background:#fff; color:#b91c1c; font:500 13px/1.5 system-ui,-apple-system,"Segoe UI",Arial,sans-serif; white-space:nowrap; word-break:normal; cursor:pointer; }
+#image-choice-fields .qb-remove-answer:hover { background:#fef2f2; }
+#image-choice-fields .qb-remove-answer:disabled { opacity:.5; cursor:wait; }
+#image-choice-fields [data-image-status] { min-width:0; color:#64748b; font-size:12px; overflow-wrap:anywhere; }
+@media(max-width:640px) { #image-choice-fields .qb-image-choice-grid { grid-template-columns:minmax(0,1fr); } }
+</style>
+
+<div id="image-choice-fields" class="qb-question-fields" data-question-fields="image_choice" hidden
+     data-upload-url="{{ url_for('teacher_question_bank_media_upload') }}"
+     data-view-url="{{ url_for('teacher_question_bank_media_view') }}">
+  <h3 class="qb-section-title">{{ _('Сурет нұсқалары') }}</h3>
+  <p class="qb-help-text">{{ _('A–D нұсқаларына сурет жүктеп, бір дұрыс жауапты таңдаңыз. PNG, JPEG, WebP — 5 МБ дейін.') }}</p>
+  <div class="qb-image-choice-grid">
+    {% for value in ['A', 'B', 'C', 'D'] %}
+      {% set letter = value | lower %}
+      <div class="qb-image-choice-card" data-image-card="{{ value }}">
+        <label class="qb-image-choice-correct">
+          <input type="radio" name="image_correct_answer" value="{{ value }}" data-type-input disabled>
+          <strong>{{ value }}</strong><span>{{ _('Дұрыс жауап') }}</span>
+        </label>
+        <div class="qb-image-choice-preview">
+          <img data-image-preview hidden alt="{{ value }} нұсқасы">
+          <span data-image-placeholder>{{ _('Сурет жүктелмеген') }}</span>
+        </div>
+        <label for="image-option-{{ letter }}-file" class="qb-form-label">{{ _('Сурет') }}</label>
+        <input id="image-option-{{ letter }}-file" type="file" accept="image/png,image/jpeg,image/webp"
+               class="qb-form-control" data-image-file data-type-input disabled>
+        <input type="hidden" name="image_option_{{ letter }}_key" data-image-key data-type-input disabled>
+        <label for="image-option-{{ letter }}-alt" class="qb-form-label">{{ _('Сипаттама (міндетті емес)') }}</label>
+        <input id="image-option-{{ letter }}-alt" type="text" name="image_option_{{ letter }}_alt"
+               maxlength="500" class="qb-form-control" data-image-alt data-type-input disabled>
+        <div class="qb-image-choice-actions">
+          <button type="button" class="qb-remove-answer" data-image-clear data-sm-action="danger">{{ _('Суретті алып тастау') }}</button>
+          <span data-image-status role="status" aria-live="polite"></span>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+</div>

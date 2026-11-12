@@ -1,0 +1,16 @@
+{% from 'teacher/assessment/question_bank/components/objective_preview.html' import objective_options, objective_preview_single with context %}
+{% macro objective_picker(objectives, selected_id, language='kk', id='qb-objective', required=true, empty_label=none, disabled=false) -%}
+<div class="qb-objective-picker" data-qb-rich-objective-picker data-language="{{ language }}"{% if not required %} data-allow-empty="1"{% endif %}>
+  <label for="{{ id }}" id="{{ id }}-label">{{ _('Оқу мақсаты / Учебная цель') }}</label>
+  <select id="{{ id }}" name="objective_id" data-qb-objective-select{% if required %} required{% endif %}{% if disabled %} disabled{% endif %}>
+    {{ objective_options(objectives, selected_id, language, empty_label) }}
+  </select>
+  <div data-qb-picker-sources hidden>
+    {% for objective in objectives %}
+      {% for lang in ['kk', 'ru', 'en'] %}
+        <template data-qb-picker-option data-value="{{ objective.learning_objective_id }}" data-language="{{ lang }}"><strong class="qb-objective-code">{{ objective.code }}</strong><span> — </span>{{ objective_preview_single(objective, lang) }}</template>
+      {% endfor %}
+    {% endfor %}
+  </div>
+</div>
+{%- endmacro %}

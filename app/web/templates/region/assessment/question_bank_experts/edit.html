@@ -1,0 +1,609 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('Сарапшы мәліметтерін өңдеу') }}{% endblock %}
+
+
+{% block extra_css %}
+<link
+  rel="stylesheet"
+  href="{{ url_for(
+    'static',
+    path='css/region/question_bank_experts/edit.css'
+  ) }}"
+>
+{% endblock %}
+
+
+{% block content %}
+
+<div class="qb-experts-page">
+
+  <!-- =====================================================
+       PAGE HEADER
+       ===================================================== -->
+
+  <header class="qb-page-header">
+
+    <div class="qb-page-header__main">
+
+      <h1 class="qb-page-title">
+        {{ _('Сарапшы мәліметтерін өңдеу') }}
+      </h1>
+
+      <p class="qb-page-subtitle">
+        {{ expert.full_name }}
+      </p>
+
+    </div>
+
+
+    <div class="qb-page-actions">
+
+      <a
+        href="{{
+          url_for(
+            'region_question_bank_expert_detail',
+            expert_id=expert.expert_id
+          )
+        }}"
+        class="qb-back-link"
+       data-sm-action="nav" data-sm-back="true">
+        {{ _('← Карточкаға оралу') }}
+      </a>
+
+    </div>
+
+  </header>
+
+
+  <!-- =====================================================
+       ERROR
+       ===================================================== -->
+
+  {% if error %}
+
+    <div
+      class="alert alert-danger"
+      role="alert"
+    >
+      {{ _(error) }}
+    </div>
+
+  {% endif %}
+
+
+  <!-- =====================================================
+       FORM
+       ===================================================== -->
+
+  <form
+    method="post"
+    action="{{
+      url_for(
+        'region_question_bank_expert_update',
+        expert_id=expert.expert_id
+      )
+    }}"
+  >
+
+
+    <!-- ===================================================
+         1. IMMUTABLE EXPERT ASSIGNMENT
+         =================================================== -->
+
+    <section class="qb-card qb-form-section">
+
+      <div class="qb-card-header">
+
+        <h2 class="qb-card-title">
+          {{ _('1. Сарапшылық тағайындау') }}
+        </h2>
+
+      </div>
+
+
+      <div class="qb-card-body">
+
+        <div class="row g-3">
+
+          <!-- IIN -->
+
+          <div class="col-md-6">
+
+            <label
+              for="expert_iin"
+              class="form-label"
+            >
+              {{ _('ЖСН') }}
+            </label>
+
+            <input
+              id="expert_iin"
+              type="text"
+              class="form-control qb-readonly-control"
+              value="{{ expert.iin }}"
+              readonly
+            >
+
+            <div class="form-text">
+              {{ _('ЖСН сарапшылық тағайындау құрылғаннан кейін өзгертілмейді.') }}
+            </div>
+
+          </div>
+
+
+          <!-- SUBJECT -->
+
+          <div class="col-md-6">
+
+<label for="specialty_id" class="form-label">{{ _('Сарапшы мамандығы / Специальность эксперта') }} <span class="text-danger">*</span></label>
+            <select id="specialty_id" name="specialty_id" class="form-select" required>
+              <option value="">{{ _('Мамандықты таңдаңыз / Выберите специальность') }}</option>
+              {% for specialty in options.specialties %}
+                {% if form is defined and form.specialty_id == specialty.id %}
+                  <option value="{{ specialty.id }}" selected>{{ expert_specialty_name(specialty) }}</option>
+                {% else %}
+                  <option value="{{ specialty.id }}">{{ expert_specialty_name(specialty) }}</option>
+                {% endif %}
+              {% endfor %}
+            </select>
+            <div class="form-text">{{ _('Проверка доступна по предметам, классам и языкам обучения выбранной специальности.') }}</div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </section>
+
+
+    <!-- ===================================================
+         2. PERSONAL DATA
+         =================================================== -->
+
+    <section class="qb-card qb-form-section">
+
+      <div class="qb-card-header">
+
+        <h2 class="qb-card-title">
+          {{ _('2. Жеке мәліметтер') }}
+        </h2>
+
+      </div>
+
+
+      <div class="qb-card-body">
+
+        <div class="row g-3">
+
+          <!-- FULL NAME -->
+
+          <div class="col-md-6">
+
+            <label
+              for="full_name"
+              class="form-label"
+            >
+              {{ _('Аты-жөні') }}
+              <span class="text-danger">*</span>
+            </label>
+
+            <input
+              type="text"
+              id="full_name"
+              name="full_name"
+              class="form-control"
+              value="{{ form.full_name }}"
+              maxlength="255"
+              required
+            >
+
+          </div>
+
+
+          <!-- PHONE -->
+
+          <div class="col-md-6">
+
+            <label
+              for="phone"
+              class="form-label"
+            >
+              {{ _('Телефон') }}
+            </label>
+
+            <input
+              type="text"
+              id="phone"
+              name="phone"
+              class="form-control"
+              value="{{ form.phone or '' }}"
+              maxlength="32"
+            >
+
+          </div>
+
+
+          <!-- EMAIL -->
+
+          <div class="col-md-6">
+
+            <label
+              for="email"
+              class="form-label"
+            >
+              Email
+            </label>
+
+            <input
+              type="email"
+              id="email"
+              name="email"
+              class="form-control"
+              value="{{ form.email or '' }}"
+              maxlength="255"
+            >
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </section>
+
+
+    <!-- ===================================================
+         3. ORGANIZATION
+         =================================================== -->
+
+    <section class="qb-card qb-form-section">
+
+      <div class="qb-card-header">
+
+        <h2 class="qb-card-title">
+          {{ _('3. Білім беру ұйымы') }}
+        </h2>
+
+      </div>
+
+
+      <div class="qb-card-body">
+
+        <div class="row g-3">
+
+          <!-- DISTRICT -->
+
+          <div class="col-md-5">
+
+            <label
+              for="district_id"
+              class="form-label"
+            >
+              {{ _('Аудан / қала') }}
+              <span class="text-danger">*</span>
+            </label>
+
+            <select
+              id="district_id"
+              class="form-select"
+              required
+            >
+
+              <option value="">
+                {{ _('Ауданды таңдаңыз') }}
+              </option>
+
+            </select>
+
+          </div>
+
+
+          <!-- SCHOOL -->
+
+          <div class="col-md-7">
+
+            <label
+              for="school_id"
+              class="form-label"
+            >
+              {{ _('Білім беру ұйымы') }}
+              <span class="text-danger">*</span>
+            </label>
+
+            <select
+              id="school_id"
+              name="school_id"
+              class="form-select"
+              required
+              disabled
+            >
+
+              <option value="">
+                {{ _('Алдымен ауданды таңдаңыз') }}
+              </option>
+
+            </select>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </section>
+
+
+    <!-- ===================================================
+         4. PROFESSIONAL DATA
+         =================================================== -->
+
+    <section class="qb-card qb-form-section">
+
+      <div class="qb-card-header">
+
+        <h2 class="qb-card-title">
+          {{ _('4. Кәсіби мәліметтер') }}
+        </h2>
+
+      </div>
+
+
+      <div class="qb-card-body">
+
+        {% include
+          "region/assessment/question_bank_experts/_professional_fields.html"
+        %}
+
+      </div>
+
+    </section>
+
+
+    <!-- ===================================================
+         ACTIONS
+         =================================================== -->
+
+    <div class="qb-form-actions">
+
+      <a
+        href="{{
+          url_for(
+            'region_question_bank_expert_detail',
+            expert_id=expert.expert_id
+          )
+        }}"
+        class="btn btn-outline-secondary"
+       data-sm-action="edit">
+        {{ _('Болдырмау') }}
+      </a>
+
+      <button
+        type="submit"
+        class="btn btn-primary"
+       data-sm-action="primary">
+        {{ _('Өзгерістерді сақтау') }}
+      </button>
+
+    </div>
+
+  </form>
+
+</div>
+
+
+<!-- =========================================================
+     DISTRICT → SCHOOL
+     ========================================================= -->
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+
+  const districtSelect =
+    document.getElementById("district_id");
+
+  const schoolSelect =
+    document.getElementById("school_id");
+
+
+  /* =======================================================
+     SCHOOLS
+     ======================================================= */
+
+  const schools = [
+
+    {% for school in options.schools %}
+
+      {
+        schoolId: {{ school.school_id }},
+        schoolName: {{ school.school_name | tojson }},
+        districtId: {{ school.district_id }},
+        districtName: {{ school.district_name | tojson }}
+      }{% if not loop.last %},{% endif %}
+
+    {% endfor %}
+
+  ];
+
+
+  /* =======================================================
+     CURRENT SCHOOL
+     ======================================================= */
+
+  const selectedSchoolId =
+    {{ form.school_id }};
+
+
+  /* =======================================================
+     UNIQUE DISTRICTS
+     ======================================================= */
+
+  const districts = new Map();
+
+  schools.forEach(function (school) {
+
+    if (!districts.has(school.districtId)) {
+
+      districts.set(
+        school.districtId,
+        school.districtName
+      );
+
+    }
+
+  });
+
+
+  /* =======================================================
+     DISTRICT OPTIONS
+     ======================================================= */
+
+  Array.from(districts.entries())
+    .sort(function (a, b) {
+
+      return a[1].localeCompare(
+        b[1],
+        "kk"
+      );
+
+    })
+    .forEach(function ([districtId, districtName]) {
+
+      const option =
+        document.createElement("option");
+
+      option.value = districtId;
+      option.textContent = districtName;
+
+      districtSelect.appendChild(option);
+
+    });
+
+
+  /* =======================================================
+     LOAD SCHOOLS
+     ======================================================= */
+
+  function loadSchools(
+    districtId,
+    selectedId = null
+  ) {
+
+    schoolSelect.innerHTML = "";
+
+
+    if (!districtId) {
+
+      schoolSelect.disabled = true;
+
+      const option =
+        document.createElement("option");
+
+      option.value = "";
+      option.textContent =
+        window.SchoolMonitorI18n.t("ex_a84ae44cf8ab");
+
+      schoolSelect.appendChild(option);
+
+      return;
+
+    }
+
+
+    schoolSelect.disabled = false;
+
+
+    const placeholder =
+      document.createElement("option");
+
+    placeholder.value = "";
+    placeholder.textContent =
+      window.SchoolMonitorI18n.t("ex_5345117a795b");
+
+    schoolSelect.appendChild(placeholder);
+
+
+    schools
+      .filter(function (school) {
+
+        return String(school.districtId)
+          === String(districtId);
+
+      })
+      .sort(function (a, b) {
+
+        return a.schoolName.localeCompare(
+          b.schoolName,
+          "kk"
+        );
+
+      })
+      .forEach(function (school) {
+
+        const option =
+          document.createElement("option");
+
+        option.value = school.schoolId;
+        option.textContent = school.schoolName;
+
+        if (
+          selectedId !== null
+          && String(school.schoolId)
+            === String(selectedId)
+        ) {
+
+          option.selected = true;
+
+        }
+
+        schoolSelect.appendChild(option);
+
+      });
+
+  }
+
+
+  /* =======================================================
+     DISTRICT CHANGE
+     ======================================================= */
+
+  districtSelect.addEventListener(
+    "change",
+    function () {
+
+      loadSchools(this.value);
+
+    }
+  );
+
+
+  /* =======================================================
+     INITIAL SELECTION
+     ======================================================= */
+
+  const selectedSchool =
+    schools.find(function (school) {
+
+      return String(school.schoolId)
+        === String(selectedSchoolId);
+
+    });
+
+
+  if (selectedSchool) {
+
+    districtSelect.value =
+      selectedSchool.districtId;
+
+    loadSchools(
+      selectedSchool.districtId,
+      selectedSchoolId
+    );
+
+  }
+
+});
+</script>
+
+{% endblock %}

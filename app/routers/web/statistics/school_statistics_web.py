@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends, Request, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.responses import HTMLResponse
 
+from app.core.i18n import resolve_language, translate
 from app.db.session import get_db
 from app.modules.statistics.school_statistics_service import SchoolPlanStatisticsService, \
     SchoolExecutionStatisticsService, StaffExecutionStatisticsService
@@ -35,7 +36,7 @@ async def school_plan_statistics_page(
     if school_plan is None:
         raise HTTPException(
             status_code=404,
-            detail="Активный план школы не найден",
+            detail=translate('Активный план школы не найден', resolve_language(request, user)),
         )
 
     data = await SchoolPlanStatisticsService.get_statistics_page_data(
@@ -55,7 +56,7 @@ async def school_plan_statistics_page(
             "school_name": (
                     getattr(school, "name", None)
                     or getattr(user, "school_name", None)
-                    or "Школа"
+                    or translate("Школа", resolve_language(request, user))
             ),
             "academic_year": school_plan.academic_year,
 
@@ -98,7 +99,7 @@ async def school_execution_statistics_page(
     if school_plan is None:
         raise HTTPException(
             status_code=404,
-            detail="План школы не найден",
+            detail=translate('План школы не найден', resolve_language(request, user)),
         )
 
     data = (
@@ -121,7 +122,7 @@ async def school_execution_statistics_page(
             "plan_id": school_plan.id,
             "school_name": (
                     getattr(school, "name", None)
-                    or "Школа"
+                    or translate("Школа", resolve_language(request, user))
             ),
             "academic_year": school_plan.academic_year,
             **data,
@@ -179,7 +180,7 @@ async def staff_statistics_page(
     if school_plan is None:
         raise HTTPException(
             status_code=404,
-            detail="Активный план школы не найден.",
+            detail=translate('Активный план школы не найден.', resolve_language(request, user)),
         )
 
     # Формируем всю статистику страницы.

@@ -1,0 +1,947 @@
+{% extends "base.html" %}
+
+{% block title %}
+{{ _('Assessment —') }} {{ class_name }}
+{% endblock %}
+
+
+{% block extra_css %}
+<style>
+  .assessment-page {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 24px 16px 48px;
+  }
+
+  /* ===================================================== */
+  /* HEADER */
+  /* ===================================================== */
+
+  .assessment-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 20px;
+    margin-bottom: 22px;
+  }
+
+  .assessment-header__content {
+    min-width: 0;
+  }
+
+  .assessment-header h1 {
+    margin: 0 0 6px;
+    font-size: 28px;
+    font-weight: 700;
+    color: #101828;
+  }
+
+  .assessment-header p {
+    margin: 0;
+    color: #667085;
+    line-height: 1.5;
+  }
+
+  .assessment-header__actions {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  .assessment-btn--back {
+    min-width: 160px;
+    height: 42px;
+    min-height: 42px;
+    padding: 0 16px;
+    font-size: 13px;
+    white-space: nowrap;
+  }
+
+
+  /* ===================================================== */
+  /* SUMMARY */
+  /* ===================================================== */
+
+  .assessment-summary {
+    display: grid;
+    grid-template-columns: repeat(
+      2,
+      minmax(0, 1fr)
+    );
+    gap: 14px;
+    margin-bottom: 22px;
+  }
+
+  .assessment-summary-card {
+    padding: 16px;
+    background: #fff;
+    border: 1px solid #e4e7ec;
+    border-radius: 12px;
+  }
+
+  .assessment-summary-card__label {
+    display: block;
+    margin-bottom: 6px;
+    color: #667085;
+    font-size: 13px;
+  }
+
+  .assessment-summary-card__value {
+    display: block;
+    color: #101828;
+    font-size: 24px;
+    font-weight: 700;
+  }
+
+
+  /* ===================================================== */
+  /* DYNAMICS */
+  /* ===================================================== */
+
+  .dynamics-section {
+    margin-bottom: 28px;
+  }
+
+  .dynamics-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 14px;
+    margin-bottom: 12px;
+  }
+
+  .dynamics-header h2 {
+    margin: 0;
+    color: #101828;
+    font-size: 20px;
+  }
+
+  .dynamics-header p {
+    margin: 4px 0 0;
+    color: #667085;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  .dynamics-count {
+    flex-shrink: 0;
+    color: #667085;
+    font-size: 13px;
+  }
+
+  .dynamics-summary {
+    display: grid;
+    grid-template-columns: repeat(
+      3,
+      minmax(0, 1fr)
+    );
+    gap: 14px;
+    margin-bottom: 14px;
+  }
+
+  .dynamics-summary-card {
+    padding: 16px;
+    background: #fff;
+    border: 1px solid #e4e7ec;
+    border-radius: 12px;
+  }
+
+  .dynamics-summary-card__label {
+    display: block;
+    margin-bottom: 6px;
+    color: #667085;
+    font-size: 13px;
+  }
+
+  .dynamics-summary-card__value {
+    display: block;
+    color: #101828;
+    font-size: 24px;
+    font-weight: 700;
+  }
+
+  .dynamics-card {
+    overflow: hidden;
+    background: #fff;
+    border: 1px solid #e4e7ec;
+    border-radius: 14px;
+  }
+
+  .dynamics-points {
+    display: grid;
+    grid-template-columns: repeat(
+      auto-fit,
+      minmax(180px, 1fr)
+    );
+  }
+
+  .dynamics-point {
+    position: relative;
+    min-width: 0;
+    padding: 18px;
+    border-right: 1px solid #eaecf0;
+  }
+
+  .dynamics-point:last-child {
+    border-right: 0;
+  }
+
+  .dynamics-point__title {
+    min-height: 36px;
+    margin-bottom: 12px;
+    color: #344054;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.4;
+  }
+
+  .dynamics-point__value {
+    margin-bottom: 14px;
+    color: #101828;
+    font-size: 26px;
+    font-weight: 700;
+  }
+
+  .dynamics-point__metrics {
+    display: grid;
+    gap: 8px;
+  }
+
+  .dynamics-point__metric {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+
+    padding-top: 8px;
+    border-top: 1px solid #f2f4f7;
+
+    font-size: 12px;
+  }
+
+  .dynamics-point__metric-label {
+    color: #667085;
+  }
+
+  .dynamics-point__metric-value {
+    color: #344054;
+    font-weight: 600;
+    text-align: right;
+    white-space: nowrap;
+  }
+
+  .dynamics-empty {
+    padding: 32px 20px;
+    text-align: center;
+    color: #667085;
+  }
+
+  .dynamics-empty h3 {
+    margin: 0 0 8px;
+    color: #344054;
+    font-size: 16px;
+  }
+
+  .dynamics-empty p {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+
+  /* ===================================================== */
+  /* SECTION */
+  /* ===================================================== */
+
+  .assessment-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 14px;
+    margin-bottom: 12px;
+  }
+
+  .assessment-section-header h2 {
+    margin: 0;
+    color: #101828;
+    font-size: 20px;
+  }
+
+  .assessment-section-header p {
+    margin: 4px 0 0;
+    color: #667085;
+    font-size: 13px;
+  }
+
+  .assessment-count {
+    flex-shrink: 0;
+    color: #667085;
+    font-size: 13px;
+  }
+
+
+  /* ===================================================== */
+  /* TABLE */
+  /* ===================================================== */
+
+  .assessment-card {
+    overflow: hidden;
+    background: #fff;
+    border: 1px solid #e4e7ec;
+    border-radius: 14px;
+  }
+
+  .assessment-table-wrap {
+    width: 100%;
+    overflow-x: auto;
+  }
+
+  .assessment-table {
+    width: 100%;
+    min-width: 900px;
+    border-collapse: collapse;
+  }
+
+  .assessment-table th,
+  .assessment-table td {
+    padding: 13px 14px;
+    border-bottom: 1px solid #eaecf0;
+    vertical-align: middle;
+  }
+
+  .assessment-table th {
+    background: #f9fafb;
+    color: #475467;
+    font-size: 12px;
+    font-weight: 600;
+    text-align: center;
+    white-space: nowrap;
+  }
+
+  .assessment-table th:first-child,
+  .assessment-table td:first-child {
+    text-align: left;
+  }
+
+  .assessment-table tbody tr:last-child td {
+    border-bottom: 0;
+  }
+
+  .assessment-table tbody tr:hover {
+    background: #fcfcfd;
+  }
+
+
+  /* ===================================================== */
+  /* ASSESSMENT INFO */
+  /* ===================================================== */
+
+  .assessment-title {
+    margin-bottom: 4px;
+    color: #101828;
+    font-weight: 700;
+  }
+
+  .assessment-subtext {
+    color: #667085;
+    font-size: 12px;
+  }
+
+  .metric-value {
+    text-align: center;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .metric-muted {
+    color: #667085;
+    font-weight: 400;
+  }
+
+
+  /* ===================================================== */
+  /* BUTTON */
+  /* ===================================================== */
+
+  .assessment-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+
+    box-sizing: border-box;
+
+    min-height: 36px;
+    padding: 0 12px;
+
+    border: 1px solid transparent;
+    border-radius: 8px;
+
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1;
+
+    text-decoration: none;
+    white-space: nowrap;
+
+    cursor: pointer;
+
+    transition:
+      background 0.15s ease,
+      border-color 0.15s ease;
+  }
+
+  .assessment-btn--secondary {
+    background: #f2f4f7;
+    border-color: #d0d5dd;
+    color: #344054;
+  }
+
+  .assessment-btn--secondary:hover {
+    background: #e4e7ec;
+    border-color: #98a2b3;
+  }
+
+  .assessment-btn--results {
+    min-width: 110px;
+  }
+
+
+  /* ===================================================== */
+  /* EMPTY */
+  /* ===================================================== */
+
+  .assessment-empty {
+    padding: 48px 20px;
+    text-align: center;
+    color: #667085;
+  }
+
+  .assessment-empty h3 {
+    margin: 0 0 8px;
+    color: #344054;
+  }
+
+  .assessment-empty p {
+    margin: 0;
+  }
+
+
+  /* ===================================================== */
+  /* RESPONSIVE */
+  /* ===================================================== */
+
+  @media (max-width: 900px) {
+
+    .dynamics-summary {
+      grid-template-columns: 1fr;
+    }
+
+    .dynamics-points {
+      grid-template-columns: repeat(
+        2,
+        minmax(0, 1fr)
+      );
+    }
+
+    .dynamics-point {
+      border-bottom: 1px solid #eaecf0;
+    }
+  }
+
+  @media (max-width: 760px) {
+
+    .assessment-summary {
+      grid-template-columns: 1fr;
+    }
+
+    .assessment-section-header,
+    .dynamics-header {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .assessment-header {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 14px;
+    }
+
+    .assessment-header__actions {
+      width: 100%;
+    }
+
+    .assessment-btn--back {
+      width: 100%;
+    }
+
+    .dynamics-points {
+      grid-template-columns: 1fr;
+    }
+
+    .dynamics-point {
+      border-right: 0;
+      border-bottom: 1px solid #eaecf0;
+    }
+
+    .dynamics-point:last-child {
+      border-bottom: 0;
+    }
+  }
+</style>
+{% endblock %}
+
+
+{% block content %}
+
+<div class="assessment-page">
+
+
+  <!-- ================================================= -->
+  <!-- HEADER -->
+  <!-- ================================================= -->
+
+  <div class="assessment-header">
+
+    <div class="assessment-header__content">
+
+      <h1>
+        {{ class_name }}
+      </h1>
+
+      <p>
+        {{ _('Сынып бойынша өткізілген Assessment тізімі және қатысу нәтижелері.') }}
+      </p>
+
+    </div>
+
+
+    <div class="assessment-header__actions">
+
+      <a class="assessment-btn assessment-btn--secondary assessment-btn--back"
+         href="{{ url_for('teacher_assessment_analytics_page')
+         }}?academic_year_start={{
+         selected_academic_year or ''
+         }}&subject_id={{
+         selected_subject_id or ''
+         }}" data-sm-action="nav" data-sm-back="true">
+        {{ _('← Аналитикаға оралу') }}
+      </a>
+
+    </div>
+
+  </div>
+
+
+  <!-- ================================================= -->
+  <!-- SUMMARY -->
+  <!-- ================================================= -->
+
+  <div class="assessment-summary">
+
+    <div class="assessment-summary-card">
+
+      <span class="assessment-summary-card__label">
+        {{ _('Сынып') }}
+      </span>
+
+      <span class="assessment-summary-card__value">
+        {{ class_name }}
+      </span>
+
+    </div>
+
+
+    <div class="assessment-summary-card">
+
+      <span class="assessment-summary-card__label">
+        {{ _('Assessment саны') }}
+      </span>
+
+      <span class="assessment-summary-card__value">
+        {{ item_count }}
+      </span>
+
+    </div>
+
+  </div>
+
+
+  <!-- ================================================= -->
+  <!-- KNOWLEDGE QUALITY DYNAMICS -->
+  <!-- ================================================= -->
+
+  <section class="dynamics-section">
+
+    <div class="dynamics-header">
+
+      <div>
+
+        <h2>
+          {{ _('Білім сапасының динамикасы') }}
+        </h2>
+
+        <p>
+          {{ _('Сыныптың ресми бақылау нүктелері бойынша білім сапасының өзгерісі.') }}
+        </p>
+
+      </div>
+
+
+      {% if dynamics and dynamics.has_data %}
+
+        <div class="dynamics-count">
+          {{ _('Бақылау нүктелері:') }}
+          {{ dynamics.point_count }}
+        </div>
+
+      {% endif %}
+
+    </div>
+
+
+    {% if dynamics and dynamics.has_data %}
+
+      <!-- =============================================== -->
+      <!-- DYNAMICS SUMMARY -->
+      <!-- =============================================== -->
+
+      <div class="dynamics-summary">
+
+        <div class="dynamics-summary-card">
+
+          <span class="dynamics-summary-card__label">
+            {{ _('Бастапқы көрсеткіш') }}
+          </span>
+
+          <span class="dynamics-summary-card__value">
+            {{ dynamics.baseline_quality_percent_display }}
+          </span>
+
+        </div>
+
+
+        <div class="dynamics-summary-card">
+
+          <span class="dynamics-summary-card__label">
+            {{ _('Соңғы көрсеткіш') }}
+          </span>
+
+          <span class="dynamics-summary-card__value">
+            {{ dynamics.latest_quality_percent_display }}
+          </span>
+
+        </div>
+
+
+        <div class="dynamics-summary-card">
+
+          <span class="dynamics-summary-card__label">
+            {{ _('Жалпы өзгеріс') }}
+          </span>
+
+          <span class="dynamics-summary-card__value">
+            {{ dynamics.total_delta_baseline_display }}
+          </span>
+
+        </div>
+
+      </div>
+
+
+      <!-- =============================================== -->
+      <!-- CHECKPOINTS -->
+      <!-- =============================================== -->
+
+      <div class="dynamics-card">
+
+        <div class="dynamics-points">
+
+          {% for point in dynamics.points %}
+
+            <div class="dynamics-point">
+
+              <div class="dynamics-point__title">
+                {{ _(point.checkpoint_label) }}
+              </div>
+
+
+              <div class="dynamics-point__value">
+                {{ point.quality_percent_display }}
+              </div>
+
+
+              <div class="dynamics-point__metrics">
+
+                <div class="dynamics-point__metric">
+
+                  <span class="dynamics-point__metric-label">
+                    {{ _('Қатысу') }}
+                  </span>
+
+                  <span class="dynamics-point__metric-value">
+                    {{ point.participation_display }}
+                  </span>
+
+                </div>
+
+
+                <div class="dynamics-point__metric">
+
+                  <span class="dynamics-point__metric-label">
+                    {{ _('«4» және «5»') }}
+                  </span>
+
+                  <span class="dynamics-point__metric-value">
+                    {{ point.quality_students }}
+                  </span>
+
+                </div>
+
+
+                <div class="dynamics-point__metric">
+
+                  <span class="dynamics-point__metric-label">
+                    {{ _('Алдыңғы нүктеге') }}
+                  </span>
+
+                  <span class="dynamics-point__metric-value">
+                    {{ point.delta_previous_display }}
+                  </span>
+
+                </div>
+
+
+                <div class="dynamics-point__metric">
+
+                  <span class="dynamics-point__metric-label">
+                    {{ _('Бастапқыдан') }}
+                  </span>
+
+                  <span class="dynamics-point__metric-value">
+                    {{ point.delta_baseline_display }}
+                  </span>
+
+                </div>
+
+              </div>
+
+            </div>
+
+          {% endfor %}
+
+        </div>
+
+      </div>
+
+
+    {% else %}
+
+      <!-- =============================================== -->
+      <!-- NO DYNAMICS -->
+      <!-- =============================================== -->
+
+      <div class="dynamics-card">
+
+        <div class="dynamics-empty">
+
+          <h3>
+            {{ _('Динамика деректері жоқ') }}
+          </h3>
+
+          <p>
+            {{ _('Осы сынып бойынша ресми бақылау нүктелерінің нәтижелері әзірге жоқ.') }}
+          </p>
+
+        </div>
+
+      </div>
+
+    {% endif %}
+
+  </section>
+
+
+  <!-- ================================================= -->
+  <!-- ASSESSMENTS -->
+  <!-- ================================================= -->
+
+  <div class="assessment-section-header">
+
+    <div>
+
+      <h2>
+        {{ _('Assessment тізімі') }}
+      </h2>
+
+      <p>
+        {{ _('Нәтижелерді көру үшін қажетті Assessment таңдаңыз.') }}
+      </p>
+
+    </div>
+
+
+    <div class="assessment-count">
+      {{ _('Барлығы:') }} {{ item_count }}
+    </div>
+
+  </div>
+
+
+  <div class="assessment-card">
+
+    {% if items %}
+
+      <div class="assessment-table-wrap">
+
+        <table class="assessment-table">
+
+          <thead>
+
+            <tr>
+
+              <th>
+                {{ _('Assessment') }}
+              </th>
+
+              <th>
+                {{ _('Пән') }}
+              </th>
+
+              <th>
+                {{ _('Параллель') }}
+              </th>
+
+              <th>
+                {{ _('Макс. балл') }}
+              </th>
+
+              <th>
+                {{ _('Қатысу') }}
+              </th>
+
+              <th>
+                {{ _('Әрекет') }}
+              </th>
+
+            </tr>
+
+          </thead>
+
+
+          <tbody>
+
+            {% for item in items %}
+
+              <tr>
+
+                <!-- Assessment -->
+
+                <td>
+
+                  <div class="assessment-title">
+                    {{ item.title }}
+                  </div>
+
+                  <div class="assessment-subtext">
+                    {{ _('Сынып') }}: {{ item.class_name }}
+                  </div>
+
+                </td>
+
+
+                <!-- Subject -->
+
+                <td class="metric-value">
+
+                  {{ item.subject_name }}
+
+                </td>
+
+
+                <!-- Grade -->
+
+                <td class="metric-value">
+
+                  {{ item.grade_level }}{{ _('-сынып') }}
+
+                </td>
+
+
+                <!-- Max score -->
+
+                <td class="metric-value">
+
+                  {{ item.max_score_display }}
+
+                </td>
+
+
+                <!-- Participation -->
+
+                <td class="metric-value">
+
+                  {{ item.participation_display }}
+
+                  {% if item.total_students > 0 %}
+
+                    <div class="assessment-subtext">
+                      {{ _('қатысты / барлығы') }}
+                    </div>
+
+                  {% endif %}
+
+                </td>
+
+
+                <!-- Action -->
+
+                <td class="metric-value">
+
+                  <a class="assessment-btn assessment-btn--secondary assessment-btn--results"
+                     href="{{ url_for(
+                     'teacher_assessment_group_results_page',
+                     assessment_group_id=item.assessment_group_id
+                     ) }}?academic_year_start={{
+                     selected_academic_year or ''
+                     }}&subject_id={{
+                     selected_subject_id or ''
+                     }}" data-sm-action="nav">
+                    {{ _('Нәтижелер') }}
+                  </a>
+
+                </td>
+
+              </tr>
+
+            {% endfor %}
+
+          </tbody>
+
+        </table>
+
+      </div>
+
+    {% else %}
+
+      <div class="assessment-empty">
+
+        <h3>
+          {{ _('Assessment табылмады') }}
+        </h3>
+
+        <p>
+          {{ _('Осы сынып бойынша Assessment нәтижелері әзірге жоқ.') }}
+        </p>
+
+      </div>
+
+    {% endif %}
+
+  </div>
+
+</div>
+
+{% endblock %}

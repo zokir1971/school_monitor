@@ -1,0 +1,705 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('Сарапшы қосу') }}{% endblock %}
+
+{% block extra_css %}
+<link
+  rel="stylesheet"
+  href="{{ url_for(
+    'static',
+    path='css/region/question_bank_experts/create.css'
+  ) }}"
+>
+{% endblock %}
+
+
+{% block content %}
+
+<div class="qb-experts-page">
+
+  <!-- =====================================================
+       PAGE HEADER
+       ===================================================== -->
+
+  <header class="qb-page-header">
+
+  <div class="qb-page-header__main">
+
+    <h1 class="qb-page-title">
+      {{ _('Сарапшы қосу') }}
+    </h1>
+
+    <p class="qb-page-subtitle">
+      {{ _('Пәндік сарапшылар қауымдастығына жаңа сарапшыны тіркеу.') }}
+    </p>
+
+  </div>
+
+
+  <div class="qb-page-actions">
+
+    <a
+      href="{{ url_for('region_question_bank_expert_list') }}"
+      class="qb-back-link"
+     data-sm-action="nav" data-sm-back="true">
+      {{ _('← Реестрге оралу') }}
+    </a>
+
+  </div>
+
+</header>
+
+  <!-- =====================================================
+       ERROR
+       ===================================================== -->
+
+  {% if error %}
+
+    <div
+      class="alert alert-danger"
+      role="alert"
+    >
+      {{ _(error) }}
+    </div>
+
+  {% endif %}
+
+
+  <!-- =====================================================
+       FORM
+       ===================================================== -->
+
+  <form
+    method="post"
+    action="{{ url_for('region_question_bank_expert_create') }}"
+  >
+
+
+    <!-- ===================================================
+         1. ORGANIZATION AND SUBJECT
+         =================================================== -->
+
+    <section class="qb-card qb-form-section">
+
+      <div class="qb-card-header">
+
+        <h2 class="qb-card-title">
+          {{ _('1. Сарапшылық тағайындау') }}
+        </h2>
+
+      </div>
+
+
+      <div class="qb-card-body">
+
+        <div class="row g-3">
+
+
+          <!-- =============================================
+               DISTRICT
+               ============================================= -->
+
+          <div class="col-lg-4">
+
+            <label
+              for="district_id"
+              class="form-label"
+            >
+              {{ _('Аудан / қала') }}
+              <span class="text-danger">*</span>
+            </label>
+
+            <select
+              id="district_id"
+              class="form-select"
+              required
+            >
+
+              <option value="">
+                {{ _('Ауданды таңдаңыз') }}
+              </option>
+
+            </select>
+
+          </div>
+
+
+          <!-- =============================================
+               SCHOOL
+               ============================================= -->
+
+          <div class="col-lg-5">
+
+            <label
+              for="school_id"
+              class="form-label"
+            >
+              {{ _('Білім беру ұйымы') }}
+              <span class="text-danger">*</span>
+            </label>
+
+            <select
+              id="school_id"
+              name="school_id"
+              class="form-select"
+              required
+              disabled
+            >
+
+              <option value="">
+                {{ _('Алдымен ауданды таңдаңыз') }}
+              </option>
+
+            </select>
+
+          </div>
+
+
+          <!-- =============================================
+               SUBJECT
+               ============================================= -->
+
+          <div class="col-lg-3">
+
+<label for="specialty_id" class="form-label">{{ _('Сарапшы мамандығы / Специальность эксперта') }} <span class="text-danger">*</span></label>
+            <select id="specialty_id" name="specialty_id" class="form-select" required>
+              <option value="">{{ _('Мамандықты таңдаңыз / Выберите специальность') }}</option>
+              {% for specialty in options.specialties %}
+                {% if form is defined and form.specialty_id == specialty.id %}
+                  <option value="{{ specialty.id }}" selected>{{ expert_specialty_name(specialty) }}</option>
+                {% else %}
+                  <option value="{{ specialty.id }}">{{ expert_specialty_name(specialty) }}</option>
+                {% endif %}
+              {% endfor %}
+            </select>
+            <div class="form-text">{{ _('Проверка доступна по предметам, классам и языкам обучения выбранной специальности.') }}</div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </section>
+
+
+    <!-- ===================================================
+         2. PERSONAL DATA
+         =================================================== -->
+
+    <section class="qb-card qb-form-section">
+
+      <div class="qb-card-header">
+
+        <h2 class="qb-card-title">
+          {{ _('2. Жеке мәліметтер') }}
+        </h2>
+
+      </div>
+
+
+      <div class="qb-card-body">
+
+        <div class="row g-3">
+
+
+          <!-- =============================================
+               IIN
+               ============================================= -->
+
+          <div class="col-md-4">
+
+            <label
+              for="iin"
+              class="form-label"
+            >
+              {{ _('ЖСН') }}
+              <span class="text-danger">*</span>
+            </label>
+
+            <input
+              id="iin"
+              name="iin"
+              type="text"
+              class="form-control"
+              value="{{
+                form.iin
+                if form is defined
+                else ''
+              }}"
+              minlength="12"
+              maxlength="12"
+              inputmode="numeric"
+              pattern="[0-9]{12}"
+              autocomplete="off"
+              required
+            >
+
+            <div class="form-text">
+              {{ _('12 цифр.') }}
+            </div>
+
+          </div>
+
+
+          <!-- =============================================
+               FULL NAME
+               ============================================= -->
+
+          <div class="col-md-8">
+
+            <label
+              for="full_name"
+              class="form-label"
+            >
+              {{ _('Аты-жөні') }}
+              <span class="text-danger">*</span>
+            </label>
+
+            <input
+              id="full_name"
+              name="full_name"
+              type="text"
+              class="form-control"
+              value="{{
+                form.full_name
+                if form is defined
+                else ''
+              }}"
+              maxlength="255"
+              required
+            >
+
+          </div>
+
+
+          <!-- =============================================
+               PHONE
+               ============================================= -->
+
+          <div class="col-md-6">
+
+            <label
+              for="phone"
+              class="form-label"
+            >
+              {{ _('Телефон') }}
+            </label>
+
+            <input
+              id="phone"
+              name="phone"
+              type="text"
+              class="form-control"
+              value="{{
+                form.phone or ''
+                if form is defined
+                else ''
+              }}"
+              maxlength="32"
+            >
+
+          </div>
+
+
+          <!-- =============================================
+               EMAIL
+               ============================================= -->
+
+          <div class="col-md-6">
+
+            <label
+              for="email"
+              class="form-label"
+            >
+              Email
+            </label>
+
+            <input
+              id="email"
+              name="email"
+              type="email"
+              class="form-control"
+              value="{{
+                form.email or ''
+                if form is defined
+                else ''
+              }}"
+              maxlength="255"
+            >
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </section>
+
+
+    <!-- ===================================================
+         3. PROFESSIONAL DATA
+         =================================================== -->
+
+    <section class="qb-card qb-form-section">
+
+      <div class="qb-card-header">
+
+        <h2 class="qb-card-title">
+          {{ _('3. Кәсіби мәліметтер') }}
+        </h2>
+
+      </div>
+
+
+      <div class="qb-card-body">
+
+        {% include
+          "region/assessment/question_bank_experts/_professional_fields.html"
+        %}
+
+      </div>
+
+    </section>
+
+
+    <!-- ===================================================
+         ACCOUNT INFO
+         =================================================== -->
+
+    <div class="qb-info-box">
+
+      <div class="qb-info-box__title">
+        {{ _('School Monitor аккаунты') }}
+      </div>
+
+      <div class="qb-info-box__text">
+
+        {{ _('Сарапшының ЖСН бойынша жүйеде белсенді аккаунт бар болса, ол автоматты түрде сарапшы жазбасымен байланыстырылады. Аккаунт әлі жоқ болса, сарапшыны реестрге қосуға болады.') }}
+
+      </div>
+
+    </div>
+
+
+    <!-- ===================================================
+         ACTIONS
+         =================================================== -->
+
+    <div class="qb-form-actions">
+
+      <a
+        href="{{ url_for('region_question_bank_expert_list') }}"
+        class="btn btn-outline-secondary"
+       data-sm-action="edit">
+        {{ _('Болдырмау') }}
+      </a>
+
+      <button
+        type="submit"
+        class="btn btn-primary"
+       data-sm-action="primary">
+        {{ _('Сарапшыны сақтау') }}
+      </button>
+
+    </div>
+
+  </form>
+
+</div>
+
+
+<!-- =====================================================
+     PAGE SCRIPT
+     ===================================================== -->
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+
+  // ======================================================
+  // ELEMENTS
+  // ======================================================
+
+  const districtSelect =
+    document.getElementById("district_id");
+
+  const schoolSelect =
+    document.getElementById("school_id");
+
+  const subjectSelect =
+    document.getElementById("subject_id");
+
+  const specialtySelect =
+    document.getElementById("specialty_text");
+
+
+  // ======================================================
+  // SCHOOLS
+  // ======================================================
+
+  const schools = [
+
+    {% for school in options.schools %}
+
+      {
+        schoolId: {{ school.school_id }},
+        schoolName: {{ school.school_name | tojson }},
+        districtId: {{ school.district_id }},
+        districtName: {{ school.district_name | tojson }}
+      }{% if not loop.last %},{% endif %}
+
+    {% endfor %}
+
+  ];
+
+
+  // ======================================================
+  // SELECTED SCHOOL
+  //
+  // Нужен для восстановления формы после ошибки
+  // серверной валидации.
+  // ======================================================
+
+  const selectedSchoolId =
+
+    {% if form is defined %}
+      {{ form.school_id }}
+    {% else %}
+      null
+    {% endif %};
+
+
+  // ======================================================
+  // DISTRICTS
+  // ======================================================
+
+  const districts = new Map();
+
+
+  schools.forEach(function (school) {
+
+    if (!districts.has(school.districtId)) {
+
+      districts.set(
+        school.districtId,
+        school.districtName
+      );
+
+    }
+
+  });
+
+
+  Array.from(districts.entries())
+    .sort(function (a, b) {
+
+      return a[1].localeCompare(
+        b[1],
+        "kk"
+      );
+
+    })
+    .forEach(function ([districtId, districtName]) {
+
+      const option =
+        document.createElement("option");
+
+      option.value =
+        districtId;
+
+      option.textContent =
+        districtName;
+
+      districtSelect.appendChild(option);
+
+    });
+
+
+  // ======================================================
+  // SCHOOL FILTER
+  // ======================================================
+
+  function loadSchools(
+    districtId,
+    selectedId = null
+  ) {
+
+    schoolSelect.innerHTML = "";
+
+
+    // ----------------------------------------------------
+    // District not selected
+    // ----------------------------------------------------
+
+    if (!districtId) {
+
+      schoolSelect.disabled = true;
+
+      const option =
+        document.createElement("option");
+
+      option.value = "";
+
+      option.textContent =
+        window.SchoolMonitorI18n.t("ex_a84ae44cf8ab");
+
+      schoolSelect.appendChild(option);
+
+      return;
+
+    }
+
+
+    // ----------------------------------------------------
+    // District selected
+    // ----------------------------------------------------
+
+    schoolSelect.disabled = false;
+
+
+    const placeholder =
+      document.createElement("option");
+
+    placeholder.value = "";
+
+    placeholder.textContent =
+      window.SchoolMonitorI18n.t("ex_5345117a795b");
+
+    schoolSelect.appendChild(placeholder);
+
+
+    schools
+      .filter(function (school) {
+
+        return String(school.districtId)
+          === String(districtId);
+
+      })
+      .forEach(function (school) {
+
+        const option =
+          document.createElement("option");
+
+        option.value =
+          school.schoolId;
+
+        option.textContent =
+          school.schoolName;
+
+
+        if (
+          selectedId !== null
+          && String(school.schoolId)
+            === String(selectedId)
+        ) {
+
+          option.selected = true;
+
+        }
+
+
+        schoolSelect.appendChild(option);
+
+      });
+
+  }
+
+
+  // ======================================================
+  // DISTRICT CHANGE
+  // ======================================================
+
+  districtSelect.addEventListener(
+    "change",
+    function () {
+
+      loadSchools(
+        this.value
+      );
+
+    }
+  );
+
+
+  // ======================================================
+  // RESTORE SCHOOL AFTER VALIDATION ERROR
+  // ======================================================
+
+  if (selectedSchoolId !== null) {
+
+    const selectedSchool =
+      schools.find(function (school) {
+
+        return String(school.schoolId)
+          === String(selectedSchoolId);
+
+      });
+
+
+    if (selectedSchool) {
+
+      districtSelect.value =
+        selectedSchool.districtId;
+
+      loadSchools(
+        selectedSchool.districtId,
+        selectedSchoolId
+      );
+
+    }
+
+  }
+
+
+  // ======================================================
+  // SUBJECT -> SPECIALTY
+  // ======================================================
+
+  if (
+    subjectSelect !== null
+    && specialtySelect !== null
+  ) {
+
+    subjectSelect.addEventListener(
+      "change",
+      function () {
+
+        const selectedOption =
+          subjectSelect.options[
+            subjectSelect.selectedIndex
+          ];
+
+
+        if (
+          !selectedOption
+          || !selectedOption.value
+        ) {
+
+          return;
+
+        }
+
+
+        const subjectName =
+          selectedOption.dataset.subjectName;
+
+
+        if (!subjectName) {
+
+          return;
+
+        }
+
+
+        specialtySelect.value =
+          subjectName;
+
+      }
+    );
+
+  }
+
+});
+</script>
+
+{% endblock %}

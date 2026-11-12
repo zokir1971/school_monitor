@@ -1,0 +1,2 @@
+{% set recovery_ru = ui_language() == 'ru' if ui_language is defined else true %}
+<p style="margin-top:14px"><a href="/access-recovery" class="header-btn" style="white-space:nowrap" data-sm-action="nav">{{ 'Забыли логин или пароль?' if recovery_ru else 'Логинді немесе құпиясөзді ұмыттыңыз ба?' }}</a></p>

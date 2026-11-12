@@ -1,0 +1,55 @@
+{% from 'teacher/assessment/question_bank/_segments.html' import render_segments with context %}
+
+{% macro render_formula_parts(item, answers=false) %}
+  {% set content = item.content or {} %}
+  {% set keys = (item.answer_key or {}).get('parts', {}) if answers else {} %}
+  <ol class="qb-formula-parts" style="list-style:none;padding-left:0;">
+    {% for part in content.get('parts', []) %}
+      <li style="margin:16px 0;padding-left:6px;">
+        <h4>{{ 'Задача' if ui_language()=='ru' else 'Есеп' }} {{ loop.index }}.</h4>
+        <div>{{ render_segments(part.get('segments', []) | part_statement_layout(loop.index)) }}</div>
+        {% if answers %}
+          {% set key = keys.get(part.get('id'), {}) %}
+          <p><strong>{{ _('Эталон формула:') }}</strong>
+            <math-field class="qb-math-field" read-only tabindex="-1">{{ key.get('expression', '') }}</math-field>
+          </p>
+          {% for symbol in part.get('variables', []) %}
+            <div><math-field class="qb-math-field" read-only tabindex="-1">{{ symbol }}</math-field> —
+              {% for option in part.get('meaning_options', []) %}
+                {% if option.get('value') == key.get('variable_meanings', {}).get(symbol) %}{{ option.get('label', '') }}{% endif %}
+              {% endfor %}
+            </div>
+          {% endfor %}
+        {% else %}
+          <p>{{ _('Формуланы және белгіленулердің мағынасын көрсетіңіз.') }}</p>
+          <div class="qb-render-response-placeholder">{{ _('Формула: ____________________') }}</div>
+          {% for symbol in part.get('variables', []) %}
+            <div class="qb-render-option">
+              <math-field class="qb-math-field" read-only tabindex="-1">{{ symbol }}</math-field>
+              <select disabled aria-label="{{ _('Шаманы таңдау') }}">
+                <option selected>{{ _('Шаманы таңдаңыз') }}</option>
+                {% for option in part.get('meaning_options', []) %}<option>{{ option.get('label', '') }}</option>{% endfor %}
+              </select>
+            </div>
+          {% endfor %}
+        {% endif %}
+        {% if part.get('target_variable') %}<div>{{ _('Өрнектелетін шама:') }} <math-field class="qb-math-field" read-only tabindex="-1">{{ part.get('target_variable') }}</math-field></div>{% endif %}
+        <p class="qb-muted">{{ _('1 балл') }}</p>
+      </li>
+    {% endfor %}
+  </ol>
+{% endmacro %}
+
+{% macro render_formula_grading_summary(item) %}
+{% if item.grading_settings.get('element_score_policy') == 'weighted_elements_v2' %}
+{% from 'teacher/assessment/question_bank/components/weighted_grading_summary.html' import render_weighted_grading with context %}{{ render_weighted_grading(item) }}
+{% else %}
+  <div>{{ _('Максималды балл:') }} <strong>{{ item.max_score }}</strong></div>
+  {% if (item.grading_settings or {}).get('formula_score_policy') == 'per_part_v1' %}
+    <div>{{ _('Тармақ саны:') }} {{ (item.content or {}).get('parts', []) | length }}.</div>
+    <div>{{ 'За каждую полностью решённую задачу — 1 балл: верны формула и значения всех обозначений.' if ui_language()=='ru' else 'Әр толық дұрыс есеп үшін — 1 балл: формула және барлық белгіленулердің мағынасы дұрыс болуы тиіс.' }}</div>
+    <div>{{ 'За неверную задачу или отсутствие ответа — 0 баллов.' if ui_language()=='ru' else 'Қате немесе жауапсыз есеп үшін — 0 балл.' }}</div>
+  {% endif %}
+  <p>{{ _('Формулаларды бағалау тексеруді қажет етеді. Автоматты салыстыру әлі қосылмаған.') }}</p>
+{% endif %}
+{% endmacro %}

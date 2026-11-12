@@ -1,0 +1,50 @@
+/* School Monitor shared UI 167. One file for /static/student_portal and pupil /assets.
+   Explicit action attributes preserve legacy JS classes and business handlers. */
+:root{--sm-blue:#245cf3;--sm-blue-hover:#1749cf;--sm-ink:#172840;--sm-line:#dce4ef;--sm-action-height:40px;--sm-action-small:32px;--sm-action-radius:10px}
+html body{font-family:Arial,"Segoe UI",sans-serif;color:var(--sm-ink);background:#f3f6fb;font-size:14px;line-height:1.5}
+html body[data-sm-student]{font-size:16px}
+body :is(h1,h2,h3,h4,label,input,select,textarea){font-family:Arial,"Segoe UI",sans-serif}
+/* Geometry/color override local button declarations; display stays non-important:
+   style.display/hidden used by editors, dialogs and conditional forms must keep working. */
+html body [data-sm-action]{--sm-fill:#fff;--sm-fg:#244eab;--sm-border:#bed0f5;--sm-hover:#edf3ff;box-sizing:border-box!important;display:inline-flex;align-items:center!important;justify-content:center!important;gap:8px!important;min-height:var(--sm-action-height)!important;height:auto!important;max-height:none!important;min-width:max-content!important;max-width:none!important;flex-shrink:0!important;padding:9px 15px!important;border:1px solid var(--sm-border)!important;border-radius:var(--sm-action-radius)!important;background:var(--sm-fill)!important;background-image:none!important;color:var(--sm-fg)!important;font:600 13px/20px Arial,"Segoe UI",sans-serif!important;letter-spacing:normal!important;text-transform:none!important;text-decoration:none!important;text-align:center!important;vertical-align:middle;white-space:nowrap!important;overflow-wrap:normal!important;word-break:normal!important;cursor:pointer;box-shadow:none!important;transition:background-color .14s,border-color .14s,box-shadow .14s}
+html body [data-sm-action="primary"]{--sm-fill:var(--sm-blue);--sm-fg:#fff;--sm-border:var(--sm-blue);--sm-hover:var(--sm-blue-hover)}
+html body [data-sm-action="success"]{--sm-fill:#187341;--sm-fg:#fff;--sm-border:#187341;--sm-hover:#105b32}
+html body [data-sm-action="edit"]{--sm-fill:#fff;--sm-fg:#895011;--sm-border:#d8ba91;--sm-hover:#fff5e8}
+html body [data-sm-action="danger"]{--sm-fill:#fff;--sm-fg:#b32626;--sm-border:#e4b2b2;--sm-hover:#fff0f0}
+html body [data-sm-action="nav"]:is([aria-pressed="true"],[aria-selected="true"],[aria-current="page"],[aria-current="true"],.is-active,.active,.is-selected,.selected,[class*="--active"]){--sm-fill:var(--sm-blue);--sm-fg:#fff;--sm-border:var(--sm-blue);--sm-hover:var(--sm-blue-hover)}
+html body [data-sm-action]:hover:not(:disabled):not([aria-disabled="true"]):not(.disabled){background:var(--sm-hover)!important}
+html body [data-sm-action]:active:not(:disabled):not([aria-disabled="true"]){box-shadow:inset 0 2px 3px #17284013!important}
+html body [data-sm-action]:focus-visible{outline:3px solid #7da5ff!important;outline-offset:3px!important}
+html body [data-sm-action]:is(:disabled,[disabled],[aria-disabled="true"],.disabled){--sm-fill:#edf0f4;--sm-fg:#637184;--sm-border:#dbe1e8;--sm-hover:#edf0f4;cursor:not-allowed!important;opacity:1!important;box-shadow:none!important}
+html body [data-sm-action][aria-disabled="true"]{pointer-events:none}
+html body [data-sm-action][data-sm-size="compact"],html body :is(table,[role="table"],[role="grid"]) [data-sm-action]{min-height:var(--sm-action-small)!important;padding:5px 11px!important;border-radius:8px!important;font-size:12px!important;line-height:20px!important}
+html body [data-sm-action][data-sm-icon="true"]{width:32px!important;min-height:32px!important;padding:5px!important;border-radius:8px!important;flex-shrink:0}
+html body [data-sm-action][hidden],html body [data-sm-action]:is(.hidden,.is-hidden,.d-none),html body [data-sm-global-navigation][hidden]{display:none!important}
+body :is(.actions,.button-row,.bank-actions,.quality-page__actions,.assignment-actions,.report-actions){gap:8px;align-items:center}
+.sm-page-nav{display:flex;align-items:center;gap:8px;flex-wrap:wrap;max-width:1180px;margin:0 auto 16px;padding:0 24px}
+/* Inputs share the same baseline; checkbox/radio, math fields and answer widgets retain their controls. */
+body input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([type="range"]):not([type="color"]):not([type="image"]):not([type="file"]):not([type="button"]):not([type="submit"]):not([type="reset"]),body select{box-sizing:border-box;min-height:40px;border:1px solid #cbd6e5;border-radius:10px;padding:8px 12px;font-size:13px;color:var(--sm-ink)}
+body table :is(input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([type="file"]):not([type="submit"]):not([type="button"]),select){min-height:32px;padding:5px 8px;border-radius:8px}
+body :is(input,select,textarea):focus-visible{outline:3px solid #7da5ff;outline-offset:2px}
+body input[type="file"]::file-selector-button{min-height:32px;padding:5px 11px;border:1px solid #bed0f5;border-radius:8px;background:white;color:#244eab;font:600 12px/20px Arial,sans-serif;cursor:pointer;margin-right:10px}
+@media(max-width:700px){.sm-page-nav{padding:0 14px}html body [data-sm-action]{max-width:none!important}}
+@media(prefers-reduced-motion:reduce){html body [data-sm-action]{transition:none}}
+@media print{.sm-page-nav,button[data-sm-action],input[data-sm-action]{display:none!important}}
+@media(forced-colors:active){html body [data-sm-action]{border-color:ButtonText!important}}
+body :is(input,select,textarea)[aria-invalid="true"]{outline:2px solid #b42318!important;outline-offset:2px}
+body[data-sm-student] :is(input,select,textarea){font-size:16px!important}
+
+/* Hidden model/CSRF fields never become visible through legacy input styles. */
+html body input[type="hidden"]{display:none!important}
+
+/* 172: actions keep their labels whole; groups wrap complete controls. */
+body :is(.actions,.button-row,.bank-actions,.quality-page__actions,.assignment-actions,.report-actions){flex-wrap:wrap}
+/* Overview analytics uses the same aligned filter row for all four roles. */
+html body form[data-sm-quality-filter]{display:grid;grid-template-columns:120px minmax(150px,1fr) 120px 160px minmax(220px,1.7fr);gap:12px;align-items:end;padding:16px}
+html body form[data-sm-quality-filter] .analytics-filter-field{min-width:0;width:auto;max-width:100%;margin:0;gap:6px}
+html body form[data-sm-quality-filter] .analytics-filter-field label{font-size:12px;line-height:18px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+html body form[data-sm-quality-filter] .analytics-filter-select{box-sizing:border-box;min-width:0;width:100%;max-width:100%;height:40px;min-height:40px;line-height:normal;text-overflow:ellipsis}
+html body form[data-sm-quality-filter] .analytics-filter-actions{grid-column:1 / -1;display:flex;justify-content:flex-end;align-items:center;flex-wrap:wrap;gap:8px;width:auto;margin:0}
+html body form[data-sm-quality-filter] .analytics-filter-actions [data-sm-action]{width:auto;flex:0 0 auto}
+@media(max-width:960px){html body form[data-sm-quality-filter]{grid-template-columns:repeat(2,minmax(0,1fr))}html body form[data-sm-quality-filter] .analytics-filter-field--work{grid-column:1 / -1}}
+@media(max-width:560px){html body form[data-sm-quality-filter]{grid-template-columns:minmax(0,1fr);padding:12px}}

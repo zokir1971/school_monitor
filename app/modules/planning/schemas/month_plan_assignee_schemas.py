@@ -107,3 +107,9 @@ class MonthItemAssigneePageDTO:
     selected_co_executor_staff_role_ids: list[int] = field(
         default_factory=list
     )
+
+    month: int | None = None
+    school_plan_id: int | None = None
+    is_active_plan: bool = False
+    year: int | None = None
+    plan_revision: str = ""

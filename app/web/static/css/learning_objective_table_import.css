@@ -1,0 +1,9 @@
+.lo-table .lo-row-top{grid-template-columns:85px minmax(130px,1fr) minmax(180px,1.2fr) minmax(170px,1.2fr) auto}
+.lo-table fieldset{border:1px solid #cbd5e1;border-radius:7px;margin:0;min-width:0;padding:8px 10px;display:flex;gap:12px;flex-wrap:wrap}
+.lo-table fieldset legend{font-size:14px;padding:0 4px}
+.lo-table fieldset label{flex-direction:row;align-items:center;gap:5px}
+.lo-table fieldset input{margin:0}
+.lo-table .lo-panel>label:has(input[type=checkbox]){display:block;margin:16px 0}
+.lo-table .lo-row-top p{grid-column:1/-1;margin:0;padding:8px;border-radius:6px}
+@media(max-width:1000px){.lo-table .lo-row-top{grid-template-columns:1fr 1fr}}
+@media(max-width:550px){.lo-table .lo-row-top{grid-template-columns:1fr}}

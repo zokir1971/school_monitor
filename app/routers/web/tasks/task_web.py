@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from starlette import status
 
 from app.db.session import get_db
-from app.modules.reports.report_schemas import ExecutionFormDTO
+from app.modules.reports.schemas.execution_dto import ExecutionFormDTO
 from app.modules.reports.schemas.report_assignment_dto import ReportAssignmentInputDTO
 from app.modules.reports.services.report_assignment_service import ReportAssignmentService
 from app.modules.tasks.task_service import StaffTasksService
@@ -700,7 +700,7 @@ async def staff_report_assignment_reassign(
         url=_url_with_query(
             assignment_page_url,
             month=month,
-            success="Исполнитель отчёта переназначен.",
+            success="Исполнитель отчёта назначен.",
         ),
         status_code=status.HTTP_303_SEE_OTHER,
     )

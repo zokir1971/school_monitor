@@ -95,7 +95,7 @@ html, body {
   line-height: 1;
 
   border: 1px solid #cbd5e1;
-  border-radius: 10px;
+  border-radius: 8px;
   background: #ffffff;
   color: #1e3a8a;
 
@@ -145,4 +145,260 @@ html, body {
 .app-main {
   padding: 16px;
   padding-top: 72px; /* 56px header + воздух */
+}
+
+/* ============================================================
+   WORKSPACE SWITCHER
+   ============================================================ */
+
+.workspace-menu {
+    position: relative;
+
+    margin-left: 16px;
+
+    font-size: 0.88rem;
+}
+
+
+/* ------------------------------------------------------------
+   TRIGGER
+   ------------------------------------------------------------ */
+
+.workspace-menu__trigger {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+
+    min-height: 26px;
+
+    padding: 5px 11px;
+
+    border: 1px solid #d7e1ee;
+    border-radius: 10px;
+
+    background: #f8fbff;
+
+    color: #234b87;
+
+    font-size: 0.86rem;
+    font-weight: 600;
+
+    line-height: 1;
+
+    cursor: pointer;
+
+    user-select: none;
+
+    transition:
+        background-color 0.15s ease,
+        border-color 0.15s ease,
+        box-shadow 0.15s ease;
+}
+
+
+/* Убираем стандартный marker details */
+
+.workspace-menu__trigger {
+    list-style: none;
+}
+
+.workspace-menu__trigger::-webkit-details-marker {
+    display: none;
+}
+
+
+.workspace-menu__trigger:hover {
+    background: #f1f6fd;
+    border-color: #bfd0e6;
+}
+
+
+.workspace-menu[open] > .workspace-menu__trigger {
+    background: #f1f6fd;
+    border-color: #b8cbe3;
+
+    box-shadow:
+        0 1px 2px rgba(15, 23, 42, 0.05);
+}
+
+
+/* ------------------------------------------------------------
+   CURRENT WORKSPACE
+   ------------------------------------------------------------ */
+
+.workspace-menu__current {
+    white-space: nowrap;
+}
+
+
+/* ------------------------------------------------------------
+   ARROW
+   ------------------------------------------------------------ */
+
+.workspace-menu__arrow {
+    display: inline-block;
+
+    color: #64748b;
+
+    font-size: 0.72rem;
+
+    transition: transform 0.15s ease;
+}
+
+
+.workspace-menu[open]
+.workspace-menu__arrow {
+    transform: rotate(180deg);
+}
+
+
+/* ------------------------------------------------------------
+   DROPDOWN
+   ------------------------------------------------------------ */
+
+.workspace-menu__dropdown {
+    position: absolute;
+
+    top: calc(100% + 7px);
+    left: 0;
+
+    z-index: 1000;
+
+    min-width: 190px;
+
+    padding: 6px;
+
+    border: 1px solid #dbe4ef;
+    border-radius: 10px;
+
+    background: #ffffff;
+
+    box-shadow:
+        0 8px 24px rgba(15, 23, 42, 0.12);
+}
+
+
+/* ------------------------------------------------------------
+   FORM
+   ------------------------------------------------------------ */
+
+.workspace-menu__form {
+    margin: 0;
+    padding: 0;
+}
+
+
+/* ------------------------------------------------------------
+   MENU ITEM
+   ------------------------------------------------------------ */
+
+.workspace-menu__item,
+.workspace-menu__active {
+    width: 100%;
+
+    min-height: 36px;
+
+    display: flex;
+    align-items: center;
+
+    padding: 7px 10px;
+
+    border: 0;
+    border-radius: 7px;
+
+    font-family: inherit;
+    font-size: 0.86rem;
+
+    text-align: left;
+}
+
+
+/* ------------------------------------------------------------
+   CLICKABLE ITEM
+   ------------------------------------------------------------ */
+
+.workspace-menu__item {
+    background: transparent;
+
+    color: #334155;
+
+    cursor: pointer;
+
+    transition:
+        background-color 0.12s ease,
+        color 0.12s ease;
+}
+
+
+.workspace-menu__item:hover,
+.workspace-menu__item:focus {
+    background: #f1f5f9;
+
+    color: #0f172a;
+
+    outline: none;
+}
+
+
+/* ------------------------------------------------------------
+   ACTIVE ITEM
+   ------------------------------------------------------------ */
+
+.workspace-menu__active {
+    justify-content: space-between;
+
+    background: #eff6ff;
+
+    color: #1d4ed8;
+
+    font-weight: 600;
+}
+
+
+.workspace-menu__check {
+    margin-left: 16px;
+
+    font-weight: 700;
+}
+
+
+/* ============================================================
+   HEADER WORKSPACE ALIGNMENT
+   ============================================================ */
+
+.header__left {
+    display: flex;
+    align-items: center;
+}
+
+
+.header__logout-form {
+    margin: 0;
+}
+
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+
+@media (max-width: 768px) {
+
+    .workspace-menu {
+        margin-left: 8px;
+    }
+
+    .workspace-menu__dropdown {
+        min-width: 170px;
+    }
+
+    .workspace-menu__trigger {
+        max-width: 170px;
+    }
+
+    .workspace-menu__current {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
 }

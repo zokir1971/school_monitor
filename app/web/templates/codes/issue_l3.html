@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Выдача кодов L3{% endblock %}
+{% block title %}{{ _('Выдача кодов L3') }}{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', path='css/register.css') }}">
@@ -11,11 +11,11 @@
 
     <div class="reg-header">
       <div>
-        <h1 class="reg-title">Выдача кодов L3 (школы)</h1>
+        <h1 class="reg-title">{{ _('Выдача кодов L3 (школы)') }}</h1>
         {% if district %}
-          <p class="reg-subtitle"><b>Ваш район:</b> {{ district.name }}</p>
+          <p class="reg-subtitle"><b>{{ _('Ваш район:') }}</b> {{ district.name }}</p>
         {% else %}
-          <p class="reg-subtitle">Выберите школы, затем задайте квоту и выдайте коды.</p>
+          <p class="reg-subtitle">{{ _('Выберите школы, затем задайте квоту и выдайте коды.') }}</p>
         {% endif %}
       </div>
     </div>
@@ -23,15 +23,14 @@
     {% if error %}
       <div id="error-box" class="alert alert--danger" role="alert">
         <div class="alert__icon">⚠️</div>
-        <div class="alert__text">{{ error }}</div>
+        <div class="alert__text">{{ _(error) }}</div>
       </div>
     {% endif %}
 
     <form method="post" action="/l2/issue-l3" class="form" id="issueL3Form">
-      <h2 class="section-title">Выбор школ</h2>
+      <h2 class="section-title">{{ _('Выбор школ') }}</h2>
       <p class="section-subtitle">
-        Начните вводить название/адрес, выберите школу из списка и нажмите «Добавить».
-        Ниже будут только выбранные школы.
+        {{ _('Начните вводить название/адрес, выберите школу из списка и нажмите «Добавить». Ниже будут только выбранные школы.') }}
       </p>
 
       {% if schools and schools|length > 0 %}
@@ -39,47 +38,47 @@
         {# ===== Выбор школ ===== #}
         <div class="grid-2">
           <div class="field">
-            <label class="field__label" for="schoolSelect">Школа</label>
+            <label class="field__label" for="schoolSelect">{{ _('Школа') }}</label>
             <select id="schoolSelect" class="field__select">
-              <option value="">— выберите школу —</option>
+              <option value="">{{ _('— выберите школу —') }}</option>
               {% for s in schools %}
                 <option value="{{ s.id }}">
                   {{ s.name }}{% if s.address %} — {{ s.address }}{% endif %}
                 </option>
               {% endfor %}
             </select>
-            <div class="field__hint">Выберите школу из списка и нажмите «Добавить».</div>
+            <div class="field__hint">{{ _('Выберите школу из списка и нажмите «Добавить».') }}</div>
           </div>
         </div>
 
       <div class="actions">
-        <button type="button" id="addSchoolBtn" class="btn btn--primary">Добавить</button>
-        <button type="button" id="addAllBtn" class="btn btn--ghost">Добавить все школы</button>
-        <button type="button" id="clearSelectedBtn" class="btn btn--ghost">Очистить</button>
+        <button type="button" id="addSchoolBtn" class="btn btn--primary" data-sm-action="primary">{{ _('Добавить') }}</button>
+        <button type="button" id="addAllBtn" class="btn btn--ghost" data-sm-action="primary">{{ _('Добавить все школы') }}</button>
+        <button type="button" id="clearSelectedBtn" class="btn btn--ghost" data-sm-action="nav">{{ _('Очистить') }}</button>
       </div>
 
 
         <div class="divider"></div>
 
         {# ===== Выбранные школы ===== #}
-        <h2 class="section-title">Выбранные школы</h2>
+        <h2 class="section-title">{{ _('Выбранные школы') }}</h2>
         <p class="section-subtitle">
-          Здесь можно быстро снять/удалить школы. В форму отправятся только выбранные.
+          {{ _('Здесь можно быстро снять/удалить школы. В форму отправятся только выбранные.') }}
         </p>
 
         <div class="scope-card" style="background:#fff;">
           <div class="actions" style="margin-top:0;">
             <label class="checkbox checkbox--bold" style="display:flex; gap:10px; align-items:center;">
               <input type="checkbox" id="selectAllChosen">
-              Выбрать все выбранные
+              {{ _('Выбрать все выбранные') }}
             </label>
-            <button type="button" id="removeCheckedBtn" class="btn btn--ghost">Удалить отмеченные</button>
+            <button type="button" id="removeCheckedBtn" class="btn btn--ghost" data-sm-action="danger">{{ _('Удалить отмеченные') }}</button>
           </div>
 
           <div id="chosenList" style="margin-top:10px; max-height:260px; overflow:auto;"></div>
 
           <div id="emptyChosen" style="opacity:.75; margin-top:10px;">
-            Пока ничего не выбрано.
+            {{ _('Пока ничего не выбрано.') }}
           </div>
         </div>
 
@@ -88,7 +87,7 @@
 
       {% else %}
         <div class="alert" role="alert" style="margin-top:12px;">
-          В этом районе пока нет школ.
+          {{ _('В этом районе пока нет школ.') }}
         </div>
       {% endif %}
 
@@ -96,18 +95,18 @@
 
       <div class="grid-2">
         <div class="field">
-          <label class="field__label" for="quota_total">Квота на каждую школу</label>
+          <label class="field__label" for="quota_total">{{ _('Квота на каждую школу') }}</label>
           <input id="quota_total" class="field__input" type="number" name="quota_total" min="1" value="1">
         </div>
 
         <div class="field">
-          <label class="field__label">Подсказка</label>
-          <div class="hint-card">Сначала выберите школы, затем задайте квоту и выдайте коды.</div>
+          <label class="field__label">{{ _('Подсказка') }}</label>
+          <div class="hint-card">{{ _('Сначала выберите школы, затем задайте квоту и выдайте коды.') }}</div>
         </div>
       </div>
 
       <div class="actions">
-        <button type="submit" class="btn btn--primary">Выдать коды L3</button>
+        <button type="submit" class="btn btn--primary" data-sm-action="primary">{{ _('Выдать коды L3') }}</button>
       </div>
     </form>
 
@@ -148,11 +147,12 @@ document.addEventListener("DOMContentLoaded", () => {
       row.style.margin = "6px 0";
 
       row.innerHTML = `
-        <span>${label}</span>
+        <span></span>
         <button type="button" data-remove="${id}" class="btn btn--ghost" style="margin-left:auto;">
-          Удалить
+          ${ {{ _('Удалить') | tojson }} }
         </button>
       `;
+      row.querySelector("span").textContent = label;
       chosenList.appendChild(row);
 
       const inp = document.createElement("input");

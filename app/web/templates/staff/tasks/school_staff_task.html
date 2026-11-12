@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Мои задачи{% endblock %}
+{% block title %}{{ _('Мои задачи') }}{% endblock %}
 
 {% block extra_css %}
   <link rel="stylesheet" href="{{ url_for('static', path='css/staff_task.css') }}">
@@ -488,26 +488,26 @@
   <div class="traffic-status">
     {% if task_status == "todo" %}
       <span class="traffic traffic--yellow"></span>
-      <span class="traffic-status__text">{{ status_label or "Жоспарланған" }}</span>
+      <span class="traffic-status__text">{{ _(status_label or "Жоспарланған") }}</span>
 
     {% elif task_status == "in_progress" %}
       <span class="traffic traffic--green"></span>
-      <span class="traffic-status__text">{{ status_label or "Орындалу үстінде" }}</span>
+      <span class="traffic-status__text">{{ _(status_label or "Орындалу үстінде") }}</span>
 
     {% elif task_status == "done" %}
       <span class="traffic traffic--blue"></span>
-      <span class="traffic-status__text">{{ status_label or "Орындалды" }}</span>
+      <span class="traffic-status__text">{{ _(status_label or "Орындалды") }}</span>
 
     {% elif task_status == "reviewed" %}
       <span class="traffic traffic--blue"></span>
-      <span class="traffic-status__text">{{ status_label or "Қаралды" }}</span>
+      <span class="traffic-status__text">{{ _(status_label or "Қаралды") }}</span>
 
     {% elif task_status == "not_executed" %}
       <span class="traffic traffic--red"></span>
-      <span class="traffic-status__text">{{ status_label or "Орындалмады" }}</span>
+      <span class="traffic-status__text">{{ _(status_label or "Орындалмады") }}</span>
 
     {% else %}
-      <span class="traffic-status__text">{{ status_label or "—" }}</span>
+      <span class="traffic-status__text">{{ _(status_label or "—") }}</span>
     {% endif %}
   </div>
 {% endmacro %}
@@ -552,26 +552,26 @@
 
         <div class="head-title">
           <h2>
-            Мои задачи на — {{ MONTH_NAMES.get(month, month) }} месяц
+            {{ _('Мои задачи на —') }} {{ _(MONTH_NAMES.get(month, month)|string) }} {{ _('месяц') }}
           </h2>
 
           <div class="sub">
-            Ответственные задачи и задачи, где вы назначены соисполнителем
+            {{ _('Ответственные задачи и задачи, где вы назначены соисполнителем') }}
           </div>
         </div>
 
         <form method="get" class="month-filter">
-          <label for="month" class="month-filter__label">Выберите месяц</label>
+          <label for="month" class="month-filter__label">{{ _('Выберите месяц') }}</label>
 
           <select name="month" id="month" class="month-filter__select">
             {% for m_num, m_name in MONTH_NAMES.items() %}
               <option value="{{ m_num }}" {% if m_num == month %}selected{% endif %}>
-                {{ m_name }}
+                {{ _(m_name) }}
               </option>
             {% endfor %}
           </select>
 
-          <button type="submit" class="month-filter__btn">Показать</button>
+          <button type="submit" class="month-filter__btn" data-sm-action="nav">{{ _('Показать') }}</button>
         </form>
 
       </div>
@@ -583,18 +583,17 @@
 
     {% if request.query_params.get("success") == "accepted" %}
       <div class="hint-box" style="margin-bottom: 16px;">
-        <div class="hint-box__title">Задача принята</div>
+        <div class="hint-box__title">{{ _('Задача принята') }}</div>
         <div class="hint-box__text">
-          Задача успешно принята в исполнение. Теперь можно сформировать
-          или продолжить алгоритм выполнения.
+          {{ _('Задача успешно принята в исполнение. Теперь можно сформировать или продолжить алгоритм выполнения.') }}
         </div>
       </div>
     {% endif %}
 
     {% if request.query_params.get("error") %}
       <div class="hint-box" style="margin-bottom: 16px;">
-        <div class="hint-box__title">Ошибка</div>
-        <div class="hint-box__text">{{ request.query_params.get("error") }}</div>
+        <div class="hint-box__title">{{ _('Ошибка') }}</div>
+        <div class="hint-box__text">{{ execution_error(request.query_params.get("error")) }}</div>
       </div>
     {% endif %}
 
@@ -603,9 +602,9 @@
 
       <article class="task-summary-card">
         <div>
-          <div class="task-summary-card__label">Ответственные задачи</div>
+          <div class="task-summary-card__label">{{ _('Ответственные задачи') }}</div>
           <div class="task-summary-card__note">
-            Вы принимаете задачу, формируете алгоритм и завершаете выполнение
+            {{ _('Вы принимаете задачу, формируете алгоритм и завершаете выполнение') }}
           </div>
         </div>
         <div class="task-summary-card__value">{{ primary_task_list | length }}</div>
@@ -613,9 +612,9 @@
 
       <article class="task-summary-card">
         <div>
-          <div class="task-summary-card__label">Задачи соисполнителя</div>
+          <div class="task-summary-card__label">{{ _('Задачи соисполнителя') }}</div>
           <div class="task-summary-card__note">
-            Вы заполняете назначенные вам отчёты
+            {{ _('Вы заполняете назначенные вам отчёты') }}
           </div>
         </div>
         <div class="task-summary-card__value">{{ co_executor_task_list | length }}</div>
@@ -628,11 +627,9 @@
 
       <div class="task-section__header">
         <div>
-          <h3 class="task-section__title">Ответственный исполнитель</h3>
+          <h3 class="task-section__title">{{ _('Ответственный исполнитель') }}</h3>
           <p class="task-section__description">
-            Эти задачи вы принимаете в исполнение, формируете алгоритм выполнения,
-            контролируете подготовку отчётов и завершаете после формирования
-            итогового документа.
+            {{ _('Эти задачи вы принимаете в исполнение, формируете алгоритм выполнения, контролируете подготовку отчётов и завершаете после формирования итогового документа.') }}
           </p>
         </div>
         <span class="task-section__count">{{ primary_task_list | length }}</span>
@@ -643,16 +640,16 @@
           <table class="plan">
             <thead>
             <tr>
-              <th class="nowrap">Неделя</th>
-              <th class="nowrap">Срок</th>
-              <th>Тақырып / Тема</th>
-              <th>Мақсаты / Цель</th>
-              <th>Объект контроля</th>
-              <th>Тип контроля</th>
-              <th>Место рассмотрения</th>
-              <th class="nowrap">Роль</th>
-              <th class="nowrap">Действие</th>
-              <th class="nowrap">Статус</th>
+              <th class="nowrap">{{ _('Неделя') }}</th>
+              <th class="nowrap">{{ _('Срок') }}</th>
+              <th>{{ _('Тақырып / Тема') }}</th>
+              <th>{{ _('Мақсаты / Цель') }}</th>
+              <th>{{ _('Объект контроля') }}</th>
+              <th>{{ _('Тип контроля') }}</th>
+              <th>{{ _('Место рассмотрения') }}</th>
+              <th class="nowrap">{{ _('Роль') }}</th>
+              <th class="nowrap">{{ _('Действие') }}</th>
+              <th class="nowrap">{{ _('Статус') }}</th>
             </tr>
             </thead>
 
@@ -670,7 +667,7 @@
                 <td>{{ t.review_place or "—" }}</td>
 
                 <td class="nowrap">
-                  <span class="task-role-badge task-role-badge--primary">Ответственный</span>
+                  <span class="task-role-badge task-role-badge--primary">{{ _('Ответственный') }}</span>
                 </td>
 
                 <td class="nowrap">
@@ -696,8 +693,8 @@
       <button
         type="submit"
         class="btn btn-primary btn-sm"
-      >
-        {{ t.action_label or "Принять на исполнение" }}
+       data-sm-action="success" data-sm-size="compact">
+        {{ _(t.action_label or "Принять на исполнение") }}
       </button>
     </form>
 
@@ -705,13 +702,13 @@
     <a
       href="{{ t.action_url }}"
       class="btn {{ t.action_css or 'btn-outline-primary' }} btn-sm"
-    >
-      {{ t.action_label or "Открыть" }}
+     data-sm-action="nav" data-sm-size="compact">
+      {{ _(t.action_label or "Открыть") }}
     </a>
 
   {% else %}
     <span class="action-placeholder">
-      {{ t.action_label or "Действие недоступно" }}
+      {{ _(t.action_label or "Действие недоступно") }}
     </span>
   {% endif %}
 
@@ -725,7 +722,7 @@
             {% else %}
               <tr>
                 <td colspan="10" class="empty">
-                  На этот месяц ответственные задачи не назначены
+                  {{ _('На этот месяц ответственные задачи не назначены') }}
                 </td>
               </tr>
             {% endfor %}
@@ -741,11 +738,9 @@
 
       <div class="task-section__header">
         <div>
-          <h3 class="task-section__title">Соисполнитель</h3>
+          <h3 class="task-section__title">{{ _('Соисполнитель') }}</h3>
           <p class="task-section__description">
-            Доступ к заполнению отчётов появляется после того, как ответственный
-            исполнитель примет задачу, сформирует алгоритм выполнения
-            и назначит вам конкретные отчёты.
+            {{ _('Доступ к заполнению отчётов появляется после того, как ответственный исполнитель примет задачу, сформирует алгоритм выполнения и назначит вам конкретные отчёты.') }}
           </p>
         </div>
         <span class="task-section__count">{{ co_executor_task_list | length }}</span>
@@ -756,15 +751,15 @@
           <table class="plan plan--coexecutor">
             <thead>
             <tr>
-              <th class="nowrap">Неделя</th>
-              <th class="nowrap">Срок</th>
-              <th>Тақырып / Тема</th>
-              <th>Мақсаты / Цель</th>
-              <th>Ответственный</th>
-              <th class="nowrap">Роль</th>
-              <th>Доступ к работе</th>
-              <th class="nowrap">Действие</th>
-              <th class="nowrap">Статус</th>
+              <th class="nowrap">{{ _('Неделя') }}</th>
+              <th class="nowrap">{{ _('Срок') }}</th>
+              <th>{{ _('Тақырып / Тема') }}</th>
+              <th>{{ _('Мақсаты / Цель') }}</th>
+              <th>{{ _('Ответственный') }}</th>
+              <th class="nowrap">{{ _('Роль') }}</th>
+              <th>{{ _('Доступ к работе') }}</th>
+              <th class="nowrap">{{ _('Действие') }}</th>
+              <th class="nowrap">{{ _('Статус') }}</th>
             </tr>
             </thead>
 
@@ -792,33 +787,33 @@
                 </td>
 
                 <td class="nowrap">
-                  <span class="task-role-badge task-role-badge--coexecutor">Соисполнитель</span>
+                  <span class="task-role-badge task-role-badge--coexecutor">{{ _('Соисполнитель') }}</span>
                 </td>
 
                 <td>
                   {% if not t.is_accepted %}
                     <span class="work-state work-state--waiting">
-                      Ответственный ещё не принял задачу
+                      {{ _('Ответственный ещё не принял задачу') }}
                     </span>
 
                   {% elif not t.has_execution_algorithm %}
                     <span class="work-state work-state--waiting">
-                      Алгоритм выполнения ещё не составлен
+                      {{ _('Алгоритм выполнения ещё не составлен') }}
                     </span>
 
                   {% elif not t.has_assigned_reports %}
                     <span class="work-state work-state--warning">
-                      Для вас отчёты ещё не назначены
+                      {{ _('Для вас отчёты ещё не назначены') }}
                     </span>
 
                   {% elif t.can_fill_reports %}
                     <span class="work-state work-state--ready">
-                      Можно заполнять отчёты
+                      {{ _('Можно заполнять отчёты') }}
                     </span>
 
                   {% else %}
                     <span class="work-state work-state--done">
-                      Работа по отчётам завершена
+                      {{ _('Работа по отчётам завершена') }}
                     </span>
                   {% endif %}
                 </td>
@@ -826,19 +821,19 @@
                 <td class="nowrap">
                   {% if t.action_url and t.can_fill_reports %}
                     <a href="{{ t.action_url }}"
-                       class="btn {{ t.action_css or 'btn-outline-primary' }} btn-sm">
-                      {{ t.action_label or "Заполнить отчёты" }}
+                       class="btn {{ t.action_css or 'btn-outline-primary' }} btn-sm" data-sm-action="primary" data-sm-size="compact">
+                      {{ _(t.action_label or "Заполнить отчёты") }}
                     </a>
 
                   {% elif t.action_url and t.action_kind == "view" %}
                     <a href="{{ t.action_url }}"
-                       class="btn {{ t.action_css or 'btn-outline-secondary' }} btn-sm">
-                      {{ t.action_label or "Просмотреть отчёты" }}
+                       class="btn {{ t.action_css or 'btn-outline-secondary' }} btn-sm" data-sm-action="nav" data-sm-size="compact">
+                      {{ _(t.action_label or "Просмотреть отчёты") }}
                     </a>
 
                   {% else %}
                     <span class="action-placeholder">
-                      {{ t.action_label or "Ожидание действий ответственного" }}
+                      {{ _(t.action_label or "Ожидание действий ответственного") }}
                     </span>
                   {% endif %}
                 </td>
@@ -849,7 +844,7 @@
             {% else %}
               <tr>
                 <td colspan="9" class="empty">
-                  На этот месяц задачи соисполнителя не назначены
+                  {{ _('На этот месяц задачи соисполнителя не назначены') }}
                 </td>
               </tr>
             {% endfor %}

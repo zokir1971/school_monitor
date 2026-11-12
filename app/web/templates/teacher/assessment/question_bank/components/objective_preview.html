@@ -1,0 +1,45 @@
+{% macro render_objective_text(text, segments=[]) -%}
+  {% if segments %}
+    {% for segment in segments %}{% if segment.type == 'latex' %}<math-field class="qb-objective-math" read-only tabindex="-1" math-virtual-keyboard-policy="manual">{{ segment.text }}</math-field>{% else %}{{ segment.text }}{% endif %}{% endfor %}
+  {% else %}
+    {% set parts = (text or '—').split('$$') %}
+    {% for part in parts %}{% if loop.index0 % 2 == 1 and not loop.last %}<math-field class="qb-objective-math" read-only tabindex="-1" math-virtual-keyboard-policy="manual">{{ part }}</math-field>{% else %}{{ part }}{% endif %}{% endfor %}
+  {% endif %}
+{%- endmacro %}
+{% macro objective_preview_single(objective, language='kk') -%}
+  {% set lang = language.value if language.value is defined else language %}
+  {% set text = objective.title_ru if lang == 'ru' else objective.title_kz %}
+  {% set segments = objective.title_segments_ru if lang == 'ru' else objective.title_segments_kz %}
+  {% if not text %}
+    {% set text = objective.title_kz or objective.title_ru %}
+    {% set segments = objective.title_segments_kz if objective.title_kz else objective.title_segments_ru %}
+    <small class="qb-objective-language-note">{{ _('Перевод выбранного языка отсутствует; показан доступный текст.') }}</small>
+  {% elif lang == 'en' %}<small class="qb-objective-language-note">{{ _('Английского перевода цели нет; показан текст KZ.') }}</small>{% endif %}
+  <span class="qb-objective-text">{{ render_objective_text(text, segments|default([], true)) }}</span>
+{%- endmacro %}
+{% macro objective_preview(objective, language='kk') -%}
+{% set lang = language.value if language.value is defined else language %}
+<span data-qb-objective-display data-objective-default-language="{{ lang }}">
+{% for code in ['kk','ru','en'] %}{% if code == lang %}<span data-objective-display-language="{{ code }}">{% else %}<span data-objective-display-language="{{ code }}" hidden>{% endif %}{{ objective_preview_single(objective, code) }}</span>{% endfor %}
+</span>
+{%- endmacro %}
+{% macro objective_language_select(value='kk', name='language', id='') -%}
+<label class="qb-objective-language-field">{{ _('Тапсырма тілі / Язык задания') }}
+<select name="{{ name }}" id="{{ id }}" data-qb-objective-language required>
+{% for code,label in [('kk','Қазақ тілі / Казахский'),('ru','Орыс тілі / Русский'),('en','Ағылшын тілі / Английский')] %}{% if value == code %}<option value="{{ code }}" selected>{{ _(label) }}</option>{% else %}<option value="{{ code }}">{{ _(label) }}</option>{% endif %}{% endfor %}
+</select></label>
+{%- endmacro %}
+{% macro objective_options(objectives, selected_id, language='kk', empty_label=none) -%}
+<option value="">{{ empty_label if empty_label is not none else _('Таңдаңыз / Выберите') }}</option>
+{% for objective in objectives %}
+{% set text = objective.title_ru if language == 'ru' else objective.title_kz %}
+{% set text = text or objective.title_kz or objective.title_ru or '—' %}
+{% set label = objective.code ~ ' — ' ~ text %}
+{% if selected_id|string == objective.learning_objective_id|string %}<option value="{{ objective.learning_objective_id }}" data-title-kz="{{ objective.code }} — {{ objective.title_kz or objective.title_ru or '—' }}" data-title-ru="{{ objective.code }} — {{ objective.title_ru or objective.title_kz or '—' }}" selected>{{ label }}</option>{% else %}<option value="{{ objective.learning_objective_id }}" data-title-kz="{{ objective.code }} — {{ objective.title_kz or objective.title_ru or '—' }}" data-title-ru="{{ objective.code }} — {{ objective.title_ru or objective.title_kz or '—' }}">{{ label }}</option>{% endif %}
+{% endfor %}
+{%- endmacro %}
+{% macro objective_choice_previews(objectives) -%}
+<div data-qb-objective-previews>
+{% for objective in objectives %}<div data-objective-preview-id="{{ objective.learning_objective_id }}" hidden><strong>{{ objective.code }}</strong>{% for language in ['kk','ru','en'] %}<div data-objective-preview-language="{{ language }}" hidden>{{ objective_preview_single(objective,language) }}</div>{% endfor %}</div>{% endfor %}
+</div>
+{%- endmacro %}

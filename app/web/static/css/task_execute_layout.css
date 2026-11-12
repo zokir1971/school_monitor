@@ -1,0 +1,18 @@
+.task-execution-page{--task-layout-top:57px;--task-layout-offset:125px;padding-bottom:130px}
+.task-execution-page .card{padding:18px;margin-bottom:14px}
+.task-execution-page .btn{display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;min-height:38px;padding:10px 15px;gap:6px;border:1px solid #c9d8f2;border-radius:9px;background:#fff;color:#235ce0;text-decoration:none;font:600 14px/1.25 Arial,sans-serif;cursor:pointer}
+.task-execution-page .btn-primary,.task-execution-page .btn--primary{background:#2863ec;border-color:#2863ec;color:#fff}
+.task-execution-page .btn-secondary,.task-execution-page .btn--secondary{background:#fff;border-color:#c9d8f2;color:#235ce0}
+.task-execution-page .btn-success{background:#168653;border-color:#168653;color:#fff}
+.task-execution-page .btn:hover{filter:brightness(.96)}
+.task-execution-page .btn:focus-visible,.task-execution-nav a:focus-visible{outline:3px solid #9dbbff;outline-offset:2px}
+.task-execution-page .btn:disabled{opacity:.55;cursor:not-allowed}
+.task-execution-nav{position:sticky;top:var(--task-layout-top);z-index:40;margin:12px 0;padding:10px 12px;background:#f5f8fd;border:1px solid #dbe4f0;border-radius:12px;box-shadow:0 3px 12px #17243b0a}
+.task-execution-nav__links{display:flex;flex-wrap:wrap;gap:8px}
+.task-execution-nav a{display:inline-flex;align-items:center;padding:9px 13px;border:1px solid #cbd9f0;border-radius:8px;background:#fff;color:#16448b;text-decoration:none;font-size:14px;line-height:1.2;white-space:nowrap}
+.task-execution-nav a[aria-current=location]{background:#2863ec;border-color:#2863ec;color:#fff}
+.task-execution-page [data-task-section]{scroll-margin-top:var(--task-layout-offset)}
+.task-execution-page .task-execution-actions{position:fixed;bottom:0;left:0;right:0;z-index:50;box-sizing:border-box;display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:10px;margin:0!important;padding:14px 20px;border:0;border-top:1px solid #dbe4ef;border-radius:0;background:rgba(255,255,255,.98);box-shadow:0 -3px 14px #17243b0a}
+.task-execution-page .task-execution-actions .alert{flex-basis:100%;margin:0!important;padding:5px 10px;text-align:center}
+@media(max-width:650px){.task-execution-nav__links{flex-wrap:nowrap;overflow-x:auto;padding-bottom:4px}.task-execution-page .task-execution-actions{padding:10px}.task-execution-page{padding-bottom:190px}.task-execution-page .card{padding:14px}}
+@media print{.task-execution-nav,.task-execution-page .task-execution-actions{display:none}.task-execution-page{padding-bottom:0}}

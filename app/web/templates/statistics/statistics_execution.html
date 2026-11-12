@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 
 {% block title %}
-Статистика выполнения задач ВШК
+{{ _('Статистика выполнения задач ВШК') }}
 {% endblock %}
 
 {% block extra_css %}
@@ -243,12 +243,12 @@
 <div class="statistics-page">
 
   <header class="page-header">
-    <h1>Статистика выполнения задач ВШК</h1>
+    <h1>{{ _('Статистика выполнения задач ВШК') }}</h1>
 
     <p class="page-subtitle">
       {{ school_name }}
       {% if academic_year %}
-        · учебный год {{ academic_year }}
+        {{ _('· учебный год') }} {{ academic_year }}
       {% endif %}
     </p>
   </header>
@@ -257,19 +257,19 @@
     <a
       href="{{ url_for('school_plan_statistics_page') }}"
       class="stats-nav-link"
-    >
-      📋 Статистика планирования
+     data-sm-action="nav">
+      {{ _('📋 Статистика планирования') }}
     </a>
   </div>
   <section class="statistics-section">
   <div class="section-header">
     <div>
       <h2 class="section-title">
-        Выполнение годового плана по направлениям
+        {{ _('Выполнение годового плана по направлениям') }}
       </h2>
 
       <p class="section-description">
-        Проценты рассчитаны относительно годового плана.
+        {{ _('Проценты рассчитаны относительно годового плана.') }}
       </p>
     </div>
   </div>
@@ -278,14 +278,14 @@
     <table class="statistics-table">
       <thead>
       <tr>
-        <th>Направление ВШК</th>
-        <th>Годовой план</th>
-        <th>Включено в месячные планы</th>
-        <th>Осталось включить</th>
-        <th>Выполнено</th>
-        <th>Рассмотрено</th>
-        <th>Охват плана</th>
-        <th>Выполнение годового плана</th>
+        <th>{{ _('Направление ВШК') }}</th>
+        <th>{{ _('Годовой план') }}</th>
+        <th>{{ _('Включено в месячные планы') }}</th>
+        <th>{{ _('Осталось включить') }}</th>
+        <th>{{ _('Выполнено') }}</th>
+        <th>{{ _('Рассмотрено') }}</th>
+        <th>{{ _('Охват плана') }}</th>
+        <th>{{ _('Выполнение годового плана') }}</th>
       </tr>
       </thead>
 
@@ -306,7 +306,7 @@
 
       <tfoot>
       <tr>
-        <td>Итого</td>
+        <td>{{ _('Итого') }}</td>
         <td>{{ annual_totals.planned_count }}</td>
         <td>{{ annual_totals.included_count }}</td>
         <td>{{ annual_totals.remaining_count }}</td>
@@ -324,7 +324,7 @@
 
     <article class="summary-card">
       <div class="summary-card__label">
-        Запланировано
+        {{ _('Запланировано') }}
       </div>
 
       <div class="summary-card__value">
@@ -332,13 +332,13 @@
       </div>
 
       <div class="summary-card__note">
-        Во всех созданных месячных планах
+        {{ _('Во всех созданных месячных планах') }}
       </div>
     </article>
 
     <article class="summary-card">
       <div class="summary-card__label">
-        Выполнено
+        {{ _('Выполнено') }}
       </div>
 
       <div class="summary-card__value">
@@ -346,14 +346,13 @@
       </div>
 
       <div class="summary-card__note">
-        {{ monthly_totals.completion_percent }}%
-        от месячных планов
+        {{ monthly_totals.completion_percent }}{{ _('% от месячных планов') }}
       </div>
     </article>
 
     <article class="summary-card">
       <div class="summary-card__label">
-        Не выполнено
+        {{ _('Не выполнено') }}
       </div>
 
       <div class="summary-card__value">
@@ -361,13 +360,13 @@
       </div>
 
       <div class="summary-card__note">
-        Из уже включённых задач
+        {{ _('Из уже включённых задач') }}
       </div>
     </article>
 
     <article class="summary-card">
       <div class="summary-card__label">
-        Рассмотрено
+        {{ _('Рассмотрено') }}
       </div>
 
       <div class="summary-card__value">
@@ -375,8 +374,7 @@
       </div>
 
       <div class="summary-card__note">
-        {{ monthly_totals.review_percent }}%
-        от выполненных задач
+        {{ monthly_totals.review_percent }}{{ _('% от выполненных задач') }}
       </div>
     </article>
 
@@ -387,12 +385,11 @@
     <div class="section-header">
       <div>
         <h2 class="section-title">
-          Выполнение месячных планов
+          {{ _('Выполнение месячных планов') }}
         </h2>
 
         <p class="section-description">
-          Показатели рассчитаны относительно задач,
-          включённых в каждый месячный план.
+          {{ _('Показатели рассчитаны относительно задач, включённых в каждый месячный план.') }}
         </p>
       </div>
     </div>
@@ -404,14 +401,14 @@
 
           <thead>
           <tr>
-            <th>Месяц</th>
-            <th>Статус плана</th>
-            <th>Запланировано</th>
-            <th>Выполнено</th>
-            <th>Не выполнено</th>
-            <th>Рассмотрено</th>
-            <th>Выполнение</th>
-            <th>Рассмотрено из выполненных</th>
+            <th>{{ _('Месяц') }}</th>
+            <th>{{ _('Статус плана') }}</th>
+            <th>{{ _('Запланировано') }}</th>
+            <th>{{ _('Выполнено') }}</th>
+            <th>{{ _('Не выполнено') }}</th>
+            <th>{{ _('Рассмотрено') }}</th>
+            <th>{{ _('Выполнение') }}</th>
+            <th>{{ _('Рассмотрено из выполненных') }}</th>
           </tr>
           </thead>
 
@@ -419,8 +416,8 @@
           {% for row in monthly_stats %}
             <tr>
               <td>
-                <a href="{{ url_for('school_execution_statistics_page') }}?month_plan_id={{ row.month_plan_id }}#month-direction-statistics">
-                  {{ row.month_name }}
+                <a href="{{ url_for('school_execution_statistics_page') }}?month_plan_id={{ row.month_plan_id }}#month-direction-statistics" data-sm-action="nav">
+                  {{ _(row.month_name) }}
                 </a>
                 <div style="font-size: 12px; color: #6b7280;">
                   {{ row.year }}
@@ -429,7 +426,7 @@
 
               <td>
                 <span class="status-badge">
-                  {{ row.plan_status_label }}
+                  {{ _(row.plan_status_label) }}
                 </span>
               </td>
 
@@ -467,7 +464,7 @@
           <tfoot>
           <tr>
             <td colspan="2">
-              Итого по созданным месячным планам
+              {{ _('Итого по созданным месячным планам') }}
             </td>
 
             <td>
@@ -502,8 +499,7 @@
     {% else %}
 
       <div class="empty-state">
-        Месячные планы для выбранного годового плана
-        пока не сформированы.
+        {{ _('Месячные планы для выбранного годового плана пока не сформированы.') }}
       </div>
 
     {% endif %}
@@ -514,14 +510,12 @@
   <div class="section-header">
     <div>
       <h2 class="section-title">
-        {{ selected_month.month_name }}
-        {{ selected_month.year }}:
-        выполнение по направлениям
+        {{ _(selected_month.month_name) }}
+        {{ selected_month.year }}{{ _(': выполнение по направлениям') }}
       </h2>
 
       <p class="section-description">
-        Проценты рассчитаны относительно выбранного
-        месячного плана.
+        {{ _('Проценты рассчитаны относительно выбранного месячного плана.') }}
       </p>
     </div>
   </div>
@@ -530,13 +524,13 @@
     <table class="statistics-table">
       <thead>
       <tr>
-        <th>Направление ВШК</th>
-        <th>Запланировано</th>
-        <th>Выполнено</th>
-        <th>Не выполнено</th>
-        <th>Рассмотрено</th>
-        <th>Выполнение</th>
-        <th>Рассмотрено из выполненных</th>
+        <th>{{ _('Направление ВШК') }}</th>
+        <th>{{ _('Запланировано') }}</th>
+        <th>{{ _('Выполнено') }}</th>
+        <th>{{ _('Не выполнено') }}</th>
+        <th>{{ _('Рассмотрено') }}</th>
+        <th>{{ _('Выполнение') }}</th>
+        <th>{{ _('Рассмотрено из выполненных') }}</th>
       </tr>
       </thead>
 
@@ -556,7 +550,7 @@
 
       <tfoot>
       <tr>
-        <td>Итого</td>
+        <td>{{ _('Итого') }}</td>
         <td>
           {{ month_direction_totals.planned_count }}
         </td>

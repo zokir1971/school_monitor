@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from app.modules.reports.assessment_report_types import REPORT_TYPES
+
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -33,7 +35,7 @@ class UserReportTemplateService:
             month_item_id: str | None = None,
             selected_report_id: str | None = None,
     ) -> dict:
-        report_code = report_code or ReportType.LESSON_OBSERVATION.value
+        report_code = UserReportTemplateService._validate_report_code(report_code or ReportType.LESSON_OBSERVATION.value)
 
         if report_code == ReportType.CHECKING_NOTEBOOKS_TABLE.value:
             return {
@@ -457,6 +459,9 @@ class UserReportTemplateService:
     @staticmethod
     def _validate_report_code(report_code: str) -> str:
         report_code = str(report_code or "").strip()
+
+        if report_code in REPORT_TYPES:
+            raise ValueError("Для этого отчёта доступен только системный шаблон. / Бұл есеп үшін тек жүйелік үлгі қолжетімді.")
 
         valid_codes = {item.value for item in ReportType.__members__.values()}
         if report_code not in valid_codes:

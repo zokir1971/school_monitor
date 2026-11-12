@@ -1,0 +1,6 @@
+{% set nav_ru=ui_language()=='ru' %}
+{% set nav_path=request.url.path %}
+<nav class="assessment-nav" aria-label="{{ 'Оценивание качества знаний' if nav_ru else 'Білім сапасын бағалау' }}">
+{% for route,label_ru,label_kk,prefix in [('shared_question_bank_catalog','Банк готовых заданий','Дайын тапсырмалар банкі','/assessment/question-bank'),('assessment_work_plan_index','Комплекты оценивания','Бағалау жинақтары','/assessment/work-plans'),('diagnostic_sessions','Проведение оценивания','Бағалауды өткізу','/assessment/diagnostics')] %}
+<a href="{{ url_for(route) }}" {% if route=='assessment_work_plan_index' %}data-assessment-list{% endif %} {% if nav_path.startswith(prefix) or (route=='shared_question_bank_catalog' and nav_path=='/teacher/question-bank/catalog') %}aria-current="page"{% endif %} data-sm-action="nav">{{ label_ru if nav_ru else label_kk }}</a>{% endfor %}
+</nav>

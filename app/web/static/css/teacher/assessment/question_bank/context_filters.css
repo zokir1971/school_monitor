@@ -1,0 +1,11 @@
+/* Shared manual/AI educational-context selectors: always one row. */
+.qb-create-page .qb-create-filters.qb-create-filters--scope,
+.qb-ai-page .qb-ai-grid.qb-ai-filters {
+  display:flex; flex-wrap:nowrap; align-items:flex-end; gap:16px;
+  overflow-x:auto; padding-bottom:6px;
+}
+.qb-create-filters--scope > label,
+.qb-ai-filters > label { flex:1 0 145px; min-width:0; max-width:none; }
+.qb-create-filters--scope > .qb-objective-language-field { max-width:none; }
+.qb-create-filters--scope > [hidden], .qb-ai-filters > [hidden] { display:none !important; }
+.qb-create-filters--scope select, .qb-ai-filters select { height:44px; }

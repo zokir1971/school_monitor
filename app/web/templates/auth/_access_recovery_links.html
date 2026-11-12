@@ -1,0 +1,8 @@
+{% set recovery_ru = (language if language is defined else ui_language() if ui_language is defined else 'ru') == 'ru' %}
+{% if user is defined and user %}
+  {% set recovery_role = user.role.value if user.role.value is defined else user.role %}
+  {% if recovery_role|lower in ['superuser','region_admin','district_admin','school_admin'] %}
+    <a href="/access-recovery/manage" class="header-btn" style="white-space:nowrap" data-sm-action="nav">{{ 'Восстановление доступа' if recovery_ru else 'Қолжетімділікті қалпына келтіру' }}</a>
+  {% endif %}
+  <a href="/access-recovery/change-password" class="header-btn" style="white-space:nowrap" data-sm-action="nav">{{ 'Сменить пароль' if recovery_ru else 'Құпиясөзді өзгерту' }}</a>
+{% endif %}

@@ -1,8 +1,11 @@
+from app.core.i18n import resolve_language
+
 from fastapi import APIRouter, Depends, Form, Request, status
 from fastapi.responses import RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
+from app.modules.users.enums import UserRole
 from app.modules.users.schemas import StaffRegisterDTO
 from app.modules.users.services.staff_auth_service import (
     StaffAuthService,
@@ -27,7 +30,10 @@ async def staff_register_page(request: Request):
 
 
 # принимаем данные из формы регистрации
-@router.post("/register", name="staff_register_submit")
+@router.post(
+    "/register",
+    name="staff_register_submit",
+)
 async def staff_register_submit(
         request: Request,
         iin: str = Form(...),
@@ -36,8 +42,37 @@ async def staff_register_submit(
         phone: str = Form(""),
         password: str = Form(...),
         password2: str = Form(...),
+        role: str = Form(...),
         db: AsyncSession = Depends(get_db),
 ):
+    # =========================================================
+    # 1. ROLE
+    # =========================================================
+
+    try:
+        user_role = UserRole(role)
+    except ValueError:
+        return render(
+            templates,
+            request,
+            "auth/register_staff_schools.html",
+            {
+                "error": "Недопустимая роль пользователя.",
+                "form": {
+                    "iin": iin,
+                    "username": username,
+                    "email": email,
+                    "phone": phone,
+                    "role": role,
+                },
+            },
+            status_code=400,
+        )
+
+    # =========================================================
+    # 2. DTO
+    # =========================================================
+
     dto = StaffRegisterDTO(
         iin=iin,
         username=username,
@@ -45,10 +80,20 @@ async def staff_register_submit(
         phone=phone,
         password=password,
         password2=password2,
+        role=user_role,
     )
 
+    # =========================================================
+    # 3. REGISTRATION
+    # =========================================================
+
     try:
-        await StaffAuthService.register_staff_user(db, dto=dto)
+        await StaffAuthService.register_staff_user(
+            db,
+            dto=dto,
+            ui_language=resolve_language(request),
+        )
+
     except StaffRegistrationError as e:
         return render(
             templates,
@@ -61,12 +106,17 @@ async def staff_register_submit(
                     "username": username,
                     "email": email,
                     "phone": phone,
+                    "role": role,
                 },
             },
             status_code=400,
         )
 
+    # =========================================================
+    # 4. SUCCESS
+    # =========================================================
+
     return RedirectResponse(
-        url="/login?success=Регистрация прошла успешно. Теперь войдите в систему.",
+        url="/login?registered=1",
         status_code=status.HTTP_303_SEE_OTHER,
     )

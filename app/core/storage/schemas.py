@@ -1,4 +1,4 @@
-# app/core/storage/schemas.py (Результат сохранения и контекст школы)
+# app/core/storage/staff_register_schemas.py (Результат сохранения и контекст школы)
 
 from __future__ import annotations
 

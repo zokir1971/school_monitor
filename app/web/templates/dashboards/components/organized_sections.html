@@ -1,0 +1,29 @@
+{% macro card(href, icon, title_ru, title_kk, description_ru, description_kk, remember=false) -%}
+{% if feature_link_available(href) %}<a class="role-dashboard__card" href="{{ href }}"{% if remember %} data-assessment-list{% endif %}>
+  <span class="role-dashboard__card-top"><span aria-hidden="true">{{ icon }}</span><span aria-hidden="true">→</span></span>
+  <h3>{{ title_ru if ui_language()=='ru' else title_kk }}</h3>
+  <p>{{ description_ru if ui_language()=='ru' else description_kk }}</p>
+</a>{% endif %}
+{%- endmacro %}
+
+{% macro heading(id, title_ru, title_kk, description_ru, description_kk) -%}
+<header class="role-dashboard__section-heading"><h2 id="{{ id }}">{{ title_ru if ui_language()=='ru' else title_kk }}</h2><p>{{ description_ru if ui_language()=='ru' else description_kk }}</p></header>
+{%- endmacro %}
+
+{% macro assessment(analytics_route, dynamics_route, manual=false, manual_first=false, results=true) -%}
+{% if assessment_enabled() %}<section class="role-dashboard__section" aria-labelledby="assessment" data-assessment-ui data-user="{{ user.id }}">
+{{ heading('assessment','Оценивание и аналитика','Бағалау және талдау','Подготовка работ, проведение, результаты и динамика качества знаний.','Жұмыстарды дайындау, өткізу, нәтижелер және білім сапасының динамикасы.') }}
+<div class="role-dashboard__grid">
+{% if manual and manual_first %}{{ manual_card() }}{% endif %}
+{{ card(url_for('shared_question_bank_catalog'),'📚','Банк готовых заданий','Дайын тапсырмалар банкі','Проверенные задания по предмету, классу и учебной цели.','Пән, сынып және оқу мақсаты бойынша тексерілген тапсырмалар.') }}
+{{ card(url_for('assessment_work_plan_index'),'🗂️','Комплекты оценивания','Бағалау жинақтары','Подбор заданий и подготовка вариантов для печати или онлайн.','Тапсырмаларды таңдау және баспаға не онлайн өткізуге арналған нұсқаларды дайындау.',remember=true) }}
+{{ card(url_for('diagnostic_sessions'),'▶','Проведение оценивания','Бағалауды өткізу','Участники, сроки, коды входа и контроль прохождения онлайн-сессий.','Қатысушылар, мерзімдер, кіру кодтары және онлайн сессиялардың орындалуын бақылау.') }}
+{% if manual and not manual_first %}{{ manual_card() }}{% endif %}
+{% if results %}{{ card(url_for(analytics_route),'📊','Аналитика результатов','Нәтижелерді талдау','Качество знаний, успеваемость и результаты оценочных работ.','Білім сапасы, үлгерім және бағалау жұмыстарының нәтижелері.') }}
+{{ card(url_for(dynamics_route),'📈','Динамика качества знаний','Білім сапасының динамикасы','Изменение результатов между контрольными точками учебного года.','Оқу жылының бақылау нүктелері арасындағы нәтижелердің өзгеруі.') }}{% endif %}
+</div></section>{% endif %}
+{%- endmacro %}
+
+{% macro manual_card() -%}
+{{ card(url_for('staff_assessment_list_page'),'📝','Ручной ввод результатов','Нәтижелерді қолмен енгізу','Создание бумажных работ, ввод баллов и завершение оценивания.','Қағаз жұмыстарын құру, балдарды енгізу және бағалауды аяқтау.') }}
+{%- endmacro %}

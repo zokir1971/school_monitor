@@ -1,3 +1,4 @@
+from app.core.i18n import resolve_language
 # app/routers/web/codes/issue_l1.py
 
 from uuid import uuid4
@@ -155,6 +156,7 @@ async def super_issue_l1_result(
 # --- GET: сохранить PDF со ВСЕМИ кодами одной выдачи и пометить как сохранённые ---
 @router.get("/super/issue-l1/pdf/{batch_id}")
 async def super_issue_l1_pdf(
+        request: Request,
         batch_id: str,
         _user=Depends(require_roles(UserRole.SUPERUSER)),
 ):
@@ -165,6 +167,7 @@ async def super_issue_l1_pdf(
     issued = data["issued"]
 
     pdf_bytes = generate_codes_pdf(
+        ui_language=resolve_language(request),
         title="Коды регистрации администраторов регионов (L1)",
         level_label="L1",
         issued=issued,

@@ -1,4 +1,11 @@
 (function () {
+  function executionLabel(value) {
+    const raw = value == null ? "" : String(value);
+    const key = "exec_label:" + raw;
+    const label = window.SchoolMonitorI18n.t(key);
+    return label === key ? raw : label;
+  }
+
   function safeJsonParse(raw, fallback = {}) {
     try {
       return raw ? JSON.parse(raw) : fallback;
@@ -30,7 +37,7 @@
     (items || []).forEach((item) => {
       const option = document.createElement("option");
       option.value = item.code;
-      option.textContent = item.label;
+      option.textContent = executionLabel(item.label);
 
       if (selectedValue && String(selectedValue) === String(item.code)) {
         option.selected = true;
@@ -47,7 +54,7 @@
 
     if (!items || !items.length) {
       containerEl.innerHTML =
-        '<div class="checkbox-placeholder">Нет данных для выбора</div>';
+        window.SchoolMonitorI18n.t("tx_d11b8213bdd3");
       return;
     }
 
@@ -70,7 +77,7 @@
 
       const label = document.createElement("label");
       label.setAttribute("for", input.id);
-      label.textContent = item.label || item.code;
+      label.textContent = executionLabel(item.label) || item.code;
 
       wrapper.appendChild(input);
       wrapper.appendChild(label);
@@ -92,13 +99,13 @@
 
     const defaultOption = document.createElement("option");
     defaultOption.value = "";
-    defaultOption.textContent = "Выберите";
+    defaultOption.textContent = window.SchoolMonitorI18n.t("tx_6a323db2ae5b");
     select.appendChild(defaultOption);
 
     (items || []).forEach((item) => {
       const option = document.createElement("option");
       option.value = item.code;
-      option.textContent = item.label;
+      option.textContent = executionLabel(item.label);
 
       if (String(selectedValue) === String(item.code)) {
         option.selected = true;
@@ -146,23 +153,108 @@
     });
   }
 
-  function getTeacherPoolBySelectedSubjects(controlFlow, selectedSubjects) {
-    const teachersMap = controlFlow.teachers_by_subject || {};
-    let teachers = [];
-
-    selectedSubjects.forEach((subjectCode) => {
-      const subjectTeachers = teachersMap[subjectCode] || [];
-
-      subjectTeachers.forEach((teacher) => {
-        teachers.push({
-          code: String(teacher.code),
-          label: teacher.label || String(teacher.code),
-          subject_code: subjectCode,
-        });
-      });
+  function algorithmView(catalog, input) {
+    const subjects = new Set(input.subjects.map(String));
+    const grades = new Set(input.parallels.map(Number));
+    const groupGrades = new Set();
+    input.groups.forEach(group => {
+      if (!['1_4', '5_9', '10_11'].includes(group)) return;
+      const [lo, hi] = group.split('_').map(Number);
+      for (let grade = lo; grade <= hi; grade++) groupGrades.add(grade);
     });
+    const pairs = catalog.subject_classes || catalog.teaching;
+    const subjectClasses = new Set(pairs.filter(row => subjects.has(String(row.subject_id))).map(row => String(row.class_id)));
+    const restrictSubjects = ['subject','teacher','parallel','complex'].includes(input.scope) && subjects.size > 0;
+    const classes = catalog.classes.filter(row => (!['subject','teacher'].includes(input.scope) || subjects.size > 0) && (!restrictSubjects || subjectClasses.has(String(row.id))) &&
+      (input.scope === 'parallel' ? grades.has(Number(row.grade_level))
+      : input.scope === 'class' && groupGrades.size ? groupGrades.has(Number(row.grade_level)) : true));
+    const explicit = new Set(input.classIds.map(String));
+    const selected = classes.filter(row => !explicit.size || explicit.has(String(row.id)));
+    const selectedIds = new Set(selected.map(row => String(row.id)));
+    const byTeacher = new Map();
+    catalog.teaching.forEach(row => {
+      if (!selectedIds.has(String(row.class_id)) || !subjects.has(String(row.subject_id))) return;
+      const key = String(row.teacher_id);
+      if (!byTeacher.has(key)) byTeacher.set(key, {id: key, name: row.full_name, classIds: new Set(), subjectIds: new Set()});
+      byTeacher.get(key).classIds.add(String(row.class_id));
+      byTeacher.get(key).subjectIds.add(String(row.subject_id));
+    });
+    return {classes, selected, teachers: Array.from(byTeacher.values()).sort((a,b) => a.name.localeCompare(b.name))};
+  }
 
-    return uniqueBy(teachers, (x) => String(x.code));
+  function refreshAlgorithmMatrix(root, controlFlow) {
+    const host = root.querySelector('[data-algorithm-matrix]');
+    if (!host) return;
+    const catalog = controlFlow.algorithm_catalog;
+    const ru = host.dataset.language === 'ru';
+    const data = safeJsonParse(root.querySelector('#task-execution-json-data')?.dataset.state, {});
+    const draft = root._algorithmMatrix || (root._algorithmMatrix = {
+      classIds: new Set((data.school_class_ids || []).map(String)),
+      teacher_ids: new Set((data.teacher_ids || []).map(String)),
+      lesson_observation: new Set((data.report_teacher_ids?.lesson_observation || []).map(String)),
+      checking_notebooks_table: new Set((data.report_teacher_ids?.checking_notebooks_table || []).map(String))
+    });
+    const scope = root.querySelector('#control_scope')?.value || '';
+    const input = {scope, subjects: getCheckedValues(root, 'input[name="subjects"]'),
+      parallels: getCheckedValues(root, 'input[name="parallel_classes"]'), groups: getCheckedValues(root, 'input[name="class_groups"]'),
+      classIds: Array.from(draft.classIds)};
+    const view = algorithmView(catalog, input);
+    const classBox = host.querySelector('[data-algorithm-classes]');
+    if (input.subjects.length || !['subject','teacher'].includes(scope)) draft.classIds = new Set([...draft.classIds].filter(id => view.classes.some(row => String(row.id) === id)));
+    const classRows = view.classes.map(row => {
+      const label = document.createElement('label');
+      label.style.cssText = 'display:flex;align-items:center;gap:6px';
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox'; checkbox.name = 'school_class_ids'; checkbox.value = String(row.id);
+      checkbox.dataset.algorithmClassId = String(row.id); checkbox.checked = draft.classIds.has(String(row.id)); checkbox.style.width = 'auto';
+      const text = document.createElement('span'); text.textContent = row.name;
+      label.append(checkbox, text); return label;
+    });
+    classBox.replaceChildren(...classRows);
+    // IDs outside the current parallel/group are not posted and cannot affect the teacher pool.
+    input.classIds = view.classes.filter(row => draft.classIds.has(String(row.id))).map(row => String(row.id));
+    const filtered = algorithmView(catalog, input);
+    host.querySelector('[data-class-hint]').textContent = scope === 'class'
+      ? (ru ? 'Отметьте конкретные классы. Это обязательный выбор для контроля класса.' : 'Нақты сыныптарды белгілеңіз. Сыныпты бақылау үшін бұл таңдау міндетті.')
+      : (ru ? 'Предлагаются классы, где выбранные предметы есть в учебном плане или действующей нагрузке. Без отметок используются все подходящие классы.' : 'Таңдалған пәндер оқу жоспарында не белсенді жүктемеде бар сыныптар ұсынылады. Белгіленбесе, барлық сәйкес сынып қолданылады.');
+    const reports = new Set(getCheckedValues(root, 'input[name="report_types"]'));
+    const columns = [];
+    if (scope === 'teacher' || reports.has('teacher_analysis')) columns.push(['teacher_ids', ru ? 'Объект контроля' : 'Бақылау нысаны']);
+    if (reports.has('lesson_observation')) columns.push(['lesson_observation', ru ? 'Наблюдение урока' : 'Сабақты бақылау']);
+    if (reports.has('checking_notebooks_table')) columns.push(['checking_notebooks_table', ru ? 'Проверка тетрадей' : 'Дәптерлерді тексеру']);
+    host.querySelector('[data-matrix-teachers]').hidden = columns.length === 0;
+    const table = host.querySelector('[data-teacher-matrix]');
+    const header = document.createElement('tr');
+    [ru ? 'Проверяемый учитель' : 'Тексерілетін мұғалім', ru ? 'Ведёт в выбранных классах' : 'Таңдалған сыныптарда жүргізеді', ...columns.map(column => column[1])].forEach(value => {
+      const th = document.createElement('th'); th.textContent = value; th.style.padding = '8px'; header.appendChild(th);
+    });
+    table.querySelector('thead').replaceChildren(header);
+    const rows = filtered.teachers.map(teacher => {
+      const tr = document.createElement('tr'); tr.dataset.teacherId = teacher.id;
+      const name = document.createElement('td'); name.textContent = teacher.name;
+      const details = document.createElement('td');
+      const subjectNames = catalog.subjects.filter(row => teacher.subjectIds.has(String(row.id))).map(row => ru ? (row.name_ru || row.name_kz) : (row.name_kz || row.name_ru));
+      const classNames = catalog.classes.filter(row => teacher.classIds.has(String(row.id))).map(row => row.name);
+      details.textContent = subjectNames.join(', ') + ' · ' + classNames.join(', ');
+      tr.append(name, details);
+      columns.forEach(([key, title]) => {
+        const td = document.createElement('td');
+        const checkbox = document.createElement('input'); checkbox.type = 'checkbox';
+        checkbox.name = key === 'teacher_ids' ? key : 'report_teacher_ids_' + key;
+        checkbox.value = teacher.id; checkbox.checked = draft[key].has(teacher.id); checkbox.style.width = 'auto';
+        checkbox.dataset.matrixFlag = key; checkbox.dataset.teacherId = teacher.id; checkbox.dataset.teacherName = teacher.name;
+        checkbox.setAttribute('aria-label', teacher.name + ': ' + title); td.appendChild(checkbox); tr.appendChild(td);
+      });
+      Array.from(tr.children).forEach(cell => {cell.style.padding = '8px'; cell.style.borderBottom = '1px solid #dbe3ef';});
+      return tr;
+    });
+    table.querySelector('tbody').replaceChildren(...rows);
+    host.querySelector('[data-matrix-hint]').textContent = !input.subjects.length
+      ? (ru ? 'Сначала выберите предмет проверки.' : 'Алдымен тексерілетін пәнді таңдаңыз.')
+      : rows.length ? (ru ? 'Отметьте учителей по нужным отчётам. Исполнителей назначают на следующем шаге.' : 'Мұғалімдерді қажетті есептер бойынша белгілеңіз. Орындаушылар келесі қадамда тағайындалады.')
+      : (ru ? 'В выбранных классах нет активной нагрузки по выбранному предмету. Проверьте учебную нагрузку школы.' : 'Таңдалған сыныптарда осы пән бойынша белсенді жүктеме жоқ. Мектептің оқу жүктемесін тексеріңіз.');
+    root.querySelector('#report-teacher-targets').hidden = scope === 'documentation';
+    window.ReportAreaEditor?.refresh(root, controlFlow, filtered, input);
   }
 
   function filterReportsByCurrentSelection(root, scopeCode, reports) {
@@ -210,212 +302,61 @@
   }
 
   function buildGeneratedMaterials(root, controlFlow) {
-    const scope = root.querySelector("#control_scope")?.value || "";
-
-    const selectedReports = getCheckedItems(
-      root,
-      '#report_type input[type="checkbox"][name="report_types"]'
-    );
-
-    const selectedTeacherItems = getCheckedItems(
-      root,
-      '#teacher-detail-container input[type="checkbox"][name="teacher_ids"]'
-    );
-
-    const selectedSubjects = getCheckedValues(
-      root,
-      '#scope-detail-container input[type="checkbox"][name="subjects"]'
-    );
-
-    const selectedClassGroups = getCheckedValues(
-      root,
-      '#scope-detail-container input[type="checkbox"][name="class_groups"]'
-    );
-
-    const selectedParallelClasses = getCheckedValues(
-      root,
-      '#scope-detail-container input[type="checkbox"][name="parallel_classes"]'
-    );
-
+    const catalog = controlFlow.algorithm_catalog;
+    if (!catalog) return [];
+    const lang = root.querySelector('[data-algorithm-matrix]')?.dataset.language === 'ru' ? 'ru' : 'kk';
+    const scope = root.querySelector('#control_scope')?.value || '';
+    const reports = getCheckedItems(root, 'input[name="report_types"]');
+    const classes = getCheckedValues(root, 'input[name="school_class_ids"]');
+    const subjects = getCheckedValues(root, 'input[name="subjects"]');
+    const parallels = getCheckedValues(root, 'input[name="parallel_classes"]');
+    const teachers = new Map(catalog.teaching.map(row => [String(row.teacher_id), row.full_name]));
+    const label = (kind, value) => kind === 'teacher' ? teachers.get(String(value)) || value
+      : kind === 'class' ? catalog.classes.find(row => String(row.id) === String(value))?.name || value
+      : kind === 'subject' ? (catalog.subjects.find(row => String(row.id) === String(value))?.[lang === 'ru' ? 'name_ru' : 'name_kz'] || catalog.subjects.find(row => String(row.id) === String(value))?.[lang === 'ru' ? 'name_kz' : 'name_ru'] || value) : value;
+    const selectedClasses = algorithmView(catalog,{scope,subjects,parallels,groups:getCheckedValues(root,'input[name="class_groups"]'),classIds:classes}).selected;
+    const subjectPairs = catalog.subject_classes || catalog.teaching;
     const generated = [];
-
-    const REFERENCE_CODE = "analytical_reference";
-    const KNOWLEDGE_QUALITY_CODE = "knowledge_quality_table";
-    const LESSON_OBSERVATION_CODE = "lesson_observation";
-    const CHECKING_NOTEBOOKS_CODE = "checking_notebooks_table";
-    const READING_SPEED_CODE = "reading_speed_table";
-
-    const referenceReport = selectedReports.find(
-      (r) => String(r.value) === REFERENCE_CODE
-    );
-
-    const otherReports = selectedReports.filter(
-      (r) => String(r.value) !== REFERENCE_CODE
-    );
-
-    if (referenceReport) {
-      generated.push({
-        report_type: referenceReport.value,
-        report_label: referenceReport.label,
-        order: generated.length + 1,
-        is_common: true,
-        scope,
-        subject_codes: selectedSubjects,
-        class_groups: selectedClassGroups,
-        parallel_classes: selectedParallelClasses,
-      });
-    }
-
-    function pushPerSelectedTeachers(reports, teachers, extra = {}) {
-      if (!teachers.length) return;
-
-      teachers.forEach((teacher) => {
-        reports.forEach((report) => {
-          generated.push({
-            teacher_id: String(teacher.value ?? teacher.code ?? teacher.id),
-            teacher_name: teacher.label || teacher.teacher_name || "",
-            report_type: report.value,
-            report_label: report.label,
-            order: generated.length + 1,
-            scope,
-            ...extra,
-          });
+    reports.forEach(report => {
+      const areaState = window.ReportAreaEditor?.data(root);
+      if (areaState?.enabled && ['knowledge_quality_table','class_summary'].includes(report.value)) {
+        areaState.areas.filter(a => a.report_codes.includes(report.value)).forEach(a => {
+          const names = catalog.subjects.map(s => {
+            const ids = new Set(a.pairs.filter(p => p.subject_id === s.id).map(p => p.class_id));
+            return ids.size ? (lang === 'ru' ? s.name_ru || s.name_kz : s.name_kz || s.name_ru) + ': ' + catalog.classes.filter(c => ids.has(c.id)).map(c => c.name).join(', ') : '';
+          }).filter(Boolean);
+          generated.push({report_type:report.value, report_label:controlFlow.report_labels?.[report.value]?.[lang] || executionLabel(report.label),
+            target_kind:'report_area', target_value:a.id, target_label:(lang === 'ru' ? a.name_ru || a.name_kk : a.name_kk || a.name_ru) || (lang === 'ru' ? 'Без названия' : 'Атаусыз'), context_label:names.join('; '), order:generated.length+1,scope});
         });
-      });
-    }
-
-    if (scope === "teacher") {
-      pushPerSelectedTeachers(otherReports, selectedTeacherItems, {
-        subject_codes: selectedSubjects,
-      });
-
-      return generated;
-    }
-
-    if (scope === "subject") {
-      const commonReports = [];
-      const perTeacherReports = [];
-
-      otherReports.forEach((report) => {
-        if (String(report.value) === KNOWLEDGE_QUALITY_CODE) {
-          commonReports.push(report);
-        } else {
-          perTeacherReports.push(report);
-        }
-      });
-
-      commonReports.forEach((report) => {
-        generated.push({
-          report_type: report.value,
-          report_label: report.label,
-          order: generated.length + 1,
-          is_common: true,
-          scope,
-          subject_codes: selectedSubjects,
-        });
-      });
-
-      pushPerSelectedTeachers(perTeacherReports, selectedTeacherItems, {
-        subject_codes: selectedSubjects,
-      });
-
-      return generated;
-    }
-
-    if (scope === "class" || scope === "parallel") {
-      const perTeacherCodes = new Set([
-        LESSON_OBSERVATION_CODE,
-        CHECKING_NOTEBOOKS_CODE,
-        READING_SPEED_CODE,
-      ]);
-
-      const commonReports = [];
-      const perTeacherReports = [];
-
-      otherReports.forEach((report) => {
-        if (perTeacherCodes.has(String(report.value))) {
-          perTeacherReports.push(report);
-        } else {
-          commonReports.push(report);
-        }
-      });
-
-      commonReports.forEach((report) => {
-        generated.push({
-          report_type: report.value,
-          report_label: report.label,
-          order: generated.length + 1,
-          is_common: true,
-          scope,
-          subject_codes: selectedSubjects,
-          class_groups: selectedClassGroups,
-          parallel_classes: selectedParallelClasses,
-        });
-      });
-
-      pushPerSelectedTeachers(perTeacherReports, selectedTeacherItems, {
-        subject_codes: selectedSubjects,
-        class_groups: selectedClassGroups,
-        parallel_classes: selectedParallelClasses,
-      });
-
-      return generated;
-    }
-
-    otherReports.forEach((report) => {
-      generated.push({
-        report_type: report.value,
-        report_label: report.label,
-        order: generated.length + 1,
-        scope,
-      });
+        return;
+      }
+      let kind, values;
+      if (report.value === 'analytical_reference') {kind = 'documentation'; values = ['Итоговая справка / Қорытынды анықтама'];}
+      else if (['lesson_observation', 'checking_notebooks_table'].includes(report.value)) {
+        kind = 'teacher'; values = getCheckedValues(root, 'input[name="report_teacher_ids_' + report.value + '"]');
+      } else if (report.value === 'teacher_analysis' || scope === 'teacher') {kind = 'teacher'; values = getCheckedValues(root, 'input[name="teacher_ids"]');}
+      else if (report.value === 'reading_speed_table' && !['class', 'parallel'].includes(scope)) {kind = 'class'; values = algorithmView(catalog, {scope, subjects, parallels, groups: getCheckedValues(root, 'input[name="class_groups"]'), classIds: classes}).selected.map(row => String(row.id));}
+      else if (report.value === 'document_analysis' || scope === 'documentation') {kind = 'documentation'; values = ['Документы задачи / Тапсырма құжаттары'];}
+      else if (scope === 'parallel') {kind = 'parallel_class'; values = parallels;}
+      else if (scope === 'class') {kind = 'class'; values = classes;}
+      else {kind = 'subject'; values = subjects;}
+      Array.from(new Set(values)).forEach(value => generated.push({report_type: report.value, report_label: controlFlow.report_labels?.[report.value]?.[lang] || executionLabel(report.label),
+        target_kind: kind, target_value: String(value), target_label: label(kind, value),
+        context_label: kind === 'subject' ? selectedClasses.filter(c => subjectPairs.some(p => String(p.subject_id) === String(value) && String(p.class_id) === String(c.id))).map(c => c.name).join(', ') : '',
+        teacher_id: kind === 'teacher' ? String(value) : null, teacher_name: kind === 'teacher' ? label(kind, value) : null,
+        order: generated.length + 1, scope}));
     });
-
     return generated;
   }
 
   function renderGeneratedMaterials(root, generated) {
-    const summaryEl = root.querySelector("#materials-preview-summary");
-    const listEl = root.querySelector("#materials-preview-list");
-    const hiddenEl = root.querySelector("#generated_reports_json");
-
-    if (!summaryEl || !listEl || !hiddenEl) return;
-
-    if (!generated.length) {
-      summaryEl.textContent =
-        "После выбора параметров здесь появится список материалов.";
-      listEl.innerHTML = "";
-      hiddenEl.value = "[]";
-      return;
-    }
-
-    const counts = {};
-
-    generated.forEach((item) => {
-      counts[item.report_label] = (counts[item.report_label] || 0) + 1;
+    const summary = root.querySelector('#materials-preview-summary'), list = root.querySelector('#materials-preview-list'), hidden = root.querySelector('#generated_reports_json');
+    if (!summary || !list || !hidden) return;
+    summary.textContent = (root.querySelector('[data-algorithm-matrix]')?.dataset.language === 'ru' ? 'Материалов к подготовке: ' : 'Дайындалатын материалдар: ') + generated.length;
+    const rows = generated.map(item => {
+      const li = document.createElement('li'); li.textContent = item.order + '. ' + executionLabel(item.report_label) + ' — ' + item.target_label + (item.context_label ? ' · ' + item.context_label : ''); return li;
     });
-
-    const summaryParts = Object.entries(counts).map(
-      ([label, count]) => `${count} × ${label}`
-    );
-
-    summaryEl.textContent = `Будет подготовлено: ${summaryParts.join(", ")}`;
-
-    listEl.innerHTML = generated
-      .map((item) => {
-        if (item.teacher_name) {
-          return `<li>${item.order}. ${item.report_label} — ${item.teacher_name}</li>`;
-        }
-
-        if (item.is_common) {
-          return `<li>${item.order}. ${item.report_label} — общий материал</li>`;
-        }
-
-        return `<li>${item.order}. ${item.report_label}</li>`;
-      })
-      .join("");
-
-    hiddenEl.value = JSON.stringify(generated);
+    list.replaceChildren(...rows); hidden.value = JSON.stringify(generated);
   }
 
   function updateReviewResultField(root) {
@@ -515,6 +456,18 @@
 
     const controlFlow = safeJsonParse(dataEl.dataset.controlFlow, {});
     const state = safeJsonParse(dataEl.dataset.state, {});
+    const catalog = controlFlow.algorithm_catalog;
+    const ruMatrix = formRoot.querySelector('[data-algorithm-matrix]')?.dataset.language === 'ru';
+    const subjectOptions = catalog.subjects.map(row => ({code: String(row.id), label: ruMatrix ? (row.name_ru || row.name_kz) : (row.name_kz || row.name_ru)}));
+    const availableGrades = new Set(catalog.classes.map(row => String(row.grade_level)));
+    controlFlow.details_by_scope.parallel.options = (controlFlow.details_by_scope.parallel.options || []).filter(row => availableGrades.has(String(row.code)));
+
+    ['subject', 'teacher', 'complex'].forEach(key => {if (controlFlow.details_by_scope[key]) controlFlow.details_by_scope[key].options = subjectOptions;});
+    state.subjects = (state.subjects || []).map(value => {
+      const row = catalog.subjects.find(item => [String(item.id), item.name_ru, item.name_kz].includes(String(value)));
+      return row ? String(row.id) : String(value);
+    });
+
 
     const savedScope = state.control_scope || "";
     const savedForm = state.control_form || "";
@@ -587,7 +540,7 @@
       return;
     }
 
-    function resetReportCheckboxes(message = "Сначала выберите объект") {
+    function resetReportCheckboxes(message = window.SchoolMonitorI18n.t("tx_056688a73c8b")) {
       reportEl.innerHTML = `<div class="checkbox-placeholder">${message}</div>`;
     }
 
@@ -595,7 +548,7 @@
       reportEl.innerHTML = "";
 
       if (!items || !items.length) {
-        resetReportCheckboxes("Нет доступных типов отчета");
+        resetReportCheckboxes(window.SchoolMonitorI18n.t("tx_e71c63f6a181"));
         return;
       }
 
@@ -611,11 +564,12 @@
         input.value = item.code;
         input.id = `report_${String(item.code).replace(/[^a-zA-Z0-9_-]/g, "_")}`;
         input.checked = normalizedSelected.includes(String(item.code));
-        input.dataset.label = item.label || item.code;
+        const localizedReport = controlFlow.report_labels?.[item.code]?.[ruMatrix ? 'ru' : 'kk'] || executionLabel(item.label) || item.code;
+        input.dataset.label = localizedReport;
 
         const label = document.createElement("label");
         label.setAttribute("for", input.id);
-        label.textContent = item.label || item.code;
+        label.textContent = localizedReport;
 
         wrapper.appendChild(input);
         wrapper.appendChild(label);
@@ -786,7 +740,7 @@
     }
 
     function buildScopeOptions() {
-      fillSelect(scopeEl, controlFlow.scopes || [], savedScope, "Выберите");
+      fillSelect(scopeEl, controlFlow.scopes || [], savedScope, window.SchoolMonitorI18n.t("tx_6a323db2ae5b"));
     }
 
     function buildFormOptions(selectedForm = "") {
@@ -794,24 +748,24 @@
       const forms = controlFlow.forms_by_scope?.[scopeCode] || [];
 
       if (!scopeCode || !forms.length) {
-        resetSelect(formEl, "Сначала выберите объект", true);
+        resetSelect(formEl, window.SchoolMonitorI18n.t("tx_056688a73c8b"), true);
         hintEl.textContent =
-          "Сначала выберите объект контроля. После этого система предложит допустимые формы, виды и типы отчета.";
+          window.SchoolMonitorI18n.t("tx_afb59fac949e");
         return;
       }
 
-      fillSelect(formEl, forms, selectedForm, "Выберите форму");
+      fillSelect(formEl, forms, selectedForm, window.SchoolMonitorI18n.t("tx_d4fea40dd0de"));
     }
 
     function buildKindOptions(selectedKind = "") {
       const scopeCode = scopeEl.value;
 
       if (!scopeCode) {
-        resetSelect(kindEl, "Сначала выберите объект", true);
+        resetSelect(kindEl, window.SchoolMonitorI18n.t("tx_056688a73c8b"), true);
         return;
       }
 
-      fillSelect(kindEl, controlFlow.kinds || [], selectedKind, "Выберите вид");
+      fillSelect(kindEl, controlFlow.kinds || [], selectedKind, window.SchoolMonitorI18n.t("tx_a28f806a209d"));
     }
 
     function buildReportOptions(selectedReports = []) {
@@ -820,14 +774,14 @@
       let reports = getReportsForCurrentSelection(scopeCode);
 
       if (!scopeCode || !reports.length) {
-        resetReportCheckboxes("Сначала выберите объект");
+        resetReportCheckboxes(window.SchoolMonitorI18n.t("tx_056688a73c8b"));
         return;
       }
 
       reports = filterReportsByCurrentSelection(formRoot, scopeCode, reports);
 
       if (!reports.length) {
-        resetReportCheckboxes("Нет доступных типов отчета");
+        resetReportCheckboxes(window.SchoolMonitorI18n.t("tx_e71c63f6a181"));
         return;
       }
 
@@ -847,7 +801,7 @@
 
       const subjectTitle = document.createElement("div");
       subjectTitle.className = "form-label";
-      subjectTitle.textContent = "Пәндер";
+      subjectTitle.textContent = window.SchoolMonitorI18n.t("tx_854f5a732eab");
 
       const subjectContainer = document.createElement("div");
       subjectContainer.id = containerId;
@@ -865,171 +819,10 @@
       );
     }
 
-    function updateTeacherOptions(scopeCode, detailConfig, isInitial = false) {
+    function updateTeacherOptions() {
       clearTeacherDetails();
-
-      if (!scopeCode || !detailConfig) {
-        return;
-      }
-
-      if (scopeCode === "subject" || scopeCode === "teacher") {
-        const selectedSubjects = getCheckedValuesByName(detailConfig.name);
-
-        if (!selectedSubjects.length) {
-          return;
-        }
-
-        const teachers = getTeacherPoolBySelectedSubjects(
-          controlFlow,
-          selectedSubjects
-        );
-
-        if (!teachers.length) {
-          teacherWrapperEl.style.display = "block";
-          teacherLabelEl.textContent = "Пән мұғалімдері";
-          teacherContainerEl.innerHTML =
-            '<div class="checkbox-placeholder">Бұл пән бойынша мұғалім табылмады</div>';
-          return;
-        }
-
-        teacherWrapperEl.style.display = "block";
-        teacherLabelEl.textContent =
-          scopeCode === "teacher" ? "Мұғалімдер" : "Пән мұғалімдері";
-
-        renderCheckboxGroup(
-          teacherContainerEl,
-          "teacher_ids",
-          teachers.map((teacher) => ({
-            code: teacher.code,
-            label: teacher.label,
-          })),
-          isInitial ? savedTeacherIds : getCheckedValuesByName("teacher_ids")
-        );
-
-        return;
-      }
-
-      if (scopeCode === "class") {
-        const selectedGroups = getCheckedValuesByName("class_groups");
-
-        const hasPrimary = selectedGroups.includes("1_4");
-        const hasSubjectGroups =
-          selectedGroups.includes("5_9") || selectedGroups.includes("10_11");
-
-        let teachers = [];
-
-        if (hasPrimary && !hasSubjectGroups) {
-          teachers = teachers.concat(controlFlow.primary_teachers || []);
-        }
-
-        if (hasPrimary && hasSubjectGroups) {
-          teachers = teachers.concat(controlFlow.primary_teachers || []);
-        }
-
-        if (hasSubjectGroups) {
-          const selectedSubjects = getCheckedValuesByName("subjects");
-
-          teacherWrapperEl.style.display = "block";
-          teacherLabelEl.textContent = hasPrimary
-            ? "Бастауыш және пән мұғалімдері"
-            : "Пән мұғалімдері";
-
-          if (!selectedSubjects.length) {
-            teacherContainerEl.innerHTML =
-              '<div class="checkbox-placeholder">Алдымен пәнді таңдаңыз</div>';
-            return;
-          }
-
-          teachers = teachers.concat(
-            getTeacherPoolBySelectedSubjects(controlFlow, selectedSubjects)
-          );
-        }
-
-        teachers = uniqueBy(teachers, (x) => String(x.code));
-
-        if (!teachers.length) {
-          teacherWrapperEl.style.display = "block";
-          teacherContainerEl.innerHTML =
-            '<div class="checkbox-placeholder">Мұғалім табылмады</div>';
-          return;
-        }
-
-        teacherWrapperEl.style.display = "block";
-        teacherLabelEl.textContent = hasSubjectGroups
-          ? hasPrimary
-            ? "Бастауыш және пән мұғалімдері"
-            : "Пән мұғалімдері"
-          : "Бастауыш сынып мұғалімдері";
-
-        renderCheckboxGroup(
-          teacherContainerEl,
-          "teacher_ids",
-          teachers,
-          isInitial ? savedTeacherIds : getCheckedValuesByName("teacher_ids")
-        );
-
-        return;
-      }
-
-      if (scopeCode === "parallel") {
-        const selectedParallels = getCheckedValuesByName("parallel_classes");
-
-        const hasPrimaryParallel = selectedParallels.some((v) =>
-          ["1", "2", "3", "4"].includes(String(v))
-        );
-
-        const hasSubjectParallel = selectedParallels.some((v) =>
-          ["5", "6", "7", "8", "9", "10", "11"].includes(String(v))
-        );
-
-        let teachers = [];
-
-        if (hasPrimaryParallel) {
-          teachers = teachers.concat(controlFlow.primary_teachers || []);
-        }
-
-        if (hasSubjectParallel) {
-          const selectedSubjects = getCheckedValuesByName("subjects");
-
-          teacherWrapperEl.style.display = "block";
-          teacherLabelEl.textContent = hasPrimaryParallel
-            ? "Бастауыш және пән мұғалімдері"
-            : "Пән мұғалімдері";
-
-          if (!selectedSubjects.length) {
-            teacherContainerEl.innerHTML =
-              '<div class="checkbox-placeholder">Алдымен пәнді таңдаңыз</div>';
-            return;
-          }
-
-          teachers = teachers.concat(
-            getTeacherPoolBySelectedSubjects(controlFlow, selectedSubjects)
-          );
-        }
-
-        teachers = uniqueBy(teachers, (x) => String(x.code));
-
-        if (!teachers.length) {
-          teacherWrapperEl.style.display = "block";
-          teacherContainerEl.innerHTML =
-            '<div class="checkbox-placeholder">Мұғалім табылмады</div>';
-          return;
-        }
-
-        teacherWrapperEl.style.display = "block";
-        teacherLabelEl.textContent = hasSubjectParallel
-          ? hasPrimaryParallel
-            ? "Бастауыш және пән мұғалімдері"
-            : "Пән мұғалімдері"
-          : "Бастауыш сынып мұғалімдері";
-
-        renderCheckboxGroup(
-          teacherContainerEl,
-          "teacher_ids",
-          teachers,
-          isInitial ? savedTeacherIds : getCheckedValuesByName("teacher_ids")
-        );
-      }
+      teacherWrapperEl.hidden = true;
+      teacherWrapperEl.style.display = 'none';
     }
 
     function buildDetailOptions() {
@@ -1045,7 +838,7 @@
 
       detailWrapperEl.style.display = "block";
       detailLabelEl.textContent =
-        detailConfig.label || "Дополнительные данные";
+        executionLabel(detailConfig.label) || window.SchoolMonitorI18n.t("tx_6f97e823e641");
 
       if (detailConfig.type === "checkbox") {
         let selectedValues = [];
@@ -1095,7 +888,7 @@
         );
       } else if (detailConfig.type === "info") {
         detailContainerEl.innerHTML =
-          '<div class="checkbox-placeholder">Құжаттар бойынша бақылау</div>';
+          window.SchoolMonitorI18n.t("tx_d2daaffcc7cb");
       }
 
       updateTeacherOptions(scopeCode, detailConfig, true);
@@ -1109,8 +902,7 @@
 
       if (scopeCode === "class") {
         const selectedGroups = getCheckedValuesByName("class_groups");
-        const hasSubjectGroups =
-          selectedGroups.includes("5_9") || selectedGroups.includes("10_11");
+        const hasSubjectGroups = selectedGroups.length > 0;
 
         const existingBlock = detailContainerEl.querySelector("#class-subjects-container")
           ?.closest(".subject-extra-block");
@@ -1126,9 +918,7 @@
 
       if (scopeCode === "parallel") {
         const selectedParallels = getCheckedValuesByName("parallel_classes");
-        const hasSubjectParallels = selectedParallels.some((v) =>
-          ["5", "6", "7", "8", "9", "10", "11"].includes(String(v))
-        );
+        const hasSubjectParallels = selectedParallels.length > 0;
 
         const existingBlock = detailContainerEl.querySelector("#parallel-subjects-container")
           ?.closest(".subject-extra-block");
@@ -1150,14 +940,14 @@
 
       if (!scopeCode) {
         hintEl.textContent =
-          "Сначала выберите объект контроля. После этого система предложит допустимые формы, виды и типы отчета.";
+          window.SchoolMonitorI18n.t("tx_afb59fac949e");
         return;
       }
 
-      const scopeLabel = getScopeLabel(scopeCode);
-      const formLabel = formCode ? getFormLabel(scopeCode, formCode) : "";
-      const kindLabel = kindCode ? getKindLabel(kindCode) : "";
-      const reportLabels = getReportLabels(scopeCode);
+      const scopeLabel = executionLabel(getScopeLabel(scopeCode));
+      const formLabel = formCode ? executionLabel(getFormLabel(scopeCode, formCode)) : "";
+      const kindLabel = kindCode ? executionLabel(getKindLabel(kindCode)) : "";
+      const reportLabels = getReportLabels(scopeCode).map(executionLabel);
       const teacherLabels = getSelectedTeacherLabels();
 
       let detailLabels = [];
@@ -1198,6 +988,7 @@
         }
       }
 
+      detailLabels = detailLabels.map(executionLabel);
       const parts = [scopeLabel];
 
       if (detailLabels.length) parts.push(detailLabels.join(", "));
@@ -1206,7 +997,7 @@
       if (reportLabels.length) parts.push(reportLabels.join(", "));
       if (teacherLabels.length) parts.push(teacherLabels.join(", "));
 
-      hintEl.textContent = "Выбрано: " + parts.join(" → ");
+      hintEl.textContent = window.SchoolMonitorI18n.t("tx_a767eb85b546") + parts.join(" → ");
     }
 
     function refreshAfterDetailChange() {
@@ -1216,9 +1007,26 @@
       rebuildDynamicSubjectBlockIfNeeded();
       updateTeacherOptions(scopeCode, detailConfig, false);
       buildReportOptions(getCheckedValuesByName("report_types"));
+      refreshAlgorithmMatrix(formRoot, controlFlow);
       updateHint();
       updateGeneratedMaterialsPreview(formRoot, controlFlow);
     }
+
+    formRoot.addEventListener('change', (event) => {
+      const target = event.target;
+      if (!target) return;
+      if (target.dataset.matrixFlag) {
+        const values = formRoot._algorithmMatrix[target.dataset.matrixFlag];
+        target.checked ? values.add(target.value) : values.delete(target.value);
+        updateGeneratedMaterialsPreview(formRoot, controlFlow);
+      } else if (target.dataset.algorithmClassId) {
+        const values = formRoot._algorithmMatrix.classIds;
+        target.checked ? values.add(target.value) : values.delete(target.value);
+        refreshAlgorithmMatrix(formRoot, controlFlow); updateGeneratedMaterialsPreview(formRoot, controlFlow);
+      } else if (target.matches('input[name="subjects"], input[name="report_types"], #control_scope, input[name="class_groups"], input[name="parallel_classes"]')) {
+        refreshAlgorithmMatrix(formRoot, controlFlow); updateGeneratedMaterialsPreview(formRoot, controlFlow);
+      }
+    });
 
     scopeEl.addEventListener("change", function () {
       buildFormOptions();
@@ -1282,16 +1090,18 @@
       buildReportOptions(savedReports);
       updateHint();
     } else {
-      resetSelect(formEl, "Сначала выберите объект", true);
-      resetSelect(kindEl, "Сначала выберите объект", true);
-      resetReportCheckboxes("Сначала выберите объект");
+      resetSelect(formEl, window.SchoolMonitorI18n.t("tx_056688a73c8b"), true);
+      resetSelect(kindEl, window.SchoolMonitorI18n.t("tx_056688a73c8b"), true);
+      resetReportCheckboxes(window.SchoolMonitorI18n.t("tx_056688a73c8b"));
       clearScopeDetails();
       clearTeacherDetails();
     }
 
+    refreshAlgorithmMatrix(formRoot, controlFlow);
     bindGeneratedMaterialsPreview(formRoot, controlFlow);
 
     setTimeout(() => {
+      refreshAlgorithmMatrix(formRoot, controlFlow);
       updateGeneratedMaterialsPreview(formRoot, controlFlow);
     }, 50);
   }

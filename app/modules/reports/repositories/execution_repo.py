@@ -3,27 +3,35 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from sqlalchemy import delete, select, update
+from sqlalchemy import delete, select, update, insert, exists, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.modules.planning.enums import PlanItemStatus
 from app.modules.planning.models_month_plan import (
+    SchoolMonthPlan,
     SchoolMonthPlanItem,
     SchoolMonthPlanItemAssignee,
 )
 from app.modules.planning.models_school import (
+    SchoolPlan,
     SchoolPlanRow11,
     SchoolPlanRow11RequiredDocument,
 )
 from app.modules.reports.enums import DocumentType, TaskDocumentStatus
 from app.modules.reports.models_documents import (
+    ReportTypeModel,
+    SchoolReportAreaScheme,
     TaskExecutionData,
     TaskExecutionDocument,
     TaskExecutionSelectedReport,
 )
+from app.modules.reports.models_report_assignments import TaskSelectedReportAssignment
+from app.modules.reports.models_template_reports import CheckingNotebooksReport
 from app.modules.staff.models_staff_school import SchoolStaffMember, SchoolStaffRole
 from app.modules.users.models import User
+from app.modules.education.models import Subject, SchoolClass, SchoolClassSubject, SchoolClassSubjectTeacher, SchoolSubjectSubgroup, CurriculumSubjectRule, SubjectMethodProfile
+from app.modules.reports.report_schemas import ExecutionPageBundle
 
 
 class ExecutionRepo:
@@ -123,42 +131,85 @@ class ExecutionRepo:
             *,
             execution_data_id: int,
             selected_reports: list[dict],
+            algorithm_parameters: dict | None = None,
+            expected_revision: int | None = None,
     ) -> None:
-        await db.execute(
-            delete(TaskExecutionSelectedReport).where(
-                TaskExecutionSelectedReport.execution_data_id == execution_data_id
-            )
-        )
+        """Synchronize the natural keys; preserve selected IDs and their dependent data.
 
-        new_rows: list[TaskExecutionSelectedReport] = []
-
+        Call within the algorithm transaction. SQL is batched; no lazy loads.
+        The task lock matches document save order, then selected rows are locked
+        to serialize changes and protect concurrent FK-based document inserts.
+        """
+        requested = {}
         for item in selected_reports:
-            report_type_id = item.get("report_type_id")
-            if not report_type_id:
-                continue
+            report_type_id = int(item.get("report_type_id") or 0)
+            if report_type_id <= 0:
+                raise ValueError("Некорректный тип отчёта. / Есеп түрі дұрыс емес.")
+            for target in item.get("targets") or []:
+                kind = str(target.get("target_kind") or "").strip()
+                value = str(target.get("target_value") or "").strip()
+                if not kind or not value:
+                    raise ValueError("Не указан объект отчёта. / Есеп нысаны көрсетілмеген.")
+                requested[(report_type_id, kind, value)] = str(target.get("target_label") or "").strip() or None
 
-            targets = item.get("targets") or []
-            for target in targets:
-                target_kind = str(target.get("target_kind") or "").strip()
-                target_value = str(target.get("target_value") or "").strip()
-                target_label = str(target.get("target_label") or "").strip() or None
+        E, I = TaskExecutionData.__table__, SchoolMonthPlanItem.__table__
+        S, D = TaskExecutionSelectedReport.__table__, TaskExecutionDocument.__table__
+        A, C = TaskSelectedReportAssignment.__table__, CheckingNotebooksReport.__table__
+        task_id = (await db.execute(select(E.c.month_item_id).where(E.c.id == execution_data_id))).scalar_one()
+        task = (await db.execute(select(I.c.id, I.c.status, I.c.completed_at).where(I.c.id == task_id).with_for_update())).mappings().one()
+        if task['completed_at'] or str(getattr(task['status'], 'value', task['status'])) in ('done', 'reviewed'):
+            raise ValueError("Завершённую задачу нельзя изменять через алгоритм. / Аяқталған тапсырманың алгоритмін өзгертуге болмайды.")
+        stored_parameters = (await db.execute(select(E.c.algorithm_parameters).where(E.c.id == execution_data_id).with_for_update())).scalar_one() or {}
+        if algorithm_parameters is None and stored_parameters.get('version')==2:
+            raise ValueError('Сохраните алгоритм через актуальную форму параметров. / Алгоритмді параметрлердің қолданыстағы нысаны арқылы сақтаңыз.')
+        if algorithm_parameters is not None:
+            revision = int(stored_parameters.get('revision') or 0)
+            if expected_revision != revision:
+                raise ValueError('Алгоритм изменён в другом окне. Обновите страницу. / Алгоритм басқа терезеде өзгертілген. Бетті жаңартыңыз.')
+            from app.modules.reports.rules.control_flow import area_scope
+            if stored_parameters.get('report_areas_mode') and 'report_areas_mode' not in algorithm_parameters:
+                raise ValueError('Обновите форму алгоритма: в ней отсутствуют сохранённые области. / Алгоритм нысанын жаңартыңыз: сақталған ауқымдар жоқ.')
+            dimension_keys = ('scope', 'year_start', 'subject_ids', 'class_ids', 'subject_class_pairs')
+            dimensions_changed = any(stored_parameters.get(key) != algorithm_parameters.get(key) for key in dimension_keys) or area_scope(stored_parameters) != area_scope(algorithm_parameters)
+            if dimensions_changed:
+                protected_scope = (await db.execute(select(S.c.id).where(S.c.execution_data_id == execution_data_id, or_(
+                    exists(select(D.c.id).where(D.c.selected_report_id == S.c.id)),
+                    exists(select(C.c.id).where(C.c.selected_report_id == S.c.id)),
+                    exists(select(A.c.id).where(A.c.selected_report_id == S.c.id, A.c.status.in_(['completed', 'waived']))))).limit(1))).first()
+                if protected_scope:
+                    raise ValueError('Нельзя менять область проверки: уже есть сохранённые документы или завершения. / Тексеру ауқымын өзгертуге болмайды: сақталған құжаттар немесе аяқталу белгілері бар.')
+            algorithm_parameters = dict(algorithm_parameters, revision=revision + 1)
 
-                if not target_kind or not target_value:
-                    continue
+        rows = (await db.execute(select(S).where(S.c.execution_data_id == execution_data_id).with_for_update())).mappings().all()
+        existing = {(row['report_type_id'], row['target_kind'], row['target_value']): row for row in rows}
+        removed = [row['id'] for key, row in existing.items() if key not in requested]
+        if removed:
+            protected = (await db.execute(select(S.c.id).where(S.c.id.in_(removed), or_(
+                exists(select(D.c.id).where(D.c.selected_report_id == S.c.id)),
+                exists(select(C.c.id).where(C.c.selected_report_id == S.c.id)),
+                exists(select(A.c.id).where(A.c.selected_report_id == S.c.id, A.c.status.in_(['completed', 'waived']))),
+            )).order_by(S.c.id))).scalars().all()
+            if protected:
+                ids = ', '.join(map(str, protected))
+                raise ValueError(f"Нельзя убрать отчёты №{ids}: уже есть черновик, документ или зафиксированное завершение. Состав алгоритма не изменён. / Есептерді алып тастауға болмайды: жоба, құжат немесе аяқталу белгісі бар. Алгоритм құрамы өзгерген жоқ.")
 
-                new_rows.append(
-                    TaskExecutionSelectedReport(
-                        execution_data_id=execution_data_id,
-                        report_type_id=int(report_type_id),
-                        target_kind=target_kind,
-                        target_value=target_value,
-                        target_label=target_label,
-                    )
-                )
-
-        if new_rows:
-            db.add_all(new_rows)
-
+        # Validate the full diff before the first mutation.
+        if removed:
+            await db.execute(delete(A).where(A.c.selected_report_id.in_(removed)))
+            await db.execute(delete(S).where(S.c.id.in_(removed)))
+        additions = [dict(execution_data_id=execution_data_id, report_type_id=key[0], target_kind=key[1],
+                          target_value=key[2], target_label=label)
+                     for key, label in requested.items() if key not in existing]
+        if additions:
+            await db.execute(insert(S), additions)
+        # Labels do not define identity and may change without replacing the row.
+        from sqlalchemy import bindparam
+        labels = [dict(selected_id=existing[key]['id'], new_label=label)
+                  for key, label in requested.items() if key in existing and existing[key]['target_label'] != label]
+        if labels:
+            await db.execute(update(S).where(S.c.id == bindparam('selected_id')).values(target_label=bindparam('new_label')), labels)
+        if algorithm_parameters is not None:
+            await db.execute(update(E).where(E.c.id == execution_data_id).values(algorithm_parameters=algorithm_parameters))
         await db.flush()
 
     @classmethod
@@ -232,6 +283,71 @@ class ExecutionRepo:
         return result.scalar_one_or_none() is not None
 
     @staticmethod
+    async def get_algorithm_catalog(db: AsyncSession, *, month_item_id: int, school_id: int | None = None, user_id: int | None = None) -> dict:
+        """Five bounded queries for one school's plan year; never a query per teacher."""
+        I, M, P = SchoolMonthPlanItem.__table__, SchoolMonthPlan.__table__, SchoolPlan.__table__
+        L = SchoolReportAreaScheme.__table__
+        statement = (select(P.c.school_id, P.c.academic_year, P.c.status.label('plan_status'), M.c.status.label('month_status'), L.c.configuration.label('area_scheme'), L.c.revision.label('area_scheme_revision'))
+                     .select_from(I.join(M, M.c.id == I.c.month_plan_id).join(P, P.c.id == M.c.school_plan_id).outerjoin(L,L.c.school_id == P.c.school_id))
+                     .where(I.c.id == month_item_id))
+        if school_id is not None:
+            statement = statement.where(P.c.school_id == school_id)
+        if user_id is not None:
+            U = User.__table__
+            statement = statement.join(U, U.c.school_id == P.c.school_id).where(U.c.id == user_id)
+        context = (await db.execute(statement)).mappings().one_or_none()
+        if context is None:
+            raise ValueError('Задача не найдена в школе пользователя. / Тапсырма пайдаланушының мектебінен табылмады.')
+        try:
+            year = int(str(context['academic_year']).replace('–', '-').replace('—', '-').replace('/', '-').split('-')[0])
+        except (TypeError, ValueError):
+            raise ValueError('Проверьте учебный год плана. / Жоспардың оқу жылын тексеріңіз.')
+        C, S, CS = SchoolClass.__table__, Subject.__table__, SchoolClassSubject.__table__
+        CR, MP = CurriculumSubjectRule.__table__, SubjectMethodProfile.__table__
+        A, F, G = SchoolClassSubjectTeacher.__table__, SchoolStaffMember.__table__, SchoolSubjectSubgroup.__table__
+        classes = (await db.execute(select(C.c.id, C.c.grade_level, C.c.letter, C.c.instruction_language, C.c.education_track)
+                   .where(C.c.school_id == context['school_id'], C.c.academic_year_start == year, C.c.is_active.is_(True))
+                   .order_by(C.c.grade_level, C.c.letter, C.c.id))).mappings().all()
+        class_ids = [row['id'] for row in classes]
+        if not class_ids:
+            return dict(school_id=context['school_id'], year_start=year, plan_status=context['plan_status'], month_status=context['month_status'], classes=[], subjects=[], teaching=[], subject_classes=[])
+        curricular = exists(select(CS.c.id).where(CS.c.subject_id == S.c.id, CS.c.school_id == context['school_id'], CS.c.school_class_id.in_(class_ids), CS.c.is_active.is_(True)))
+        assigned = exists(select(A.c.id).where(A.c.subject_id == S.c.id, A.c.school_id == context['school_id'], A.c.school_class_id.in_(class_ids), A.c.is_active.is_(True)))
+        subjects = (await db.execute(select(S.c.id, S.c.code, S.c.name_ru, S.c.name_kz).where(S.c.is_active.is_(True), or_(curricular, assigned))
+                    .order_by(S.c.sort_order, S.c.id))).mappings().all()
+        live_subgroup = exists(select(G.c.id).where(G.c.id == A.c.subgroup_id, G.c.school_id == context['school_id'], G.c.school_class_id == A.c.school_class_id,
+                                                   G.c.subject_id == A.c.subject_id, G.c.is_active.is_(True)))
+        teaching = (await db.execute(select(A.c.staff_member_id.label('teacher_id'), F.c.full_name, A.c.subject_id, A.c.school_class_id.label('class_id'))
+                    .select_from(A.join(F, F.c.id == A.c.staff_member_id).join(S, S.c.id == A.c.subject_id))
+                    .where(A.c.school_id == context['school_id'], F.c.school_id == context['school_id'], A.c.school_class_id.in_(class_ids),
+                           A.c.is_active.is_(True), A.c.unassigned_at.is_(None), S.c.is_active.is_(True), F.c.is_active.is_(True),
+                           or_(A.c.subgroup_id.is_(None), live_subgroup)).distinct()
+                    .order_by(F.c.full_name, A.c.staff_member_id, A.c.school_class_id, A.c.subject_id))).mappings().all()
+        curriculum_pairs = (await db.execute(select(CS.c.subject_id, CS.c.school_class_id.label('class_id'),CR.c.method_profile_id,MP.c.code.label('profile_code'),MP.c.name.label('profile_name'))
+            .select_from(CS.outerjoin(CR,CR.c.id==CS.c.rule_id).outerjoin(MP,MP.c.id==CR.c.method_profile_id))
+            .where(CS.c.school_id == context['school_id'], CS.c.school_class_id.in_(class_ids), CS.c.is_active.is_(True)).distinct())).mappings().all()
+        subject_set = {row['id'] for row in subjects}
+        pairs = sorted({(row['subject_id'],row['class_id']) for row in list(curriculum_pairs)+list(teaching) if row['subject_id'] in subject_set})
+        pair_set = set(pairs)
+        profiles = {}
+        for row in curriculum_pairs:
+            if row['method_profile_id'] is not None and (row['subject_id'],row['class_id']) in pair_set:
+                entry=profiles.setdefault(row['method_profile_id'],dict(id=row['method_profile_id'],name=row['profile_name'],code=row['profile_code'],pairs=[]))
+                entry['pairs'].append(dict(subject_id=row['subject_id'],class_id=row['class_id']))
+        paired_subjects = {sid for sid,cid in pairs}
+        result = dict(school_id=context['school_id'], year_start=year, plan_status=context['plan_status'], month_status=context['month_status'],
+                    classes=[dict(row, name=str(row['grade_level']) + str(row['letter'] or '')) for row in classes],
+                    subjects=[dict(row) for row in subjects if row['id'] in paired_subjects], teaching=[dict(row) for row in teaching],
+                    subject_classes=[dict(subject_id=sid,class_id=cid) for sid,cid in pairs],method_profiles=list(profiles.values()))
+        from app.modules.reports.rules.report_area_scheme import suggestions
+        result['area_scheme'] = context.get('area_scheme') or {}
+        result['area_scheme_revision'] = context.get('area_scheme_revision') or 0
+        result['area_suggestions'] = suggestions(result,result['area_scheme'])
+        result['area_defaults'] = suggestions(result)
+        return result
+
+
+    @staticmethod
     async def get_teacher_labels_by_ids(
             db: AsyncSession,
             *,
@@ -270,85 +386,29 @@ class ExecutionRepo:
         return result
 
     @classmethod
-    async def get_missing_selected_reports(
-            cls,
-            db: AsyncSession,
-            *,
-            month_item_id: int,
-    ) -> list[str]:
-        """
-        Получить список выбранных системных отчетов, которые еще не заполнены.
-
-        analytical_reference / Анықтама не проверяем здесь,
-        потому что это итоговый документ, а не системный отчет.
-        """
-
-        execution_data = await cls.get_execution_data_for_task(
-            db,
-            month_item_id=month_item_id,
-        )
-
-        if not execution_data or not execution_data.selected_reports:
-            return []
-
-        selected_codes_by_label: dict[str, str] = {}
-
-        excluded_codes = {
-            "analytical_reference",
-        }
-
-        for item in execution_data.selected_reports:
-            if not item.report_type:
-                continue
-
-            code = str(item.report_type.code or "").strip()
-            if not code:
-                continue
-
-            if code in excluded_codes:
-                continue
-
-            label = (
-                    item.report_type.name_kz
-                    or item.report_type.name_ru
-                    or code
-            )
-
-            selected_codes_by_label[code] = label
-
-        selected_codes = set(selected_codes_by_label.keys())
-
-        if not selected_codes:
-            return []
-
-        completed_stmt = (
-            select(TaskExecutionDocument.report_code)
-            .where(
-                TaskExecutionDocument.month_item_id == month_item_id,
-                TaskExecutionDocument.is_current.is_(True),
-                TaskExecutionDocument.is_final.is_(False),
-                TaskExecutionDocument.document_type == DocumentType.REPORT,
-                TaskExecutionDocument.report_code.in_(selected_codes),
-                TaskExecutionDocument.status.in_([
-                    TaskDocumentStatus.SUBMITTED,
-                    TaskDocumentStatus.ACCEPTED,
-                ]),
-            )
-        )
-
-        completed_result = await db.execute(completed_stmt)
-        completed_codes = {
-            str(code).strip()
-            for code in completed_result.scalars().all()
-            if code
-        }
-
-        missing_codes = selected_codes - completed_codes
-
-        return [
-            selected_codes_by_label[code]
-            for code in missing_codes
-        ]
+    async def get_missing_selected_reports(cls, db: AsyncSession, *, month_item_id: int) -> list[str]:
+        """A completed document resolves its own selected position, not its type."""
+        selected = TaskExecutionSelectedReport.__table__
+        execution = TaskExecutionData.__table__
+        types = ReportTypeModel.__table__
+        documents = TaskExecutionDocument.__table__
+        assignments = TaskSelectedReportAssignment.__table__
+        completed = exists(select(documents.c.id).where(
+            documents.c.selected_report_id == selected.c.id,
+            documents.c.month_item_id == month_item_id,
+            documents.c.is_current.is_(True), documents.c.is_final.is_(False),
+            documents.c.document_type == DocumentType.REPORT,
+            documents.c.status.in_([TaskDocumentStatus.SUBMITTED, TaskDocumentStatus.ACCEPTED])))
+        waived = exists(select(assignments.c.id).where(
+            assignments.c.selected_report_id == selected.c.id,
+            assignments.c.status == 'waived'))
+        statement = (select(types.c.name_kz, types.c.name_ru, types.c.code, selected.c.target_label, selected.c.target_value)
+                     .select_from(selected.join(execution, execution.c.id == selected.c.execution_data_id)
+                                  .join(types, types.c.id == selected.c.report_type_id))
+                     .where(execution.c.month_item_id == month_item_id, types.c.code != 'analytical_reference',
+                            ~completed, ~waived).order_by(selected.c.id))
+        return [str(row.name_kz or row.name_ru or row.code) + ' · ' + str(row.target_label or row.target_value)
+                for row in (await db.execute(statement)).all()]
 
     @classmethod
     async def mark_current_system_reports_submitted(
@@ -394,3 +454,67 @@ class ExecutionRepo:
         )
 
         await db.execute(stmt)
+
+
+    @classmethod
+    async def get_execution_page_bundle(
+            cls,
+            db: AsyncSession,
+            *,
+            month_item_id: int,
+    ) -> ExecutionPageBundle:
+        """
+        Получить bundle данных execution-страницы.
+
+        Зачем нужен:
+        - сервису удобно получать execution_data и current_draft
+          одной repo-точкой
+        - сервис остается чище
+        - внутреннюю реализацию можно позже оптимизировать
+          без изменения сервисного слоя
+        """
+        current_draft = await cls.get_current_draft(
+            db,
+            month_item_id=month_item_id,
+        )
+        execution_data = await cls.get_execution_data_for_task(
+            db,
+            month_item_id=month_item_id,
+        )
+
+        return ExecutionPageBundle(
+            current_draft=current_draft,
+            execution_data=execution_data,
+        )
+
+    @classmethod
+    async def get_current_draft(
+            cls,
+            db: AsyncSession,
+            *,
+            month_item_id: int,
+    ) -> TaskExecutionDocument | None:
+        """
+        Получить текущий черновик по задаче.
+
+        Логика:
+        - только current
+        - только не final
+        - если черновиков несколько, берем самый свежий
+          по version desc, id desc
+        """
+        stmt = (
+            select(TaskExecutionDocument)
+            .where(
+                TaskExecutionDocument.month_item_id == month_item_id,
+                TaskExecutionDocument.is_current.is_(True),
+                TaskExecutionDocument.is_final.is_(False),
+            )
+            .order_by(
+                TaskExecutionDocument.version.desc(),
+                TaskExecutionDocument.id.desc(),
+            )
+        )
+
+        result = await db.execute(stmt)
+        return result.scalars().first()

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from app.core.i18n import normalize_language
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import (
@@ -30,10 +32,9 @@ class AdminRegistrationService:
             full_name: str | None = None,
             iin: str | None = None,
             selected_region_id: int | None = None,
-            selected_district_id: int | None = None,
-            selected_school_id: int | None = None,
             email: str | None = None,
             phone: str | None = None,
+            ui_language: str | None = None,
     ) -> User:
         code_norm = code.strip().upper()
         lookup_hash = registration_code_lookup_hash(code_norm)
@@ -86,7 +87,7 @@ class AdminRegistrationService:
                 if not d:
                     raise ValueError("Район по коду не найден")
 
-                # ✅ users single-scope: только district_id
+                # users single-scope: только district_id
 
                 user_region_id = None
 
@@ -134,6 +135,7 @@ class AdminRegistrationService:
 
             # 6) Создаём пользователя (flush внутри add)
             user = User(
+                ui_language=normalize_language(ui_language),
                 username=username_norm,
                 full_name=full_name.strip() if full_name else None,
                 iin=iin.strip() if iin else None,
@@ -162,7 +164,7 @@ class AdminRegistrationService:
             await RegistrationCodeRepo.add_use(db, use)
 
             # commit сделает контекстный менеджер db.begin()
-        #import logging
-        #log = logging.getLogger(__name__)
-        #log.info("REGISTER_BY_CODE role=%s code=%s", target_role, code)
+            # import logging
+            # log = logging.getLogger(__name__)
+            # log.info("REGISTER_BY_CODE role=%s code=%s", target_role, code)
         return user

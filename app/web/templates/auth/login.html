@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Внутришкольный контроль{% endblock %}
+{% block title %}{{ _('Внутришкольный контроль') }}{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -297,9 +297,9 @@
 <div class="auth-page">
   <!-- ОБЩИЙ ЗАГОЛОВОК -->
   <div class="auth-header">
-    <h2 class="auth-brand__title">Внутришкольный контроль</h2>
+    <h2 class="auth-brand__title">{{ _('Внутришкольный контроль') }}</h2>
     <p class="auth-brand__subtitle">
-      Информационная система планирования, контроля и исполнения задач школы
+      {{ _('Информационная система планирования, контроля и исполнения задач школы') }}
     </p>
   </div>
 
@@ -308,52 +308,56 @@
     <section class="auth-left">
       <div class="auth-card">
         <div class="auth-card__head">
-          <h2>Вход в систему</h2>
-          <p>Введите логин или ИИН и пароль для продолжения</p>
+          <h2>{{ _('Вход в систему') }}</h2>
+          <p>{{ _('Введите логин или ИИН и пароль для продолжения') }}</p>
         </div>
 
+        {% if request.query_params.get('registered') == '1' %}
+          <div class="auth-alert" role="status">{{ _('Регистрация прошла успешно. Теперь войдите в систему.') }}</div>
+        {% endif %}
         {% if error %}
           <div class="auth-alert">
-            {{ error }}
+            {{ _(error) }}
           </div>
         {% endif %}
 
         <form method="post" action="/login" class="auth-form">
           <div class="form-group">
-            <label for="identifier">Логин или ИИН</label>
+            <label for="identifier">{{ _('Логин или ИИН') }}</label>
             <input
               id="identifier"
               name="identifier"
               type="text"
-              placeholder="Введите логин или ИИН"
+              placeholder="{{ _('Введите логин или ИИН') }}"
               required
             >
           </div>
 
           <div class="form-group">
-            <label for="password">Пароль</label>
+            <label for="password">{{ _('Пароль') }}</label>
             <input
               id="password"
               name="password"
               type="password"
-              placeholder="Введите пароль"
+              placeholder="{{ _('Введите пароль') }}"
               required
             >
           </div>
 
-          <button type="submit" class="auth-submit">
-            Войти
+          <button type="submit" class="auth-submit" data-sm-action="primary">
+            {{ _('Войти') }}
           </button>
         </form>
+        {% include 'auth/_access_recovery_entry.html' %}
 
         <div class="auth-divider"></div>
 
         <div class="auth-register">
           <div class="auth-register__text">
-            Вы сотрудник школы и ещё не зарегистрированы?
+            {{ _('Вы сотрудник школы и ещё не зарегистрированы?') }}
           </div>
-          <a href="/staff-auth/register" class="auth-register__link">
-            Регистрация для персонала школы
+          <a href="/staff-auth/register" class="auth-register__link" data-sm-action="nav">
+            {{ _('Регистрация для персонала школы') }}
           </a>
         </div>
       </div>
@@ -363,9 +367,9 @@
     <aside class="auth-right">
       <div class="docs-panel">
         <div class="docs-panel__head">
-          <h3>Нормативная база ВШК</h3>
+          <h3>{{ _('Нормативная база ВШК') }}</h3>
           <p>
-            Документы и методические материалы, на которые опирается внутришкольный контроль
+            {{ _('Документы и методические материалы, на которые опирается внутришкольный контроль') }}
           </p>
         </div>
 
@@ -373,9 +377,9 @@
           <a href="#" class="doc-card" target="_blank" rel="noopener noreferrer">
             <div class="doc-card__icon">📘</div>
             <div class="doc-card__body">
-              <div class="doc-card__title">Нормативные документы</div>
+              <div class="doc-card__title">{{ _('Нормативные документы') }}</div>
               <div class="doc-card__text">
-                Основные приказы, положения и регламенты по организации ВШК
+                {{ _('Основные приказы, положения и регламенты по организации ВШК') }}
               </div>
             </div>
           </a>
@@ -383,9 +387,9 @@
           <a href="#" class="doc-card" target="_blank" rel="noopener noreferrer">
             <div class="doc-card__icon">📑</div>
             <div class="doc-card__body">
-              <div class="doc-card__title">Методические рекомендации</div>
+              <div class="doc-card__title">{{ _('Методические рекомендации') }}</div>
               <div class="doc-card__text">
-                Рекомендации по планированию, контролю и анализу результатов
+                {{ _('Рекомендации по планированию, контролю и анализу результатов') }}
               </div>
             </div>
           </a>
@@ -393,9 +397,9 @@
           <a href="#" class="doc-card" target="_blank" rel="noopener noreferrer">
             <div class="doc-card__icon">🏛️</div>
             <div class="doc-card__body">
-              <div class="doc-card__title">Локальные акты школы</div>
+              <div class="doc-card__title">{{ _('Локальные акты школы') }}</div>
               <div class="doc-card__text">
-                Внутренние положения, приказы и утверждённые документы школы
+                {{ _('Внутренние положения, приказы и утверждённые документы школы') }}
               </div>
             </div>
           </a>
@@ -403,9 +407,9 @@
           <a href="#" class="doc-card" target="_blank" rel="noopener noreferrer">
             <div class="doc-card__icon">🗂️</div>
             <div class="doc-card__body">
-              <div class="doc-card__title">Положения и регламенты</div>
+              <div class="doc-card__title">{{ _('Положения и регламенты') }}</div>
               <div class="doc-card__text">
-                Регламенты проведения контроля, мониторинга и внутренней оценки
+                {{ _('Регламенты проведения контроля, мониторинга и внутренней оценки') }}
               </div>
             </div>
           </a>
@@ -413,9 +417,9 @@
           <a href="#" class="doc-card" target="_blank" rel="noopener noreferrer">
             <div class="doc-card__icon">📝</div>
             <div class="doc-card__body">
-              <div class="doc-card__title">Инструкции по работе</div>
+              <div class="doc-card__title">{{ _('Инструкции по работе') }}</div>
               <div class="doc-card__text">
-                Инструкции и памятки по использованию системы ВШК
+                {{ _('Инструкции и памятки по использованию системы ВШК') }}
               </div>
             </div>
           </a>

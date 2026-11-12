@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from app.core.i18n import normalize_language
+
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -31,18 +33,13 @@ class StaffRegistrationResult:
     staff_member: SchoolStaffMember
 
 
-@dataclass
-class StaffLoginResult:
-    user: User
-    staff_member: SchoolStaffMember | None
-
-
 class StaffAuthService:
     @staticmethod
     async def register_staff_user(
             db: AsyncSession,
             *,
             dto: StaffRegisterDTO,
+            ui_language: str | None = None,
     ) -> StaffRegistrationResult:
         iin = (dto.iin or "").strip()
         username = (dto.username or "").strip()
@@ -50,6 +47,16 @@ class StaffAuthService:
         phone = (dto.phone or "").strip() or None
         password = dto.password or ""
         password2 = dto.password2 or ""
+
+        role = dto.role
+
+        if role not in {
+            UserRole.SCHOOL_STAFF,
+            UserRole.TEACHER,
+        }:
+            raise StaffRegistrationError(
+                "Недопустимая роль пользователя"
+            )
 
         if not iin:
             raise StaffRegistrationError("ИИН обязателен")
@@ -108,11 +115,12 @@ class StaffAuthService:
             raise StaffRegistrationError("Пользователь уже существует")
 
         user = User(
+            ui_language=normalize_language(ui_language),
             username=username,
             iin=iin,
             full_name=staff_member.full_name,
             password_hash=hash_password(password),
-            role=UserRole.SCHOOL_STAFF,
+            role=role,
             is_active=True,
             email=email,
             phone=phone,
@@ -135,7 +143,7 @@ class StaffAuthService:
             db: AsyncSession,
             *,
             dto: StaffLoginDTO,
-    ) -> StaffLoginResult:
+    ) -> StaffRegistrationResult:
         identifier = (dto.identifier or "").strip()
         password = dto.password or ""
 
@@ -159,8 +167,13 @@ class StaffAuthService:
         if not user.is_active:
             raise StaffLoginError("Аккаунт отключен")
 
-        if user.role != UserRole.SCHOOL_STAFF:
-            raise StaffLoginError("Вход для этой роли через эту форму недоступен")
+        if user.role not in {
+            UserRole.SCHOOL_STAFF,
+            UserRole.TEACHER,
+        }:
+            raise StaffLoginError(
+                "Вход для этой роли через эту форму недоступен"
+            )
 
         if not verify_password(password, user.password_hash):
             raise StaffLoginError("Неверный пароль")
@@ -176,7 +189,7 @@ class StaffAuthService:
         user.last_login_at = __import__("datetime").datetime.utcnow()
         await db.commit()
 
-        return StaffLoginResult(
+        return StaffRegistrationResult(
             user=user,
             staff_member=staff_member,
         )

@@ -1,3 +1,4 @@
+from app.core.i18n import resolve_language
 # app/routers/web/codes/issue_l2.py
 from uuid import uuid4
 
@@ -171,6 +172,7 @@ async def l1_issue_l2_result(
 # --- GET: сохранить PDF со ВСЕМИ кодами одной выдачи и пометить как сохранённые ---
 @router.get("/l1/issue-l2/pdf/{batch_id}")
 async def l1_issue_l2_pdf(
+        request: Request,
         batch_id: str,
         db: AsyncSession = Depends(get_db),
         _user=Depends(require_roles(UserRole.REGION_ADMIN)),
@@ -183,6 +185,7 @@ async def l1_issue_l2_pdf(
     region = await db.get(Region, _user.region_id)
 
     pdf_bytes = generate_codes_pdf(
+        ui_language=resolve_language(request),
         title="Коды регистрации администраторов районов (L2)",
         level_label="L2",
         issued=issued,

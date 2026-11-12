@@ -215,3 +215,14 @@ class S3Storage(BaseStorage):
             )
 
         return normalized_key
+
+    async def read(self, *, object_key: str, max_bytes: int = 8_000_000) -> bytes:
+        def load():
+            response = self._client.get_object(Bucket=self._bucket, Key=object_key)
+            body = response['Body']
+            try:
+                data = body.read(max_bytes + 1)
+                if len(data) > max_bytes: raise ValueError('Image exceeds export limit')
+                return data
+            finally: body.close()
+        return await asyncio.to_thread(load)

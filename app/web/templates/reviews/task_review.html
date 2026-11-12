@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 
 {% block title %}
-Рассмотрение задач
+{{ _('Рассмотрение задач') }}
 {% endblock %}
 
 {% block extra_css %}
@@ -484,24 +484,24 @@
   {% set page_error = error or request.query_params.get("error") %}
   {% if page_error %}
     <div class="alert alert-error">
-      {{ page_error }}
+      {{ task_review_error(page_error) }}
     </div>
   {% endif %}
 
   {% if request.query_params.get("success") == "reviewed" %}
     <div class="alert alert-success">
-      Рассмотрение успешно сохранено.
+      {{ _('Рассмотрение успешно сохранено.') }}
 
       {% if request.query_params.get("reviewed_count") %}
-        Количество рассмотренных задач:
+        {{ _('Количество рассмотренных задач:') }}
         <strong>{{ request.query_params.get("reviewed_count") }}</strong>.
       {% endif %}
     </div>
   {% elif request.query_params.get("success") == "marked_not_executed" %}
     <div class="alert alert-success">
-      Просроченные задачи переведены в статус «Не исполнено».
+      {{ _('Просроченные задачи переведены в статус «Не исполнено».') }}
       {% if request.query_params.get("updated_count") %}
-        Количество обновлённых задач:
+        {{ _('Количество обновлённых задач:') }}
         <strong>{{ request.query_params.get("updated_count") }}</strong>.
       {% endif %}
     </div>
@@ -516,13 +516,11 @@
     <div class="review-card__header">
       <div>
         <h2 class="review-card__title">
-          Выбор места рассмотрения
+          {{ _('Выбор места рассмотрения') }}
         </h2>
 
         <p class="review-card__description">
-          Выберите орган или заседание. Для методического объединения
-          дополнительно укажите конкретное объединение. После этого будут
-          показаны задачи активного плана ВШК, связанные с выбранным местом.
+          {{ _('Выберите орган или заседание. Для методического объединения дополнительно укажите конкретное объединение. После этого будут показаны задачи активного плана ВШК, связанные с выбранным местом.') }}
         </p>
       </div>
     </div>
@@ -533,19 +531,19 @@
 
       <div class="form-group">
         <label for="academic-year">
-          Учебный год
+          {{ _('Учебный год') }}
         </label>
 
         <input id="academic-year"
                type="text"
                class="form-control"
-               value="{{ academic_year_label or 'Активный учебный год не найден' }}"
+               value="{{ academic_year_label or _('Активный учебный год не найден') }}"
                readonly>
       </div>
 
       <div class="form-group">
         <label for="review-place-filter">
-          Место рассмотрения
+          {{ _('Место рассмотрения') }}
         </label>
 
         <select id="review-place-filter"
@@ -554,7 +552,7 @@
                 required>
 
           <option value="">
-            Выберите место рассмотрения
+            {{ _('Выберите место рассмотрения') }}
           </option>
 
           {% for place in review_places | default([]) %}
@@ -579,7 +577,7 @@
                     {% if selected_place_value == place_value %}
                       selected
                     {% endif %}>
-              {{ place_label }}
+              {{ review_result_label(place_label) }}
             </option>
 
           {% endfor %}
@@ -590,11 +588,11 @@
            id="method-association-filter-group"
            {% if selected_place_value != "method_assoc" %}hidden{% endif %}>
         <label for="method-association-filter">
-          Методическое объединение
+          {{ _('Методическое объединение') }}
         </label>
 
         <div class="field-help">
-          Поле обязательно только для места «Методическое объединение».
+          {{ _('Поле обязательно только для места «Методическое объединение».') }}
         </div>
 
         <select id="method-association-filter"
@@ -602,7 +600,7 @@
           class="form-control">
 
           <option value="">
-            Выберите методическое объединение
+            {{ _('Выберите методическое объединение') }}
           </option>
 
           {% for association in method_associations | default([]) %}
@@ -610,7 +608,7 @@
               {% if selected_method_association_id|string == association.id|string %}
                 selected
               {% endif %}>
-              {{ association.name }}
+              {{ method_association_name(association.name) }}
             </option>
           {% endfor %}
 
@@ -619,8 +617,8 @@
       </div>
 
       <button type="submit"
-              class="btn btn-primary">
-        Показать задачи
+              class="btn btn-primary" data-sm-action="nav">
+        {{ _('Показать задачи') }}
       </button>
 
     </form>
@@ -631,10 +629,9 @@
 
     <div class="card-title-row">
         <div>
-            <h3>Просроченные задачи</h3>
+            <h3>{{ _('Просроченные задачи') }}</h3>
             <p>
-                Эти задачи ещё имеют статус «Запланировано» или
-                «Выполняется», хотя срок исполнения уже истёк.
+                {{ _('Эти задачи ещё имеют статус «Запланировано» или «Выполняется», хотя срок исполнения уже истёк.') }}
             </p>
         </div>
 
@@ -660,13 +657,13 @@
                 <th>
                     <input type="checkbox"
                            id="select-all-overdue"
-                           title="Выбрать все просроченные задачи">
+                           title="{{ _('Выбрать все просроченные задачи') }}">
                 </th>
                 <th>№</th>
-                <th>Задача</th>
-                <th>Ответственный</th>
-                <th>Срок исполнения</th>
-                <th>Текущий статус</th>
+                <th>{{ _('Задача') }}</th>
+                <th>{{ _('Ответственный') }}</th>
+                <th>{{ _('Срок исполнения') }}</th>
+                <th>{{ _('Текущий статус') }}</th>
             </tr>
             </thead>
 
@@ -688,7 +685,7 @@
 
                 <td>{{ task.planned_period_text }}</td>
 
-                <td>{{ task.status_label }}</td>
+                <td>{{ review_result_label(task.status_label) }}</td>
             </tr>
             {% endfor %}
             </tbody>
@@ -698,15 +695,15 @@
             <button type="submit"
                     class="btn btn-warning"
                     id="mark-overdue-button"
-                    disabled>
-                Отметить выбранные как неисполненные
+                    disabled data-sm-action="edit">
+                {{ _('Отметить выбранные как неисполненные') }}
             </button>
         </div>
     </form>
 </section>
 {% else %}
 <div class="review-card">
-    Просроченные задачи не найдены.
+    {{ _('Просроченные задачи не найдены.') }}
 </div>
 {% endif %}
 
@@ -720,14 +717,11 @@
       <div class="review-card__header">
         <div>
           <h2 class="review-card__title">
-            Задачи для рассмотрения
+            {{ _('Задачи для рассмотрения') }}
           </h2>
 
           <p class="review-card__description">
-            Отметьте одну или несколько доступных задач.
-            Доступны выполненные и окончательно неисполненные задачи.
-            Для методического объединения задача может рассматриваться
-            разными объединениями, но не повторно одним и тем же МО.
+            {{ _('Отметьте одну или несколько доступных задач. Доступны выполненные и окончательно неисполненные задачи. Для методического объединения задача может рассматриваться разными объединениями, но не повторно одним и тем же МО.') }}
           </p>
         </div>
 
@@ -737,15 +731,15 @@
       </div>
 
       <div class="review-place-summary">
-        Место рассмотрения:
-        <strong>{{ selected_place_label or selected_place_value }}</strong>
+        {{ _('Место рассмотрения:') }}
+        <strong>{{ review_result_label(selected_place_label or selected_place_value) }}</strong>
 
         {% if selected_place_value == "method_assoc"
               and selected_method_association_label %}
           <span>·</span>
           <span>
-            Методическое объединение:
-            <strong>{{ selected_method_association_label }}</strong>
+            {{ _('Методическое объединение:') }}
+            <strong>{{ method_association_name(selected_method_association_label) }}</strong>
           </span>
         {% endif %}
 
@@ -780,14 +774,14 @@
                 <th class="checkbox-cell">
                   <input type="checkbox"
                          id="select-all-tasks"
-                         title="Выбрать все доступные задачи">
+                         title="{{ _('Выбрать все доступные задачи') }}">
                 </th>
                 <th>№</th>
-                <th>Задача</th>
-                <th>Ответственный</th>
-                <th>Срок выполнения</th>
-                <th>Статус</th>
-                <th>Результат</th>
+                <th>{{ _('Задача') }}</th>
+                <th>{{ _('Ответственный') }}</th>
+                <th>{{ _('Срок выполнения') }}</th>
+                <th>{{ _('Статус') }}</th>
+                <th>{{ _('Результат') }}</th>
               </tr>
               </thead>
 
@@ -824,7 +818,7 @@
                     {% else %}
                       <input type="checkbox"
                              disabled
-                             title="Задача недоступна для рассмотрения">
+                             title="{{ _('Задача недоступна для рассмотрения') }}">
                     {% endif %}
 
                   </td>
@@ -836,7 +830,7 @@
                   </td>
 
                   <td class="responsible-name">
-                    {{ task.responsible_name or "Не назначен" }}
+                    {{ task.responsible_name or _('Не назначен') }}
                   </td>
 
                   <td class="period-text">
@@ -846,25 +840,25 @@
                   <td>
                     {% if status_value == "done" %}
                       <span class="status-badge status-done">
-                        {{ task.status_label }}
+                        {{ review_result_label(task.status_label) }}
                       </span>
                     {% elif status_value == "not_executed" %}
                       <span class="status-badge status-not-executed">
-                        {{ task.status_label }}
+                        {{ review_result_label(task.status_label) }}
                       </span>
                     {% elif status_value == "in_progress" %}
                       <span class="status-badge status-in-progress">
-                        {{ task.status_label }}
+                        {{ review_result_label(task.status_label) }}
                       </span>
                     {% else %}
                       <span class="status-badge status-default">
-                        {{ task.status_label or "—" }}
+                        {{ review_result_label(task.status_label or "—") }}
                       </span>
                     {% endif %}
                   </td>
 
                   <td>
-                    {{ task.expected_result_label or "—" }}
+                    {{ task_review_expected_result(task.expected_result_label) }}
                   </td>
 
                 </tr>
@@ -875,15 +869,15 @@
             </table>
             <div class="table-actions">
               <div class="selected-counter">
-                Выбрано задач:
+                {{ _('Выбрано задач:') }}
               <strong id="selected-review-count">0</strong>
               </div>
 
               <button
                 type="button"
                 id="clear-selection-button"
-                class="btn btn-secondary">
-                Снять выделение
+                class="btn btn-secondary" data-sm-action="nav">
+                {{ _('Снять выделение') }}
               </button>
 
             </div>
@@ -896,11 +890,11 @@
         <div class="review-form-section" id="protocol-upload-section">
 
           <h3 class="review-form-title">
-            Протокол заседания
+            {{ _('Протокол заседания') }}
           </h3>
 
           <div class="selected-summary">
-            Для протокола выбрано задач:
+            {{ _('Для протокола выбрано задач:') }}
             <strong id="protocol-selected-task-count">0</strong>
           </div>
 
@@ -908,7 +902,7 @@
 
             <div class="form-group">
               <label for="protocol-number">
-                Номер протокола
+                {{ _('Номер протокола') }}
               </label>
 
               <input id="protocol-number"
@@ -918,17 +912,17 @@
                      class="form-control"
                      value="{{ form_data.get('protocol_number', '') if form_data else '' }}"
                      maxlength="100"
-                     placeholder="Например: 12"
+                     placeholder="{{ _('Например: 12') }}"
                      required>
 
               <div class="field-help">
-                Укажите номер без символа №.
+                {{ _('Укажите номер без символа №.') }}
               </div>
             </div>
 
             <div class="form-group">
               <label for="protocol-date">
-                Дата протокола
+                {{ _('Дата протокола') }}
               </label>
 
               <input id="protocol-date"
@@ -942,7 +936,7 @@
 
             <div class="form-group full-width">
               <label for="protocol-file">
-                Файл протокола
+                {{ _('Файл протокола') }}
               </label>
 
               <input id="protocol-file"
@@ -954,10 +948,7 @@
                      required>
 
               <div class="field-help" id="protocol-file-help">
-                Допустимые форматы: PDF, DOC, DOCX.
-                Максимальный размер — 20 МБ. Файл будет загружен
-                вместе с результатом рассмотрения после нажатия
-                «Сохранить рассмотрение».
+                {{ _('Допустимые форматы: PDF, DOC, DOCX. Максимальный размер — 20 МБ. Файл будет загружен вместе с результатом рассмотрения после нажатия «Сохранить рассмотрение».') }}
               </div>
             </div>
 
@@ -971,11 +962,11 @@
           <div class="review-form-section">
 
             <h3 class="review-form-title">
-              Результат рассмотрения
+              {{ _('Результат рассмотрения') }}
             </h3>
 
             <div class="selected-summary">
-              Выбрано задач:
+              {{ _('Выбрано задач:') }}
               <strong id="selected-task-count">0</strong>
             </div>
 
@@ -983,42 +974,41 @@
 
               <div class="form-group">
                 <label for="selected-review-place">
-                  Место рассмотрения
+                  {{ _('Место рассмотрения') }}
                 </label>
 
                 <input id="selected-review-place"
                        type="text"
                        class="form-control"
-                       value="{{ selected_place_label or selected_place_value }}"
+                       value="{{ review_result_label(selected_place_label or selected_place_value) }}"
                        readonly>
 
                 <div class="field-help">
-                  Место определяется выбранным списком задач
-                  и не изменяется при сохранении.
+                  {{ _('Место определяется выбранным списком задач и не изменяется при сохранении.') }}
                 </div>
               </div>
 
               {% if selected_place_value == "method_assoc" %}
                 <div class="form-group">
                   <label for="selected-method-association">
-                    Методическое объединение
+                    {{ _('Методическое объединение') }}
                   </label>
 
                   <input id="selected-method-association"
                          type="text"
                          class="form-control"
-                         value="{{ selected_method_association_label or 'Не выбрано' }}"
+                         value="{{ method_association_name(selected_method_association_label) if selected_method_association_label else _('Не выбрано') }}"
                          readonly>
 
                   <div class="field-help">
-                    Объединение закрепляется за общим протоколом рассмотрения.
+                    {{ _('Объединение закрепляется за общим протоколом рассмотрения.') }}
                   </div>
                 </div>
               {% endif %}
 
               <div class="form-group full-width">
                 <label for="review-comment">
-                  Комментарий
+                  {{ _('Комментарий') }}
                 </label>
 
                 <textarea id="review-comment"
@@ -1026,7 +1016,7 @@
                           name="comment"
                           class="form-control"
                           rows="4"
-                          placeholder="Дополнительная информация о рассмотрении">{{
+                          placeholder="{{ _('Дополнительная информация о рассмотрении') }}">{{
                     form_data.get("comment", "")
                     if form_data is defined and form_data
                     else ""
@@ -1041,8 +1031,8 @@
                       form="batch-review-form"
                       class="btn btn-success"
                       id="submit-review-button"
-                      disabled>
-                Сохранить рассмотрение
+                      disabled data-sm-action="success">
+                {{ _('Сохранить рассмотрение') }}
               </button>
 
             </div>
@@ -1053,7 +1043,7 @@
       {% else %}
 
         <div class="empty-state">
-          Для выбранного места рассмотрения нерассмотренные задачи не найдены.
+          {{ _('Для выбранного места рассмотрения нерассмотренные задачи не найдены.') }}
         </div>
 
       {% endif %}
@@ -1227,15 +1217,14 @@ document.addEventListener("DOMContentLoaded", function () {
           event.preventDefault();
 
           alert(
-            "Выберите хотя бы одну просроченную задачу."
+            {{ _('Выберите хотя бы одну просроченную задачу.')|tojson }}
           );
 
           return;
         }
 
         const confirmed = window.confirm(
-          "Перевести выбранные задачи в статус " +
-          "«Не исполнено»: " +
+          {{ _('Перевести выбранные задачи в статус «Не исполнено»: ')|tojson }} +
           selectedCount +
           "?"
         );
@@ -1532,8 +1521,7 @@ document.addEventListener("DOMContentLoaded", function () {
           event.preventDefault();
 
           alert(
-            "Выберите хотя бы одну задачу " +
-            "для рассмотрения."
+            {{ _('Выберите хотя бы одну задачу для рассмотрения.')|tojson }}
           );
 
           return;
@@ -1541,14 +1529,14 @@ document.addEventListener("DOMContentLoaded", function () {
 
         if (!protocolNumber || !protocolNumber.value.trim()) {
           event.preventDefault();
-          alert("Укажите номер протокола.");
+          alert({{ _('Укажите номер протокола.')|tojson }});
           protocolNumber?.focus();
           return;
         }
 
         if (!protocolDate || !protocolDate.value) {
           event.preventDefault();
-          alert("Укажите дату протокола.");
+          alert({{ _('Укажите дату протокола.')|tojson }});
           protocolDate?.focus();
           return;
         }
@@ -1559,7 +1547,7 @@ document.addEventListener("DOMContentLoaded", function () {
           protocolFile.files.length === 0
         ) {
           event.preventDefault();
-          alert("Выберите файл протокола.");
+          alert({{ _('Выберите файл протокола.')|tojson }});
           protocolFile?.focus();
           return;
         }
@@ -1569,7 +1557,7 @@ document.addEventListener("DOMContentLoaded", function () {
         if (selectedFile.size > MAX_PROTOCOL_FILE_SIZE) {
           event.preventDefault();
           alert(
-            "Размер файла протокола не должен превышать 20 МБ."
+            {{ _('Размер файла протокола не должен превышать 20 МБ.')|tojson }}
           );
           protocolFile.focus();
           return;
@@ -1583,15 +1571,15 @@ document.addEventListener("DOMContentLoaded", function () {
 
         if (!validExtension) {
           event.preventDefault();
-          alert("Разрешены только файлы PDF, DOC и DOCX.");
+          alert({{ _('Разрешены только файлы PDF, DOC и DOCX.')|tojson }});
           protocolFile.focus();
           return;
         }
 
         const confirmed = window.confirm(
-          "Сохранить рассмотрение для выбранных задач: " +
+          {{ _('Сохранить рассмотрение для выбранных задач: ')|tojson }} +
           selectedCount +
-          "?\nПротокол: " +
+          {{ _('?\nПротокол: ')|tojson }} +
           selectedFile.name
         );
 

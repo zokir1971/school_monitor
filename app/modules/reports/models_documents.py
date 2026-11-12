@@ -328,6 +328,8 @@ class TaskExecutionData(Base):
         unique=True,
     )
 
+    algorithm_parameters: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+
     control_scope: Mapped[str | None] = mapped_column(Text, nullable=True)
     control_form: Mapped[str | None] = mapped_column(Text, nullable=True)
     control_kind: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -443,3 +445,13 @@ class TaskExecutionSelectedReport(Base):
         cascade="all, delete-orphan",
         single_parent=True,
     )
+
+
+class SchoolReportAreaScheme(Base):
+    """One reusable, versioned report layout per school."""
+    __tablename__ = 'school_report_area_schemes'
+    school_id: Mapped[int] = mapped_column(ForeignKey('schools.id', ondelete='CASCADE'), primary_key=True)
+    revision: Mapped[int] = mapped_column(Integer, nullable=False)
+    configuration: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    updated_by_user_id: Mapped[int | None] = mapped_column(ForeignKey('users.id', ondelete='SET NULL'))
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)

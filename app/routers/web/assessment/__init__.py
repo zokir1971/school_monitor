@@ -1,0 +1,48 @@
+# app/routers/web/assessment/__init__.py
+
+from fastapi import APIRouter, Depends
+from app.core.feature_access import require_assessment_enabled
+from .teacher_assessment_web import router as teacher_assessment_router
+from .staff_assessment_web import router as staff_assessment_router
+from .district_assessment_web import router as district_assessment_router
+from .region_assessment_web import router as region_assessment_router
+from .knowledge_quality_dynamics_web import router as knowledge_quality_dynamics_router
+from .teacher_online_assessment_web import router as teacher_online_assessment_router
+from .teacher_question_bank_web import router as teacher_question_bank_router
+from .region_question_bank_expert_web import router as region_question_bank_expert_router
+from .question_bank_expert_review_web import router as question_bank_expert_review_router
+from .teacher_question_bank_ai_web import router as teacher_question_bank_ai_router
+from .learning_objective_import_web import router as learning_objective_import_router
+from .learning_objective_reference_web import router as learning_objective_reference_router
+
+from .shared_question_bank_web import router as shared_question_bank_router
+
+router = APIRouter(dependencies=[Depends(require_assessment_enabled)])
+router.include_router(shared_question_bank_router)
+
+from .assessment_bank_web import router as assessment_bank_router
+router.include_router(assessment_bank_router)
+router.include_router(teacher_assessment_router)
+router.include_router(staff_assessment_router)
+router.include_router(district_assessment_router)
+router.include_router(region_assessment_router)
+router.include_router(knowledge_quality_dynamics_router)
+router.include_router(teacher_online_assessment_router)
+router.include_router(teacher_question_bank_router)
+router.include_router(region_question_bank_expert_router)
+router.include_router(question_bank_expert_review_router)
+router.include_router(teacher_question_bank_ai_router)
+router.include_router(
+    learning_objective_import_router,
+    prefix="/planning/super",
+)
+router.include_router(learning_objective_reference_router)
+
+from .question_bank_languages_web import router as question_bank_languages_router
+router.include_router(question_bank_languages_router)
+
+from .work_plan_web import router as work_plan_router
+router.include_router(work_plan_router)
+
+from .diagnostic_sessions_web import router as diagnostic_sessions_router
+router.include_router(diagnostic_sessions_router)

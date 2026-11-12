@@ -7,6 +7,7 @@ from sqlalchemy import exists, update, select, func, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.modules.planning.repositories.review_place_sync_repo import ReviewPlaceSyncRepo
 from app.modules.planning.enums import PlanStatus, PlanPeriodType, ReviewPlace
 from app.modules.reports.enums import DocumentType
 from app.modules.planning.models import (
@@ -643,20 +644,7 @@ class SchoolPlanningRepo:
             row11_id: int,
             review_places: list[ReviewPlace],
     ) -> None:
-        await db.execute(
-            delete(SchoolPlanRow11ReviewPlace)
-            .where(SchoolPlanRow11ReviewPlace.row11_id == row11_id)
-        )
-
-        for place in review_places:
-            db.add(
-                SchoolPlanRow11ReviewPlace(
-                    row11_id=row11_id,
-                    review_place=place,
-                )
-            )
-
-        await db.flush()
+        await ReviewPlaceSyncRepo.replace_annual(db, row11_id=row11_id, values=review_places)
 
     # сохранение данных из модального окна: место рассмотрения
     @staticmethod
@@ -667,24 +655,7 @@ class SchoolPlanningRepo:
             review_places: list[str],
     ) -> None:
 
-        await db.execute(
-            delete(SchoolPlanRow11ReviewPlace)
-            .where(SchoolPlanRow11ReviewPlace.row11_id == row11_id)
-        )
-
-        for rp in review_places:
-            val = (rp or "").strip()
-            if not val:
-                continue
-
-            db.add(
-                SchoolPlanRow11ReviewPlace(
-                    row11_id=row11_id,
-                    review_place=ReviewPlace(val),
-                )
-            )
-
-        await db.flush()
+        await ReviewPlaceSyncRepo.replace_annual(db, row11_id=row11_id, values=review_places)
 
     # сохранение данных из модального окна: тип документа
     @staticmethod

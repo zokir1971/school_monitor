@@ -1,0 +1,673 @@
+/* ============================================================
+   QUESTION BANK EXPERT — EDIT
+   region/assessment/question_bank_experts/edit.html
+   ============================================================ */
+
+
+/* ============================================================
+   1. PAGE
+   ============================================================ */
+
+.qb-experts-page {
+    --qb-primary: #2563eb;
+    --qb-primary-dark: #1d4ed8;
+
+    --qb-text: #1f2937;
+    --qb-muted: #64748b;
+
+    --qb-border: #e2e8f0;
+    --qb-border-soft: #eef2f7;
+
+    --qb-bg: #ffffff;
+    --qb-bg-soft: #f8fafc;
+
+    --qb-radius: 12px;
+    --qb-radius-sm: 8px;
+
+    width: 100%;
+    max-width: 1120px;
+
+    margin: 0 auto;
+    padding: 20px 14px 32px;
+
+    color: var(--qb-text);
+}
+
+
+/* ============================================================
+   2. PAGE HEADER
+   ============================================================ */
+
+.qb-experts-page .qb-page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+
+    gap: 24px;
+
+    margin-bottom: 20px;
+}
+
+.qb-experts-page .qb-page-header__main {
+    min-width: 0;
+}
+
+.qb-experts-page .qb-page-title {
+    margin: 0;
+
+    color: var(--qb-text);
+
+    font-size: 1.65rem;
+    font-weight: 700;
+    line-height: 1.25;
+}
+
+.qb-experts-page .qb-page-subtitle {
+    margin: 6px 0 0;
+
+    color: var(--qb-muted);
+
+    font-size: 0.9rem;
+    line-height: 1.4;
+}
+
+.qb-experts-page .qb-page-actions {
+    display: flex;
+    align-items: center;
+
+    flex-shrink: 0;
+}
+
+
+/* ============================================================
+   3. BACK BUTTON
+   ============================================================ */
+
+.qb-experts-page .qb-back-link,.qb-experts-page .qb-back-link,
+.qb-experts-page a.qb-back-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    box-sizing: border-box;
+
+    height: 42px;
+    min-height: 42px;
+
+    padding: 0 14px;
+    margin: 0;
+
+    color: #475569;
+    background-color: #ffffff;
+
+    border: 1px solid #cbd5e1;
+    border-radius: var(--qb-radius-sm);
+
+    font-family: inherit;
+    font-size: 0.86rem;
+    font-weight: 600;
+    line-height: 1;
+
+    white-space: nowrap;
+    text-decoration: none;
+
+    vertical-align: middle;
+
+    transition:
+        color 0.15s ease,
+        background-color 0.15s ease,
+        border-color 0.15s ease;
+}
+
+.qb-experts-page .qb-back-link:hover,
+.qb-experts-page .qb-back-link:focus {
+    color: #1e40af;
+    background-color: #eff6ff;
+
+    border-color: #93c5fd;
+
+    text-decoration: none;
+}
+
+/* ============================================================
+   4. ERROR
+   ============================================================ */
+
+.qb-experts-page .alert-danger {
+    margin-bottom: 16px;
+
+    padding: 12px 15px;
+
+    color: #991b1b;
+    background-color: #fef2f2;
+
+    border: 1px solid #fecaca;
+    border-radius: var(--qb-radius-sm);
+
+    font-size: 0.88rem;
+    line-height: 1.45;
+}
+
+
+/* ============================================================
+   5. FORM SECTIONS
+   ============================================================ */
+
+.qb-experts-page .qb-form-section {
+    margin-bottom: 14px;
+}
+
+.qb-experts-page .qb-card {
+    overflow: hidden;
+
+    background-color: var(--qb-bg);
+
+    border: 1px solid var(--qb-border);
+    border-radius: var(--qb-radius);
+
+    box-shadow:
+        0 1px 2px rgba(15, 23, 42, 0.03),
+        0 4px 14px rgba(15, 23, 42, 0.03);
+}
+
+
+/* ============================================================
+   6. CARD HEADER
+   ============================================================ */
+
+.qb-experts-page .qb-card-header {
+    display: flex;
+    align-items: center;
+
+    min-height: 46px;
+
+    padding: 11px 18px;
+
+    background-color: var(--qb-bg-soft);
+
+    border-bottom: 1px solid var(--qb-border);
+}
+
+.qb-experts-page .qb-card-title {
+    margin: 0;
+
+    color: var(--qb-text);
+
+    font-size: 0.96rem;
+    font-weight: 700;
+    line-height: 1.35;
+}
+
+
+/* ============================================================
+   7. CARD BODY
+   ============================================================ */
+
+.qb-experts-page .qb-card-body {
+    padding: 14px 16px;
+}
+
+
+/* ============================================================
+   8. LABELS
+   ============================================================ */
+
+.qb-experts-page .form-label {
+    display: block;
+
+    margin-bottom: 4px;
+
+    color: #334155;
+
+    font-size: 0.84rem;
+    font-weight: 600;
+    line-height: 1.3;
+}
+
+.qb-experts-page .text-danger {
+    color: #dc2626 !important;
+}
+
+
+/* ============================================================
+   9. INPUTS AND SELECTS
+   ============================================================ */
+
+.qb-experts-page .form-control,
+.qb-experts-page .form-select {
+    display: block;
+
+    width: 100%;
+    min-height: 38px;
+
+    padding: 6px 10px;
+
+    color: #1e293b;
+    background-color: #ffffff;
+
+    border: 1px solid #cbd5e1;
+    border-radius: var(--qb-radius-sm);
+
+    font-size: 0.88rem;
+    line-height: 1.35;
+
+    box-shadow: none;
+
+    transition:
+        border-color 0.15s ease,
+        box-shadow 0.15s ease,
+        background-color 0.15s ease;
+}
+
+.qb-experts-page .form-control:hover:not(:disabled):not([readonly]),
+.qb-experts-page .form-select:hover:not(:disabled) {
+    border-color: #94a3b8;
+}
+
+.qb-experts-page .form-control:focus,
+.qb-experts-page .form-select:focus {
+    border-color: #60a5fa;
+
+    outline: none;
+
+    box-shadow:
+        0 0 0 3px rgba(37, 99, 235, 0.10);
+}
+
+.qb-experts-page .form-control::placeholder {
+    color: #94a3b8;
+}
+
+
+/* ============================================================
+   10. READONLY FIELDS
+   ============================================================ */
+
+.qb-experts-page .qb-readonly-control,
+.qb-experts-page .form-control[readonly] {
+    color: #475569;
+    background-color: #f8fafc;
+
+    border-color: #e2e8f0;
+
+    cursor: default;
+}
+
+.qb-experts-page .form-control[readonly]:focus {
+    border-color: #e2e8f0;
+
+    box-shadow: none;
+}
+
+
+/* ============================================================
+   11. DISABLED FIELDS
+   ============================================================ */
+
+.qb-experts-page .form-control:disabled,
+.qb-experts-page .form-select:disabled {
+    color: #94a3b8;
+    background-color: #f1f5f9;
+
+    border-color: #e2e8f0;
+
+    cursor: not-allowed;
+
+    opacity: 1;
+}
+
+
+/* ============================================================
+   12. HELP TEXT
+   ============================================================ */
+
+.qb-experts-page .form-text {
+    margin-top: 4px;
+
+    color: var(--qb-muted);
+
+    font-size: 0.76rem;
+    line-height: 1.35;
+}
+
+
+/* ============================================================
+   13. TEXTAREA
+   ============================================================ */
+
+.qb-experts-page textarea.form-control {
+    min-height: 76px;
+
+    resize: vertical;
+}
+
+
+/* ============================================================
+   14. PEDAGOGICAL EXPERIENCE
+
+   Используется общим _professional_fields.html:
+   [ поле ] жыл
+   ============================================================ */
+
+.qb-experts-page .qb-experience-field {
+    display: flex;
+    align-items: center;
+
+    gap: 8px;
+}
+
+.qb-experts-page .qb-experience-field .form-control {
+    flex: 1;
+
+    min-width: 0;
+}
+
+.qb-experts-page .qb-experience-unit {
+    flex: 0 0 auto;
+
+    color: #475569;
+
+    font-size: 0.88rem;
+    font-weight: 500;
+
+    white-space: nowrap;
+}
+
+
+/* ============================================================
+   15. FORM ACTIONS
+   ============================================================ */
+
+.qb-experts-page .qb-form-actions {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+
+    gap: 10px;
+
+    padding-top: 4px;
+}
+
+
+/* ============================================================
+   16. BUTTONS
+   ============================================================ */
+
+.qb-experts-page .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    box-sizing: border-box;
+
+    height: 42px;
+    min-height: 42px;
+
+    padding: 0 14px;
+    margin: 0;
+
+    border: 1px solid transparent;
+    border-radius: var(--qb-radius-sm);
+
+    font-family: inherit;
+    font-size: 0.86rem;
+    font-weight: 600;
+    line-height: 1;
+
+    white-space: nowrap;
+    text-decoration: none;
+
+    cursor: pointer;
+    vertical-align: middle;
+
+    appearance: none;
+    -webkit-appearance: none;
+
+    box-shadow: none;
+
+    transition:
+        color 0.15s ease,
+        background-color 0.15s ease,
+        border-color 0.15s ease,
+        transform 0.1s ease;
+}
+
+.qb-experts-page a.btn,
+.qb-experts-page button.btn {
+    height: 42px;
+    min-height: 42px;
+}
+
+.qb-experts-page .btn:active {
+    transform: translateY(1px);
+}
+
+/* ============================================================
+   17. PRIMARY BUTTON
+   ============================================================ */
+
+.qb-experts-page .btn-primary,
+.qb-experts-page button.btn-primary,
+.qb-experts-page a.btn-primary {
+    color: #ffffff;
+    background-color: var(--qb-primary);
+
+    border-color: var(--qb-primary);
+}
+
+.qb-experts-page .btn-primary:hover,
+.qb-experts-page .btn-primary:focus,
+.qb-experts-page button.btn-primary:hover,
+.qb-experts-page button.btn-primary:focus,
+.qb-experts-page a.btn-primary:hover,
+.qb-experts-page a.btn-primary:focus {
+    color: #ffffff;
+    background-color: var(--qb-primary-dark);
+
+    border-color: var(--qb-primary-dark);
+}
+
+
+/* ============================================================
+   18. SECONDARY BUTTON
+   ============================================================ */
+
+.qb-experts-page .btn-outline-secondary,
+.qb-experts-page a.btn-outline-secondary {
+    color: #475569;
+    background-color: #ffffff;
+
+    border-color: #cbd5e1;
+}
+
+.qb-experts-page .btn-outline-secondary:hover,
+.qb-experts-page .btn-outline-secondary:focus,
+.qb-experts-page a.btn-outline-secondary:hover,
+.qb-experts-page a.btn-outline-secondary:focus {
+    color: #1f2937;
+    background-color: #f8fafc;
+
+    border-color: #94a3b8;
+}
+
+
+/* ============================================================
+   19. FORM GRID
+
+   edit.html использует:
+   col-md-5 / col-md-7
+   col-md-6
+
+   _professional_fields.html также работает внутри этой сетки.
+   ============================================================ */
+
+.qb-experts-page .row {
+    display: flex;
+    flex-wrap: wrap;
+
+    margin-right: -6px;
+    margin-left: -6px;
+}
+
+.qb-experts-page .row > * {
+    width: 100%;
+
+    padding-right: 6px;
+    padding-left: 6px;
+}
+
+.qb-experts-page .g-3 {
+    row-gap: 10px;
+}
+
+
+/* ============================================================
+   20. MEDIUM GRID
+   ============================================================ */
+
+@media (min-width: 768px) {
+
+    .qb-experts-page .col-md-4 {
+        flex: 0 0 auto;
+        width: 33.333333%;
+    }
+
+    .qb-experts-page .col-md-5 {
+        flex: 0 0 auto;
+        width: 41.666667%;
+    }
+
+    .qb-experts-page .col-md-6 {
+        flex: 0 0 auto;
+        width: 50%;
+    }
+
+    .qb-experts-page .col-md-7 {
+        flex: 0 0 auto;
+        width: 58.333333%;
+    }
+
+    .qb-experts-page .col-md-8 {
+        flex: 0 0 auto;
+        width: 66.666667%;
+    }
+}
+
+
+/* ============================================================
+   21. LARGE GRID
+
+   На случай если _professional_fields.html использует
+   col-lg-* так же, как на create.html.
+   ============================================================ */
+
+@media (min-width: 992px) {
+
+    .qb-experts-page .col-lg-3 {
+        flex: 0 0 auto;
+        width: 25%;
+    }
+
+    .qb-experts-page .col-lg-4 {
+        flex: 0 0 auto;
+        width: 33.333333%;
+    }
+
+    .qb-experts-page .col-lg-5 {
+        flex: 0 0 auto;
+        width: 41.666667%;
+    }
+
+    .qb-experts-page .col-lg-6 {
+        flex: 0 0 auto;
+        width: 50%;
+    }
+
+    .qb-experts-page .col-lg-7 {
+        flex: 0 0 auto;
+        width: 58.333333%;
+    }
+
+    .qb-experts-page .col-lg-8 {
+        flex: 0 0 auto;
+        width: 66.666667%;
+    }
+}
+
+
+/* ============================================================
+   22. TABLET
+   ============================================================ */
+
+@media (max-width: 767.98px) {
+
+    .qb-experts-page {
+        padding: 16px 10px 24px;
+    }
+
+    .qb-experts-page .qb-page-header {
+        flex-direction: column;
+
+        gap: 14px;
+
+        margin-bottom: 18px;
+    }
+
+    .qb-experts-page .qb-page-title {
+        font-size: 1.4rem;
+    }
+
+    .qb-experts-page .qb-page-actions {
+        width: 100%;
+    }
+
+    .qb-experts-page .qb-card-header {
+        padding: 10px 15px;
+    }
+
+    .qb-experts-page .qb-card-body {
+        padding: 14px;
+    }
+
+    .qb-experts-page .qb-form-actions {
+        flex-direction: column-reverse;
+        align-items: stretch;
+    }
+
+    .qb-experts-page .qb-form-actions .btn {
+        width: 100%;
+    }
+}
+
+
+/* ============================================================
+   23. MOBILE
+   ============================================================ */
+
+@media (max-width: 575.98px) {
+
+    .qb-experts-page {
+        padding-left: 8px;
+        padding-right: 8px;
+    }
+
+    .qb-experts-page .qb-page-title {
+        font-size: 1.3rem;
+    }
+
+    .qb-experts-page .qb-back-link {
+        width: 100%;
+    }
+
+    .qb-experts-page .qb-card {
+        border-radius: 10px;
+    }
+
+    .qb-experts-page .qb-card-header {
+        padding: 10px 13px;
+    }
+
+    .qb-experts-page .qb-card-body {
+        padding: 13px;
+    }
+}

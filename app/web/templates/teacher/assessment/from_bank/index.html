@@ -1,0 +1,25 @@
+{% extends 'teacher/assessment/from_bank/base.html' %}
+{% block bank_content %}
+<div class="bank-actions"><a class="bank-button" href="{{ url_for('assessment_work_plan_index') }}" data-sm-action="nav">{{ _('Комплекты оценивания') }}</a></div>
+<header class="bank-heading"><h1>{{ _('Assessment из банка заданий') }}</h1><a class="bank-button" href="{{ url_for('teacher_question_bank_page') }}" data-sm-action="nav">{{ _('К конструктору заданий') }}</a></header>
+<p class="bank-note">{{ _('Выберите язык заданий. Язык интерфейса не меняет язык сохранённого Assessment.') }}</p>
+<p class="bank-note">{{ _('Сейчас доступна сборка черновика. Назначение классам и запуск прохождения подключаются отдельно.') }}</p>
+{% if error %}<p class="bank-error" role="alert">{{ bank_feedback(error) }}</p>{% endif %}
+<section class="bank-panel">
+<h2>{{ _('Новый черновик Assessment') }}</h2>
+<form method="post" action="{{ url_for('teacher_assessment_bank_create') }}">
+<div class="bank-fields">
+<label>{{ _('Название Assessment') }}<input name="title" required maxlength="255" value="{{ values.get('title','') }}"></label>
+<label>{{ _('Предмет и класс') }}<select name="scope" required><option value="">{{ _('Выберите предмет и класс') }}</option>
+{% for scope in teaching_scope %}{% set scope_value=scope.subject_id|string ~ ':' ~ scope.grade_level|string %}
+<option value="{{ scope_value }}" {% if values.get('scope')==scope_value %}selected{% endif %}>{{ qb_subject_name(scope) }} · {{ scope.grade_level }}</option>{% endfor %}
+</select></label>
+<label>{{ _('Язык заданий') }}<select name="language" required><option value="">{{ _('Выберите язык заданий') }}</option><option value="ru" {% if values.get('language')=='ru' %}selected{% endif %}>Русский</option><option value="kk" {% if values.get('language')=='kk' %}selected{% endif %}>Қазақша</option></select></label>
+</div><div class="bank-actions"><button class="bank-button" type="submit" data-sm-action="primary">{{ _('Создать черновик и выбрать задания') }}</button></div>
+</form>
+</section>
+<section><h2>{{ _('Мои работы из банка') }}</h2><ul class="bank-list">
+{% for assessment in assessments %}<li><a href="{{ url_for('teacher_assessment_bank_workspace', assessment_id=assessment.id) }}" data-sm-action="nav">{{ assessment.title }} · {{ 'Қазақша' if assessment.settings.bank_language=='kk' else 'Русский' }} · {{ assessment_enum_label(assessment.status) }}</a></li>
+{% else %}<li>{{ _('Работ из банка пока нет.') }}</li>{% endfor %}
+</ul></section>
+{% endblock %}

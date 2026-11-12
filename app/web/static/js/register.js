@@ -26,9 +26,9 @@ document.addEventListener("DOMContentLoaded", () => {
   // 1) При загрузке страницы подгружаем список областей
   // ---------------------------------------------------
   (async () => {
-    resetSelect(regionSelect, "— выберите область —");
-    resetSelect(districtSelect, "— сначала выберите область —");
-    resetSelect(schoolSelect, "— сначала выберите район —");
+    resetSelect(regionSelect, window.SchoolMonitorI18n.t("select_region"));
+    resetSelect(districtSelect, window.SchoolMonitorI18n.t("first_region"));
+    resetSelect(schoolSelect, window.SchoolMonitorI18n.t("first_district"));
     districtSelect.disabled = true;
     schoolSelect.disabled = true;
 
@@ -51,8 +51,8 @@ document.addEventListener("DOMContentLoaded", () => {
   regionSelect.addEventListener("change", async () => {
     const regionId = regionSelect.value;
 
-    resetSelect(districtSelect, regionId ? "— выберите район —" : "— сначала выберите область —");
-    resetSelect(schoolSelect, "— сначала выберите район —");
+    resetSelect(districtSelect, regionId ? window.SchoolMonitorI18n.t("select_district") : window.SchoolMonitorI18n.t("first_region"));
+    resetSelect(schoolSelect, window.SchoolMonitorI18n.t("first_district"));
     districtSelect.disabled = !regionId;
     schoolSelect.disabled = true;
 
@@ -77,7 +77,7 @@ document.addEventListener("DOMContentLoaded", () => {
   districtSelect.addEventListener("change", async () => {
     const districtId = districtSelect.value;
 
-    resetSelect(schoolSelect, districtId ? "— выберите школу —" : "— сначала выберите район —");
+    resetSelect(schoolSelect, districtId ? window.SchoolMonitorI18n.t("select_school") : window.SchoolMonitorI18n.t("first_district"));
     schoolSelect.disabled = !districtId;
 
     if (!districtId) return;

@@ -6,7 +6,10 @@ from app.modules.planning.router import router as planning_router
 from app.modules.staff.router import router as staff_router
 from app.modules.org.router import router as org_router
 
+from app.routers.web.auth.access_recovery import router as access_recovery_router
+
 router = APIRouter()
+router.include_router(access_recovery_router)
 router.include_router(web_router)
 router.include_router(planning_router)
 router.include_router(org_router)

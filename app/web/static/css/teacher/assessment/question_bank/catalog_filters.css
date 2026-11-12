@@ -1,0 +1,16 @@
+.qb-catalog .qb-catalog-filter__grid {display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px 12px;}
+.qb-catalog-filter__field {min-width:0;}
+.qb-catalog-filter__field[hidden] {display:none!important;}
+.qb-catalog-filter__select {box-sizing:border-box;width:100%;min-width:0;height:38px;padding:7px 10px;font-size:14px;}
+.qb-catalog .qb-btn {width:auto!important;min-height:36px;padding:7px 14px;font:600 14px/1.4 system-ui;border-radius:8px;}
+.qb-catalog .qb-btn--primary {background:#2563eb;border-color:#2563eb;}
+.qb-catalog .qb-btn--primary:hover {background:#1d4ed8;border-color:#1d4ed8;}
+.qb-catalog-filter__actions {display:flex;flex-direction:row!important;justify-content:flex-end;flex-wrap:wrap;gap:8px;margin-top:12px;}
+@media(max-width:900px){.qb-catalog .qb-catalog-filter__grid {grid-template-columns:repeat(2,minmax(0,1fr));}}
+@media(max-width:540px){.qb-catalog .qb-catalog-filter__grid {grid-template-columns:minmax(0,1fr);}}
+.qb-catalog .qb-btn--secondary {color:#2563eb;border-color:#bfdbfe;background:#fff;}
+.qb-catalog .qb-btn--secondary:hover {background:#eff6ff;}
+
+.qb-catalog .qb-btn {box-sizing:border-box;height:34px;min-height:34px;padding:6px 12px;font:600 13px/1.4 system-ui;}
+.qb-catalog .qb-objective-picker .qb-objective-trigger {min-height:38px;padding:6px 10px;box-sizing:border-box;}
+.qb-catalog .qb-objective-picker .qb-objective-option {padding:8px 10px;}

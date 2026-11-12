@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="{{ pdf_language }}">
 <head>
     <meta charset="UTF-8">
-    <title>Акт проверки тетрадей</title>
+    <title>{{ pdf_text('Акт проверки тетрадей') }}</title>
 
     <style>
         * {
@@ -129,63 +129,63 @@
 {% set percent = data.get("percent") or schema.get("percent") or report.percent or 0 %}
 {% set level = data.get("level") or schema.get("level") or report.level or info.get("level") or "—" %}
 
-<h1>Дәптер тексеруді бағалау парағы</h1>
+<h1>{{ pdf_text('Дәптер тексеруді бағалау парағы') }}</h1>
 
 <div class="subtitle">
-    Электронды қол қойылған / электронно подписанный
+    {{ pdf_text('Электронды қол қойылған / электронно подписанный') }}
 </div>
 
-<h2>1. Жалпы мәлімет / Общая информация</h2>
+<h2>{{ pdf_text('1. Жалпы мәлімет / Общая информация') }}</h2>
 
 <table>
     <tbody>
 
     <tr>
-        <th>Білім беру ұйымы / Организация образования</th>
+        <th>{{ pdf_text('Білім беру ұйымы / Организация образования') }}</th>
         <td>{{ info.get("school_name") or report.school_name or "—" }}</td>
     </tr>
 
     <tr>
-        <th>Тексеру күні / Дата проверки</th>
+        <th>{{ pdf_text('Тексеру күні / Дата проверки') }}</th>
         <td>{{ info.get("check_date") or "—" }}</td>
     </tr>
 
     <tr>
-        <th>Тексеруші / Проверяющий</th>
+        <th>{{ pdf_text('Тексеруші / Проверяющий') }}</th>
         <td>{{ info.get("checker_name") or report.checker_name or "—" }}</td>
     </tr>
 
     <tr>
-        <th>Тексерушінің лауазымы / Должность проверяющего</th>
+        <th>{{ pdf_text('Тексерушінің лауазымы / Должность проверяющего') }}</th>
         <td>{{ info.get("checker_post") or report.checker_post or "—" }}</td>
     </tr>
 
     <tr>
-        <th>Мұғалім / Учитель</th>
+        <th>{{ pdf_text('Мұғалім / Учитель') }}</th>
         <td>{{ info.get("teacher_name") or report.teacher_name or "—" }}</td>
     </tr>
 
     <tr>
-        <th>Сынып / Класс</th>
+        <th>{{ pdf_text('Сынып / Класс') }}</th>
         <td>{{ info.get("class_name") or report.class_name or "—" }}</td>
     </tr>
 
     <tr>
-        <th>Пән / Предмет</th>
+        <th>{{ pdf_text('Пән / Предмет') }}</th>
         <td>{{ info.get("subject_name") or report.subject_name or "—" }}</td>
     </tr>
 
     </tbody>
 </table>
 
-<h2>2. Бағалау критерийлері / Критерий оценки</h2>
+<h2>{{ pdf_text('2. Бағалау критерийлері / Критерий оценки') }}</h2>
 
 <table class="criteria-table">
     <thead>
     <tr>
         <th style="width: 50px;">№</th>
-        <th>Критерий</th>
-        <th style="width: 100px;">Балл</th>
+        <th>{{ pdf_text('Критерий') }}</th>
+        <th style="width: 100px;">{{ pdf_text('Балл') }}</th>
     </tr>
     </thead>
 
@@ -204,7 +204,7 @@
                 criterion.get("label_kz")
                 or criterion.get("text")
                 or criterion.get("name")
-                or ("Критерий " ~ loop.index)
+                or (pdf_text("Критерий") ~ " " ~ loop.index)
             %}
         {% endif %}
 
@@ -220,7 +220,7 @@
             <td>{{ loop.index }}</td>
 
             <td class="criterion-text">
-                {{ criterion_text }}
+                {{ pdf_criterion_text(criterion, criterion_text) }}
             </td>
 
             <td>
@@ -233,48 +233,48 @@
     </tbody>
 </table>
 
-<h2>3. Қорытында / Итог</h2>
+<h2>{{ pdf_text('3. Қорытында / Итог') }}</h2>
 
 <table class="summary-table">
     <tbody>
 
     <tr>
-        <th>Жалпы балл / Общий балл</th>
+        <th>{{ pdf_text('Жалпы балл / Общий балл') }}</th>
         <td>{{ total_score }}</td>
     </tr>
 
     <tr>
-        <th>Макисмалды былл / Максимальный балл</th>
-        <td>{{ max_score or "—" }}</td>
+        <th>{{ pdf_text('Макисмалды былл / Максимальный балл') }}</th>
+        <td>{{ max_score if max_score is not none else "—" }}</td>
     </tr>
 
     <tr>
-        <th>Пайыз / Процент</th>
-        <td>{{ percent or "—" }}%</td>
+        <th>{{ pdf_text('Пайыз / Процент') }}</th>
+        <td>{{ percent if percent is not none else "—" }}%</td>
     </tr>
 
     <tr>
-        <th>Деңгейі / Уровень</th>
-        <td>{{ level or "—" }}</td>
+        <th>{{ pdf_text('Деңгейі / Уровень') }}</th>
+        <td>{{ pdf_level_text(level or "—") }}</td>
     </tr>
 
     </tbody>
 </table>
 
-<h2>4. Кері байланыс және ұсыныстар / Рекомендации и обратная связь</h2>
+<h2>{{ pdf_text('4. Кері байланыс және ұсыныстар / Рекомендации и обратная связь') }}</h2>
 
 <table>
     <tbody>
 
     <tr>
-        <th>Кері байланыс / Обратная связь</th>
+        <th>{{ pdf_text('Кері байланыс / Обратная связь') }}</th>
         <td>
             {{ report.conclusion or info.get("conclusion") or "—" }}
         </td>
     </tr>
 
     <tr>
-        <th>Ұсыныс / Рекомендации</th>
+        <th>{{ pdf_text('Ұсыныс / Рекомендации') }}</th>
         <td>
             {{ report.recommendations or info.get("recommendations") or "—" }}
         </td>
@@ -287,18 +287,18 @@
 
     <div class="sign-info">
 
-        <h2>Электронды қолтаңба / Электронная подпись</h2>
+        <h2>{{ pdf_text('Электронды қолтаңба / Электронная подпись') }}</h2>
 
         <table>
             <tbody>
 
             <tr>
-                <th>Статус</th>
-                <td>Қол қойылған / Подписан</td>
+                <th>{{ pdf_text('Статус') }}</th>
+                <td>{{ pdf_text('Қол қойылған / Подписан') }}</td>
             </tr>
 
             <tr>
-                <th>Уақыты / Дата</th>
+                <th>{{ pdf_text('Уақыты / Дата') }}</th>
                 <td>
                     {% if report.submitted_at %}
                         {{ report.submitted_at.strftime("%d.%m.%Y %H:%M") }}
@@ -309,7 +309,7 @@
             </tr>
 
             <tr>
-                <th>ID есеп / отчета</th>
+                <th>{{ pdf_text('ID есеп / отчета') }}</th>
                 <td>{{ report.id }}</td>
             </tr>
 
@@ -323,7 +323,7 @@
             <img src="{{ qr_file }}" alt="QR">
 
             <div class="muted">
-                Нақтылығын тексеру / Проверка подлинности
+                {{ pdf_text('Нақтылығын тексеру / Проверка подлинности') }}
             </div>
         </div>
     {% endif %}
@@ -331,9 +331,8 @@
 </div>
 
 <div class="footer">
-    Құжат school_monitor жүйесінда автоматты жасалған <br>
-    Документ сформирован автоматически системой school_monitor.
-</div>
+    {{ pdf_text('Документ сформирован автоматически системой school_monitor.') }}
+  </div>
 
 </body>
 </html>

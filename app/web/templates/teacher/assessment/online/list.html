@@ -1,0 +1,667 @@
+{% extends "base.html" %}
+
+{% block title %}
+{{ _('ONLINE Assessment') }}
+{% endblock %}
+
+
+{% block extra_css %}
+<style>
+  .online-page {
+    max-width: 1500px;
+    margin: 0 auto;
+    padding: 24px;
+  }
+
+  .online-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 20px;
+    margin-bottom: 24px;
+  }
+
+  .online-header__title {
+    margin: 0 0 6px;
+    font-size: 28px;
+    font-weight: 700;
+    color: #1f2937;
+  }
+
+  .online-header__description {
+    margin: 0;
+    color: #6b7280;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+
+  /* =====================================================
+     SUMMARY
+     ===================================================== */
+
+  .summary-grid {
+    display: grid;
+    grid-template-columns:
+      repeat(5, minmax(150px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .summary-card {
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 18px;
+  }
+
+  .summary-card__label {
+    margin-bottom: 8px;
+    color: #6b7280;
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  .summary-card__value {
+    color: #111827;
+    font-size: 28px;
+    font-weight: 700;
+    line-height: 1;
+  }
+
+  .summary-card--review {
+    border-color: #f59e0b;
+    background: #fffbeb;
+  }
+
+  .summary-card--review .summary-card__value {
+    color: #b45309;
+  }
+
+  .summary-card--completed {
+    border-color: #86efac;
+    background: #f0fdf4;
+  }
+
+  .summary-card--completed .summary-card__value {
+    color: #15803d;
+  }
+
+
+  /* =====================================================
+     REVIEW ALERT
+     ===================================================== */
+
+  .review-alert {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+
+    margin-bottom: 24px;
+    padding: 16px 18px;
+
+    border: 1px solid #fcd34d;
+    border-radius: 10px;
+
+    background: #fffbeb;
+    color: #92400e;
+  }
+
+  .review-alert__title {
+    margin: 0 0 4px;
+    font-weight: 700;
+  }
+
+  .review-alert__text {
+    margin: 0;
+    font-size: 14px;
+  }
+
+
+  /* =====================================================
+     TABLE
+     ===================================================== */
+
+  .assessment-card {
+    overflow: hidden;
+
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+  }
+
+  .assessment-table-wrapper {
+    overflow-x: auto;
+  }
+
+  .assessment-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 1050px;
+  }
+
+  .assessment-table th,
+  .assessment-table td {
+    padding: 14px 16px;
+    border-bottom: 1px solid #e5e7eb;
+    text-align: left;
+    vertical-align: middle;
+  }
+
+  .assessment-table th {
+    background: #f9fafb;
+    color: #4b5563;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .assessment-table td {
+    color: #374151;
+    font-size: 14px;
+  }
+
+  .assessment-table tbody tr:last-child td {
+    border-bottom: 0;
+  }
+
+  .assessment-table tbody tr:hover {
+    background: #f9fafb;
+  }
+
+
+  /* =====================================================
+     ASSESSMENT
+     ===================================================== */
+
+  .assessment-title {
+    margin-bottom: 4px;
+    color: #111827;
+    font-weight: 700;
+  }
+
+  .assessment-subject {
+    color: #6b7280;
+    font-size: 13px;
+  }
+
+  .assessment-title__link {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .assessment-title__link:hover {
+    color: #2563eb;
+    text-decoration: underline;
+  }
+
+
+  /* =====================================================
+     STATUS
+     ===================================================== */
+
+  .status-badge {
+    display: inline-flex;
+    align-items: center;
+
+    padding: 5px 9px;
+
+    border-radius: 999px;
+
+    background: #f3f4f6;
+    color: #374151;
+
+    font-size: 12px;
+    font-weight: 700;
+
+    white-space: nowrap;
+  }
+
+  .status-badge--active {
+    background: #eff6ff;
+    color: #1d4ed8;
+  }
+
+  .status-badge--completed {
+    background: #dcfce7;
+    color: #166534;
+  }
+
+  .status-badge--draft {
+    background: #f3f4f6;
+    color: #4b5563;
+  }
+
+
+  /* =====================================================
+     COUNTERS
+     ===================================================== */
+
+  .counter {
+    font-weight: 700;
+    color: #111827;
+  }
+
+  .counter--review {
+    color: #b45309;
+  }
+
+  .counter--completed {
+    color: #15803d;
+  }
+
+
+  /* =====================================================
+     PROGRESS
+     ===================================================== */
+
+  .progress-box {
+    min-width: 130px;
+  }
+
+  .progress-box__top {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+
+    margin-bottom: 6px;
+
+    color: #4b5563;
+    font-size: 12px;
+  }
+
+  .progress-track {
+    width: 100%;
+    height: 7px;
+
+    overflow: hidden;
+
+    background: #e5e7eb;
+    border-radius: 999px;
+  }
+
+  .progress-bar {
+    height: 100%;
+    background: #22c55e;
+    border-radius: 999px;
+  }
+
+
+  /* =====================================================
+     EMPTY
+     ===================================================== */
+
+  .empty-state {
+    padding: 56px 24px;
+    text-align: center;
+  }
+
+  .empty-state__title {
+    margin: 0 0 8px;
+
+    color: #374151;
+    font-size: 18px;
+    font-weight: 700;
+  }
+
+  .empty-state__text {
+    margin: 0;
+    color: #6b7280;
+    font-size: 14px;
+  }
+
+
+  /* =====================================================
+     RESPONSIVE
+     ===================================================== */
+
+  @media (max-width: 1100px) {
+    .summary-grid {
+      grid-template-columns:
+        repeat(3, minmax(150px, 1fr));
+    }
+  }
+
+  @media (max-width: 700px) {
+    .online-page {
+      padding: 16px;
+    }
+
+    .summary-grid {
+      grid-template-columns:
+        repeat(2, minmax(130px, 1fr));
+    }
+
+    .online-header {
+      flex-direction: column;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .summary-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+{% endblock %}
+
+
+{% block content %}
+
+<div class="online-page">
+
+  <!-- ===================================================
+       HEADER
+       =================================================== -->
+
+  <div class="online-header">
+
+    <div>
+      <h1 class="online-header__title">
+        {{ _('ONLINE Assessment') }}
+      </h1>
+
+      <p class="online-header__description">
+        {{ _('Онлайн бағалаулардың орындалуын бақылау және тексеруге жіберілген жұмыстарды басқару.') }}
+      </p>
+    </div>
+
+  </div>
+
+
+  <!-- ===================================================
+       SUMMARY
+       =================================================== -->
+
+  <div class="summary-grid">
+
+    <div class="summary-card">
+      <div class="summary-card__label">
+        {{ _('Assessment саны') }}
+      </div>
+
+      <div class="summary-card__value">
+        {{ total_assessments }}
+      </div>
+    </div>
+
+
+    <div class="summary-card">
+      <div class="summary-card__label">
+        {{ _('Оқушылар') }}
+      </div>
+
+      <div class="summary-card__value">
+        {{ total_students }}
+      </div>
+    </div>
+
+
+    <div class="summary-card">
+      <div class="summary-card__label">
+        {{ _('Орындалуда') }}
+      </div>
+
+      <div class="summary-card__value">
+        {{ in_progress_count }}
+      </div>
+    </div>
+
+
+    <div class="summary-card summary-card--review">
+      <div class="summary-card__label">
+        {{ _('Тексеруді күтуде') }}
+      </div>
+
+      <div class="summary-card__value">
+        {{ pending_review_count }}
+      </div>
+    </div>
+
+
+    <div class="summary-card summary-card--completed">
+      <div class="summary-card__label">
+        {{ _('Орындалды') }}
+      </div>
+
+      <div class="summary-card__value">
+        {{ completed_count }}
+      </div>
+    </div>
+
+  </div>
+
+
+  <!-- ===================================================
+       PENDING REVIEW
+       =================================================== -->
+
+  {% if has_pending_review %}
+
+    <div class="review-alert">
+
+      <div>
+        <p class="review-alert__title">
+          {{ _('Қолмен тексеруді қажет ететін жұмыстар бар') }}
+        </p>
+
+        <p class="review-alert__text">
+          {{ pending_review_count }}
+          {{ _('оқушының жұмысы тексеруді күтуде. Assessment саны:') }}
+          {{ assessments_with_pending_review_count }}.
+        </p>
+      </div>
+
+    </div>
+
+  {% endif %}
+
+
+  <!-- ===================================================
+       ASSESSMENTS
+       =================================================== -->
+
+  <div class="assessment-card">
+
+    {% if items %}
+
+      <div class="assessment-table-wrapper">
+
+        <table class="assessment-table">
+
+          <thead>
+            <tr>
+              <th>{{ _('Assessment') }}</th>
+              <th>{{ _('Күйі') }}</th>
+              <th>{{ _('Топтар') }}</th>
+              <th>{{ _('Оқушылар') }}</th>
+              <th>{{ _('Тағайындалды') }}</th>
+              <th>{{ _('Орындалуда') }}</th>
+              <th>{{ _('Тексеруде') }}</th>
+              <th>{{ _('Орындалды') }}</th>
+              <th>{{ _('Прогресс') }}</th>
+            </tr>
+          </thead>
+
+          <tbody>
+
+            {% for item in items %}
+
+              <tr>
+
+                <!-- Assessment -->
+
+                <td>
+                  <div class="assessment-title">
+                    <a
+                      class="assessment-title__link"
+                      href="{{
+                        url_for(
+                          'teacher_online_assessment_groups_page',
+                          assessment_id=item.assessment_id
+                        )
+                      }}"
+                     data-sm-action="nav">
+                      {{ item.title }}
+                    </a>
+                  </div>
+
+                  <div class="assessment-subject">
+                    {{ item.subject_display }}
+                  </div>
+                </td>
+
+
+                <!-- Status -->
+
+                <td>
+
+                  {% set status_value = item.status.value %}
+
+                  <span
+                    class="
+                      status-badge
+                      {% if status_value == 'active' %}
+                        status-badge--active
+                      {% elif status_value == 'completed' %}
+                        status-badge--completed
+                      {% elif status_value == 'draft' %}
+                        status-badge--draft
+                      {% endif %}
+                    "
+                  >
+                    {{ _(item.status_display) }}
+                  </span>
+
+                </td>
+
+
+                <!-- Groups -->
+
+                <td>
+                  <span class="counter">
+                    {{ item.group_count }}
+                  </span>
+                </td>
+
+
+                <!-- Students -->
+
+                <td>
+                  <span class="counter">
+                    {{ item.total_students }}
+                  </span>
+                </td>
+
+
+                <!-- Assigned -->
+
+                <td>
+                  {{ item.assigned_count }}
+                </td>
+
+
+                <!-- In progress -->
+
+                <td>
+                  {{ item.in_progress_count }}
+                </td>
+
+
+                <!-- Pending review -->
+
+                <td>
+
+                  {% if item.has_pending_review %}
+
+                    <span class="counter counter--review">
+                      {{ item.pending_review_count }}
+                    </span>
+
+                  {% else %}
+
+                    0
+
+                  {% endif %}
+
+                </td>
+
+
+                <!-- Completed -->
+
+                <td>
+                  <span class="counter counter--completed">
+                    {{ item.completed_count }}
+                  </span>
+                </td>
+
+
+                <!-- Progress -->
+
+                <td>
+
+                  <div class="progress-box">
+
+                    <div class="progress-box__top">
+
+                      <span>
+                        {{ item.finished_count }}
+                        /
+                        {{ item.total_students }}
+                      </span>
+
+                      <strong>
+                        {{ item.completion_percent }}%
+                      </strong>
+
+                    </div>
+
+                    <div class="progress-track">
+
+                      <div
+                        class="progress-bar"
+                        style="
+                          width:
+                          {{ item.completion_percent }}%;
+                        "
+                      ></div>
+
+                    </div>
+
+                  </div>
+
+                </td>
+
+              </tr>
+
+            {% endfor %}
+
+          </tbody>
+
+        </table>
+
+      </div>
+
+    {% else %}
+
+      <div class="empty-state">
+
+        <h3 class="empty-state__title">
+          {{ _('ONLINE Assessment табылмады') }}
+        </h3>
+
+        <p class="empty-state__text">
+          {{ _('Сізге бекітілген ONLINE Assessment әзірге жоқ.') }}
+        </p>
+
+      </div>
+
+    {% endif %}
+
+  </div>
+
+</div>
+
+{% endblock %}

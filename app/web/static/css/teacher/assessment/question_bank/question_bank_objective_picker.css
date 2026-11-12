@@ -1,0 +1,52 @@
+.qb-objective-picker{position:relative;min-width:0;font:inherit;color:inherit}
+.qb-objective-picker>label{display:block;margin-bottom:6px;font-weight:500}
+.qb-objective-picker [hidden]{display:none!important}
+.qb-objective-picker .qb-objective-trigger{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;min-height:44px;padding:10px 12px;border:1px solid #cbd5e1;border-radius:8px;background:#fff;color:#1e293b;text-align:left;font:inherit;cursor:pointer}
+.qb-objective-picker .qb-objective-trigger:disabled{cursor:not-allowed;opacity:.6}
+.qb-objective-picker .qb-objective-trigger:focus-visible,.qb-objective-picker .qb-objective-search:focus-visible{outline:2px solid #bfdbfe;border-color:#3b82f6}
+.qb-objective-picker .qb-objective-trigger[aria-invalid=true]{border-color:#dc2626}
+.qb-objective-selected{flex:1;min-width:0;white-space:normal;overflow-wrap:anywhere;line-height:1.6}
+.qb-objective-caret{flex:none;font-size:12px;color:#64748b}
+.qb-objective-popup{position:absolute;top:calc(100% + 6px);left:0;right:0;z-index:40;padding:8px;background:#fff;border:1px solid #cbd5e1;border-radius:10px;box-shadow:0 12px 30px #0f172a26}
+.qb-objective-picker .qb-objective-search{box-sizing:border-box;width:100%;padding:9px 11px;border:1px solid #cbd5e1;border-radius:6px;font:inherit;background:#fff;color:#1e293b;margin-bottom:6px}
+.qb-objective-options{max-height:320px;overflow:auto;overscroll-behavior:contain}
+.qb-objective-option{padding:10px 12px;border-radius:6px;line-height:1.7;white-space:normal;overflow-wrap:anywhere;cursor:pointer}
+.qb-objective-option+.qb-objective-option{border-top:1px solid #f1f5f9}
+.qb-objective-option[aria-selected=true]{background:#eff6ff}
+.qb-objective-option:focus-visible,.qb-objective-option:hover{outline:2px solid #93c5fd;outline-offset:-2px;background:#f1f5f9}
+.qb-objective-code{color:#1d4ed8}
+.qb-objective-picker .qb-objective-math{display:inline-block;vertical-align:middle;border:0;padding:0 2px;min-width:0;background:transparent;color:inherit;pointer-events:none;font-size:1em;--caret-color:transparent;--selection-background-color:transparent}
+.qb-objective-language-note{display:block;white-space:normal;color:#64748b;font-size:12px}
+.qb-objective-empty{padding:12px;color:#64748b}
+@media(max-width:640px){.qb-objective-options{max-height:240px}.qb-objective-popup{padding:6px}}
+
+
+/* Compact selected value; the expanded list keeps the complete text. */
+.qb-objective-picker .qb-objective-selected {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  line-height: 24px;
+}
+.qb-objective-picker .qb-objective-trigger {
+  min-height: 44px;
+  padding: 9px 12px;
+  font-weight: 400;
+}
+.qb-objective-picker .qb-objective-text {
+  display: inline;
+  white-space: normal;
+  line-height: inherit;
+}
+.qb-objective-picker .qb-objective-selected .qb-objective-text,
+.qb-objective-picker .qb-objective-selected .qb-objective-language-note {
+  display: inline;
+  white-space: nowrap;
+}
+.qb-objective-picker .qb-objective-code { display: inline; }
+.qb-objective-picker .qb-objective-option {
+  white-space: normal;
+  line-height: 1.6;
+}

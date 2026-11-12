@@ -22,18 +22,55 @@ def _normalize_user(u):
         "username": getattr(u, "username", None),
         "full_name": getattr(u, "full_name", None),  # ✅ добавить
         "role": role,
+        "ui_language": getattr(u, "ui_language", None),
     }
 
 
-def render(templates, request, name: str, ctx: dict, status_code: int = 200):
+def render(
+        templates,
+        request,
+        name: str,
+        ctx: dict,
+        status_code: int = 200,
+):
     c = dict(ctx)
-    c.setdefault("request", request)
 
-    # ключевой фикс: user в шаблон — только примитивы
+    c.setdefault(
+        "request",
+        request,
+    )
+
+    # --------------------------------------------------------
+    # REQUEST-SCOPED WORKSPACE CONTEXT
+    # --------------------------------------------------------
+
+    workspace_context = getattr(
+        request.state,
+        "workspace_context",
+        None,
+    )
+
+    if workspace_context is not None:
+        c.setdefault(
+            "workspace_context",
+            workspace_context,
+        )
+
+    # --------------------------------------------------------
+    # USER NORMALIZATION
+    # --------------------------------------------------------
+
     if "user" in c:
-        c["user"] = _normalize_user(c["user"])
+        c["user"] = _normalize_user(
+            c["user"]
+        )
 
-    return templates.TemplateResponse(request, name, c, status_code=status_code)
+    return templates.TemplateResponse(
+        request,
+        name,
+        c,
+        status_code=status_code,
+    )
 
 
 def render_error(templates, request, name: str, ctx: dict, error: str, status_code: int = 400) -> Response:

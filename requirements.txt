@@ -40,3 +40,13 @@ qrcode~=8.2
 weasyprint~=68.1
 playwright~=1.59.0
 botocore~=1.42.93
+pygments~=2.19.2
+openai==3.16.2
+pillow~=12.1.0
+# Извлечение учебных целей из PDF
+pdfplumber>=0.11,<0.12
+pdfminer.six==20251230
+
+# Offline-тесты импорта
+aiosqlite>=0.20,<1
+pypdf>=5,<7

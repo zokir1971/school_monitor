@@ -1,0 +1,13 @@
+.assessment-workflow .catalog-filters{grid-template-columns:repeat(4,minmax(0,1fr));gap:10px 12px}
+.assessment-workflow .catalog-filters label{min-width:0}
+.assessment-workflow .catalog-filters select,.assessment-workflow .catalog-filters input{width:100%;box-sizing:border-box}
+.assessment-workflow .catalog-delete{color:#b42318;border-color:#f4b4ae}
+.assessment-workflow .catalog-delete:hover{background:#fff1f0;border-color:#b42318}
+.assessment-workflow .catalog-delete-confirm{background:#b42318;border-color:#b42318}
+.assessment-workflow .catalog-delete-confirm:hover{background:#912018}
+.catalog-success{padding:10px 12px;border:1px solid #abefc6;border-radius:8px;color:#067647;background:#ecfdf3}
+.catalog-delete-review{max-width:850px}
+.catalog-delete-review h2{overflow-wrap:anywhere}
+@media(max-width:960px){.assessment-workflow .catalog-filters{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:720px){.assessment-workflow .catalog-filters{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:480px){.assessment-workflow .catalog-filters{grid-template-columns:minmax(0,1fr)}}

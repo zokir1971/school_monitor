@@ -1,0 +1,9 @@
+{# One fallback for full pages. Existing explicit parent links take precedence in ui_actions.js. #}
+{% if user is defined and user and not request.url.path.startswith(('/dashboards','/workspace')) %}
+<nav class="sm-page-nav" data-sm-global-navigation data-sm-user="{{ user.id }}" aria-label="{{ 'Навигация страницы' if ui_language()=='ru' else 'Бет навигациясы' }}">
+  <a href="/dashboards" data-sm-action="nav" data-sm-nav-back>{{ '← Назад к панели' if ui_language()=='ru' else '← Панельге оралу' }}</a>
+  <a href="/dashboards" data-sm-action="nav" data-sm-nav-home hidden>{{ 'К панели' if ui_language()=='ru' else 'Панельге' }}</a>
+</nav>
+{% elif not (user is defined and user) and request.url.path not in ('/login','/') %}
+<nav class="sm-page-nav" aria-label="{{ 'Навигация страницы' if ui_language()=='ru' else 'Бет навигациясы' }}"><a href="/login" data-sm-action="nav">{{ '← Назад ко входу' if ui_language()=='ru' else '← Кіру бетіне оралу' }}</a></nav>
+{% endif %}

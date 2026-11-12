@@ -3,13 +3,13 @@
 
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.session import get_db
-
-from app.modules.planning.services import SchoolPlanningService
-from app.modules.users.deps import require_roles
+from app.modules.users.deps import require_roles, resolve_workspace_context
 from app.modules.users.enums import UserRole
+from app.modules.users.models import User
+from app.modules.users.schemas import UserWorkspaceContextDTO
+from app.routers.web.dashboards.workspace_render import render_dashboard as render
+from app.modules.users.enums import UserWorkspace
 from app.routers.web.web_common import templates
 
 router = APIRouter()
@@ -20,25 +20,23 @@ router = APIRouter()
     name="school_admin_dashboard",
     response_class=HTMLResponse,
 )
-async def dashboard_l3(
+async def school_admin_dashboard(
     request: Request,
-    db: AsyncSession = Depends(get_db),
-    user=Depends(
+    user: User = Depends(
         require_roles(
-            UserRole.SUPERUSER,
             UserRole.SCHOOL_ADMIN,
         )
     ),
+    _workspace_context: UserWorkspaceContextDTO = Depends(
+        resolve_workspace_context
+    ),
 ):
-    academic_year = (
-        await SchoolPlanningService.get_active_academic_year(db)
-    )
-
-    return templates.TemplateResponse(
+    return render(
+        templates,
         request,
         "dashboards/l3.html",
         {
             "user": user,
-            "academic_year": academic_year,
         },
+        workspace=UserWorkspace.PRIMARY,
     )

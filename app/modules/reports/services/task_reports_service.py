@@ -1,5 +1,6 @@
 # app/modules/reports/services/task_reports_service.py
 from __future__ import annotations
+from types import SimpleNamespace
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -73,6 +74,9 @@ class TaskReportsService:
             "pdf": "checking_notebooks_pdf_view",
         },
     }
+
+    from app.modules.reports.assessment_report_types import REPORT_TYPES as _REPORT_TYPES
+    SYSTEM_REPORT_ROUTES.update({code: dict(fill=cfg['route']+'_fill_page',pdf=cfg['route']+'_pdf_view') for code,cfg in _REPORT_TYPES.items() if not cfg.get('final')})
 
     @classmethod
     async def get_page_data(
@@ -1085,6 +1089,9 @@ class TaskReportsService:
         # =========================================================
         # STATUS
         # =========================================================
+
+        if report_code in cls._REPORT_TYPES and document and document.file_path and getattr(document.status,'value',document.status) in ('submitted','approved','accepted'):
+            user_report = SimpleNamespace(id=document.id,pdf_signed_file=document.file_path)
 
         user_report_is_signed = bool(
             user_report

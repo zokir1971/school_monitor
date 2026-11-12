@@ -1,0 +1,415 @@
+{#
+    Универсальный renderer правильного ответа.
+
+    ВАЖНО:
+        Использовать только в интерфейсах,
+        где answer_key разрешено видеть:
+            - автор задания;
+            - эксперт Human Review;
+            - административный/служебный просмотр.
+
+        НЕ подключать в student execution.
+#}
+
+{% from "teacher/assessment/question_bank/_segments.html"
+   import render_segments with context %}
+
+
+{# ---------------------------------------------------------
+   Вспомогательный renderer named-item по value
+   --------------------------------------------------------- #}
+
+{% macro render_named_item(items, value) %}
+
+  {% set ns = namespace(found=false) %}
+
+  {% for option in items %}
+
+    {% if option.get("value") == value %}
+
+      {% set ns.found = true %}
+
+      {{ render_segments(
+          option.get("segments", [])
+      ) }}
+
+    {% endif %}
+
+  {% endfor %}
+
+  {% if not ns.found %}
+    <code>{{ value }}</code>
+  {% endif %}
+
+{% endmacro %}
+
+
+{% macro render_answer_key(item) %}
+
+  {% set question_type = (
+      item.question_type.value
+      if item.question_type.value is defined
+      else item.question_type
+  ) %}
+
+  {% set content = item.content or {} %}
+  {% set answer_key = item.answer_key or {} %}
+  {% set grading = item.grading_settings or {} %}
+
+
+  {# =========================================================
+     SINGLE CHOICE
+     ========================================================= #}
+
+  {% if question_type == "single_choice" %}
+    {% if 'parts' in content %}
+      {% from 'teacher/assessment/question_bank/components/single_choice_parts.html' import render_single_choice_parts with context %}
+      {{ render_single_choice_parts(item, show_answers=true) }}
+    {% else %}
+
+
+    {% set correct_value = answer_key.get("value") %}
+    {% set options = content.get("options", []) %}
+
+    <div class="qb-answer-item qb-answer-item--correct">
+
+      <div class="qb-answer-item__marker">
+        {{ correct_value }}
+      </div>
+
+      <div class="qb-answer-item__body">
+        {{ render_named_item(
+            options,
+            correct_value
+        ) }}
+      </div>
+
+    </div>
+
+
+  {# =========================================================
+     MULTIPLE CHOICE
+     ========================================================= #}
+
+    {% endif %}
+  {% elif question_type == "multiple_choice" %}
+
+    {% set correct_values = answer_key.get("values", []) %}
+    {% set options = content.get("options", []) %}
+
+    <div class="qb-answer-list">
+
+      {% for value in correct_values %}
+
+        <div class="qb-answer-item qb-answer-item--correct">
+
+          <div class="qb-answer-item__marker">
+            {{ value }}
+          </div>
+
+          <div class="qb-answer-item__body">
+            {{ render_named_item(
+                options,
+                value
+            ) }}
+          </div>
+
+        </div>
+
+      {% endfor %}
+
+    </div>
+
+
+  {# =========================================================
+     TRUE / FALSE
+     ========================================================= #}
+
+  {% elif question_type == "true_false" %}
+    {% set labels = content.get("labels", {}) %}
+    {% if "statements" in content %}
+      <ol class="qb-answer-value">
+        {% for statement in content.get("statements", []) %}
+          {% set value = answer_key.get("values", {}).get(statement.get("id")) %}
+          <li>{{ render_segments(statement.get("segments", [])) }} —
+            {% if value is sameas true %}{{ labels.get("true", _('Дұрыс')) }}
+            {% elif value is sameas false %}{{ labels.get("false", _('Бұрыс')) }}{% else %}—{% endif %}
+          </li>
+        {% endfor %}
+      </ol>
+    {% else %}
+      {% set value = answer_key.get("value") %}
+      <div class="qb-answer-value">
+        {% if value is sameas true %}{{ labels.get("true", _('Дұрыс')) }}
+        {% elif value is sameas false %}{{ labels.get("false", _('Бұрыс')) }}{% else %}—{% endif %}
+      </div>
+    {% endif %}
+
+  {% elif question_type == "short_text" %}
+
+    {% set answers = answer_key.get(
+        "accepted_answers",
+        []
+    ) %}
+
+    <div class="qb-answer-list">
+
+      {% for answer in answers %}
+
+        <div class="qb-answer-text">
+          {{ answer }}
+        </div>
+
+      {% else %}
+
+        <div class="qb-render-empty">
+          —
+        </div>
+
+      {% endfor %}
+
+    </div>
+
+    {% if grading.get("case_sensitive") is sameas true %}
+      <div class="qb-answer-note">
+        {{ _('Бас әріп пен кіші әріп ескеріледі.') }}
+      </div>
+    {% endif %}
+
+
+  {# =========================================================
+     NUMBER
+     ========================================================= #}
+
+  {% elif question_type == "number" %}
+    {% if 'parts' in content %}
+      <ol class="qb-answer-value">{% for part in content.get('parts', []) %}
+        <li>{{ render_segments(part.get('segments', [])) }} —
+          <strong>{{ answer_key.get('values', {}).get(part.get('id'), '—') }}</strong>
+          {{ part.get('unit', '') }}
+          <span class="qb-answer-note">{{ _('(Допуск: ±') }}{{ grading.get('tolerances', {}).get(part.get('id'), 0) }})</span>
+        </li>
+      {% endfor %}</ol>
+    {% else %}
+
+    <div class="qb-answer-value">
+
+      {{ answer_key.get("value", "—") }}
+
+      {% if content.get("unit") %}
+        {{ content.get("unit") }}
+      {% endif %}
+
+    </div>
+
+    {% if grading.get("tolerance") is not none %}
+
+      <div class="qb-answer-note">
+        {{ _('Рұқсат етілген ауытқу: ±') }}{{ grading.get("tolerance") }}
+      </div>
+
+    {% endif %}
+
+
+  {# =========================================================
+     MATCHING
+     ========================================================= #}
+
+    {% endif %}
+
+  {% elif question_type == "matching" %}
+
+    {% set left_items = content.get("left", []) %}
+    {% set right_items = content.get("right", []) %}
+    {% set pairs = answer_key.get("pairs", []) %}
+
+    <div class="qb-answer-matching">
+
+      {% for pair in pairs %}
+
+        <div class="qb-answer-pair qb-answer-pair--stacked">
+          <div class="qb-answer-pair__mapping"><span>{{ pair.get('left') | matching_label(left_items, 'left') }}</span><span aria-hidden="true"> — </span><span>{{ pair.get('right') | matching_label(right_items, 'right') }}</span></div>
+
+          <div class="qb-answer-pair__side">
+            {{ render_named_item(
+                left_items,
+                pair.get("left")
+            ) }}
+          </div>
+
+          <div class="qb-answer-pair__arrow">
+            →
+          </div>
+
+          <div class="qb-answer-pair__side">
+            {{ render_named_item(
+                right_items,
+                pair.get("right")
+            ) }}
+          </div>
+
+        </div>
+
+      {% endfor %}
+
+    </div>
+
+
+  {# =========================================================
+     ORDERING
+     ========================================================= #}
+
+  {% elif question_type == "ordering" %}
+
+    {% set items = content.get("items", []) %}
+    {% set order = answer_key.get("order", []) %}
+
+    <div class="qb-answer-list">
+
+      {% for value in order %}
+
+        <div class="qb-answer-item qb-answer-item--correct">
+
+          <div class="qb-answer-item__marker">
+            {{ loop.index }}
+          </div>
+
+          <div class="qb-answer-item__body">
+            {{ render_named_item(
+                items,
+                value
+            ) }}
+          </div>
+
+        </div>
+
+      {% endfor %}
+
+    </div>
+
+
+  {# =========================================================
+     FILL GAPS
+     ========================================================= #}
+
+  {% elif question_type == "fill_gaps" %}
+
+    {% from 'teacher/assessment/question_bank/components/fill_gaps_answers.html' import render_fill_gaps_answers with context %}
+    {{ render_fill_gaps_answers(item) }}
+
+
+  {# =========================================================
+     FORMULA
+     ========================================================= #}
+
+  {% elif question_type == "formula" %}
+    {% if content.get('parts') %}
+      {% from 'teacher/assessment/question_bank/components/formula_parts.html' import render_formula_parts with context %}
+      {{ render_formula_parts(item, answers=true) }}
+    {% else %}
+
+    {% set expression = answer_key.get(
+        "expression",
+        answer_key.get("latex", "")
+    ) %}
+
+    {% if expression %}
+
+      <div class="qb-answer-formula">
+        <math-field class="qb-math-field" read-only tabindex="-1">{{ expression }}</math-field>
+      </div>
+
+    {% else %}
+
+      <div class="qb-render-empty">
+        —
+      </div>
+
+    {% endif %}
+
+
+    {% set meanings = answer_key.get('variable_meanings', {}) %}
+    {% set meaning_options = content.get('meaning_options', []) %}
+    {% if meanings %}
+      <div class="qb-render-subtitle">{{ _('Белгіленулердің дұрыс сәйкестігі') }}</div>
+      {% for symbol in content.get('variables', []) %}
+        <div class="qb-render-option">
+          <div class="qb-render-option__marker"><math-field class="qb-math-field" read-only tabindex="-1">{{ symbol }}</math-field></div>
+          <div class="qb-render-option__body">
+            {% for option in meaning_options %}
+              {% if option.get('value') == meanings.get(symbol) %}{{ option.get('label', '') }}{% endif %}
+            {% endfor %}
+          </div>
+        </div>
+      {% endfor %}
+    {% endif %}
+    {% if content.get('target_variable') %}
+      <div>{{ _('Өрнектелетін шама:') }} <strong>{{ content.get('target_variable') }}</strong></div>
+    {% endif %}
+
+    {% endif %}
+
+  {# =========================================================
+     IMAGE CHOICE
+     ========================================================= #}
+
+  {% elif question_type == "image_choice" %}
+
+    {% set correct_value = answer_key.get("value") %}
+    {% set options = content.get("options", []) %}
+
+    {% for option in options %}
+
+      {% if option.get("value") == correct_value %}
+
+        <div class="qb-answer-image">
+
+          <div class="qb-answer-item__marker">
+            {{ correct_value }}
+          </div>
+
+          <img
+            src="{{ url_for('teacher_question_bank_media_view') }}?object_key={{ option.get('object_key', '') | urlencode }}"
+            alt="{{ option.get('alt', '') }}"
+            class="qb-answer-image__image"
+              style="display:block;max-width:100%;max-height:240px;object-fit:contain"
+            loading="lazy"
+          >
+
+          {% if option.get("alt") %}
+            <div class="qb-answer-image__alt">
+              {{ option.get("alt") }}
+            </div>
+          {% endif %}
+
+        </div>
+
+      {% endif %}
+
+    {% endfor %}
+
+
+  {# =========================================================
+     MANUAL REVIEW
+     ========================================================= #}
+
+  {% elif question_type == "manual_review" %}
+
+    <div class="qb-answer-manual">
+      {{ _('Бұл тапсырмада автоматты дұрыс жауап жоқ. Жауап қолмен бағаланады.') }}
+    </div>
+
+
+  {# =========================================================
+     UNKNOWN
+     ========================================================= #}
+
+  {% else %}
+
+    <div class="qb-render-unknown">
+      {{ _('Дұрыс жауаптың көрінісі қолдау таппаған.') }}
+    </div>
+
+  {% endif %}
+
+{% endmacro %}

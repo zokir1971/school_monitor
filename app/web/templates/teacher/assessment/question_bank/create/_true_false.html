@@ -1,0 +1,91 @@
+<!-- =============================================
+        TRUE / FALSE
+        ============================================= -->
+
+        <div
+          id="true-false-fields"
+          class="qb-answer-builder"
+          data-question-fields="true_false"
+          hidden
+        >
+
+          <div class="qb-answer-builder__header">
+
+            <h3>
+              {{ _('Дұрыс жауап') }}
+            </h3>
+
+            <p>
+              {{ _('Тұжырымның дұрыс немесе бұрыс екенін белгілеңіз.') }}
+            </p>
+
+          </div>
+
+
+          <div class="qb-true-false-grid" data-tf-legacy>
+
+            <label class="qb-true-false-option">
+
+              <input
+                type="radio"
+                name="correct_answer"
+                value="true"
+                data-type-input
+                disabled
+              >
+
+              <span>
+                {{ _('Дұрыс') }}
+              </span>
+
+            </label>
+
+
+            <label class="qb-true-false-option">
+
+              <input
+                type="radio"
+                name="correct_answer"
+                value="false"
+                data-type-input
+                disabled
+              >
+
+              <span>
+                {{ _('Бұрыс') }}
+              </span>
+
+            </label>
+
+          </div>
+
+          <div data-tf-statements hidden></div>
+  <p data-tf-status role="status" aria-live="polite"></p>
+  <input type="hidden" name="true_false_statements" data-tf-payload data-type-input disabled>
+  <template data-tf-row-template>
+    <section class="qb-tf-row" style="border:1px solid #eaecf0;border-radius:8px;padding:12px;margin-top:12px;">
+      <label class="qb-form-label" data-tf-label></label>
+      <div class="qb-rich-editor" data-rich-editor>
+        <div class="qb-rich-editor__toolbar">
+          <button type="button" class="qb-rich-editor__formula-btn" data-rich-add-math data-sm-action="nav" data-sm-size="compact">{{ _('+ Формула') }}</button>
+          <button type="button" data-rich-edit-math disabled data-sm-action="edit">{{ _('Өңдеу / Редактировать') }}</button>
+          <button type="button" data-rich-copy-math disabled data-sm-action="nav">{{ _('Көшіру / Копировать') }}</button>
+          <button type="button" data-rich-paste-math disabled data-sm-action="nav">{{ _('Қою / Вставить') }}</button>
+          <button type="button" data-rich-delete-math disabled data-sm-action="danger">{{ _('Жою / Удалить') }}</button>
+        </div>
+        <div class="qb-rich-editor__content" data-rich-content contenteditable="true" role="textbox" aria-multiline="true"></div>
+        <input type="hidden" data-rich-plain-value data-type-input>
+        <input type="hidden" data-rich-segments data-type-input>
+      </div>
+      <label>{{ _('Дұрыс жауап / Правильный ответ') }}
+        <select data-tf-answer data-type-input>
+          <option value="">{{ _('Таңдаңыз / Выберите') }}</option>
+          <option value="true">{{ _('Дұрыс / Верно') }}</option>
+          <option value="false">{{ _('Бұрыс / Неверно') }}</option>
+        </select>
+      </label>
+    </section>
+  </template>
+</div>
+
+<script defer src="{{ url_for('static', path='js/teacher/assessment/question_bank/true_false_editor.js') }}?v=63"></script>

@@ -10,4 +10,5 @@ def dashboard_url_for_role(role: UserRole) -> str:
         UserRole.DISTRICT_ADMIN: "/dashboards/l2",
         UserRole.SCHOOL_ADMIN: "/dashboards/l3",
         UserRole.SCHOOL_STAFF: "/dashboards/staff_school",
+        UserRole.TEACHER: "/dashboards/teacher",
     }.get(role, "/dashboards")

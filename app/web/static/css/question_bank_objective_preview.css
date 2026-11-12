@@ -1,0 +1,98 @@
+[data-qb-objective-display] [hidden], [data-qb-objective-previews] [hidden] {display:none!important}
+.qb-objective-text {white-space:pre-wrap;line-height:1.7;overflow-wrap:anywhere}
+.qb-objective-math {display:inline-block;vertical-align:middle;border:0;background:transparent;font-size:1.1em;max-width:100%;pointer-events:none}
+.qb-objective-language-note {display:block;color:#8a5800;font-size:13px;line-height:1.5;margin-bottom:5px}
+[data-qb-objective-previews] {margin:12px 0;padding:12px;border:1px solid #d5dfed;border-radius:8px;background:#f8fafc;grid-column:1/-1}
+[data-qb-objective-previews]:not(:has(> :not([hidden]))) {display:none}
+
+.qb-objective-language-field { display:flex; flex-direction:column; gap:6px; margin-bottom:16px; font:500 14px/1.5 system-ui,-apple-system,"Segoe UI",Arial,sans-serif; color:#1e293b; }
+.qb-objective-language-field select { box-sizing:border-box; width:100%; min-width:0; padding:10px 12px; border:1px solid #cbd5e1; border-radius:8px; font:inherit; color:#1e293b; background:#fff; }
+.qb-objective-language-field select:focus { outline:2px solid #bfdbfe; border-color:#3b82f6; }
+
+/* Unified code + wording layout for choices and current learning objectives.
+   Scope current-objective rules to .qb-selected-objectives: review history
+   reuses the child class names and must retain its original layout. */
+.qb-objective-list .qb-objective-option__content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.qb-objective-list .qb-objective-option__main,
+.qb-selected-objectives .qb-selected-objective__body {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  align-items: start;
+  gap: 8px;
+  min-width: 0;
+  white-space: normal;
+}
+
+.qb-objective-list .qb-objective-option__main {
+  flex: 1 1 0;
+}
+
+.qb-selected-objectives .qb-selected-objective__body {
+  flex: 1 1 0;
+}
+
+.qb-selected-objectives > .qb-selected-objective + .qb-selected-objective {
+  margin-top: 10px;
+}
+
+.qb-objective-list .qb-objective-option__code,
+.qb-selected-objectives .qb-selected-objective__code {
+  margin: 0;
+  padding: 0;
+  color: #2563eb;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.7;
+  white-space: nowrap;
+}
+
+.qb-objective-list .qb-objective-option__title,
+.qb-selected-objectives .qb-selected-objective__title {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  color: #344054;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.7;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+/* Formatting whitespace from the Jinja preview macro is not a line break. */
+.qb-objective-list .qb-objective-option__title [data-qb-objective-display],
+.qb-objective-list .qb-objective-option__title [data-objective-display-language],
+.qb-objective-list .qb-objective-option__title .qb-objective-text,
+.qb-selected-objectives .qb-selected-objective__title [data-qb-objective-display],
+.qb-selected-objectives .qb-selected-objective__title [data-objective-display-language],
+.qb-selected-objectives .qb-selected-objective__title .qb-objective-text {
+  display: inline;
+  white-space: normal;
+  color: inherit;
+  font: inherit;
+}
+
+.qb-objective-list .qb-objective-option__title [hidden],
+.qb-selected-objectives .qb-selected-objective__title [hidden] {
+  display: none !important;
+}
+
+.qb-objective-list .qb-objective-option__check {
+  flex-shrink: 0;
+}
+
+.qb-objective-list .qb-objective-option > input:focus-visible
++ .qb-objective-option__content {
+  outline: 2px solid #2563eb;
+  outline-offset: 3px;
+}
+
+.qb-selected-objectives .qb-selected-objective__body,
+.qb-objective-list .qb-objective-option__main {
+  align-items: baseline;
+}

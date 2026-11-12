@@ -1,0 +1,667 @@
+/* ============================================================
+   QUESTION BANK EXPERTS — LIST
+   region/assessment/question_bank_experts/list.html
+   ============================================================ */
+
+
+/* ============================================================
+   1. PAGE
+   ============================================================ */
+
+.qb-experts-page {
+    --qb-border: #e5e7eb;
+    --qb-border-soft: #eef2f7;
+
+    --qb-text: #1f2937;
+    --qb-muted: #64748b;
+
+    --qb-primary: #2563eb;
+    --qb-primary-dark: #1d4ed8;
+
+    --qb-success: #15803d;
+    --qb-success-soft: #f0fdf4;
+
+    --qb-radius: 12px;
+
+    color: var(--qb-text);
+}
+
+
+/* ============================================================
+   2. PAGE HEADER
+   ============================================================ */
+
+.qb-experts-page .qb-page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+
+    gap: 24px;
+    margin-bottom: 24px;
+}
+
+.qb-experts-page .qb-page-header__main {
+    min-width: 0;
+}
+
+.qb-experts-page .qb-page-title {
+    margin: 0;
+
+    font-size: 1.65rem;
+    font-weight: 700;
+    line-height: 1.25;
+
+    color: var(--qb-text);
+}
+
+.qb-experts-page .qb-page-subtitle {
+    max-width: 760px;
+
+    margin: 7px 0 0;
+
+    color: var(--qb-muted);
+
+    font-size: 0.94rem;
+    line-height: 1.5;
+}
+
+.qb-experts-page .qb-page-actions {
+    display: flex;
+    align-items: center;
+
+    flex-shrink: 0;
+}
+
+
+/* ============================================================
+   3. BUTTONS
+   ============================================================ */
+
+.qb-experts-page .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    box-sizing: border-box;
+
+    height: 42px;
+    min-height: 42px;
+
+    padding: 0 14px;
+    margin: 0;
+
+    border: 1px solid transparent;
+    border-radius: 8px;
+
+    font-family: inherit;
+    font-size: 0.88rem;
+    font-weight: 600;
+    line-height: 1;
+
+    white-space: nowrap;
+    text-decoration: none;
+
+    cursor: pointer;
+
+    appearance: none;
+    -webkit-appearance: none;
+
+    transition:
+        background-color 0.15s ease,
+        border-color 0.15s ease,
+        color 0.15s ease;
+}
+
+
+/* ============================================================
+   PRIMARY
+   ============================================================ */
+
+.qb-experts-page .btn-primary,
+.qb-experts-page a.btn-primary,
+.qb-experts-page button.btn-primary {
+    color: #ffffff;
+
+    background-color: var(--qb-primary);
+
+    border: 1px solid var(--qb-primary);
+    border-radius: 8px;
+}
+
+.qb-experts-page .btn-primary:hover,
+.qb-experts-page .btn-primary:focus,
+.qb-experts-page a.btn-primary:hover,
+.qb-experts-page a.btn-primary:focus,
+.qb-experts-page button.btn-primary:hover,
+.qb-experts-page button.btn-primary:focus {
+    color: #ffffff;
+
+    background-color: var(--qb-primary-dark);
+
+    border-color: var(--qb-primary-dark);
+
+    text-decoration: none;
+}
+
+
+/* ============================================================
+   OUTLINE PRIMARY
+   ============================================================ */
+
+.qb-experts-page .btn-outline-primary,
+.qb-experts-page a.btn-outline-primary,
+.qb-experts-page button.btn-outline-primary {
+    color: var(--qb-primary);
+
+    background-color: #ffffff;
+
+    border: 1px solid #93c5fd;
+    border-radius: 8px;
+}
+
+.qb-experts-page .btn-outline-primary:hover,
+.qb-experts-page .btn-outline-primary:focus,
+.qb-experts-page a.btn-outline-primary:hover,
+.qb-experts-page a.btn-outline-primary:focus,
+.qb-experts-page button.btn-outline-primary:hover,
+.qb-experts-page button.btn-outline-primary:focus {
+    color: #ffffff;
+
+    background-color: var(--qb-primary);
+
+    border-color: var(--qb-primary);
+
+    text-decoration: none;
+}
+
+
+/* ============================================================
+   OUTLINE SECONDARY
+   ============================================================ */
+
+.qb-experts-page .btn-outline-secondary,
+.qb-experts-page a.btn-outline-secondary,
+.qb-experts-page button.btn-outline-secondary {
+    color: #475569;
+
+    background-color: #ffffff;
+
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+}
+
+.qb-experts-page .btn-outline-secondary:hover,
+.qb-experts-page .btn-outline-secondary:focus,
+.qb-experts-page a.btn-outline-secondary:hover,
+.qb-experts-page a.btn-outline-secondary:focus,
+.qb-experts-page button.btn-outline-secondary:hover,
+.qb-experts-page button.btn-outline-secondary:focus {
+    color: #1f2937;
+
+    background-color: #f8fafc;
+
+    border-color: #94a3b8;
+
+    text-decoration: none;
+}
+
+
+/* ============================================================
+   SMALL BUTTON
+   ============================================================ */
+
+.qb-experts-page .btn.btn-sm {
+    height: 32px;
+    min-height: 32px;
+
+    padding: 0 10px;
+
+    border-radius: 7px;
+
+    font-size: 0.8rem;
+}
+
+/* ============================================================
+   4. FILTER CARD
+   ============================================================ */
+
+.qb-experts-page .qb-filter-card {
+    margin-bottom: 20px;
+
+    padding: 18px 20px;
+
+    background: #ffffff;
+
+    border: 1px solid var(--qb-border);
+    border-radius: var(--qb-radius);
+
+    box-shadow:
+        0 1px 2px rgba(15, 23, 42, 0.03),
+        0 4px 14px rgba(15, 23, 42, 0.03);
+}
+
+.qb-experts-page .qb-filter-title {
+    margin-bottom: 14px;
+
+    color: var(--qb-text);
+
+    font-size: 0.92rem;
+    font-weight: 700;
+}
+
+.qb-experts-page .qb-filter-grid {
+    display: grid;
+
+    grid-template-columns:
+        minmax(190px, 1fr)
+        minmax(190px, 1fr)
+        minmax(170px, 0.8fr)
+        auto;
+
+    gap: 14px;
+
+    align-items: end;
+}
+
+.qb-experts-page .qb-filter-actions {
+    display: flex;
+    align-items: center;
+
+    gap: 8px;
+}
+
+
+/* ============================================================
+   5. FILTER FORM
+   ============================================================ */
+
+.qb-experts-page .form-label {
+    display: block;
+
+    margin-bottom: 6px;
+
+    color: #374151;
+
+    font-size: 0.87rem;
+    font-weight: 600;
+}
+
+.qb-experts-page .form-select {
+    width: 100%;
+    min-height: 42px;
+
+    padding: 7px 34px 7px 10px;
+
+    color: var(--qb-text);
+    background-color: #ffffff;
+
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+
+    font-size: 0.9rem;
+
+    box-shadow: none;
+
+    transition:
+        border-color 0.15s ease,
+        box-shadow 0.15s ease;
+}
+
+.qb-experts-page .form-select:hover {
+    border-color: #94a3b8;
+}
+
+.qb-experts-page .form-select:focus {
+    border-color: #60a5fa;
+
+    outline: none;
+
+    box-shadow:
+        0 0 0 3px rgba(37, 99, 235, 0.10);
+}
+
+
+/* ============================================================
+   6. TABLE CARD
+   ============================================================ */
+
+.qb-experts-page .qb-table-card {
+    overflow: hidden;
+
+    background: #ffffff;
+
+    border: 1px solid var(--qb-border);
+    border-radius: var(--qb-radius);
+
+    box-shadow:
+        0 1px 2px rgba(15, 23, 42, 0.03),
+        0 4px 14px rgba(15, 23, 42, 0.03);
+}
+
+.qb-experts-page .qb-table-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+    gap: 16px;
+
+    padding: 15px 18px;
+
+    background: #f8fafc;
+
+    border-bottom: 1px solid var(--qb-border);
+}
+
+.qb-experts-page .qb-table-title {
+    margin: 0;
+
+    color: var(--qb-text);
+
+    font-size: 0.96rem;
+    font-weight: 700;
+}
+
+.qb-experts-page .qb-table-count {
+    color: var(--qb-muted);
+
+    font-size: 0.83rem;
+}
+
+
+/* ============================================================
+   7. TABLE
+   ============================================================ */
+
+.qb-experts-page .qb-table-wrap {
+    width: 100%;
+
+    overflow-x: auto;
+}
+
+.qb-experts-page .qb-table {
+    width: 100%;
+
+    margin: 0;
+
+    border-collapse: collapse;
+
+    font-size: 0.86rem;
+}
+
+.qb-experts-page .qb-table thead th {
+    padding: 11px 12px;
+
+    color: #64748b;
+    background: #f8fafc;
+
+    border-bottom: 1px solid var(--qb-border);
+
+    font-size: 0.74rem;
+    font-weight: 700;
+
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+
+    white-space: nowrap;
+
+    text-align: left;
+}
+
+.qb-experts-page .qb-table tbody td {
+    padding: 13px 12px;
+
+    color: #374151;
+
+    border-bottom: 1px solid var(--qb-border-soft);
+
+    vertical-align: middle;
+}
+
+.qb-experts-page .qb-table tbody tr:last-child td {
+    border-bottom: 0;
+}
+
+.qb-experts-page .qb-table tbody tr {
+    transition: background-color 0.12s ease;
+}
+
+.qb-experts-page .qb-table tbody tr:hover {
+    background: #fafcff;
+}
+
+
+/* ============================================================
+   8. TABLE COLUMNS
+   ============================================================ */
+
+.qb-experts-page .qb-table__name {
+    min-width: 180px;
+
+    color: var(--qb-text);
+
+    font-weight: 600;
+}
+
+.qb-experts-page .qb-table__district {
+    min-width: 140px;
+}
+
+.qb-experts-page .qb-table__school {
+    min-width: 220px;
+}
+
+.qb-experts-page .qb-table__subject {
+    min-width: 125px;
+}
+
+.qb-experts-page .qb-table__actions {
+    width: 1%;
+
+    white-space: nowrap;
+
+    text-align: right;
+}
+
+
+/* ============================================================
+   9. BADGES
+   ============================================================ */
+
+.qb-experts-page .qb-badge {
+    display: inline-flex;
+    align-items: center;
+
+    gap: 5px;
+
+    padding: 5px 9px;
+
+    border: 1px solid transparent;
+    border-radius: 999px;
+
+    font-size: 0.76rem;
+    font-weight: 600;
+
+    white-space: nowrap;
+}
+
+.qb-experts-page .qb-badge__dot {
+    width: 6px;
+    height: 6px;
+
+    flex: 0 0 6px;
+
+    border-radius: 50%;
+
+    background: currentColor;
+}
+
+.qb-experts-page .qb-badge--success {
+    color: #166534;
+    background: var(--qb-success-soft);
+
+    border-color: #bbf7d0;
+}
+
+.qb-experts-page .qb-badge--inactive {
+    color: #64748b;
+    background: #f3f4f6;
+
+    border-color: #e5e7eb;
+}
+
+.qb-experts-page .qb-badge--primary {
+    color: #1d4ed8;
+    background: #eff6ff;
+
+    border-color: #dbeafe;
+}
+
+.qb-experts-page .qb-badge--neutral {
+    color: #64748b;
+    background: #f8fafc;
+
+    border-color: #e2e8f0;
+}
+
+
+/* ============================================================
+   10. TEXT HELPERS
+   ============================================================ */
+
+.qb-experts-page .qb-muted {
+    color: var(--qb-muted);
+}
+
+.qb-experts-page .qb-nowrap {
+    white-space: nowrap;
+}
+
+.qb-experts-page .qb-mono {
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.015em;
+}
+
+
+/* ============================================================
+   11. EMPTY STATE
+   ============================================================ */
+
+.qb-experts-page .qb-empty {
+    padding: 48px 24px;
+
+    text-align: center;
+}
+
+.qb-experts-page .qb-empty__icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    width: 46px;
+    height: 46px;
+
+    margin: 0 auto 12px;
+
+    color: var(--qb-muted);
+    background: #f1f5f9;
+
+    border-radius: 12px;
+
+    font-size: 1.15rem;
+    font-weight: 700;
+}
+
+.qb-experts-page .qb-empty__title {
+    margin: 0 0 6px;
+
+    color: var(--qb-text);
+
+    font-size: 0.98rem;
+    font-weight: 700;
+}
+
+.qb-experts-page .qb-empty__text {
+    margin: 0;
+
+    color: var(--qb-muted);
+
+    font-size: 0.86rem;
+}
+
+
+/* ============================================================
+   12. RESPONSIVE
+   ============================================================ */
+
+@media (max-width: 1199.98px) {
+
+    .qb-experts-page .qb-filter-grid {
+        grid-template-columns:
+            repeat(2, minmax(0, 1fr));
+    }
+
+    .qb-experts-page .qb-filter-actions {
+        grid-column: 1 / -1;
+    }
+}
+
+
+@media (max-width: 767.98px) {
+
+    .qb-experts-page .qb-page-header {
+        flex-direction: column;
+
+        gap: 16px;
+    }
+
+    .qb-experts-page .qb-page-actions {
+        width: 100%;
+    }
+
+    .qb-experts-page .qb-page-title {
+        font-size: 1.4rem;
+    }
+
+    .qb-experts-page .qb-filter-card {
+        padding: 16px;
+    }
+
+    .qb-experts-page .qb-filter-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .qb-experts-page .qb-filter-actions {
+        grid-column: auto;
+
+        width: 100%;
+    }
+
+    .qb-experts-page .qb-filter-actions .btn {
+        flex: 1;
+    }
+
+    .qb-experts-page .qb-table-header {
+        padding: 14px 16px;
+    }
+}
+
+
+@media (max-width: 575.98px) {
+
+    .qb-experts-page .qb-page-actions {
+        align-items: stretch;
+    }
+
+    .qb-experts-page .qb-page-actions .btn {
+        width: 100%;
+    }
+
+    .qb-experts-page .qb-filter-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .qb-experts-page .qb-filter-actions .btn {
+        width: 100%;
+    }
+}

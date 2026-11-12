@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Коды L1 выданы{% endblock %}
+{% block title %}{{ _('Коды L1 выданы') }}{% endblock %}
 
 {% block extra_css %}
   <link rel="stylesheet" href="{{ url_for('static', path='css/code.css') }}">
@@ -9,29 +9,27 @@
 
 {% if not show_codes and not saved %}
   <div class="alert alert--warning">
-    ⚠️ Вы обновили страницу. Коды больше не показываются.
-    Нажмите <b>«Сохранить PDF»</b>, чтобы сохранить все коды одной выдачи.
+    {{ _('⚠️ Вы обновили страницу. Коды больше не показываются. Нажмите') }} <b>{{ _('«Сохранить PDF»') }}</b>{{ _(', чтобы сохранить все коды одной выдачи.') }}
   </div>
 {% endif %}
 
 <div class="card card--large">
 
-  <h2 class="card__title">Коды для регистрации администраторов регионов (L1)</h2>
+  <h2 class="card__title">{{ _('Коды для регистрации администраторов регионов (L1)') }}</h2>
 
   {% if not saved %}
     <div class="alert alert--warning">
-      ⚠️ Вы ещё не сохранили коды. После закрытия страницы восстановление будет невозможно.
-      Нажмите <b>«Сохранить PDF»</b>, чтобы сохранить все коды одной выдачи.
+      {{ _('⚠️ Вы ещё не сохранили коды. После закрытия страницы восстановление будет невозможно. Нажмите') }} <b>{{ _('«Сохранить PDF»') }}</b>{{ _(', чтобы сохранить все коды одной выдачи.') }}
     </div>
   {% else %}
     <div class="alert alert--success">
-      ✅ Коды сохранены в PDF. Можно переходить в админ-панель.
+      {{ _('✅ Коды сохранены в PDF. Можно переходить в админ-панель.') }}
     </div>
   {% endif %}
 
   <div class="alert alert--info">
-    <b>Создано кодов:</b> {{ count }}<br>
-    Каждый код показывается <b>только один раз</b>. После закрытия страницы восстановление невозможно.
+    <b>{{ _('Создано кодов:') }}</b> {{ count }}<br>
+    {{ _('Каждый код показывается') }} <b>{{ _('только один раз') }}</b>{{ _('. После закрытия страницы восстановление невозможно.') }}
   </div>
 
   <div class="issued-list">
@@ -39,7 +37,7 @@
       <div class="issued-card">
 
         <div class="issued-card__header">
-          Регион: <span>{{ item.region_name }}</span>
+          {{ _('Регион:') }} <span>{{ item.region_name }}</span>
         </div>
 
         <div class="issued-card__code">
@@ -48,19 +46,19 @@
             type="button"
             class="btn btn--ghost btn-copy"
             data-code="{{ item.raw_code }}"
-          >
-            Скопировать
+           data-sm-action="nav">
+            {{ _('Скопировать') }}
           </button>
         </div>
 
         <div class="issued-card__meta">
-          <div><b>Квота:</b> {{ item.quota_total }}</div>
+          <div><b>{{ _('Квота:') }}</b> {{ item.quota_total }}</div>
           <div>
-            <b>Действует до:</b>
+            <b>{{ _('Действует до:') }}</b>
             {% if item.expires_at %}
-              {{ item.expires_at }}
+              {{ _(item.expires_at) }}
             {% else %}
-              без срока
+              {{ _('без срока') }}
             {% endif %}
           </div>
         </div>
@@ -76,13 +74,13 @@
         class="btn btn--primary"
         target="_blank"
         rel="noopener"
-        id="savePdfBtn">
-        💾 Сохранить PDF
+        id="savePdfBtn" data-sm-action="primary">
+        {{ _('💾 Сохранить PDF') }}
       </a>
     {% endif %}
 
-    <a href="/dashboards" class="btn btn--ghost" style="margin-left:10px;">
-      В админ-панель
+    <a href="/dashboards" class="btn btn--ghost" style="margin-left:10px;" data-sm-action="nav">
+      {{ _('В админ-панель') }}
     </a>
   </div>
 
@@ -93,8 +91,8 @@
   document.querySelectorAll(".btn-copy").forEach(btn => {
     btn.addEventListener("click", () => {
       navigator.clipboard.writeText(btn.dataset.code);
-      btn.textContent = "Скопировано";
-      setTimeout(() => btn.textContent = "Скопировать", 1500);
+      btn.textContent = {{ _('Скопировано') | tojson }};
+      setTimeout(() => btn.textContent = {{ _('Скопировать') | tojson }}, 1500);
     });
   });
 

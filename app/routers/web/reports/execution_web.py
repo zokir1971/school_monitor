@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+from urllib.parse import urlencode
 
 from fastapi import APIRouter, Depends, Request, HTTPException, status
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -25,6 +26,8 @@ from app.routers.web.helpers.render import render, render_error
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/staff/reports", tags=["staff-reports"])
+from app.routers.web.reports.document_correction_web import router as correction_router
+router.include_router(correction_router)
 
 
 # Сохранение черновика
@@ -46,21 +49,33 @@ async def staff_task_execute_save(
     # SAVE (сохранение черновика)
     # -------------------------
     if action == "save":
-        await ExecutionService.save_execution_draft(
-            db,
-            month_item_id=month_item_id,
-            user_id=current_user.id,
-            control_scope=str(form.get("control_scope") or "").strip(),
-            control_form=str(form.get("control_form") or "").strip(),
-            control_kind=str(form.get("control_kind") or "").strip(),
-            review_result=str(form.get("review_result") or "").strip(),
-            report_types=[str(x).strip() for x in form.getlist("report_types") if str(x).strip()],
-            subjects=[str(x).strip() for x in form.getlist("subjects") if str(x).strip()],
-            class_groups=[str(x).strip() for x in form.getlist("class_groups") if str(x).strip()],
-            parallel_classes=[str(x).strip() for x in form.getlist("parallel_classes") if str(x).strip()],
-            teacher_ids=[str(x).strip() for x in form.getlist("teacher_ids") if str(x).strip()],
-            teacher_id=str(form.get("teacher_id") or "").strip(),
-        )
+        try:
+            await ExecutionService.save_execution_draft(
+                db,
+                month_item_id=month_item_id,
+                user_id=current_user.id,
+                control_scope=str(form.get("control_scope") or "").strip(),
+                control_form=str(form.get("control_form") or "").strip(),
+                control_kind=str(form.get("control_kind") or "").strip(),
+                review_result=str(form.get("review_result") or "").strip(),
+                report_types=[str(x).strip() for x in form.getlist("report_types") if str(x).strip()],
+                subjects=[str(x).strip() for x in form.getlist("subjects") if str(x).strip()],
+                class_groups=[str(x).strip() for x in form.getlist("class_groups") if str(x).strip()],
+                parallel_classes=[str(x).strip() for x in form.getlist("parallel_classes") if str(x).strip()],
+                teacher_ids=[str(x).strip() for x in form.getlist("teacher_ids") if str(x).strip()],
+                teacher_id=str(form.get("teacher_id") or "").strip(),
+                school_class_ids=[str(value) for value in form.getlist('school_class_ids')],
+                algorithm_revision=int(str(form.get('algorithm_revision') or '0')),
+                report_areas_json=str(form['report_areas_json']) if 'report_areas_json' in form else None,
+                report_teacher_ids={code: [str(value).strip() for value in form.getlist("report_teacher_ids_" + code)]
+                                    for code in ("lesson_observation", "checking_notebooks_table")}
+                                   if form.get("report_teacher_selection") == "1" else None,
+            )
+        except ValueError as exc:
+            await db.rollback()
+            query = urlencode(dict(error=str(exc), month=month, selected_task_id=selected_task_id or month_item_id))
+            return RedirectResponse(str(request.url_for("staff_tasks_execute_page")) + "?" + query + "#task-section-parameters", status_code=303)
+
 
         redirect_url = request.url_for("staff_tasks_execute_page")
 
@@ -160,7 +175,7 @@ async def staff_report_execute_page(
     task = page_data["task"]
 
     task_status_value = getattr(task.status, "value", task.status)
-    is_done = task_status_value == PlanItemStatus.DONE.value
+    is_done = task_status_value in (PlanItemStatus.DONE.value, PlanItemStatus.REVIEWED.value)
 
     return render(
         templates,
@@ -338,6 +353,7 @@ async def staff_report_execute_submit(
 
 
 # Просмотр итогового документа
+@router.get("/documents/{document_id}/download", name="staff_report_document_download")
 @router.get("/documents/{document_id}/view", name="staff_report_document_view")
 async def staff_report_document_view(
         document_id: int,
@@ -387,49 +403,4 @@ async def staff_report_document_view(
 
 
 # Выгрузка итогового документа
-@router.get("/documents/{document_id}/download", name="staff_report_document_download")
-async def staff_report_document_download(
-        document_id: int,
-        db: AsyncSession = Depends(get_db),
-        current_user: User = Depends(get_current_user),
-):
-    document = await ExecutionDocumentService.get_document_for_access(
-        db,
-        document_id=document_id,
-        user_id=current_user.id,
-        user_role=current_user.role,
-    )
-
-    if not document:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Документ не найден или нет доступа",
-        )
-
-    object_key = str(document.file_path or "").strip()
-
-    if not object_key:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="У документа отсутствует путь к файлу",
-        )
-
-    storage = get_storage()
-
-    if not await storage.exists(
-        object_key=object_key,
-    ):
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Файл не найден в хранилище",
-        )
-
-    download_url = await storage.get_download_url(
-        object_key=object_key,
-        expires_in=300,
-    )
-
-    return RedirectResponse(
-        url=download_url,
-        status_code=302,
-    )
+staff_report_document_download = staff_report_document_view

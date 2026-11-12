@@ -1,158 +1,36 @@
-{% extends "base.html" %}
-
-{% block title %}Панель администратора{% endblock %}
-
+{% extends 'base.html' %}
+{% import 'dashboards/components/organized_sections.html' as sections with context %}
+{% set ru=ui_language()=='ru' %}
+{% block title %}{{ "Панель администратора региона" if ru else "Өңір әкімшісінің панелі" }}{% endblock %}
 {% block extra_css %}
-<link rel="stylesheet" href="{{ url_for('static', path='css/admin.css') }}">
+<link rel="stylesheet" href="{{ url_for('static',path='css/dashboards/organized_sections.css') }}?v=124">
+<script defer src="{{ url_for('static',path='js/assessment/navigation.js') }}?v=99"></script>
 {% endblock %}
-
 {% block content %}
-
-<div class="dashboard">
-
-  <!-- Администрирование -->
-<section class="dashboard-section">
-  <h3 class="section-title">Администрирование</h3>
-
-  {% set role = (user.role.value if user.role is not string else user.role) %}
-
-  <div class="card-grid">
-
-    {% if role in ["superuser", "region_admin", "district_admin"] %}
-    <a class="card" href="/l1/issue-l2">
-      <div class="card__inner">
-        <div class="card__top">
-          <div class="card__icon">🔐</div>
-        </div>
-        <h3 class="card__title">Выдача кодов доступа</h3>
-        <p class="card__desc">Регистрация администраторов и сотрудников</p>
-        <div class="card__footer">
-          <span>Открыть</span><span class="card__arrow">→</span>
-        </div>
-      </div>
-    </a>
-    {% endif %}
-
-    <a class="card" href="/users/admins">
-      <div class="card__inner">
-        <div class="card__top">
-          <div class="card__icon">👥</div>
-        </div>
-        <h3 class="card__title">Управление персоналом</h3>
-        <p class="card__desc">Администраторы, учителя, наблюдатели</p>
-        <div class="card__footer">
-          <span>Открыть</span><span class="card__arrow">→</span>
-        </div>
-      </div>
-    </a>
-
-    <a class="card" href="/planning/schools">
-      <div class="card__inner">
-        <div class="card__top">
-          <div class="card__icon">📅</div>
-        </div>
-        <h3 class="card__title">Планирование ВШК</h3>
-        <p class="card__desc">6 направлений, задачи и сроки, ответственные</p>
-        <div class="card__footer">
-          <span>Открыть</span><span class="card__arrow">→</span>
-        </div>
-      </div>
-    </a>
-
-  </div>
-</section>
-
-<section class="dashboard-section">
-  <h3 class="section-title">Школьный контроль</h3>
-
-  <div class="card-grid">
-    <a class="card" href="/lessons/observations">
-      <div class="card__inner">
-        <div class="card__top">
-          <div class="card__icon">📋</div>
-        </div>
-        <h3 class="card__title">Наблюдение уроков</h3>
-        <p class="card__desc">Планирование и проведение наблюдений</p>
-        <div class="card__footer">
-          <span>Открыть</span><span class="card__arrow">→</span>
-        </div>
-      </div>
-    </a>
-
-    <a class="card" href="/assessments">
-      <div class="card__inner">
-        <div class="card__top">
-          <div class="card__icon">🧠</div>
-        </div>
-        <h3 class="card__title">Оценка качества урока</h3>
-        <p class="card__desc">Критерии, шкалы, результаты</p>
-        <div class="card__footer">
-          <span>Открыть</span><span class="card__arrow">→</span>
-        </div>
-      </div>
-    </a>
-
-    <a class="card" href="/staff_school">
-      <div class="card__inner">
-        <div class="card__top">
-          <div class="card__icon">🎓</div>
-        </div>
-        <h3 class="card__title">Развитие педагогов</h3>
-        <p class="card__desc">Анализ, рекомендации, рост</p>
-        <div class="card__footer">
-          <span>Открыть</span><span class="card__arrow">→</span>
-        </div>
-      </div>
-    </a>
-  </div>
-</section>
-
-  <!-- 📊 Отчёты -->
-  <section class="dashboard-section">
-    <h3>Отчёты и аналитика</h3>
-
-    <div class="card-grid">
-      <a class="card" href="/reports/schools" >
-        <div class="card__inner">
-          <div class="card__top">
-            <div class="card__icon">📊</div>
-          </div>
-          <h3 class="card__title"> Отчёты по школам </h3>
-          <p class="card__desc">Справки и протоколы</p>
-          <div class="card__footer">
-            <span>Открыть</span><span class="card__arrow">→</span>
-          </div>
-        </div>
-      </a>
-
-      <a class="card" href="/reports/schools" >
-        <div class="card__inner">
-          <div class="card__top">
-            <div class="card__icon">📊</div>
-          </div>
-          <h3 class="card__title"> Отчёты по предметам </h3>
-          <p class="card__desc">Справки и протоколы</p>
-          <div class="card__footer">
-            <span>Открыть</span><span class="card__arrow">→</span>
-          </div>
-        </div>
-      </a>
-
-      <a class="card" href="/reports/schools" >
-        <div class="card__inner">
-          <div class="card__top">
-            <div class="card__icon">📊</div>
-          </div>
-          <h3 class="card__title"> Отчёты по учителям </h3>
-          <p class="card__desc">Справки и протоколы</p>
-          <div class="card__footer">
-            <span>Открыть</span><span class="card__arrow">→</span>
-          </div>
-        </div>
-      </a>
-
-    </div>
-  </section>
-
+{% set role=user.role.value if user.role is not string else user.role %}
+<div class="role-dashboard">
+<header class="role-dashboard__heading"><h1>{{ "Панель администратора региона" if ru else "Өңір әкімшісінің панелі" }}</h1></header>
+<nav class="role-dashboard__nav" aria-label="{{ 'Разделы панели' if ru else 'Панель бөлімдері' }}">
+<a href="#administration" data-sm-action="nav">{{ "Администрирование" if ru else "Әкімшілендіру" }}</a>
+{% if assessment_enabled() %}<a href="#assessment" data-sm-action="nav">{{ "Оценивание и аналитика" if ru else "Бағалау және талдау" }}</a>{% endif %}
+<a href="#statistics" data-sm-action="nav">{{ "Статистика региона" if ru else "Өңір статистикасы" }}</a>
+</nav>
+<section class="role-dashboard__section" aria-labelledby="administration">
+{{ sections.heading("administration","Администрирование","Әкімшілендіру","Управление доступом и сотрудниками.","Қолжетімділікті және қызметкерлерді басқару.") }}
+<div class="role-dashboard__grid">
+{% include 'components/access_recovery_card.html' %}
+{% if role in ['superuser','region_admin','district_admin'] %}
+{{ sections.card('/l1/issue-l2', "🔐", "Коды доступа", "Кіру кодтары", "Регистрация администраторов и сотрудников.", "Әкімшілер мен қызметкерлерді тіркеу.") }}
+{% endif %}
+{{ sections.card('/users/admins', "👥", "Управление персоналом", "Қызметкерлерді басқару", "Учётные записи и управление сотрудниками.", "Тіркелгілер және қызметкерлерді басқару.") }}
+{{ sections.card(url_for('region_question_bank_expert_list'), "🧑‍🏫", "Предметные эксперты", "Пән сарапшылары", "Сообщество экспертов, проверяющих задания банка.", "Банк тапсырмаларын тексеретін сарапшылар қауымдастығы.") }}
+</div></section>
+{{ sections.assessment('region_assessment_analytics_page','region_assessment_knowledge_quality_dynamics') }}
+<section class="role-dashboard__section" aria-labelledby="statistics">
+{{ sections.heading("statistics","Статистика региона","Өңір статистикасы","Отчёты и материалы мониторинга школ.","Мектептердің есептері және мониторинг материалдары.") }}
+<div class="role-dashboard__grid">
+{{ sections.card('/reports/schools', "📄", "Отчёты по школам", "Мектептер бойынша есептер", "Доступные отчётные материалы по школам.", "Мектептер бойынша қолжетімді есеп материалдары.") }}
+{{ sections.card('/lessons/observations', "👁", "Наблюдение уроков", "Сабақтарды бақылау", "Планирование и проведение наблюдений.", "Бақылауды жоспарлау және өткізу.") }}
+</div></section>
 </div>
 {% endblock %}

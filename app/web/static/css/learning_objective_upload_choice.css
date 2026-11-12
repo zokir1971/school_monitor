@@ -1,0 +1,7 @@
+.lo-upload-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}
+.lo-upload-option{display:flex;flex-direction:column;align-items:flex-start;gap:14px;color:inherit;text-decoration:none;padding:28px;transition:border-color .15s,box-shadow .15s}
+.lo-upload-option:hover,.lo-upload-option:focus-visible{border-color:#2563eb;box-shadow:0 4px 16px #2563eb18}
+.lo-upload-option h2,.lo-upload-option p{margin:0}
+.lo-upload-option p{color:#64748b;flex:1}
+.lo-upload-format{font-weight:700;color:#2563eb;letter-spacing:.03em;font-size:18px}
+@media(max-width:650px){.lo-upload-options{grid-template-columns:1fr}}

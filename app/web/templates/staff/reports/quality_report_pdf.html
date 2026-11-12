@@ -1,0 +1,16 @@
+<!doctype html><html lang="{{ snapshot.language }}"><head><meta charset="utf-8"><title>{{ snapshot.get('report_titles',{}).get('ru' if ru else 'kk') or (('Обобщённый анализ' if ru else 'Жалпылама талдау') if snapshot.get('report_code')=='class_summary' else ('Качество знаний' if ru else 'Білім сапасы')) }}</title>{% include 'staff/reports/quality_report_styles.html' %}
+<style>
+.signature-section{break-inside:avoid;page-break-inside:avoid}.signature-box{margin-top:24px;padding-top:18px;border-top:1px solid #d1d5db;display:flex;justify-content:space-between;align-items:flex-start;gap:24px;break-inside:avoid;page-break-inside:avoid;font-family:Arial,sans-serif;color:#111827}
+.signature-box .sign-info{flex:1;min-width:0}.signature-box h2{font-size:14px;margin:18px 0 8px;border-bottom:1px solid #d1d5db;padding-bottom:4px}
+.signature-box table{width:100%;border-collapse:collapse;margin-bottom:12px}.signature-box th,.signature-box td{border:1px solid #d1d5db;padding:8px 10px;font-size:13px;vertical-align:top;text-align:left}.signature-box th{width:46%;background:#f9fafb;font-weight:600;color:#374151}
+.signature-box .qr-box{width:170px;min-width:170px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:8px}.signature-box .qr-code{width:150px;height:150px;object-fit:contain;display:block;background:#fff;padding:6px;border:1px solid #d1d5db;border-radius:10px}.signature-box .qr-caption{color:#6b7280;font-size:11px;line-height:1.4}
+.signature-footer{text-align:center;margin-top:20px;font:10px Arial,sans-serif;color:#6b7280;break-inside:avoid;page-break-inside:avoid}
+</style></head><body>{% include 'staff/reports/quality_report_body.html' %}
+{% set sign=signature_info|default({}) %}
+<section class="signature-section"><div class="signature-box"><div class="sign-info"><h2>{{ 'Электронная подпись' if ru else 'Электронды қолтаңба' }}</h2><table><tbody>
+<tr><th>{{ 'Статус' if ru else 'Мәртебесі' }}</th><td>{{ ('Подписан' if ru else 'Қол қойылған') if qr else '—' }}</td></tr>
+<tr><th>{{ 'Дата' if ru else 'Күні' }}</th><td>{{ sign.get('date') or '—' }}</td></tr>
+<tr><th>{{ 'ID отчёта' if ru else 'Есеп ID' }}</th><td>{{ sign.get('report_id') or '—' }}</td></tr>
+</tbody></table></div>{% if qr %}<div class="qr-box"><img src="{{ qr }}" class="qr-code" width="150" height="150" alt="QR"><div class="qr-caption">{{ 'Проверка подлинности' if ru else 'Нақтылығын тексеру' }}</div></div>{% endif %}</div>
+<div class="signature-footer">{{ 'Документ сформирован автоматически системой school_monitor.' if ru else 'Құжат school_monitor жүйесінде автоматты түрде қалыптастырылған.' }}</div></section>
+</body></html>

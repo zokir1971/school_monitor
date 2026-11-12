@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+{% block title %}{{ _('Assessment из банка заданий') }}{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', path='css/teacher/assessment/question_bank/question_bank_renderer.css') }}">
+<style>
+.bank-page{max-width:1200px;margin:0 auto;padding:24px 16px 48px}
+.bank-heading{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:16px;margin-bottom:24px}
+.bank-heading h1{margin:0;overflow-wrap:anywhere}.bank-note{line-height:1.6;color:#475467}
+.bank-panel{padding:20px;margin:20px 0;border:1px solid #e4e7ec;border-radius:12px;background:#fff}
+.bank-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.bank-fields label{display:grid;gap:8px}
+.bank-fields input,.bank-fields select{width:100%;box-sizing:border-box;padding:10px;border:1px solid #d0d5dd;border-radius:8px}
+.bank-button{display:inline-flex;align-items:center;justify-content:center;padding:10px 18px;border:1px solid #2563eb;border-radius:8px;background:#2563eb;color:white;text-decoration:none;font:inherit;cursor:pointer}
+.bank-button:hover{background:#1d4ed8;color:white}.bank-button:focus-visible{outline:3px solid #93c5fd;outline-offset:2px}
+.bank-button--secondary{background:white;color:#2563eb}.bank-actions{display:flex;justify-content:flex-end;flex-wrap:wrap;gap:12px;margin-top:20px}
+.bank-error{padding:16px;border:1px solid #fda29b;border-radius:8px;color:#b42318;background:#fff4f2}
+.bank-choice{display:flex;align-items:center;gap:10px;font-weight:600}.bank-choice input{width:18px;height:18px}
+.bank-disabled{color:#667085}.bank-list{display:grid;gap:12px;padding:0;list-style:none}
+.bank-list a{display:block;padding:16px;border:1px solid #e4e7ec;border-radius:8px}
+@media(max-width:640px){.bank-heading,.bank-fields{grid-template-columns:minmax(0,1fr)}.bank-heading>a{justify-self:start}}
+</style>
+{% endblock %}
+{% block content %}<div class="bank-page">{% block bank_content %}{% endblock %}</div>{% endblock %}
+{% block extra_js %}
+<script data-readable-prose-loader defer src="https://cdn.jsdelivr.net/npm/mathlive"></script>
+<script defer src="{{ url_for('static', path='js/teacher/assessment/question_bank/readable_math_prose.js') }}"></script>
+<script defer src="{{ url_for('static', path='js/teacher/assessment/question_bank/question_bank_readonly_formulas.js') }}"></script>
+{% endblock %}

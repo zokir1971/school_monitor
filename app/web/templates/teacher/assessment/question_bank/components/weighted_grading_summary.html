@@ -1,0 +1,15 @@
+{% macro render_weighted_grading(item) %}
+{% set g=item.grading_settings %}
+<div class="qb-grading-list">
+ <div class="qb-grading-row"><span>{{ _('Элементов в одной карточке') }}</span><strong>{{ g.element_count }}</strong></div>
+ {% if g.get('criterion_points') %}
+ <div class="qb-grading-row"><span>{{ _('Баллы критериев через запятую') }}</span><strong>{{ g.criterion_points|join(', ') }}</strong></div>
+ {% else %}<div class="qb-grading-row"><span>{{ _('Баллов за правильный элемент') }}</span><strong>{{ g.points_per_element }}</strong></div>{% endif %}
+ <div class="qb-grading-row"><span>{{ _('Ең жоғары балл') }}</span><strong>{{ item.max_score }}</strong></div>
+ <div class="qb-grading-row"><span>{{ _('Қате немесе жауап берілмесе') }}</span><strong>0</strong></div>
+</div>
+{% if g.get('correct_option_count') %}<p>{{ _('Правильных вариантов из четырёх') }}: {{ g.correct_option_count }}. {{ _('Полный балл только за точный набор ответов, иначе 0.') }}</p>{% endif %}
+{% if (item.question_type.value if item.question_type.value is defined else item.question_type)=='number' %}
+{% for part in item.content.get('parts',[]) %}<div>{{ loop.index }}) ±{{ g.get('tolerances',{}).get(part.id,0) }}</div>{% endfor %}
+{% endif %}
+{% endmacro %}

@@ -21,3 +21,6 @@ SYSTEM_REPORT_CONFIG = {
         "pdf_route": "checking_notebooks_pdf_view",
     },
 }
+
+from app.modules.reports.assessment_report_types import REPORT_TYPES
+SYSTEM_REPORT_CONFIG.update({code: dict(fill_route=cfg['route']+'_fill_page', pdf_route=cfg['route']+'_pdf_view') for code,cfg in REPORT_TYPES.items() if not cfg.get('final')})

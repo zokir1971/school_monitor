@@ -343,3 +343,8 @@ async def super_rows11_delete(
     await db.commit()
     return RedirectResponse(url=f"/planning/super/builder?template_id={template_id}&direction_id={direction_id}",
                             status_code=303)
+
+
+# Learning objective PDF importer.
+from app.routers.web.assessment.learning_objective_import_web import router as learning_objective_import_router
+router.include_router(learning_objective_import_router)

@@ -1,0 +1,2001 @@
+{% extends "base.html" %}
+
+{% block title %}
+{{ _('Жаңа Assessment құру') }}
+{% endblock %}
+
+
+{% block extra_css %}
+<style>
+  .assessment-page {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 24px 16px 48px;
+  }
+
+  .assessment-header {
+    margin-bottom: 24px;
+  }
+
+  .assessment-header h1 {
+    margin: 0 0 6px;
+    font-size: 28px;
+    font-weight: 700;
+  }
+
+  .assessment-header p {
+    margin: 0;
+    color: #667085;
+  }
+
+  .assessment-card {
+    background: #fff;
+    border: 1px solid #e4e7ec;
+    border-radius: 14px;
+    padding: 22px;
+    margin-bottom: 20px;
+  }
+
+  .assessment-card__title {
+    margin: 0 0 18px;
+    font-size: 19px;
+    font-weight: 700;
+  }
+
+  .assessment-grid {
+    display: grid;
+    grid-template-columns: repeat(
+      2,
+      minmax(0, 1fr)
+    );
+    gap: 18px;
+  }
+
+  .assessment-field {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+  }
+
+  .assessment-field[hidden] {
+    display: none;
+  }
+
+  .assessment-field--full {
+    grid-column: 1 / -1;
+  }
+
+  .assessment-label {
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  .assessment-required {
+    color: #d92d20;
+  }
+
+  .assessment-input,
+  .assessment-select,
+  .assessment-textarea {
+    width: 100%;
+    box-sizing: border-box;
+
+    border: 1px solid #d0d5dd;
+    border-radius: 9px;
+
+    padding: 10px 12px;
+
+    font: inherit;
+
+    background: #fff;
+  }
+
+  .assessment-input:focus,
+  .assessment-select:focus,
+  .assessment-textarea:focus {
+    outline: none;
+
+    border-color: #98a2b3;
+
+    box-shadow:
+      0 0 0 3px
+      rgba(152, 162, 179, 0.15);
+  }
+
+  .assessment-textarea {
+    min-height: 100px;
+    resize: vertical;
+  }
+
+  .assessment-help {
+    color: #667085;
+    font-size: 13px;
+    line-height: 1.45;
+  }
+
+  .assessment-error {
+    border: 1px solid #fda29b;
+    background: #fef3f2;
+    color: #b42318;
+
+    border-radius: 10px;
+
+    padding: 12px 14px;
+    margin-bottom: 18px;
+  }
+
+  /* ===================================================== */
+  /* CLASSES */
+  /* ===================================================== */
+
+  .classes-grid {
+    display: grid;
+
+    grid-template-columns: repeat(
+      auto-fill,
+      minmax(150px, 1fr)
+    );
+
+    gap: 10px;
+  }
+
+  .class-option {
+    display: block;
+    position: relative;
+    cursor: pointer;
+  }
+
+  .class-option input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .class-option__body {
+    display: block;
+
+    border: 1px solid #d0d5dd;
+    border-radius: 10px;
+
+    padding: 12px;
+
+    background: #fff;
+
+    transition:
+      background 0.15s ease,
+      border-color 0.15s ease,
+      box-shadow 0.15s ease;
+  }
+
+  .class-option:hover
+  .class-option__body {
+    border-color: #98a2b3;
+  }
+
+  .class-option input:checked
+  + .class-option__body {
+    border-color: #475467;
+    background: #f2f4f7;
+    box-shadow:
+      inset 0 0 0 1px #475467;
+  }
+
+  .class-name {
+    display: block;
+
+    font-weight: 700;
+
+    margin-bottom: 3px;
+  }
+
+  .class-year {
+    color: #667085;
+    font-size: 12px;
+  }
+
+  /* ===================================================== */
+  /* OBJECTIVES */
+  /* ===================================================== */
+
+  .objectives-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+
+    gap: 12px;
+
+    margin-bottom: 14px;
+  }
+
+  .objectives-status {
+    color: #667085;
+    font-size: 13px;
+    text-align: right;
+  }
+
+  .objectives-status.is-error {
+    color: #b42318;
+    font-weight: 600;
+  }
+
+  .objectives-list {
+    display: flex;
+    flex-direction: column;
+
+    gap: 10px;
+  }
+
+  .objective-row {
+    display: grid;
+
+    grid-template-columns:
+      minmax(0, 1fr)
+      150px;
+
+    gap: 16px;
+
+    align-items: center;
+
+    border: 1px solid #e4e7ec;
+    border-radius: 10px;
+
+    padding: 12px 14px;
+
+    background: #fff;
+  }
+
+  .objective-row.is-selected {
+    border-color: #98a2b3;
+    background: #fcfcfd;
+  }
+
+  .objective-main {
+    display: flex;
+    align-items: flex-start;
+
+    gap: 10px;
+  }
+
+  .objective-main input[type="checkbox"] {
+    margin-top: 4px;
+  }
+
+  .objective-code {
+    display: block;
+
+    font-weight: 700;
+
+    margin-bottom: 3px;
+  }
+
+  .objective-title {
+    color: #475467;
+    font-size: 14px;
+    line-height: 1.45;
+  }
+
+  .objective-score {
+    display: none;
+  }
+
+  .objective-row.is-selected
+  .objective-score {
+    display: block;
+  }
+
+  .objective-score label {
+    display: block;
+
+    margin-bottom: 5px;
+
+    font-size: 12px;
+    color: #667085;
+  }
+
+  /* ===================================================== */
+  /* SCORE SUMMARY */
+  /* ===================================================== */
+
+  .score-summary {
+    margin-top: 14px;
+
+    border-top: 1px solid #e4e7ec;
+
+    padding-top: 14px;
+
+    display: flex;
+    justify-content: flex-end;
+
+    gap: 24px;
+
+    font-size: 14px;
+  }
+
+  .score-summary strong {
+    font-size: 16px;
+  }
+
+  .score-summary.is-invalid {
+    color: #b42318;
+  }
+
+  /* ===================================================== */
+  /* MESSAGES */
+  /* ===================================================== */
+
+  .assessment-empty {
+    padding: 18px;
+
+    text-align: center;
+
+    border: 1px dashed #d0d5dd;
+    border-radius: 10px;
+
+    color: #667085;
+  }
+
+  .assessment-warning {
+    padding: 12px 14px;
+
+    border-radius: 10px;
+
+    background: #fffaeb;
+    border: 1px solid #fedf89;
+
+    color: #93370d;
+  }
+
+  /* ===================================================== */
+  /* ACTIONS */
+  /* ===================================================== */
+
+  .assessment-actions {
+    display: flex;
+    justify-content: flex-end;
+
+    gap: 10px;
+
+    margin-top: 22px;
+  }
+
+  .assessment-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    border: 0;
+    border-radius: 9px;
+
+    padding: 11px 18px;
+
+    font: inherit;
+    font-weight: 600;
+
+    cursor: pointer;
+
+    text-decoration: none;
+  }
+
+  .assessment-btn--primary {
+    background: #344054;
+    color: #fff;
+  }
+
+  .assessment-btn--primary:hover {
+    background: #1d2939;
+    color: #fff;
+    text-decoration: none;
+  }
+
+  .assessment-btn--secondary {
+    background: #f2f4f7;
+    color: #344054;
+
+    text-decoration: none;
+  }
+
+  .assessment-btn--secondary:hover {
+    background: #e4e7ec;
+    color: #1d2939;
+    text-decoration: none;
+  }
+
+  /* ===================================================== */
+  /* RESPONSIVE */
+  /* ===================================================== */
+
+  @media (max-width: 760px) {
+    .assessment-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .objective-row {
+      grid-template-columns: 1fr;
+    }
+
+    .objectives-toolbar {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .objectives-status {
+      text-align: left;
+    }
+
+    .score-summary {
+      justify-content: flex-start;
+      flex-direction: column;
+
+      gap: 4px;
+    }
+
+    .assessment-actions {
+      justify-content: stretch;
+    }
+
+    .assessment-actions
+    .assessment-btn {
+      flex: 1;
+    }
+  }
+</style>
+{% endblock %}
+
+
+{% block content %}
+
+<div class="assessment-page">
+
+  <!-- ================================================= -->
+  <!-- HEADER -->
+  <!-- ================================================= -->
+
+  <div class="assessment-header">
+
+    <h1>
+      {{ _('Жаңа Assessment құру') }}
+    </h1>
+
+    <p>
+      {{ _('Пәнді, Assessment режимін және сыныптарды таңдаңыз. Бір Assessment бірнеше сыныпты қамти алады.') }}
+    </p>
+
+  </div>
+
+
+  <!-- ================================================= -->
+  <!-- ERROR -->
+  <!-- ================================================= -->
+
+  {% if error %}
+
+    <div class="assessment-error">
+      {{ assessment_error(error) }}
+    </div>
+
+  {% endif %}
+
+
+  <!-- ================================================= -->
+  <!-- FORM -->
+  <!-- ================================================= -->
+
+  <form
+    method="post"
+    action="{{ url_for('staff_assessment_create') }}"
+    id="assessment-create-form"
+  >
+
+    <input
+      type="hidden"
+      name="academic_year_start"
+      value="{{ academic_year_start }}"
+    >
+
+
+    <!-- ================================================= -->
+    <!-- 1. BASIC DATA -->
+    <!-- ================================================= -->
+
+    <section class="assessment-card">
+
+      <h2 class="assessment-card__title">
+        {{ _('1. Негізгі мәліметтер') }}
+      </h2>
+
+
+      <div class="assessment-grid">
+
+
+        <p class="assessment-help assessment-field--full">{{ 'Название формируется автоматически на русском и казахском.' if ui_language()=='ru' else 'Атау қазақша және орысша автоматты түрде құрылады.' }}</p>
+        <input type="hidden" id="title" name="title" value="">
+
+        <!-- SUBJECT -->
+
+        <div class="assessment-field">
+
+          <label
+            class="assessment-label"
+            for="subject_id"
+          >
+            {{ _('Пән') }}
+            <span class="assessment-required">
+              *
+            </span>
+          </label>
+
+          <select
+            class="assessment-select"
+            id="subject_id"
+            name="subject_id"
+            required
+          >
+
+          <option value="">
+            {{ _('Пәнді таңдаңыз') }}
+          </option>
+
+            {% for subject in subjects %}
+
+              <option
+                value="{{ subject.id }}"
+                {% if form_data
+                      and form_data.subject_id|string
+                          == subject.id|string %}
+                  selected
+                {% endif %}
+              >
+                {{ assessment_subject_name(subject) }}
+              </option>
+
+            {% endfor %}
+
+          </select>
+        </div>
+
+
+        <!-- ASSESSMENT TYPE -->
+
+        <div class="assessment-field">
+
+          <label
+            class="assessment-label"
+            for="assessment_type"
+          >
+            {{ _('Assessment түрі') }}
+            <span class="assessment-required">
+              *
+            </span>
+          </label>
+
+          <select
+            class="assessment-select"
+            id="assessment_type"
+            name="assessment_type"
+            required
+          >
+
+            <option value="">{{ 'Выберите тип работы' if ui_language()=='ru' else 'Жұмыс түрін таңдаңыз' }}</option><option value="sor" {% if form_data is defined and form_data and form_data.get('assessment_mode')=='assessment_by_section' %}selected{% endif %}>{{ 'СОР' if ui_language()=='ru' else 'БЖБ' }}</option><option value="soch" {% if form_data is defined and form_data and form_data.get('assessment_mode')=='assessment_by_quarter' %}selected{% endif %}>{{ 'СОЧ' if ui_language()=='ru' else 'ТЖБ' }}</option>{% for item in assessment_types if item.value!='summative' %}
+
+              <option
+                value="{{ item.value }}"
+                {% if form_data
+                      and form_data.assessment_type
+                          == item.value %}
+                  selected
+                {% endif %}
+              >
+                {{ ({'baseline':'Нулевой контроль','diagnostic':'Диагностическая работа','monitoring':'Мониторинг','control':'Контрольная работа','custom':'Другое'}.get(item.value,item.label_kz)) if ui_language()=='ru' else item.label_kz }}
+              </option>
+            {% endfor %}
+
+          </select>
+
+        </div>
+
+
+        <div class="assessment-field">
+          <label class="assessment-label" for="naming_quarter">{{ 'Четверть' if ui_language()=='ru' else 'Тоқсан' }}</label>
+          <select class="assessment-select" id="naming_quarter" name="naming_quarter">
+            <option value="">{{ 'Выберите четверть' if ui_language()=='ru' else 'Тоқсанды таңдаңыз' }}</option>
+            {% for q in range(1,5) %}<option value="{{ q }}" {% if form_data is defined and form_data and form_data.get('naming_quarter')==q|string %}selected{% endif %}>{{ {1:'I',2:'II',3:'III',4:'IV'}[q] }} {{ 'четверть' if ui_language()=='ru' else 'тоқсан' }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="assessment-field">
+          <label class="assessment-label" for="section_number">{{ 'Номер СОР (необязательно)' if ui_language()=='ru' else 'БЖБ нөмірі (міндетті емес)' }}</label>
+          <input class="assessment-input" id="section_number" name="section_number" type="number" min="1" max="99" value="{{ form_data.get('section_number','') if form_data is defined and form_data else '' }}">
+        </div>
+
+        <!-- ASSESSMENT MODE -->
+
+        {% set selected_assessment_mode =
+          form_data.assessment_mode
+          if form_data
+          else "without_objectives"
+        %}
+
+        <div class="assessment-field">
+
+          <label
+            class="assessment-label"
+            for="assessment_mode"
+          >
+            {{ _('Assessment режимі') }}
+            <span class="assessment-required">
+              *
+            </span>
+          </label>
+
+          <select
+            class="assessment-select"
+            id="assessment_mode"
+            name="assessment_mode"
+            required
+            >
+
+            <option value="without_objectives">{{ 'Только общий балл' if ui_language()=='ru' else 'Тек жалпы балл' }}</option><option value="by_objectives" {% if form_data is defined and form_data and form_data.get('assessment_mode') in ['by_objectives','assessment_by_section','assessment_by_quarter'] %}selected{% endif %}>{{ 'Баллы по учебным целям' if ui_language()=='ru' else 'Оқу мақсаттары бойынша балдар' }}</option>
+
+          </select>
+        </div>
+
+        <!-- ASSESSMENT CHECKPOINT -->
+
+        {% set selected_checkpoint = form_data.checkpoint if form_data else "" %}
+
+        <div class="assessment-field">
+
+          <label
+            class="assessment-label"
+            for="checkpoint"
+          >
+            {{ _('Жылдық динамикадағы бақылау нүктесі') }}
+          </label>
+
+          <select
+            class="assessment-select"
+            id="checkpoint"
+            name="checkpoint"
+          >
+
+            <option
+              value=""
+              {% if not selected_checkpoint %}selected{% endif %}
+            >
+              {{ _('Жылдық динамикаға қатыспайды') }}
+            </option>
+
+            {% for item in assessment_checkpoints %}
+
+              <option
+                value="{{ item.value }}"
+                {% if selected_checkpoint == item.value %}
+                  selected
+                {% endif %}
+              >
+                {{ _(item.label_kz) }}
+              </option>
+
+            {% endfor %}
+
+          </select>
+
+          <div class="assessment-help">
+            {{ _('Тек жыл ішіндегі білім сапасының динамикасын есептеу үшін қолданылатын ресми бақылау нүктесін таңдаңыз. Қарапайым ЖБ үшін бос қалдырыңыз.') }}
+          </div>
+
+        </div>
+
+        <!-- MAX SCORE -->
+
+        <div class="assessment-field">
+
+          <label
+            class="assessment-label"
+            for="max_score"
+          >
+            {{ _('Максималды балл') }}
+
+            <span class="assessment-required">
+              *
+            </span>
+          </label>
+
+          <input
+            class="assessment-input"
+            type="number"
+            id="max_score"
+            name="max_score"
+            min="0.01"
+            step="0.01"
+            required
+            value="{{ form_data.get('max_score', '') if form_data else '' }}"
+            placeholder="30"
+          >
+
+          <div class="assessment-help">
+            {{ _('Мысалы: 20, 30 немесе 50.') }}
+          </div>
+
+        </div>
+
+
+        <!-- DURATION -->
+
+        <div class="assessment-field">
+
+          <label
+            class="assessment-label"
+            for="duration_minutes"
+          >
+            {{ _('Ұзақтығы, минут') }}
+          </label>
+
+          <input
+            class="assessment-input"
+            type="number"
+            id="duration_minutes"
+            name="duration_minutes"
+            min="1"
+            step="1"
+            value="{{ form_data.get('duration_minutes', '') if form_data else '' }}"
+            placeholder="{{ _('Мысалы: 25') }}"
+          >
+
+          <div class="assessment-help">
+            {{ _('Міндетті емес. Қажет болса Assessment ұзақтығын көрсетіңіз.') }}
+          </div>
+
+        </div>
+
+
+        <!-- ACADEMIC YEAR -->
+
+        <div class="assessment-field">
+
+          <label class="assessment-label">
+            {{ _('Оқу жылы') }}
+          </label>
+
+          <input
+            class="assessment-input"
+            type="text"
+            value="{{ academic_year_label }}"
+            readonly
+          >
+
+        </div>
+
+
+        <!-- DESCRIPTION -->
+
+        <div
+          class="
+            assessment-field
+            assessment-field--full
+          "
+        >
+
+          <label
+            class="assessment-label"
+            for="description"
+          >
+            {{ _('Сипаттама') }}
+          </label>
+
+          <textarea
+            class="assessment-textarea"
+            id="description"
+            name="description"
+            placeholder="{{ _('Қосымша сипаттама...') }}"
+          >{{ form_data.get('description', '') if form_data else '' }}</textarea>
+
+        </div>
+
+      </div>
+
+    </section>
+
+
+    <!-- ================================================= -->
+    <!-- 2. CLASSES -->
+    <!-- ================================================= -->
+
+    <section class="assessment-card">
+
+      <h2 class="assessment-card__title">
+        {{ _('2. Сыныптар') }}
+      </h2>
+
+      <p class="assessment-help">
+        {{ _('Бір немесе бірнеше сыныпты таңдауға болады. БЖБ / СОР және ТЖБ / СОЧ режимдерінде бір параллельдің сыныптары таңдалуы тиіс.') }}
+      </p>
+
+
+      {% if classes %}
+
+        <div class="classes-grid">
+
+          {% for school_class in classes %}
+
+            <label class="class-option">
+
+              <input
+                type="checkbox"
+                name="school_class_ids"
+                value="{{ school_class.id }}"
+                data-grade-level="{{ school_class.grade_level }}"
+
+                {% if school_class.id
+                      in selected_class_ids|default([]) %}
+                  checked
+                {% endif %}
+              >
+
+              <span class="class-option__body">
+
+                <span class="class-name">
+                  {{ school_class.name }}
+                </span>
+
+                <span class="class-year">
+                  {{ school_class.academic_year_label }}
+                </span>
+
+              </span>
+
+            </label>
+
+          {% endfor %}
+
+        </div>
+
+      {% else %}
+
+        <div class="assessment-empty">
+          {{ _('Осы оқу жылына белсенді сыныптар табылмады.') }}
+        </div>
+
+      {% endif %}
+
+    </section>
+
+
+    <!-- ================================================= -->
+    <!-- 3. LEARNING OBJECTIVES -->
+    <!-- ================================================= -->
+
+    <section
+      class="assessment-card"
+      id="objectives-section"
+    >
+
+      <div class="objectives-toolbar">
+
+        <div>
+
+          <h2
+            class="assessment-card__title"
+            style="margin-bottom: 4px;"
+          >
+            {{ _('3. Оқу мақсаттары') }}
+          </h2>
+
+          <div class="assessment-help">
+            {{ _('БЖБ / СОР және ТЖБ / СОЧ режимдерінде оқу мақсаттары міндетті. Оқу мақсаттары пән мен бір параллель таңдалғаннан кейін көрсетіледі.') }}
+          </div>
+
+        </div>
+
+
+        <div
+          class="objectives-status"
+          id="objectives-status"
+        ></div>
+
+      </div>
+
+
+      <div
+        id="objectives-message"
+        class="assessment-empty"
+      >
+        {{ _('Assessment режимін таңдаңыз.') }}
+      </div>
+
+
+      <div
+        id="objectives-list"
+        class="objectives-list"
+        hidden
+      ></div>
+
+
+      <div
+        id="score-summary"
+        class="score-summary"
+        hidden
+      >
+
+        <span>
+          {{ _('Оқу мақсаттары:') }}
+
+          <strong id="objectives-total-score">
+            0
+          </strong>
+        </span>
+
+        <span>
+          {{ _('Assessment:') }}
+
+          <strong id="assessment-max-score-display">
+            0
+          </strong>
+        </span>
+
+      </div>
+
+    </section>
+
+
+    <!-- ================================================= -->
+    <!-- ACTIONS -->
+    <!-- ================================================= -->
+
+    <div class="assessment-actions">
+
+      <a
+        class="
+          assessment-btn
+          assessment-btn--secondary
+        "
+        href="{{ url_for('staff_assessment_list_page') }}"
+       data-sm-action="edit">
+        {{ _('Болдырмау') }}
+      </a>
+
+      <button
+        class="
+          assessment-btn
+          assessment-btn--primary
+        "
+        type="submit"
+       data-sm-action="primary">
+        {{ _('Assessment құру') }}
+      </button>
+
+    </div>
+
+  </form>
+
+</div>
+
+
+<script>
+document.addEventListener(
+  "DOMContentLoaded",
+  () => {
+
+    // =====================================================
+    // ELEMENTS
+    // =====================================================
+
+    const form =
+      document.getElementById(
+        "assessment-create-form"
+      );
+
+    const subjectSelect =
+      document.getElementById(
+        "subject_id"
+      );
+
+    const assessmentModeSelect =
+      document.getElementById(
+        "assessment_mode"
+      );
+
+    const maxScoreInput =
+      document.getElementById(
+        "max_score"
+      );
+
+    const classInputs =
+      Array.from(
+        document.querySelectorAll(
+          'input[name="school_class_ids"]'
+        )
+      );
+
+    const objectivesSection =
+      document.getElementById(
+        "objectives-section"
+      );
+
+    const objectivesList =
+      document.getElementById(
+        "objectives-list"
+      );
+
+    const objectivesMessage =
+      document.getElementById(
+        "objectives-message"
+      );
+
+    const objectivesStatus =
+      document.getElementById(
+        "objectives-status"
+      );
+
+    const scoreSummary =
+      document.getElementById(
+        "score-summary"
+      );
+
+    const objectivesTotalScore =
+      document.getElementById(
+        "objectives-total-score"
+      );
+
+    const assessmentMaxScoreDisplay =
+      document.getElementById(
+        "assessment-max-score-display"
+      );
+
+
+    // =====================================================
+    // RESTORE DATA
+    // =====================================================
+
+    const selectedObjectiveIds =
+      new Set(
+        {{ selected_objective_ids
+           | default([])
+           | list
+           | tojson }}
+          .map(String)
+      );
+
+    const restoredFormData =
+      {{ form_data
+         | default({})
+         | tojson }};
+
+
+    // =====================================================
+    // MODE
+    // =====================================================
+
+    function isObjectiveMode() {
+
+      return (
+        assessmentModeSelect.value === "by_objectives" ||
+        assessmentModeSelect.value
+          === "assessment_by_section"
+        ||
+        assessmentModeSelect.value
+          === "assessment_by_quarter"
+      );
+
+    }
+
+
+    // =====================================================
+    // CLASSES
+    // =====================================================
+
+    function selectedClasses() {
+
+      return classInputs.filter(
+        input => input.checked
+      );
+
+    }
+
+
+    function selectedGradeLevels() {
+
+      return new Set(
+        selectedClasses().map(
+          input =>
+            input.dataset.gradeLevel
+        )
+      );
+
+    }
+
+
+    // =====================================================
+    // OBJECTIVES UI
+    // =====================================================
+
+    function clearObjectives(
+      message
+    ) {
+
+      objectivesList.innerHTML = "";
+
+      objectivesList.hidden = true;
+      scoreSummary.hidden = true;
+
+      objectivesMessage.textContent =
+        message;
+
+      objectivesMessage.hidden = false;
+
+      objectivesStatus.textContent = "";
+
+      objectivesStatus.classList.remove(
+        "is-error"
+      );
+
+    }
+
+
+    function formatNumber(
+      value
+    ) {
+
+      if (
+        value === null
+        ||
+        value === undefined
+        ||
+        Number.isNaN(value)
+      ) {
+        return "0";
+      }
+
+      if (
+        Number.isInteger(value)
+      ) {
+        return String(value);
+      }
+
+      return String(
+        Math.round(
+          value * 100
+        ) / 100
+      ).replace(
+        ".",
+        ","
+      );
+
+    }
+
+
+    // =====================================================
+    // SCORE SUMMARY
+    // =====================================================
+
+    function updateScoreSummary() {
+
+      const scoreInputs =
+        Array.from(
+          objectivesList
+            .querySelectorAll(
+              ".objective-row.is-selected " +
+              ".objective-score-input"
+            )
+        );
+
+      const total =
+        scoreInputs.reduce(
+          (
+            sum,
+            input
+          ) => {
+
+            const value =
+              Number(
+                String(
+                  input.value || "0"
+                ).replace(
+                  ",",
+                  "."
+                )
+              );
+
+            return (
+              sum
+              +
+              (
+                Number.isFinite(
+                  value
+                )
+                  ? value
+                  : 0
+              )
+            );
+
+          },
+          0
+        );
+
+      const maxScore =
+        Number(
+          String(
+            maxScoreInput.value
+            || "0"
+          ).replace(
+            ",",
+            "."
+          )
+        );
+
+      objectivesTotalScore.textContent =
+        formatNumber(
+          total
+        );
+
+      assessmentMaxScoreDisplay.textContent =
+        formatNumber(
+          maxScore
+        );
+
+      scoreSummary.hidden =
+        scoreInputs.length === 0;
+
+      const isValid =
+        (
+          scoreInputs.length === 0
+        )
+        ||
+        (
+          Number.isFinite(
+            maxScore
+          )
+          &&
+          Math.abs(
+            total - maxScore
+          ) < 0.0001
+        );
+
+      scoreSummary.classList.toggle(
+        "is-invalid",
+        !isValid
+      );
+
+    }
+
+
+    // =====================================================
+    // BUILD OBJECTIVE ROW
+    // =====================================================
+
+    function buildObjectiveRow(
+      objective
+    ) {
+
+      const row =
+        document.createElement(
+          "div"
+        );
+
+      row.className =
+        "objective-row";
+
+
+      const main =
+        document.createElement(
+          "div"
+        );
+
+      main.className =
+        "objective-main";
+
+
+      const checkbox =
+        document.createElement(
+          "input"
+        );
+
+      checkbox.type =
+        "checkbox";
+
+      checkbox.name =
+        "learning_objective_ids";
+
+      checkbox.value =
+        String(
+          objective.id
+        );
+
+
+      const textBox =
+        document.createElement(
+          "div"
+        );
+
+
+      const code =
+        document.createElement(
+          "span"
+        );
+
+      code.className =
+        "objective-code";
+
+      code.textContent =
+        objective.code;
+
+
+      const title =
+        document.createElement(
+          "div"
+        );
+
+      title.className =
+        "objective-title";
+
+      title.textContent =
+        objective.title_kz;
+
+
+      textBox.append(
+        code,
+        title
+      );
+
+
+      main.append(
+        checkbox,
+        textBox
+      );
+
+
+      const scoreBox =
+        document.createElement(
+          "div"
+        );
+
+      scoreBox.className =
+        "objective-score";
+
+
+      const scoreLabel =
+        document.createElement(
+          "label"
+        );
+
+      scoreLabel.textContent =
+        window.SchoolMonitorI18n.t("as_efefc3289ab0");
+
+
+      const scoreInput =
+        document.createElement(
+          "input"
+        );
+
+      scoreInput.type =
+        "number";
+
+      scoreInput.min =
+        "0.01";
+
+      scoreInput.step =
+        "0.01";
+
+      scoreInput.className =
+        "assessment-input " +
+        "objective-score-input";
+
+      scoreInput.name =
+        (
+          "objective_max_score_"
+          +
+          objective.id
+        );
+
+      scoreInput.disabled =
+        true;
+
+
+      scoreBox.append(
+        scoreLabel,
+        scoreInput
+      );
+
+
+      row.append(
+        main,
+        scoreBox
+      );
+
+
+      // ===================================================
+      // CHECKBOX EVENT
+      // ===================================================
+
+      checkbox.addEventListener(
+        "change",
+        () => {
+
+          row.classList.toggle(
+            "is-selected",
+            checkbox.checked
+          );
+
+          scoreInput.disabled =
+            !checkbox.checked;
+
+          scoreInput.required =
+            checkbox.checked;
+
+          if (
+            !checkbox.checked
+          ) {
+            scoreInput.value = "";
+          }
+
+          objectivesStatus.classList.remove(
+            "is-error"
+          );
+
+          updateScoreSummary();
+
+        }
+      );
+
+
+      scoreInput.addEventListener(
+        "input",
+        updateScoreSummary
+      );
+
+
+      // ===================================================
+      // RESTORE AFTER SERVER ERROR
+      // ===================================================
+
+      if (
+        selectedObjectiveIds.has(
+          String(
+            objective.id
+          )
+        )
+      ) {
+
+        checkbox.checked =
+          true;
+
+        row.classList.add(
+          "is-selected"
+        );
+
+        scoreInput.disabled =
+          false;
+
+        scoreInput.required =
+          true;
+
+        const restoredScore =
+          restoredFormData[
+            `objective_max_score_${objective.id}`
+          ];
+
+        if (
+          restoredScore !== undefined
+          &&
+          restoredScore !== null
+        ) {
+
+          scoreInput.value =
+            restoredScore;
+
+        }
+
+      }
+
+
+      return row;
+
+    }
+
+
+    // =====================================================
+    // LOAD OBJECTIVES
+    // =====================================================
+
+    let objectiveLoadVersion=0;
+    async function loadObjectives() {
+      const loadVersion=++objectiveLoadVersion;
+      const quarterField=document.getElementById('naming_quarter');
+      const quarterRequired=['sor','soch'].includes(document.getElementById('assessment_type').value);
+      const selectedQuarter=quarterRequired ? quarterField.value : '';
+      if(quarterRequired&&!selectedQuarter){
+        objectivesList.innerHTML='';
+        const message=document.createElement('p');message.textContent={{ ('Выберите четверть для загрузки учебных целей.' if ui_language()=='ru' else 'Оқу мақсаттарын жүктеу үшін тоқсанды таңдаңыз.')|tojson }};
+        objectivesList.appendChild(message);objectivesList.hidden=false;
+        return;
+      }
+
+
+      // ---------------------------------------------------
+      // WITHOUT OBJECTIVES
+      // ---------------------------------------------------
+
+      if (
+        !isObjectiveMode()
+      ) {
+
+        objectivesList.innerHTML =
+          "";
+
+        objectivesList.hidden =
+          true;
+
+        scoreSummary.hidden =
+          true;
+
+        objectivesMessage.textContent =
+          (
+            window.SchoolMonitorI18n.t("as_5c61e90b2094")
+            +
+            window.SchoolMonitorI18n.t("as_c1c97f6d7eec")
+          );
+
+        objectivesMessage.hidden =
+          false;
+
+        objectivesStatus.textContent =
+          "";
+
+        objectivesStatus.classList.remove(
+          "is-error"
+        );
+
+        return;
+
+      }
+
+
+      const subjectId =
+        subjectSelect.value;
+
+      const selected =
+        selectedClasses();
+
+
+      // ---------------------------------------------------
+      // SUBJECT
+      // ---------------------------------------------------
+
+      if (
+        !subjectId
+      ) {
+
+        clearObjectives(
+          window.SchoolMonitorI18n.t("as_9ddc633d14c8")
+        );
+
+        return;
+
+      }
+
+
+      // ---------------------------------------------------
+      // CLASS
+      // ---------------------------------------------------
+
+      if (
+        selected.length === 0
+      ) {
+
+        clearObjectives(
+          (
+            window.SchoolMonitorI18n.t("as_ef471acd67d3")
+            +
+            window.SchoolMonitorI18n.t("as_221400db6d8b")
+          )
+        );
+
+        return;
+
+      }
+
+
+      // ---------------------------------------------------
+      // ONE GRADE LEVEL
+      // ---------------------------------------------------
+
+      const gradeLevels =
+        selectedGradeLevels();
+
+      if (
+        gradeLevels.size !== 1
+      ) {
+
+        clearObjectives(
+          (
+            window.SchoolMonitorI18n.t("as_8fa1ecab9f00")
+            +
+            window.SchoolMonitorI18n.t("as_18e059e8721a")
+          )
+        );
+
+        return;
+
+      }
+
+
+      const gradeLevel =
+        Array.from(
+          gradeLevels
+        )[0] - (document.getElementById('assessment_type').value==='baseline'?1:0);
+
+
+      // ---------------------------------------------------
+      // LOADING
+      // ---------------------------------------------------
+
+      objectivesStatus.textContent =
+        window.SchoolMonitorI18n.t("as_330cea6d9544");
+
+      objectivesStatus.classList.remove(
+        "is-error"
+      );
+
+      objectivesMessage.hidden =
+        true;
+
+      objectivesList.hidden =
+        true;
+
+
+      try {
+
+        const baseUrl =
+          "{{ url_for('staff_assessment_learning_objectives') }}";
+
+        const params =
+          new URLSearchParams({
+            subject_id:
+              subjectId,
+
+            grade_level:
+              gradeLevel,
+          });
+
+
+        if(selectedQuarter)params.set('quarter',selectedQuarter);
+        objectivesList.innerHTML='';
+
+        const response =
+          await fetch(
+            `${baseUrl}?${params.toString()}`,
+            {
+              headers: {
+                "Accept":
+                  "application/json",
+              },
+            }
+          );
+
+
+        if (
+          !response.ok
+        ) {
+
+          throw new Error(
+            "Learning objectives request failed"
+          );
+
+        }
+
+
+        const data =
+          await response.json();
+        if(loadVersion!==objectiveLoadVersion)return;
+
+        const items =
+          Array.isArray(
+            data.items
+          )
+            ? data.items
+            : [];
+
+
+        objectivesList.innerHTML =
+          "";
+
+
+        if (
+          items.length === 0
+        ) {
+
+          clearObjectives(
+            (
+              window.SchoolMonitorI18n.t("as_9003d9c469a6")
+              +
+              window.SchoolMonitorI18n.t("as_7892421d87e6")
+            )
+          );
+
+          return;
+
+        }
+
+
+        for (
+          const objective
+          of items
+        ) {
+
+          objectivesList.appendChild(
+            buildObjectiveRow(
+              objective
+            )
+          );
+
+        }
+
+
+        objectivesList.hidden =
+          false;
+
+        objectivesMessage.hidden =
+          true;
+
+        objectivesStatus.textContent =
+          window.SchoolMonitorI18n.t("as_52624a7403a9", {p0: (items.length)});
+
+        updateScoreSummary();
+
+      }
+      catch (
+        error
+      ) {
+
+        console.error(
+          error
+        );
+
+        clearObjectives(
+          (
+            window.SchoolMonitorI18n.t("as_8b78ef115951")
+            +
+            window.SchoolMonitorI18n.t("as_2b9c2a07fd54")
+          )
+        );
+
+      }
+
+    }
+
+
+    // =====================================================
+    // MODE EVENT
+    // =====================================================
+
+    assessmentModeSelect.addEventListener(
+      "change",
+      () => {
+
+        selectedObjectiveIds.clear();
+
+        loadObjectives();
+
+      }
+    );
+
+
+    // =====================================================
+    // SUBJECT EVENT
+    // =====================================================
+
+    subjectSelect.addEventListener(
+      "change",
+      () => {
+
+        selectedObjectiveIds.clear();
+
+        loadObjectives();
+
+      }
+    );
+
+
+    // =====================================================
+    // CLASS EVENTS
+    // =====================================================
+
+    classInputs.forEach(
+      input => {
+
+        input.addEventListener(
+          "change",
+          () => {
+
+            selectedObjectiveIds.clear();
+
+            loadObjectives();
+
+          }
+        );
+
+      }
+    );
+
+
+    // =====================================================
+    // MAX SCORE EVENT
+    // =====================================================
+
+    maxScoreInput.addEventListener(
+      "input",
+      updateScoreSummary
+    );
+
+
+    // =====================================================
+    // SUBMIT VALIDATION
+    // =====================================================
+
+    form.addEventListener(
+      "submit",
+      event => {
+
+        // WITHOUT_OBJECTIVES
+        if (
+          !isObjectiveMode()
+        ) {
+          return;
+        }
+
+
+        const checkedObjectives =
+          objectivesList
+            .querySelectorAll(
+              'input[name="learning_objective_ids"]:checked'
+            );
+
+
+        // -------------------------------------------------
+        // AT LEAST ONE OBJECTIVE
+        // -------------------------------------------------
+
+        if (
+          checkedObjectives.length === 0
+        ) {
+
+          event.preventDefault();
+
+          objectivesStatus.textContent =
+            (
+              window.SchoolMonitorI18n.t("as_4749c338df0d")
+              +
+              window.SchoolMonitorI18n.t("as_02f3c8dcdb44")
+            );
+
+          objectivesStatus.classList.add(
+            "is-error"
+          );
+
+          objectivesSection.scrollIntoView({
+            behavior:
+              "smooth",
+
+            block:
+              "start",
+          });
+
+          return;
+
+        }
+
+
+        // -------------------------------------------------
+        // OBJECTIVE SCORE SUM
+        // -------------------------------------------------
+
+        const scoreInputs =
+          Array.from(
+            objectivesList
+              .querySelectorAll(
+                ".objective-row.is-selected " +
+                ".objective-score-input"
+              )
+          );
+
+
+        const total =
+          scoreInputs.reduce(
+            (
+              sum,
+              input
+            ) => {
+
+              const value =
+                Number(
+                  String(
+                    input.value || "0"
+                  ).replace(
+                    ",",
+                    "."
+                  )
+                );
+
+              return (
+                sum
+                +
+                (
+                  Number.isFinite(
+                    value
+                  )
+                    ? value
+                    : 0
+                )
+              );
+
+            },
+            0
+          );
+
+
+        const maxScore =
+          Number(
+            String(
+              maxScoreInput.value
+              || "0"
+            ).replace(
+              ",",
+              "."
+            )
+          );
+
+
+        if (
+          !Number.isFinite(
+            maxScore
+          )
+          ||
+          Math.abs(
+            total - maxScore
+          ) >= 0.0001
+        ) {
+
+          event.preventDefault();
+
+          objectivesStatus.textContent =
+            (
+              window.SchoolMonitorI18n.t("as_6a02a4e8b859")
+              +
+              window.SchoolMonitorI18n.t("as_91b48d090f0d")
+              +
+              window.SchoolMonitorI18n.t("as_f16d5ed10965")
+            );
+
+          objectivesStatus.classList.add(
+            "is-error"
+          );
+
+          scoreSummary.classList.add(
+            "is-invalid"
+          );
+
+          objectivesSection.scrollIntoView({
+            behavior:
+              "smooth",
+
+            block:
+              "start",
+          });
+
+        }
+
+      }
+    );
+
+
+    // =====================================================
+    // INITIAL STATE
+    // =====================================================
+
+    loadObjectives();
+
+  }
+);
+</script>
+
+<script defer src="{{ url_for('static',path='js/assessment/manual_work_parameters.js') }}?v=122"></script>
+{% endblock %}
