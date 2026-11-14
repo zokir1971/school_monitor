@@ -17,21 +17,24 @@ from .learning_objective_reference_web import router as learning_objective_refer
 
 from .shared_question_bank_web import router as shared_question_bank_router
 
-router = APIRouter(dependencies=[Depends(require_assessment_enabled)])
-router.include_router(shared_question_bank_router)
+# Reference setup remains available to the platform superuser while assessment
+# execution is disabled. Existing endpoint role checks remain in force.
+router = APIRouter()
+assessment_router = APIRouter(dependencies=[Depends(require_assessment_enabled)])
+assessment_router.include_router(shared_question_bank_router)
 
 from .assessment_bank_web import router as assessment_bank_router
-router.include_router(assessment_bank_router)
-router.include_router(teacher_assessment_router)
-router.include_router(staff_assessment_router)
-router.include_router(district_assessment_router)
-router.include_router(region_assessment_router)
-router.include_router(knowledge_quality_dynamics_router)
-router.include_router(teacher_online_assessment_router)
-router.include_router(teacher_question_bank_router)
-router.include_router(region_question_bank_expert_router)
-router.include_router(question_bank_expert_review_router)
-router.include_router(teacher_question_bank_ai_router)
+assessment_router.include_router(assessment_bank_router)
+assessment_router.include_router(teacher_assessment_router)
+assessment_router.include_router(staff_assessment_router)
+assessment_router.include_router(district_assessment_router)
+assessment_router.include_router(region_assessment_router)
+assessment_router.include_router(knowledge_quality_dynamics_router)
+assessment_router.include_router(teacher_online_assessment_router)
+assessment_router.include_router(teacher_question_bank_router)
+assessment_router.include_router(region_question_bank_expert_router)
+assessment_router.include_router(question_bank_expert_review_router)
+assessment_router.include_router(teacher_question_bank_ai_router)
 router.include_router(
     learning_objective_import_router,
     prefix="/planning/super",
@@ -39,10 +42,13 @@ router.include_router(
 router.include_router(learning_objective_reference_router)
 
 from .question_bank_languages_web import router as question_bank_languages_router
-router.include_router(question_bank_languages_router)
+assessment_router.include_router(question_bank_languages_router)
 
 from .work_plan_web import router as work_plan_router
-router.include_router(work_plan_router)
+assessment_router.include_router(work_plan_router)
 
 from .diagnostic_sessions_web import router as diagnostic_sessions_router
-router.include_router(diagnostic_sessions_router)
+assessment_router.include_router(diagnostic_sessions_router)
+
+# Every operational assessment route inherits the feature gate.
+router.include_router(assessment_router)
