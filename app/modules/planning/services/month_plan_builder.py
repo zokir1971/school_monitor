@@ -8,6 +8,7 @@ from app.modules.planning.repositories.review_place_sync_repo import ReviewPlace
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.planning.constants import ACADEMIC_MONTHS
+from app.modules.planning.utils.month_schedule import period_matches
 from app.modules.planning.enums import PlanPeriodType
 from app.modules.planning.models_month_plan import SchoolMonthPlanItem
 from app.modules.planning.models_school import SchoolPlanRow11
@@ -29,6 +30,7 @@ class MonthPlanBuilder:
         school_plan_id: int,
         month_plan_id: int,
         month: int,
+        default_included: bool = True,
     ) -> None:
         if month not in ACADEMIC_MONTHS:
             raise ValueError(
@@ -54,6 +56,8 @@ class MonthPlanBuilder:
         row_map: dict[int, SchoolPlanRow11] = {}
 
         for row in rows:
+            if not period_matches(row,month):
+                continue
             row_map[row.id] = row
             period_type_value = cls._enum_value(
                 row.period_type
@@ -103,7 +107,7 @@ class MonthPlanBuilder:
 
         already_included_quarter_ids = (
             await SchoolMonthlyPlanRepo
-            .list_previously_included_quarter_source_ids(
+            .list_previously_completed_quarter_source_ids(
                 db,
                 school_plan_id=school_plan_id,
                 source_row11_ids=quarter_candidate_ids,
@@ -131,7 +135,7 @@ class MonthPlanBuilder:
                     db,
                     month_plan_id=month_plan_id,
                     source_row11_ids=non_quarter_ids,
-                    default_included=True,
+                    default_included=default_included,
                     default_week=None,
                 )
             )
@@ -158,7 +162,7 @@ class MonthPlanBuilder:
                 rows=review_place_rows,
             )
 
-        await ReviewPlaceSyncRepo.sync(db, school_plan_id=school_plan_id, month_plan_id=month_plan_id, locked=True)
+        # Existing review places are left untouched during a composition refresh.
 
         await db.flush()
 
@@ -242,20 +246,11 @@ class MonthPlanBuilder:
             if source_row is None:
                 continue
 
-            for relation in source_row.review_places or []:
-                review_place = getattr(relation, "review_place", None)
-                if review_place is None:
-                    continue
-
-                result.append(
-                    {
-                        "month_item_id": item.id,
-                        "review_place": getattr(
-                            review_place,
-                            "value",
-                            review_place,
-                        ),
-                    }
-                )
+            values={str(getattr(rel.review_place,'value',rel.review_place))
+                    for rel in source_row.review_places or [] if rel.review_place is not None}
+            if not values:
+                values=ReviewPlaceSyncRepo.legacy_places(getattr(source_row,'review_place',None))or set()
+            for value in sorted(values):
+                result.append(dict(month_item_id=item.id,review_place=value))
 
         return result

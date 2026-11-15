@@ -1,4 +1,5 @@
 import re
+from functools import lru_cache
 from jinja2 import pass_context
 from app.core.i18n import SUPPORTED_LANGUAGES, catalog, resolve_language, normalize_language
 
@@ -46,8 +47,8 @@ def install_i18n(environment):
                   "teacher": "Учитель", "school_staff": "Сотрудник школы"}
         return gettext(context, labels.get(str(code).lower(), str(code)))
 
-    @pass_context
-    def ui_messages(context):
+    @lru_cache(maxsize=2)
+    def _ui_messages_for_language(language):
         from app.core.i18n_web_messages import WEB_MESSAGES
         from app.core.question_bank_ui_messages import QB_WEB_MESSAGES
         from app.core.assessment_ui_messages import ASSESSMENT_WEB_MESSAGES
@@ -60,7 +61,19 @@ def install_i18n(environment):
         from app.core.reports_ui_messages import REPORTS_WEB_MESSAGES
         from app.core.report_forms_ui_messages import REPORT_FORMS_WEB_MESSAGES
         from app.core.template_constructor_ui_messages import CONSTRUCTOR_WEB_MESSAGES
-        return {key: gettext(context, message) for key, message in (WEB_MESSAGES | QB_WEB_MESSAGES | ASSESSMENT_WEB_MESSAGES | EDUCATION_WEB_MESSAGES | EXPERT_WEB_MESSAGES | STAFF_WEB_MESSAGES | PLANNING_WEB_MESSAGES | MONTHLY_WEB_MESSAGES | EXECUTION_WEB_MESSAGES | REPORTS_WEB_MESSAGES | REPORT_FORMS_WEB_MESSAGES | CONSTRUCTOR_WEB_MESSAGES).items()}
+        return {key: catalog(language).gettext(message) for key, message in (WEB_MESSAGES | QB_WEB_MESSAGES | ASSESSMENT_WEB_MESSAGES | EDUCATION_WEB_MESSAGES | EXPERT_WEB_MESSAGES | STAFF_WEB_MESSAGES | PLANNING_WEB_MESSAGES | MONTHLY_WEB_MESSAGES | EXECUTION_WEB_MESSAGES | REPORTS_WEB_MESSAGES | REPORT_FORMS_WEB_MESSAGES | CONSTRUCTOR_WEB_MESSAGES).items()}
+
+
+    @pass_context
+    def ui_messages(context):
+        # Static UI strings only. A fresh dictionary prevents mutation from
+        # leaking to another request; user-entered text is never cached here.
+        return _ui_messages_for_language(ui_language(context)).copy()
+
+    @lru_cache(maxsize=2)
+    def _month_labels_for_language(language):
+        from app.core.planning_period import MONTH_NAMES_KZ
+        return {key: catalog(language).gettext(value) for key, value in MONTH_NAMES_KZ.items()}
 
     @pass_context
     def qb_subject_name(context, obj):
@@ -145,7 +158,7 @@ def install_i18n(environment):
         # Prepared free-form display text and legacy deadlines are plan data.
         if getattr(row, "period_text", None):
             return str(row.period_text)
-        months = {key: gettext(context, value) for key, value in MONTH_NAMES_KZ.items()}
+        months = _month_labels_for_language(ui_language(context)).copy()
         text = format_row11_period(row, current_month=current_month, month_names=months)
         period = str(getattr(getattr(row, "period_type", None), "value", getattr(row, "period_type", None)))
         if period in {"quarter", "all_year", "monthly"}:

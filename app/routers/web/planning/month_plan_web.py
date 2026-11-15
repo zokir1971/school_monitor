@@ -265,6 +265,7 @@ async def school_monthly_page(
         )
     )
 
+    assignment_data = (await MonthCorrectionRepo.snapshot(db, school_id=school_id, month_plan_id=month_plan.id)) if month_plan else None
     blocks = []
 
     if month_plan is not None:
@@ -273,13 +274,16 @@ async def school_monthly_page(
             .build_month_plan_direction_blocks(
                 db,
                 month_plan_id=month_plan.id,
+                schedule_data=assignment_data,
             )
         )
 
-    assignment_data = (await MonthCorrectionRepo.snapshot(db, school_id=school_id, month_plan_id=month_plan.id)) if month_plan else None
     assignment_editors, plan_revision = MonthCorrectionService.editor(assignment_data)
     base_context.update(assignment_editors=assignment_editors, plan_revision=plan_revision)
     base_context['monthly_state'] = month_plan_readiness(assignment_data, month_weeks_grid(year, month))
+    visible_ids={item.id for block in blocks for item in block.items}
+    base_context['monthly_state']['unpublished']=[i for i in base_context['monthly_state']['unpublished'] if i in visible_ids]
+    base_context['schedule_hidden_count']=len(assignment_data['items'])-len(visible_ids) if assignment_data else 0
     base_context['problem_topics'] = {item.id: item.topic for block in blocks for item in block.items}
     saved_id = request.query_params.get('task_saved', '')
     base_context['saved_task'] = next((dict(item) for item in assignment_data['items'] if str(item['id']) == saved_id), None) if assignment_data else None
@@ -378,7 +382,7 @@ async def school_monthly_build_draft(
     return _month_page_redirect(
         request,
         month=month,
-        success="Черновик месячного плана сформирован.",
+        success=("Состав задач обновлён. Сохранённые назначения и результаты сохранены." if resolve_language(request,user)=="ru" else "Тапсырмалар құрамы жаңартылды. Сақталған тағайындаулар мен нәтижелер сақталды."),
     )
 
 

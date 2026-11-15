@@ -141,3 +141,7 @@ from app.core.feature_flags import get_features
 from app.core.feature_access import FeatureUnavailable, unavailable_response
 get_features()
 app.add_exception_handler(FeatureUnavailable, unavailable_response)
+
+# Opt-in local navigation profiling; disabled unless explicitly enabled.
+from app.core.planning_profile import install_planning_profile
+install_planning_profile(app)

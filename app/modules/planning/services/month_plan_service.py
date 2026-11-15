@@ -1,5 +1,6 @@
 # app/modules/planning/services/month_plan_service.py
 from fastapi import HTTPException
+from app.modules.planning.utils.month_schedule import MonthSchedule
 from app.modules.planning.repositories.month_correction_repo import MonthCorrectionRepo
 from app.modules.planning.services.month_correction_service import MonthCorrectionService
 from app.modules.planning.utils.month_plan_readiness import month_plan_readiness, enum_value
@@ -118,6 +119,7 @@ class SchoolMonthlyPlanningService:
             db: AsyncSession,
             *,
             month_plan_id: int,
+            schedule_data=None,
     ) -> list[MonthPlanDirectionBlockDTO]:
         """
         Подготовить блоки направлений для страницы месячного плана.
@@ -145,6 +147,11 @@ class SchoolMonthlyPlanningService:
                 month_plan_id=month_plan_id,
             )
         )
+
+        if schedule_data is None:
+            schedule_data=await SchoolMonthlyPlanRepo.schedule_snapshot(db,month_plan_id=month_plan_id)
+        schedule=await MonthSchedule.evaluate(db,schedule_data)
+        items=[item for item in items if item.id in schedule['visible_ids']]
 
         blocks_by_direction: dict[
             int,
@@ -201,6 +208,7 @@ class SchoolMonthlyPlanningService:
                 )
 
             row_dto = MonthPlanItemRowDTO(
+                schedule_warning=item.id in schedule['warning_ids'],
                 id=item.id,
                 source_row11_id=item.source_row11_id,
 
@@ -372,20 +380,10 @@ class SchoolMonthlyPlanningService:
             month=month,
         )
 
-        # 5) Проверяем есть ли items
-        count = await SchoolMonthlyPlanRepo.count_items(
-            db,
-            month_plan_id=month_plan.id,
-        )
-
-        # Если только создали или items пустые — строим
-        if created or count == 0:
-            await MonthPlanBuilder.build_items(
-                db=db,
-                school_plan_id=school_plan_id,
-                month_plan_id=month_plan.id,
-                month=month,
-            )
+        if enum_value(month_plan.status)=='archived':
+            raise HTTPException(409,'Архивный план нельзя обновлять / Мұрағат жоспарын жаңартуға болмайды')
+        # Add newly eligible rows without resetting existing flags or history.
+        await MonthPlanBuilder.build_items(db=db,school_plan_id=school_plan_id,month_plan_id=month_plan.id,month=month,default_included=created or enum_value(month_plan.status)=='draft')
 
         return month_plan
 
@@ -403,6 +401,11 @@ class SchoolMonthlyPlanningService:
             raise HTTPException(404, 'Месячный план не найден / Айлық жоспар табылмады')
         if enum_value(data['plan']['status']) != 'draft':
             raise HTTPException(409, 'План уже отправлен или архивирован / Жоспар жіберілген немесе мұрағатталған')
+        schedule=await MonthSchedule.evaluate(db,data)
+        invalid={item['id'] for item in data['items'] if item['is_included']}-schedule['eligible_ids']
+        if invalid:
+            numbers=', '.join(map(str,sorted(invalid)))
+            raise HTTPException(409,f'Проверьте сроки включённых задач: №{numbers}. Они не соответствуют месяцу либо уже выполнены в этой четверти. / Енгізілген тапсырмалардың мерзімдерін тексеріңіз: №{numbers}. Олар айға сәйкес келмейді немесе осы тоқсанда орындалған.')
         readiness = month_plan_readiness(data, month_weeks_grid(data['plan']['year'], data['plan']['month']))
         if not readiness['included'] or readiness['problems']:
             raise HTTPException(400, 'План не отправлен. Проверьте недели и ответственных включённых задач. / Жоспар жіберілмеді. Енгізілген тапсырмалардың апталарын және жауаптыларын тексеріңіз.')
@@ -482,7 +485,7 @@ class SchoolMonthlyPlanningService:
 
         existing_quarter_ids = (
             await SchoolMonthlyPlanRepo
-            .list_previously_included_quarter_source_ids(
+            .list_previously_completed_quarter_source_ids(
                 db,
                 school_plan_id=month_plan.school_plan_id,
                 source_row11_ids=list(selected_quarter_rows),
@@ -498,7 +501,7 @@ class SchoolMonthlyPlanningService:
                 status_code=400,
                 detail=(
                     f"Квартальная задача '{duplicate_row.topic}' "
-                    "уже запланирована в этой четверти."
+                    "уже выполнена в этой четверти."
                 ),
             )
 

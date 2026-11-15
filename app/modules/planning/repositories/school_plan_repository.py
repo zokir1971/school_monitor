@@ -5,7 +5,7 @@ from typing import cast, Type
 
 from sqlalchemy import exists, update, select, func, delete
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import selectinload, raiseload
 
 from app.modules.planning.repositories.review_place_sync_repo import ReviewPlaceSyncRepo
 from app.modules.planning.enums import PlanStatus, PlanPeriodType, ReviewPlace
@@ -175,7 +175,7 @@ class SchoolPlanningRepo:
     @staticmethod
     async def list_active_templates(db: AsyncSession) -> list[PlanTemplate]:
         res = await db.execute(
-            select(PlanTemplate)
+            select(PlanTemplate).options(raiseload("*"))
             .where(PlanTemplate.is_active.is_(True))
             .order_by(PlanTemplate.id.desc())
         )
@@ -190,7 +190,7 @@ class SchoolPlanningRepo:
             db: AsyncSession, *, template_id: int
     ) -> list[PlanTemplateDirection]:
         res = await db.execute(
-            select(PlanTemplateDirection)
+            select(PlanTemplateDirection).options(raiseload("*"), selectinload(PlanTemplateDirection.direction))
             .where(PlanTemplateDirection.template_id == template_id)
             .order_by(PlanTemplateDirection.sort_order.asc(), PlanTemplateDirection.id.asc())
         )
@@ -247,7 +247,7 @@ class SchoolPlanningRepo:
         """
 
         stmt = (
-            select(PlanTemplateRow11)
+            select(PlanTemplateRow11).options(raiseload("*"))
             .join(
                 PlanTemplateDirection,
                 PlanTemplateDirection.id
@@ -297,7 +297,7 @@ class SchoolPlanningRepo:
     @staticmethod
     async def get_school_plan(db: AsyncSession, *, plan_id: int, school_id: int) -> SchoolPlan | None:
         res = await db.execute(
-            select(SchoolPlan).where(
+            select(SchoolPlan).options(raiseload("*"), selectinload(SchoolPlan.template)).where(
                 SchoolPlan.id == plan_id,
                 SchoolPlan.school_id == school_id,
             )
@@ -366,7 +366,7 @@ class SchoolPlanningRepo:
         """
 
         stmt = (
-            select(SchoolPlan)
+            select(SchoolPlan).options(raiseload("*"), selectinload(SchoolPlan.template))
             .where(
                 SchoolPlan.school_id == school_id
             )
@@ -415,7 +415,7 @@ class SchoolPlanningRepo:
             db: AsyncSession, *, plan_id: int, direction_id: int
     ) -> list[SchoolPlanRow4]:
         res = await db.execute(
-            select(SchoolPlanRow4)
+            select(SchoolPlanRow4).options(raiseload("*"))
             .execution_options(populate_existing=True)
             .where(
                 SchoolPlanRow4.school_plan_id == plan_id,
@@ -432,7 +432,12 @@ class SchoolPlanningRepo:
         res = await db.execute(
             select(SchoolPlanRow11)
             .execution_options(populate_existing=True)
-            .options(selectinload(SchoolPlanRow11.role_assignments))  # ✅ ВАЖНО
+            .options(
+                raiseload("*"),
+                selectinload(SchoolPlanRow11.role_assignments),
+                selectinload(SchoolPlanRow11.required_documents),
+                selectinload(SchoolPlanRow11.review_places),
+            )
             .where(
                 SchoolPlanRow11.school_plan_id == plan_id,
                 SchoolPlanRow11.direction_id == direction_id,
@@ -481,6 +486,7 @@ class SchoolPlanningRepo:
         return await db.scalar(
             select(SchoolPlanRow11)
             .options(
+                raiseload("*"),
                 selectinload(SchoolPlanRow11.role_assignments),
                 selectinload(SchoolPlanRow11.required_documents),
                 selectinload(SchoolPlanRow11.review_places),

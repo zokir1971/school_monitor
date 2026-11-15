@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import contains_eager, selectinload
+from sqlalchemy.orm import contains_eager, selectinload, raiseload
 
 from app.modules.planning.enums import (
     AssignmentKind,
@@ -89,6 +89,7 @@ class SchoolMonthPlanAssigneeRepo:
             .join(SchoolMonthPlanItem.month_plan)
             .join(SchoolMonthPlan.school_plan)
             .options(
+                raiseload("*"),
                 selectinload(
                     SchoolMonthPlanItem.month_plan
                 ).selectinload(
@@ -145,6 +146,7 @@ class SchoolMonthPlanAssigneeRepo:
             select(SchoolStaffRole)
             .join(SchoolStaffRole.staff_member)
             .options(
+                raiseload("*"),
                 contains_eager(
                     SchoolStaffRole.staff_member
                 )
@@ -184,6 +186,7 @@ class SchoolMonthPlanAssigneeRepo:
             select(SchoolStaffRole)
             .join(SchoolStaffRole.staff_member)
             .options(
+                raiseload("*"),
                 contains_eager(
                     SchoolStaffRole.staff_member
                 )
@@ -307,6 +310,7 @@ class SchoolMonthPlanAssigneeRepo:
         stmt = (
             select(SchoolMonthPlanItemAssignee)
             .options(
+                raiseload("*"),
                 selectinload(
                     SchoolMonthPlanItemAssignee.staff_role
                 ).selectinload(

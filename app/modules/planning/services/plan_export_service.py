@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import raiseload
 
 from app.modules.org.models import School, District
 from app.modules.planning.enums import (
@@ -327,17 +328,23 @@ class SchoolPlanExportService:
         if user.school_id is None:
             return None
 
-        plan: SchoolPlan | None = await db.get(SchoolPlan, school_plan_id)
+        # Scope the root query before any export rows are read. Disable default
+        # relationship loading only for these queries; DTO content stays the same.
+        plan: SchoolPlan | None = await db.scalar(
+            select(SchoolPlan)
+            .where(SchoolPlan.id == school_plan_id, SchoolPlan.school_id == user.school_id)
+            .options(raiseload("*"))
+        )
         if plan is None or plan.school_id != user.school_id:
             return None
 
-        school: School | None = await db.get(School, user.school_id)
+        school: School | None = await db.get(School, user.school_id, options=[raiseload("*")])
         if school is None:
             return None
 
         district: District | None = None
         if school.district_id:
-            district = await db.get(District, school.district_id)
+            district = await db.get(District, school.district_id, options=[raiseload("*")])
 
         meta = PlanMeta(
             school_name=(school.name or "").strip() or f"Школа #{school.id}",
@@ -345,97 +352,58 @@ class SchoolPlanExportService:
             district_name=(district.name if district else None),
         )
 
-        # если PlanDirection у тебя лежит в другом модуле, импортируй оттуда
         from app.modules.planning.models import PlanDirection
 
-        directions = list(
-            (
-                await db.scalars(
-                    select(PlanDirection)
-                    .order_by(PlanDirection.sort_order.asc(), PlanDirection.id.asc())
-                )
-            ).all()
-        )
+        directions = list((await db.scalars(
+            select(PlanDirection).options(raiseload("*"))
+            .order_by(PlanDirection.sort_order.asc(), PlanDirection.id.asc())
+        )).all())
+
+        # Read each table once for the entire plan. Query count is independent
+        # of the number of directions and rows, with no large IN parameter list.
+        rows4_all = list((await db.scalars(
+            select(SchoolPlanRow4).options(raiseload("*"))
+            .where(SchoolPlanRow4.school_plan_id == school_plan_id)
+            .order_by(SchoolPlanRow4.row_order.asc(), SchoolPlanRow4.id.asc())
+        )).all())
+        rows11_all = list((await db.scalars(
+            select(SchoolPlanRow11).options(raiseload("*"))
+            .where(SchoolPlanRow11.school_plan_id == school_plan_id)
+            .order_by(SchoolPlanRow11.row_order.asc(), SchoolPlanRow11.id.asc())
+        )).all())
+
+        rows4_by_direction: dict[int, list] = defaultdict(list)
+        rows11_by_direction: dict[int, list] = defaultdict(list)
+        for row in rows4_all:
+            rows4_by_direction[row.direction_id].append(row)
+        for row in rows11_all:
+            rows11_by_direction[row.direction_id].append(row)
+
+        async def children_for_plan(model):
+            return list((await db.scalars(
+                select(model).options(raiseload("*"))
+                .join(SchoolPlanRow11, model.row11_id == SchoolPlanRow11.id)
+                .where(SchoolPlanRow11.school_plan_id == school_plan_id)
+                .order_by(model.row11_id.asc(), model.id.asc())
+            )).all())
+
+        responsibles_map: dict[int, list] = {}
+        review_places_map: dict[int, list] = {}
+        documents_map: dict[int, list] = {}
+        if rows11_all:
+            responsibles_map = SchoolPlanExportService._group_by_row11_id(
+                await children_for_plan(SchoolPlanRow11Responsible)
+            )
+            review_places_map = SchoolPlanExportService._group_by_row11_id(
+                await children_for_plan(SchoolPlanRow11ReviewPlace)
+            )
+            documents_map = SchoolPlanExportService._group_by_row11_id(
+                await children_for_plan(SchoolPlanRow11RequiredDocument)
+            )
 
         blocks: list[DirectionBlock] = []
-
-        for d in directions:
-            rows4: list[SchoolPlanRow4] = list(
-                (
-                    await db.scalars(
-                        select(SchoolPlanRow4)
-                        .where(
-                            SchoolPlanRow4.school_plan_id == school_plan_id,
-                            SchoolPlanRow4.direction_id == d.id,
-                        )
-                        .order_by(SchoolPlanRow4.row_order.asc(), SchoolPlanRow4.id.asc())
-                    )
-                ).all()
-            )
-
-            rows11_db: list[SchoolPlanRow11] = list(
-                (
-                    await db.scalars(
-                        select(SchoolPlanRow11)
-                        .where(
-                            SchoolPlanRow11.school_plan_id == school_plan_id,
-                            SchoolPlanRow11.direction_id == d.id,
-                        )
-                        .order_by(SchoolPlanRow11.row_order.asc(), SchoolPlanRow11.id.asc())
-                    )
-                ).all()
-            )
-
-            responsibles_map: dict[int, list] = {}
-            review_places_map: dict[int, list] = {}
-            documents_map: dict[int, list] = {}
-
-            row11_ids = [row.id for row in rows11_db]
-
-            if row11_ids:
-                responsibles = list(
-                    (
-                        await db.scalars(
-                            select(SchoolPlanRow11Responsible)
-                            .where(SchoolPlanRow11Responsible.row11_id.in_(row11_ids))
-                            .order_by(
-                                SchoolPlanRow11Responsible.row11_id.asc(),
-                                SchoolPlanRow11Responsible.id.asc(),
-                            )
-                        )
-                    ).all()
-                )
-
-                review_places = list(
-                    (
-                        await db.scalars(
-                            select(SchoolPlanRow11ReviewPlace)
-                            .where(SchoolPlanRow11ReviewPlace.row11_id.in_(row11_ids))
-                            .order_by(
-                                SchoolPlanRow11ReviewPlace.row11_id.asc(),
-                                SchoolPlanRow11ReviewPlace.id.asc(),
-                            )
-                        )
-                    ).all()
-                )
-
-                documents = list(
-                    (
-                        await db.scalars(
-                            select(SchoolPlanRow11RequiredDocument)
-                            .where(SchoolPlanRow11RequiredDocument.row11_id.in_(row11_ids))
-                            .order_by(
-                                SchoolPlanRow11RequiredDocument.row11_id.asc(),
-                                SchoolPlanRow11RequiredDocument.id.asc(),
-                            )
-                        )
-                    ).all()
-                )
-
-                responsibles_map = SchoolPlanExportService._group_by_row11_id(responsibles)
-                review_places_map = SchoolPlanExportService._group_by_row11_id(review_places)
-                documents_map = SchoolPlanExportService._group_by_row11_id(documents)
-
+        for direction in directions:
+            rows4 = rows4_by_direction.get(direction.id, [])
             rows11 = [
                 SchoolPlanExportService._build_row11_dto(
                     row,
@@ -443,22 +411,9 @@ class SchoolPlanExportService:
                     review_place_items=review_places_map.get(row.id, []),
                     document_items=documents_map.get(row.id, []),
                 )
-                for row in rows11_db
+                for row in rows11_by_direction.get(direction.id, [])
             ]
+            if rows4 or rows11:
+                blocks.append(DirectionBlock(direction=direction, rows4=rows4, rows11=rows11))
 
-            if not rows4 and not rows11:
-                continue
-
-            blocks.append(
-                DirectionBlock(
-                    direction=d,
-                    rows4=rows4,
-                    rows11=rows11,
-                )
-            )
-
-        return FullPlanDTO(
-            plan=plan,
-            directions=blocks,
-            meta=meta,
-        )
+        return FullPlanDTO(plan=plan, directions=blocks, meta=meta)

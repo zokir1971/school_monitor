@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from starlette.responses import Response
+from app.core.render_urls import indexed_render_urls
 
 
 def _normalize_user(u):
@@ -65,12 +66,13 @@ def render(
             c["user"]
         )
 
-    return templates.TemplateResponse(
-        request,
-        name,
-        c,
-        status_code=status_code,
-    )
+    with indexed_render_urls(c["request"]):
+        return templates.TemplateResponse(
+            request,
+            name,
+            c,
+            status_code=status_code,
+        )
 
 
 def render_error(templates, request, name: str, ctx: dict, error: str, status_code: int = 400) -> Response:

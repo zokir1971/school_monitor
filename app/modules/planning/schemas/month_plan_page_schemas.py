@@ -82,6 +82,8 @@ class MonthPlanItemRowDTO:
     # -----------------------------------------------------
     # Исполнители
     # -----------------------------------------------------
+    schedule_warning: bool = False
+
     primary_assignee_name: str | None = None
 
     co_executor_names: list[str] = field(

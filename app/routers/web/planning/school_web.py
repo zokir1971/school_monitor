@@ -1,12 +1,13 @@
 # app/routers/web/planning/school_web.py
 from __future__ import annotations
+from app.core.planning_profile import measure_export_phase
 
 from typing import cast
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request, Response
 from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import raiseload
 from starlette.responses import HTMLResponse, RedirectResponse
 
 from app.db.session import get_db
@@ -28,7 +29,10 @@ from app.modules.users.enums import UserRole
 from app.modules.users.models import User
 from app.routers.web.helpers.render import render
 from app.routers.web.web_common import templates
-from app.utils.plan_vshk_pdf import ApprovalMeta, PlanVshkPdf
+from app.utils.plan_vshk_pdf import ApprovalMeta
+from app.modules.planning.utils.plan_pdf_worker import (
+    PdfQueueBusy, PdfWorkerUnavailable, build_plan_pdf, snapshot_plan_pdf,
+)
 
 router = APIRouter(prefix="/planning/school", tags=["Planning.School.Web"])
 
@@ -54,7 +58,7 @@ def _require_school_id(user) -> int:
 
 
 async def _get_school_or_400(db: AsyncSession, *, school_id: int) -> School:
-    school = await db.get(School, school_id)
+    school = await db.get(School, school_id, options=[raiseload("*")])
     if school is None:
         raise HTTPException(status_code=400, detail="Школа пользователя не найдена")
     return cast(School, school)
@@ -175,77 +179,27 @@ async def school_dashboard(
     requested_year = (academic_year or "").strip()
 
     if requested_year:
-        # Пользователь явно выбрал учебный год.
         year = requested_year
-
+        all_plans = await SchoolPlanningRepo.list_school_plans(
+            db, school_id=school_id, academic_year=year,
+        )
     else:
-        # Получаем планы школы без ограничения по году.
-        school_plans = (
-            await SchoolPlanningRepo.list_school_plans(
-                db,
-                school_id=school_id,
-            )
+        # Reuse this one ordered result for choosing the year, the active plan
+        # and the visible tab. Do not read the same plans a second/third time.
+        school_plans = await SchoolPlanningRepo.list_school_plans(
+            db, school_id=school_id,
         )
+        current_plan = _pick_active_plan(school_plans)
+        year = current_plan.academic_year if current_plan is not None else _normalize_academic_year(None)
+        all_plans = [plan for plan in school_plans if plan.academic_year == year]
 
-        # Сначала ACTIVE, затем DRAFT.
-        current_plan = _pick_active_plan(
-            school_plans
-        )
-
-        if current_plan is not None:
-            year = current_plan.academic_year
-        else:
-            # Только fallback для школы,
-            # у которой ещё вообще нет рабочего плана.
-            year = _normalize_academic_year(None)
-
-    # =====================================================
-    # ALL PLANS FOR SELECTED ACADEMIC YEAR
-    # =====================================================
-
-    all_plans = (
-        await SchoolPlanningRepo.list_school_plans(
-            db,
-            school_id=school_id,
-            academic_year=year,
-        )
-    )
-
-    active_plan = _pick_active_plan(
-        all_plans
-    )
-
-    # =====================================================
-    # TAB FILTER
-    # =====================================================
-
-    status_filter: PlanStatus | None = None
-
-    if tab_val == "active":
-        status_filter = PlanStatus.ACTIVE
-
-    elif tab_val == "archive":
-        status_filter = PlanStatus.ARCHIVED
-
-    # tab == "my":
-    # показываем все планы выбранного учебного года.
-
-    # =====================================================
-    # VISIBLE PLANS
-    # =====================================================
-
-    if status_filter is None:
-        plans = all_plans
-
-    else:
-        plans = (
-            await SchoolPlanningRepo.list_school_plans(
-                db,
-                school_id=school_id,
-                academic_year=year,
-                status=status_filter,
-            )
-        )
+    active_plan = _pick_active_plan(all_plans)
+    status_filter = {
+        "active": PlanStatus.ACTIVE,
+        "archive": PlanStatus.ARCHIVED,
+    }.get(tab_val)
+    plans = (all_plans if status_filter is None else
+             [plan for plan in all_plans if plan.status == status_filter.value])
 
     # =====================================================
     # RENDER
@@ -340,15 +294,6 @@ async def school_plan_view(
         db, template_id=plan.template_id
     )
 
-    # строки годового плана
-    rows11 = (
-        await db.execute(
-            select(SchoolPlanRow11)
-            .where(SchoolPlanRow11.school_plan_id == plan_id)
-            .options(selectinload(SchoolPlanRow11.role_assignments))
-        )
-    ).scalars().all()
-
     return render(
         templates,
         request,
@@ -357,7 +302,6 @@ async def school_plan_view(
             "user": user,
             "plan": plan,
             "template_directions": tds,
-            "rows11": rows11,
             "MONTH_NAMES": MONTH_NAMES,
         },
     )
@@ -788,23 +732,25 @@ async def school_plan_preview(
         db: AsyncSession = Depends(get_db),
         user: User = Depends(require_roles(UserRole.SCHOOL_ADMIN)),
 ):
-    dto = await SchoolPlanExportService.get_full_plan(db, school_plan_id=plan_id, user=user)
+    with measure_export_phase("export_data"):
+        dto = await SchoolPlanExportService.get_full_plan(db, school_plan_id=plan_id, user=user)
     if not dto:
         raise HTTPException(status_code=404, detail="План не найден")
 
-    return render(
-        templates,
-        request,
-        "planning/school/plan_preview.html",
-        {
-            "user": user,
-            "plan": dto.plan,
-            "directions": dto.directions,
-            "meta": dto.meta,
-            "MONTH_NAMES": MONTH_NAMES,  # месяцы
-            "ROLE_LABELS": build_role_labels_kz(),  # роли (человеческие подписи)
-        },
-    )
+    with measure_export_phase("preview_render"):
+        return render(
+            templates,
+            request,
+            "planning/school/plan_preview.html",
+            {
+                "user": user,
+                "plan": dto.plan,
+                "directions": dto.directions,
+                "meta": dto.meta,
+                "MONTH_NAMES": MONTH_NAMES,  # месяцы
+                "ROLE_LABELS": build_role_labels_kz(),  # роли (человеческие подписи)
+            },
+        )
 
 
 @router.get("/{plan_id}/pdf", name="school_plan_pdf", response_class=Response)
@@ -813,7 +759,8 @@ async def school_plan_pdf(
         db: AsyncSession = Depends(get_db),
         user: User = Depends(require_roles(UserRole.SCHOOL_ADMIN)),
 ):
-    dto = await SchoolPlanExportService.get_full_plan(db, school_plan_id=plan_id, user=user)
+    with measure_export_phase("export_data"):
+        dto = await SchoolPlanExportService.get_full_plan(db, school_plan_id=plan_id, user=user)
     if not dto:
         raise HTTPException(status_code=404, detail="План не найден")
 
@@ -824,9 +771,22 @@ async def school_plan_pdf(
         director_position="Директор школы",
         approve_title="УТВЕРЖДАЮ",
     )
-    pdf_bytes = PlanVshkPdf.build(dto, meta=meta)
+    document = snapshot_plan_pdf(dto)
+    filename = f"plan_vshk_{document.plan.academic_year}_{document.plan.id}.pdf"
+    # The export is a read-only GET. Release its transaction/connection before
+    # waiting for a PDF slot; the process receives only a scalar snapshot.
+    await db.close()
+    try:
+        with measure_export_phase("pdf_render"):
+            pdf_bytes = await build_plan_pdf(document, meta=meta)
+    except (PdfQueueBusy, PdfWorkerUnavailable):
+        raise HTTPException(
+            status_code=503,
+            detail="Сервис формирования PDF временно недоступен. Повторите загрузку через несколько секунд. / "
+                   "PDF дайындау қызметі уақытша қолжетімсіз. Бірнеше секундтан кейін қайталап көріңіз.",
+            headers={"Retry-After": "3"},
+        ) from None
 
-    filename = f"plan_vshk_{dto.plan.academic_year}_{dto.plan.id}.pdf"
     return Response(
         content=pdf_bytes,
         media_type="application/pdf",

@@ -1,3 +1,4 @@
+from app.modules.planning.utils.month_schedule import MonthSchedule
 import hashlib
 import json
 import logging
@@ -46,9 +47,14 @@ class MonthCorrectionService:
         if form.get('plan_revision') != cls.revision(data):
             raise HTTPException(409, 'План изменён другим пользователем. Обновите страницу / Жоспар өзгерді. Бетті жаңартыңыз')
         items = {r['id']:r for r in data['items']}
-        expected = set(items) if target_item_id is None else {target_item_id}
+        schedule=await MonthSchedule.evaluate(db,data)
+        expected = schedule['visible_ids'] if target_item_id is None else {target_item_id}
         if not expected <= set(items) or len(updates) != len(expected) or {u.item_id for u in updates} != expected:
             raise HTTPException(400, 'Неполная форма плана. Обновите страницу / Жоспар нысаны толық емес')
+        invalid=[u.item_id for u in updates if u.is_included and not items[u.item_id]['is_included'] and u.item_id not in schedule['eligible_ids']]
+        if invalid:
+            numbers=', '.join(map(str,invalid))
+            raise HTTPException(409,f'Срок задачи не соответствует месяцу или квартальная задача уже выполнена: №{numbers}. Обновите страницу. / Тапсырма мерзімі айға сәйкес келмейді немесе тоқсандық тапсырма орындалған: №{numbers}. Бетті жаңартыңыз.')
         blocked = sorted(u.item_id for u in updates if not u.is_included and items[u.item_id]['is_included']
             and (items[u.item_id].get('exclusion_protected', False)
                 or value(items[u.item_id].get('status')) not in (None, 'todo')
@@ -71,6 +77,9 @@ class MonthCorrectionService:
         changes, replace_ids, assignments, staff_ids, audit = [], [], [], set(), []
         for u in updates:
             item = items[u.item_id]
+            # Keep prepared/history-bearing out-of-period rows unchanged on a full-page save.
+            if target_item_id is None and u.item_id in schedule['warning_ids'] and not u.is_included and not item['is_included']:
+                continue
             prefix = f'item_{u.item_id}_'
             inline = prefix+'primary' in form
             try:

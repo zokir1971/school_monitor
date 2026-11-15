@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from fastapi import HTTPException
 from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import selectinload, raiseload
 from starlette.datastructures import FormData
 
 from app.modules.planning.enums import ResponsibleRole, PlanPeriodType, ReviewPlace, PlanStatus
@@ -26,7 +26,7 @@ from app.modules.users.permissions import assert_can_edit_school
 # =========================================================
 
 async def _get_plan_or_404(db: AsyncSession, *, plan_id: int) -> SchoolPlan:
-    plan: SchoolPlan | None = await db.get(SchoolPlan, plan_id)
+    plan: SchoolPlan | None = await db.get(SchoolPlan, plan_id, options=[raiseload("*")])
     if plan is None:
         raise HTTPException(status_code=404, detail="План не найден")
     return plan
@@ -233,7 +233,7 @@ class SchoolPlanEditService:
     ) -> DirectionEditDTO:
 
         # 1) Проверяем направление
-        direction: PlanDirection | None = await db.get(PlanDirection, direction_id)
+        direction: PlanDirection | None = await db.get(PlanDirection, direction_id, options=[raiseload("*")])
         if direction is None:
             raise HTTPException(status_code=404, detail="Направление не найдено")
 
@@ -680,14 +680,14 @@ class SchoolPlanEditService:
         # 3. DIRECTION
         # =====================================================
 
-        direction_data = await SchoolPlanEditService.get_direction_data(
-            db,
-            plan_id=row.school_plan_id,
-            direction_id=row.direction_id,
-            user=user,
+        # This row already exists: form setup needs only its direction metadata.
+        # Avoid whole-direction loading/template bootstrap and its intermediate
+        # commit. The caller retains ownership of the save transaction.
+        direction = await db.get(
+            PlanDirection, row.direction_id, options=[raiseload("*")],
         )
-
-        direction = direction_data.direction
+        if direction is None:
+            raise HTTPException(status_code=404, detail="Направление не найдено")
 
         # =====================================================
         # 4. SOURCE TEMPLATE ROW

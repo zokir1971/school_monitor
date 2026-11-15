@@ -5,6 +5,7 @@
   <link rel="stylesheet" href="{{ url_for('static', path='css/monthly_plan.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', path='css/monthly_plan_actions.css') }}?v=167">
   <link rel="stylesheet" href="{{ url_for('static', path='css/monthly_direction_navigation.css') }}?v=127">
+  <link rel="stylesheet" href="{{ url_for('static', path='css/monthly_plan_layout.css') }}?v=219">
   <style>
 .monthly-status {scroll-margin-top:145px;padding:18px 20px;margin:16px 0;border:1px solid #e9bb64;border-radius:12px;background:#fff8e8;color:#704717;}
 .monthly-status--active {background:#effcf3;border-color:#a7dfb8;color:#176137;}
@@ -18,6 +19,15 @@
 
 {% block content %}
 {% set ru = ui_language() == 'ru' %}
+{% set month_names = ('Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь') if ru else ('Қаңтар', 'Ақпан', 'Наурыз', 'Сәуір', 'Мамыр', 'Маусым', 'Шілде', 'Тамыз', 'Қыркүйек', 'Қазан', 'Қараша', 'Желтоқсан') %}{% macro cached_week_options(selected_week) %}                          <option value="" {% if not selected_week %}selected{% endif %}>—</option>
+
+                          {% for w in weeks %}
+                            <option value="{{ w.week }}"
+                                title="{{ w.start }} - {{ w.end }}"
+                                {% if selected_week == w.week %}selected{% endif %}>
+                              {{ w.week }} ({{ w.start.strftime("%d.%m") }} – {{ w.end.strftime("%d.%m") }})
+                            </option>
+                          {% endfor %}{% endmacro %}{% set week_option_cache = {} %}
 <section class="dashboard-section monthly-plan-page">
   <div class="section-head">
     <h2 class="section-title">{{ _('Планирование задач на месяц') }}</h2>
@@ -63,6 +73,7 @@
   </section>
   {% endif %}
 
+  {% if schedule_hidden_count is defined and schedule_hidden_count %}<p class="muted">{{ 'Не соответствуют текущим срокам и скрыты из выбора' if ru else 'Ағымдағы мерзімдерге сәйкес келмейді және таңдаудан жасырылды' }}: {{ schedule_hidden_count }}. {{ 'Сохранённые данные не удалены.' if ru else 'Сақталған деректер жойылған жоқ.' }}</p>{% endif %}
   {% if saved_task is defined and saved_task %}
   <section class="monthly-status {% if saved_task.is_included %}monthly-status--active{% endif %}" role="status">
     <strong>{{ 'Задача' if ru else 'Тапсырма' }} №{{ saved_task.id }} · {{ problem_topics.get(saved_task.id, '') }}</strong>
@@ -115,6 +126,10 @@
           <form method="post" action="{{ request.url_for('school_monthly_build_draft', month=month) }}">
             <input type="hidden" name="school_plan_id" value="{{ school_plan_id or '' }}">
             <button class="btn btn--primary" type="submit" data-sm-action="primary">{{ _('Сформировать черновик') }}</button>
+          </form>
+        {% elif active_plan and month_plan and month_plan.status.value != 'archived' %}
+          <form method="post" action="{{ request.url_for('school_monthly_build_draft', month=month) }}">
+            <button class="btn" type="submit" data-sm-action="secondary">{{ 'Обновить состав задач' if ru else 'Тапсырмалар құрамын жаңарту' }}</button>
           </form>
         {% elif not month %}
           <span class="muted">{{ _('Выберите месяц и нажмите «Открыть».') }}</span>
@@ -205,6 +220,12 @@
             <div class="table-wrap direction-table" style="margin-top:10px;">
 
               <table class="plan">
+                <colgroup>
+                  <col class="plan-col-include"><col class="plan-col-week">
+                  <col class="plan-col-topic"><col class="plan-col-goal">
+                  <col class="plan-col-period"><col class="plan-col-assignees">
+                  <col class="plan-col-review"><col class="plan-col-actions">
+                </colgroup>
                 <thead>
                   <tr>
                     <th class="nowrap-num">
@@ -214,7 +235,7 @@
                           class="select-all"
                           {% if readonly %}disabled{% endif %}
                         >
-                        {{ _('Выбрать все задачи') }}
+                        <span>{{ 'Выбрать все' if ru else 'Барлығын таңдау' }}</span>
                       </label>
                     </th>
                     <th class="nowrap-weeks">{{ _('Неделя') }}</th>
@@ -247,26 +268,19 @@
 
                       <td class="nowrap-weeks">
                         <select class="input input-week" name="item_{{ it.id }}_week" {% if readonly %}disabled{% endif %}>
-                          <option value="" {% if not it.week_of_month %}selected{% endif %}>—</option>
-
-                          {% for w in weeks %}
-                            <option value="{{ w.week }}"
-                                title="{{ w.start }} - {{ w.end }}"
-                                {% if it.week_of_month == w.week %}selected{% endif %}>
-                              {{ w.week }} ({{ w.start.strftime("%d.%m") }} – {{ w.end.strftime("%d.%m") }})
-                            </option>
-                          {% endfor %}
+                          {% if it.week_of_month not in week_option_cache %}{% set _cached = week_option_cache.update({it.week_of_month: cached_week_options(it.week_of_month)}) %}{% endif %}{{ week_option_cache[it.week_of_month] }}
                         </select>
 
                         <div class="row-tags">
                           {% if it.period_type == 'month' and it.period_value_int %}
-                            <span class="tag">{{ _('ай:') }} {{ it.period_value_int }}</span>
+                            <span class="tag">{{ month_names[it.period_value_int - 1] }}</span>
                           {% endif %}
                         </div>
                       </td>
 
                       <td>
                         <div>{{ it.topic }}</div>
+                        {% if it.schedule_warning %}<div class="muted" role="status">{{ 'Срок изменён или квартальная задача уже выполнена. Строка сохранена, поскольку включена в план либо имеет назначения или историю.' if ru else 'Мерзім өзгерген немесе тоқсандық тапсырма орындалған. Жол жоспарда болғандықтан не тағайындаулары немесе тарихы бар болғандықтан сақталды.' }}</div>{% endif %}
                         {% if it.control_object %}
                           <div class="muted">{{ it.control_object }}</div>
                         {% endif %}

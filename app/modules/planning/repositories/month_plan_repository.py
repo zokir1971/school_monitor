@@ -6,7 +6,7 @@ import sqlalchemy as sa
 from sqlalchemy import delete, func, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import selectinload, raiseload
 
 from app.modules.planning.enums import PlanStatus, PlanItemStatus, AssignmentKind
 # твои модели/enum/dto
@@ -29,7 +29,7 @@ class SchoolMonthlyPlanRepo:
             db: AsyncSession, *, school_plan_id: int, year: int, month: int
     ) -> SchoolMonthPlan | None:
         res = await db.execute(
-            select(SchoolMonthPlan).where(
+            select(SchoolMonthPlan).options(raiseload("*")).where(
                 SchoolMonthPlan.school_plan_id == school_plan_id,
                 SchoolMonthPlan.year == year,
                 SchoolMonthPlan.month == month,
@@ -39,7 +39,7 @@ class SchoolMonthlyPlanRepo:
 
     @staticmethod
     async def get_month_plan_by_id(db: AsyncSession, *, month_plan_id: int) -> SchoolMonthPlan | None:
-        res = await db.execute(select(SchoolMonthPlan).where(SchoolMonthPlan.id == month_plan_id))
+        res = await db.execute(select(SchoolMonthPlan).options(raiseload("*")).where(SchoolMonthPlan.id == month_plan_id))
         return res.scalar_one_or_none()
 
     @staticmethod
@@ -144,6 +144,7 @@ class SchoolMonthlyPlanRepo:
             .where(SchoolMonthPlanItem.month_plan_id == month_plan_id)
             .order_by(SchoolMonthPlanItem.id.asc())
             .options(
+                raiseload("*"),
                 selectinload(SchoolMonthPlanItem.review_places),
             )
         )
@@ -418,7 +419,7 @@ class SchoolMonthlyPlanRepo:
     ) -> SchoolMonthPlan | None:
 
         res = await db.execute(
-            select(SchoolMonthPlan)
+            select(SchoolMonthPlan).options(raiseload("*"))
             .join(SchoolPlan, SchoolPlan.id == SchoolMonthPlan.school_plan_id)
             .where(
                 SchoolMonthPlan.id == month_plan_id,
@@ -449,6 +450,7 @@ class SchoolMonthlyPlanRepo:
             select(SchoolPlanRow11)
             .where(SchoolPlanRow11.school_plan_id == school_plan_id)
             .options(
+                raiseload("*"),
                 selectinload(SchoolPlanRow11.review_places),
                 selectinload(SchoolPlanRow11.required_documents),
             )
@@ -470,7 +472,7 @@ class SchoolMonthlyPlanRepo:
     async def get_school_plan(
             db: AsyncSession, *, school_plan_id: int
     ) -> SchoolPlan | None:
-        res = await db.execute(select(SchoolPlan).where(SchoolPlan.id == school_plan_id))
+        res = await db.execute(select(SchoolPlan).options(raiseload("*")).where(SchoolPlan.id == school_plan_id))
         return res.scalar_one_or_none()
 
     @staticmethod
@@ -478,7 +480,7 @@ class SchoolMonthlyPlanRepo:
             db: AsyncSession, *, school_id: int
     ) -> SchoolPlan | None:
         res = await db.execute(
-            select(SchoolPlan)
+            select(SchoolPlan).options(raiseload("*"))
             .where(SchoolPlan.school_id == school_id, SchoolPlan.status == PlanStatus.ACTIVE)
             .limit(1)
         )
@@ -489,7 +491,7 @@ class SchoolMonthlyPlanRepo:
             db: AsyncSession, *, school_plan_id: int, school_id: int
     ) -> SchoolPlan | None:
         res = await db.execute(
-            select(SchoolPlan).where(SchoolPlan.id == school_plan_id, SchoolPlan.school_id == school_id)
+            select(SchoolPlan).options(raiseload("*")).where(SchoolPlan.id == school_plan_id, SchoolPlan.school_id == school_id)
         )
         return res.scalar_one_or_none()
 
@@ -523,7 +525,7 @@ class SchoolMonthlyPlanRepo:
         return result
 
     @staticmethod
-    async def list_previously_included_quarter_source_ids(
+    async def list_previously_completed_quarter_source_ids(
             db: AsyncSession,
             *,
             school_plan_id: int,
@@ -546,7 +548,7 @@ class SchoolMonthlyPlanRepo:
                 SchoolMonthPlanItem.source_row11_id.in_(
                     source_row11_ids
                 ),
-                SchoolMonthPlanItem.is_included.is_(True),
+                SchoolMonthPlanItem.status.in_((PlanItemStatus.DONE, PlanItemStatus.REVIEWED)),
             )
             .distinct()
         )
@@ -583,7 +585,7 @@ class SchoolMonthlyPlanRepo:
 
         existing_ids = (
             await SchoolMonthlyPlanRepo
-            .list_previously_included_quarter_source_ids(
+            .list_previously_completed_quarter_source_ids(
                 db,
                 school_plan_id=school_plan_id,
                 source_row11_ids=[source_row11_id],
@@ -592,6 +594,33 @@ class SchoolMonthlyPlanRepo:
         )
 
         return source_row11_id in existing_ids
+
+    @staticmethod
+    async def list_previously_included_quarter_source_ids(db,**kwargs):
+        # Backward-compatible name; completed work is the business condition.
+        return await SchoolMonthlyPlanRepo.list_previously_completed_quarter_source_ids(db,**kwargs)
+
+    @staticmethod
+    async def schedule_periods(db,*,school_plan_id,source_ids):
+        if not source_ids:return {}
+        r=SchoolPlanRow11.__table__
+        rows=(await db.execute(select(r.c.id,r.c.period_type,r.c.period_value_int,r.c.period_values).where(r.c.school_plan_id==school_plan_id,r.c.id.in_(sorted(source_ids))))).mappings()
+        return {row['id']:row for row in rows}
+
+    @staticmethod
+    async def schedule_snapshot(db,*,month_plan_id):
+        from app.modules.planning.models_month_plan import SchoolMonthPlanItemExecution,SchoolMonthPlanItemAssignee
+        from app.modules.reports.models_documents import TaskExecutionDocument,TaskExecutionData
+        from app.modules.reviews.models_task_review import SchoolMonthPlanItemReviewResult
+        m,i=SchoolMonthPlan.__table__,SchoolMonthPlanItem.__table__
+        p=SchoolPlan.__table__
+        checks=[sa.exists(select(table.c.id).where(table.c.month_item_id==i.c.id))for table in (
+            SchoolMonthPlanItemAssignee.__table__,SchoolMonthPlanItemExecution.__table__,
+            TaskExecutionDocument.__table__,TaskExecutionData.__table__,SchoolMonthPlanItemReviewResult.__table__)]
+        rows=list((await db.execute(select(m.c.school_plan_id,m.c.month.label('plan_month'),m.c.status.label('plan_status'),p.c.status.label('annual_status'),i,sa.or_(*checks).label('exclusion_protected')).select_from(m.join(p,p.c.id==m.c.school_plan_id).outerjoin(i,i.c.month_plan_id==m.c.id)).where(m.c.id==month_plan_id))).mappings())
+        if not rows:return None
+        first=rows[0]
+        return dict(plan=dict(school_plan_id=first['school_plan_id'],month=first['plan_month'],status=first['plan_status'],annual_status=first['annual_status']),items=[r for r in rows if r['id']is not None],assignments=[])
 
 
 class SchoolMonthPlanItemRepo:

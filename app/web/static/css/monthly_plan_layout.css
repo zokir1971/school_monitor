@@ -1,0 +1,91 @@
+/* Monthly plan only. Column proportions stay within the card; compact screens scroll inside it. */
+.monthly-plan-page,
+.monthly-plan-page #monthly-save-form,
+.monthly-plan-page .dir-card {
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+.monthly-plan-page .direction-table {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-x: auto;
+}
+.monthly-plan-page table.plan {
+  width: 100%;
+  min-width: 1120px;
+  table-layout: fixed;
+}
+.monthly-plan-page table.plan th,
+.monthly-plan-page table.plan td {
+  width: auto;
+  min-width: 0;
+  max-width: none;
+  box-sizing: border-box;
+  padding: 10px 8px;
+  white-space: normal;
+  word-break: normal;
+  overflow-wrap: anywhere;
+}
+.monthly-plan-page .plan-col-include { width: 8%; }
+.monthly-plan-page .plan-col-week { width: 12%; }
+.monthly-plan-page .plan-col-actions { width: 13%; }
+.monthly-plan-page .plan-col-topic { width: 17%; }
+.monthly-plan-page .plan-col-goal { width: 19%; }
+.monthly-plan-page .plan-col-period { width: 9%; }
+.monthly-plan-page .plan-col-assignees { width: 14%; }
+.monthly-plan-page .plan-col-review { width: 8%; }
+.monthly-plan-page table.plan th:first-child label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  overflow-wrap: normal;
+}
+.monthly-plan-page table.plan td:first-child label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+  font-size: 13px;
+}
+.monthly-plan-page table.plan input[type="checkbox"] { flex-shrink: 0; }
+.monthly-plan-page .input-week {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  padding-inline: 5px;
+  font-size: 12px;
+}
+.monthly-plan-page .row-tags .tag,
+.monthly-plan-page .assignee-item .tag,
+.monthly-plan-page .review-badge {
+  max-width: 100%;
+  box-sizing: border-box;
+  white-space: normal;
+  word-break: normal;
+  overflow-wrap: anywhere;
+}
+.monthly-plan-page .review-badge {
+  display: inline-block;
+  margin-block: 2px;
+}
+.monthly-plan-page .btn,
+.monthly-plan-page button,
+.monthly-plan-page .monthly-plan-assign,
+.monthly-plan-page .monthly-plan-actions .btn {
+  white-space: nowrap;
+  word-break: normal;
+  overflow-wrap: normal;
+}
+.monthly-plan-page table.plan .monthly-plan-assign {
+  font-size: 12px;
+  padding-inline: 6px;
+}
+
+/* Keep the primary name on a separate line below its role label. */
+.monthly-plan-page .assignee-item > strong {
+  display: block;
+  margin-top: 4px;
+}
