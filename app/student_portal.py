@@ -46,8 +46,8 @@ async def sweep_deadlines():
 
 @asynccontextmanager
 async def lifespan(app):
-    from app.core.feature_flags import assessment_enabled
-    if not assessment_enabled():
+    from app.core.feature_flags import assessment_enabled,get_features
+    if get_features().RESTRICTED_MODULES_SUPERUSER_ONLY or not assessment_enabled():
         yield
         return
     worker=asyncio.create_task(sweep_deadlines())

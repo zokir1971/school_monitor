@@ -3,7 +3,7 @@ from urllib.parse import urlsplit
 from fastapi import Depends,Request
 from fastapi.responses import HTMLResponse,JSONResponse
 from jinja2 import pass_context
-from app.core.feature_flags import assessment_enabled,school_education_enabled,report_enabled
+from app.core.feature_flags import assessment_enabled,school_education_enabled,report_enabled,restricted_modules_allowed,get_features
 
 class FeatureUnavailable(Exception):
     def __init__(self,feature='assessment',user=None):self.feature=feature;self.user=user
@@ -18,8 +18,12 @@ def require_assessment_enabled():ensure_assessment()
 require_assessment_enabled.feature_key='assessment'
 
 def report_dependency(code):
-    def check():ensure_report(code)
-    if code=='knowledge_quality_table':check.feature_key='assessment'
+    if code=='knowledge_quality_table':
+        from app.core.restricted_modules import require_restricted_modules
+        def check(_user=Depends(require_restricted_modules)):ensure_report(code)
+        check.feature_key='assessment'
+    else:
+        def check():ensure_report(code)
     return check
 
 # Import authorization lazily at module integration sites to avoid config/import cycles.
@@ -47,7 +51,7 @@ async def unavailable_response(request:Request,exc:FeatureUnavailable):
 class PortalFeatureGate:
     def __init__(self,app):self.app=app
     async def __call__(self,scope,receive,send):
-        if scope['type']=='http' and not assessment_enabled():
+        if scope['type']=='http' and (get_features().RESTRICTED_MODULES_SUPERUSER_ONLY or not assessment_enabled()):
             response=await unavailable_response(Request(scope),FeatureUnavailable())
             await response(scope,receive,send)
         else:await self.app(scope,receive,send)
@@ -59,7 +63,7 @@ def _dependencies(dependant):
         yield from _dependencies(child)
 
 def feature_link_available(request,href,user=None):
-    if assessment_enabled() and school_education_enabled(user):return True
+    if restricted_modules_allowed(user) and assessment_enabled() and school_education_enabled(user):return True
     path=urlsplit(str(href)).path
     rules=getattr(request.app.state,'feature_link_rules',None)
     if rules is None:
@@ -71,6 +75,7 @@ def feature_link_available(request,href,user=None):
         request.app.state.feature_link_rules=rules
     for pattern,keys in rules:
         if pattern.fullmatch(path):
+            if 'superuser_modules' in keys and not restricted_modules_allowed(user):return False
             if 'assessment' in keys and not assessment_enabled():return False
             if 'school_education' in keys and not school_education_enabled(user):return False
     return True
@@ -78,5 +83,17 @@ def feature_link_available(request,href,user=None):
 def install_feature_helpers(environment):
     @pass_context
     def link_available(context,href,user=None):return feature_link_available(context['request'],href,user or context.get('user'))
-    environment.globals.update(assessment_enabled=assessment_enabled,school_education_enabled=school_education_enabled,
-                               feature_report_available=report_enabled,feature_link_available=link_available)
+    @pass_context
+    def assessment_available(context):
+        return restricted_modules_allowed(context.get('user')) and assessment_enabled()
+    @pass_context
+    def education_available(context,user=None):
+        actor=user or context.get('user')
+        return restricted_modules_allowed(actor) and school_education_enabled(actor)
+    @pass_context
+    def report_available(context,code):
+        if getattr(code,'value',code)=='knowledge_quality_table' and not restricted_modules_allowed(context.get('user')):
+            return False
+        return report_enabled(code)
+    environment.globals.update(assessment_enabled=assessment_available,school_education_enabled=education_available,
+                               feature_report_available=report_available,feature_link_available=link_available)

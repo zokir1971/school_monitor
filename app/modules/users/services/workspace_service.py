@@ -200,8 +200,8 @@ class UserWorkspaceService:
         # QUESTION BANK EXPERT
         # -----------------------------------------------------
 
-        from app.core.feature_flags import assessment_enabled
-        if not assessment_enabled():return items
+        from app.core.feature_flags import assessment_enabled,restricted_modules_allowed
+        if not assessment_enabled() or not restricted_modules_allowed(user):return items
         has_expert = (
             await QuestionBankExpertRepo
             .has_active_expert_scope(

@@ -88,7 +88,12 @@ def run_migrations_online() -> None:
             text("SET search_path TO public")
         )
 
+        # Finish SQLAlchemy autobegin before Alembic takes ownership.
+        bootstrap.commit()
+        connection.execution_options(isolation_level="READ COMMITTED")
+
         context.configure(
+            transaction_per_migration=True,
             connection=connection,
             target_metadata=target_metadata,
             compare_type=True,

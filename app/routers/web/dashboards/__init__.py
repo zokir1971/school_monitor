@@ -1,4 +1,5 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+from app.core.restricted_modules import require_restricted_modules
 
 from .common import router as common_router
 from .region import router as region_router
@@ -21,4 +22,4 @@ router.include_router(school_router)
 router.include_router(school_staff_router)
 router.include_router(teacher_router)
 router.include_router(workspace_router)
-router.include_router(question_bank_expert_dashboard_router)
+router.include_router(question_bank_expert_dashboard_router, dependencies=[Depends(require_restricted_modules)])

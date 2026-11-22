@@ -1,6 +1,7 @@
 # app/routers/web/__init__.py (Подключает все web-маршруты (HTML-страницы):)
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+from app.core.restricted_modules import require_restricted_modules
 
 
 from .core import router as core_router
@@ -39,5 +40,5 @@ router.include_router(schools_router)
 router.include_router(reviews_router)
 router.include_router(statistics_router)
 router.include_router(monitoring_router)
-router.include_router(assessment_router)
-router.include_router(education_router)
+router.include_router(assessment_router, dependencies=[Depends(require_restricted_modules)])
+router.include_router(education_router, dependencies=[Depends(require_restricted_modules)])

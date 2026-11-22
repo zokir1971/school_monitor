@@ -6,11 +6,16 @@ from pydantic_settings import BaseSettings,SettingsConfigDict
 class FeatureSettings(BaseSettings):
     ASSESSMENT_ENABLED: bool = True
     SCHOOL_EDUCATION_ENABLED: bool = True
+    RESTRICTED_MODULES_SUPERUSER_ONLY: bool = True
     model_config = SettingsConfigDict(env_file=str(Path(__file__).resolve().parents[2]/'.env.features'),
                                      env_file_encoding='utf-8-sig',extra='ignore',case_sensitive=False)
 
 @lru_cache(maxsize=1)
 def get_features():return FeatureSettings()
+
+def restricted_modules_allowed(user=None):
+    role=user.get('role') if isinstance(user,dict) else getattr(user,'role',None)
+    return not get_features().RESTRICTED_MODULES_SUPERUSER_ONLY or getattr(role,'value',role)=='superuser'
 
 def assessment_enabled():return get_features().ASSESSMENT_ENABLED
 
