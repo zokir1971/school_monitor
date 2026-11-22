@@ -1,5 +1,7 @@
 # app/routers/web/setup/superuser.py
 
+from starlette.concurrency import run_in_threadpool
+
 from app.core.i18n import resolve_language
 
 from fastapi import APIRouter, Depends, Form, Request
@@ -76,7 +78,7 @@ async def setup_superuser_submit(
         iin = validate_iin(iin)
         email = validate_email(email)
         phone = validate_kz_phone(phone)
-        password_hash = hash_password(password)
+        password_hash = await run_in_threadpool(hash_password, password)
 
         await BootstrapService.create_superuser(
             db,

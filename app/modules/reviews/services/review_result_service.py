@@ -210,6 +210,8 @@ class ReviewResultService:
                     year=selected_year,
                     month=selected_month,
                     review_place=selected_review_place,
+                    participant_user_id=access.participant_user_id,
+                    participant_staff_id=access.participant_staff_id,
                 )
             )
 
@@ -530,22 +532,10 @@ class ReviewResultService:
             selected_school_id=selected_school_id,
         )
 
-        active_plan = (
-            await ReviewResultRepository.get_active_school_plan(
-                db,
-                school_id=access.school_id,
-            )
-        )
-
-        if active_plan is None:
-            raise ValueError(
-                "У выбранной школы отсутствует активный годовой план."
-            )
-
         result = await ReviewResultRepository.get_result_by_id(
             db,
             review_result_id=review_result_id,
-            school_plan_id=active_plan.id,
+            school_id=access.school_id,
             participant_user_id=access.participant_user_id,
             participant_staff_id=access.participant_staff_id,
         )
@@ -917,6 +907,7 @@ class ReviewResultService:
 
         return ReviewResultHistoryItemDTO(
             review_result_id=result.id,
+            month_item_id=result.month_item_id,
 
             review_place=cls._get_enum_value(
                 result.review_place
@@ -1348,7 +1339,8 @@ class ReviewResultService:
             return None
 
         if requested_year is None:
-            return available_years[0]
+            current_year = date.today().year
+            return current_year if current_year in available_years else available_years[0]
 
         if requested_year not in available_years:
             raise ValueError(

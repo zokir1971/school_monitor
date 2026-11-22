@@ -19,9 +19,8 @@ from app.modules.planning.enums import ReviewPlace
 from app.modules.reviews.services.review_result_service import (
     ReviewResultService,
 )
-from app.modules.users.deps import (
-    require_school_member_scope,
-)
+from app.modules.users.deps import require_roles
+from app.modules.users.enums import UserRole
 from app.modules.users.models import User
 from app.routers.web.helpers.render import (
     render,
@@ -53,7 +52,7 @@ async def review_result_list_page(
     task_review_id: str | None = Query(default=None),
 
     db: AsyncSession = Depends(get_db),
-    user: User = Depends(require_school_member_scope),
+    user: User = Depends(require_roles(UserRole.SCHOOL_ADMIN, UserRole.SCHOOL_STAFF)),
 ):
     """
     Показывает список задач и результаты их рассмотрения.
@@ -213,7 +212,7 @@ async def review_result_task_detail_page(
         review_place: str | None = Query(default=None),
 
         db: AsyncSession = Depends(get_db),
-        user: User = Depends(require_school_member_scope),
+        user: User = Depends(require_roles(UserRole.SCHOOL_ADMIN, UserRole.SCHOOL_STAFF)),
 ):
     """
     Показывает задачу и полную историю её рассмотрений.
@@ -287,7 +286,7 @@ async def review_result_detail_page(
         school_id: str | None = Query(default=None),
 
         db: AsyncSession = Depends(get_db),
-        user: User = Depends(require_school_member_scope),
+        user: User = Depends(require_roles(UserRole.SCHOOL_ADMIN, UserRole.SCHOOL_STAFF)),
 ):
     """
     Показывает один конкретный результат рассмотрения.
@@ -303,17 +302,12 @@ async def review_result_detail_page(
             selected_school_id=selected_school_id,
         )
 
-        return render(
-            templates,
-            request,
-            "reviews/review_result_detail.html",
-            ctx={
-                "user": user,
-                "result": result,
-                "school_id": selected_school_id,
-                "selected_review_place": None,
-            },
-        )
+        target = request.url_for("review_result_task_detail_page", month_item_id=result.month_item_id)
+        query = {"review_place": result.review_place}
+        if selected_school_id is not None:
+            query["school_id"] = selected_school_id
+        target = target.include_query_params(**query)
+        return RedirectResponse(str(target) + f"#review-result-{result.review_result_id}", status_code=303)
 
     except ValueError as exc:
         return render_error(
@@ -345,7 +339,7 @@ async def review_result_document_view(
         school_id: str | None = Query(default=None),
 
         db: AsyncSession = Depends(get_db),
-        user: User = Depends(require_school_member_scope),
+        user: User = Depends(require_roles(UserRole.SCHOOL_ADMIN, UserRole.SCHOOL_STAFF)),
 ):
     """
     Открывает документ результата рассмотрения.
@@ -421,7 +415,7 @@ async def review_result_document_download(
         school_id: str | None = Query(default=None),
 
         db: AsyncSession = Depends(get_db),
-        user: User = Depends(require_school_member_scope),
+        user: User = Depends(require_roles(UserRole.SCHOOL_ADMIN, UserRole.SCHOOL_STAFF)),
 ):
     """
     Скачивает документ результата рассмотрения.

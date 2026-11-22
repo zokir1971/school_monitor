@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload, load_only
+from sqlalchemy.orm import raiseload, selectinload, load_only
 
 from app.core.storage.schemas import SchoolStorageContext
 from app.modules.org.models import School
@@ -42,7 +42,7 @@ class ExecutionDocumentRepo:
         Получить текущий рабочий документ выбранного отчета.
         """
         stmt = (
-            select(TaskExecutionDocument)
+            select(TaskExecutionDocument).options(raiseload("*"))
             .where(
                 TaskExecutionDocument.selected_report_id == selected_report_id,
                 TaskExecutionDocument.is_final.is_(False),
@@ -71,7 +71,7 @@ class ExecutionDocumentRepo:
 
 
         stmt = (
-            select(TaskExecutionDocument)
+            select(TaskExecutionDocument).options(raiseload("*"))
             .where(
                 TaskExecutionDocument.selected_report_id.in_(
                     selected_report_ids
@@ -140,7 +140,7 @@ class ExecutionDocumentRepo:
         для конкретного пользователя.
         """
         stmt = (
-            select(TaskExecutionDocument)
+            select(TaskExecutionDocument).options(raiseload("*"))
             .where(
                 TaskExecutionDocument.selected_report_id == selected_report_id,
                 TaskExecutionDocument.uploaded_by_user_id == user_id,
@@ -196,7 +196,7 @@ class ExecutionDocumentRepo:
         - selectinload на user-связях предотвращает N+1
         """
         stmt = (
-            select(TaskExecutionDocument)
+            select(TaskExecutionDocument).options(raiseload("*"))
             .where(TaskExecutionDocument.month_item_id == month_item_id)
             .where(TaskExecutionDocument.is_final.is_(True))
             .order_by(TaskExecutionDocument.created_at.desc(), TaskExecutionDocument.id.desc())
@@ -219,11 +219,11 @@ class ExecutionDocumentRepo:
             month_item_id: int,
     ) -> TaskExecutionDocument | None:
         stmt = (
-            select(TaskExecutionDocument)
+            select(TaskExecutionDocument).options(raiseload("*"))
             .where(TaskExecutionDocument.month_item_id == month_item_id)
             .where(TaskExecutionDocument.is_final.is_(True))
             .where(TaskExecutionDocument.is_current.is_(True))
-            .order_by(TaskExecutionDocument.created_at.desc(), TaskExecutionDocument.id.desc())
+            .order_by(TaskExecutionDocument.created_at.desc(), TaskExecutionDocument.id.desc()).limit(1)
         )
 
         result = await db.execute(stmt)
@@ -234,7 +234,7 @@ class ExecutionDocumentRepo:
             db: AsyncSession,
             *,
             month_item_id: int,
-    ) -> None:
+    ) -> dict | None:
         """
         блокируем одну задачу, а не всю таблицу
         не даём двум upload одновременно:
@@ -242,11 +242,16 @@ class ExecutionDocumentRepo:
         перезаписать друг друга
         """
         stmt = (
-            select(SchoolMonthPlanItem.id)
+            select(SchoolMonthPlanItem.id, SchoolMonthPlanItem.status, SchoolMonthPlanItem.completed_at,
+                   SchoolMonthPlanItem.is_included, SchoolMonthPlan.status.label("month_status"),
+                   SchoolPlan.status.label("annual_status"))
+            .join(SchoolMonthPlan, SchoolMonthPlan.id == SchoolMonthPlanItem.month_plan_id)
+            .join(SchoolPlan, SchoolPlan.id == SchoolMonthPlan.school_plan_id)
             .where(SchoolMonthPlanItem.id == month_item_id)
-            .with_for_update()
+            .with_for_update(of=SchoolMonthPlanItem)
         )
-        await db.execute(stmt)
+        row = (await db.execute(stmt)).mappings().one_or_none()
+        return dict(row) if row else None
 
     @classmethod
     async def prepare_final_document(
@@ -352,7 +357,7 @@ class ExecutionDocumentRepo:
         """
 
         stmt = (
-            select(SchoolMonthPlanItem)
+            select(SchoolMonthPlanItem).options(raiseload("*"))
             .where(
                 SchoolMonthPlanItem.id == month_item_id
             )
@@ -415,7 +420,7 @@ class ExecutionDocumentRepo:
         Подгружаем только то, что реально нужно для view/download.
         """
         stmt = (
-            select(TaskExecutionDocument)
+            select(TaskExecutionDocument).options(raiseload("*"))
             .where(TaskExecutionDocument.id == document_id)
             .options(
                 selectinload(TaskExecutionDocument.required_document),
@@ -447,7 +452,7 @@ class ExecutionDocumentRepo:
         - только upload
         """
         stmt = (
-            select(TaskExecutionDocument)
+            select(TaskExecutionDocument).options(raiseload("*"))
             .where(TaskExecutionDocument.month_item_id == month_item_id)
             .where(TaskExecutionDocument.is_final.is_(True))
             .where(TaskExecutionDocument.is_current.is_(True))

@@ -1,13 +1,15 @@
-{% macro assessment_section() -%}{% if assessment_enabled() %}
+{% macro assessment_section(unified=false) -%}{% if assessment_enabled() %}
 {% set ru=ui_language()=='ru' %}
-<section class="assessment-section" data-assessment-ui data-user="{{ user.id }}" aria-label="{{ 'Оценивание качества знаний' if ru else 'Білім сапасын бағалау' }}">
-<h2>{{ 'Оценивание качества знаний' if ru else 'Білім сапасын бағалау' }}</h2>
-<div class="assessment-cards">
+<section class="{{ 'dashboard-section' if unified else 'assessment-section' }}" data-assessment-ui data-user="{{ user.id }}" aria-label="{{ 'Оценивание качества знаний' if ru else 'Білім сапасын бағалау' }}">
+{% if unified %}<h3 class="section-title">{{ 'Оценивание качества знаний' if ru else 'Білім сапасын бағалау' }}</h3>{% else %}<h2>{{ 'Оценивание качества знаний' if ru else 'Білім сапасын бағалау' }}</h2>{% endif %}
+<div class="{{ 'card-grid' if unified else 'assessment-cards' }}">
 {% for route,icon,title_ru,title_kk,desc_ru,desc_kk in [
 ('shared_question_bank_catalog','📚','Банк готовых заданий','Дайын тапсырмалар банкі','Найдите проверенные задания по предмету, классу и учебной цели.','Пән, сынып және оқу мақсаты бойынша тексерілген тапсырмаларды табыңыз.'),
 ('assessment_work_plan_index','🗂️','Комплекты оценивания','Бағалау жинақтары','Создайте комплект, подберите задания и подготовьте варианты для печати или онлайн.','Жинақ құрып, тапсырмаларды таңдап, баспаға немесе онлайн өткізуге арналған нұсқаларды дайындаңыз.'),
 ('diagnostic_sessions','▶','Проведение оценивания','Бағалауды өткізу','Выберите подготовленные комплекты по предметам, назначьте участников и отслеживайте прохождение.','Пәндер бойынша дайын жинақтарды таңдап, қатысушыларды тағайындаңыз және орындалуын қадағалаңыз.')
-] %}<a class="assessment-card" href="{{ url_for(route) }}" {% if route=='assessment_work_plan_index' %}data-assessment-list{% endif %}>
-<div class="assessment-card__top"><span aria-hidden="true">{{ icon }}</span><span aria-hidden="true">→</span></div><h3>{{ title_ru if ru else title_kk }}</h3><p>{{ desc_ru if ru else desc_kk }}</p></a>{% endfor %}
+] %}<a class="{{ 'card' if unified else 'assessment-card' }}" href="{{ url_for(route) }}" {% if route=='assessment_work_plan_index' %}data-assessment-list{% endif %}>
+{% if unified %}
+<div class="card__inner"><div class="card__top"><span class="card__icon" aria-hidden="true">{{ icon }}</span></div><h3 class="card__title">{{ title_ru if ru else title_kk }}</h3><p class="card__desc">{{ desc_ru if ru else desc_kk }}</p><div class="card__footer"><span>{{ 'Открыть' if ru else 'Ашу' }}</span><span class="card__arrow" aria-hidden="true">→</span></div></div>
+{% else %}<div class="assessment-card__top"><span aria-hidden="true">{{ icon }}</span><span aria-hidden="true">→</span></div><h3>{{ title_ru if ru else title_kk }}</h3><p>{{ desc_ru if ru else desc_kk }}</p>{% endif %}</a>{% endfor %}
 </div></section>
 {% endif %}{%- endmacro %}

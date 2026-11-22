@@ -1,0 +1,23 @@
+{% macro label(ru, kk) -%}{{ ru if pdf_language == 'ru' else kk }}{%- endmacro %}
+<h2>{{ label('Наличие тетрадей по классам', 'Сыныптар бойынша дәптерлердің болуы') }}</h2>
+<table class="notebook-presence-table"><thead><tr>{% for ru,kk in [('Класс','Сынып'),('Учеников','Оқушылар'),('Проверено','Тексерілді'),('Есть тетрадь','Дәптері бар'),('Нет тетради','Дәптері жоқ'),('Не проверены','Тексерілмеген')] %}<th>{{ label(ru,kk) }}</th>{% endfor %}</tr></thead>
+<tbody>{% for row in data.get('class_checks',[]) %}<tr><th>{{ row.class_name }}</th>{% for key in ['students','checked','have','missing','unchecked'] %}<td>{{ row[key] if row[key] is not none else '—' }}</td>{% endfor %}</tr>{% endfor %}</tbody>
+<tfoot><tr><th>{{ label('Итого','Барлығы') }}</th>{% for key in ['students','checked','have','missing','unchecked'] %}<td>{{ data.get('class_totals',{}).get(key,'—') }}</td>{% endfor %}</tr></tfoot></table>
+{% for row in data.get('class_checks',[]) %}
+<table class="criteria-table notebook-criteria-table">
+<colgroup><col style="width:6%"><col style="width:47%"><col style="width:47%"></colgroup>
+<thead><tr class="notebook-class-heading"><th colspan="3">{{ row.class_name }} · {{ (row.name_ru or row.name_kz) if pdf_language == 'ru' else row.name_kz }}</th></tr><tr><th>№</th><th>{{ pdf_text('Критерий') }}</th><th>{{ pdf_text('Балл') }}</th></tr></thead><tbody>
+{% for criterion in schema.criteria or [] %}
+  {% set key = (criterion.get('key') or 'criterion_' ~ loop.index0) if criterion is mapping else 'criterion_' ~ loop.index0 %}
+  {% set text = (criterion.get('label_kz') or criterion.get('text') or criterion.get('name') or key) if criterion is mapping else criterion %}
+  <tr><td>{{ loop.index }}</td><td class="criterion-text">{{ pdf_criterion_text(criterion, text) }}</td><td class="notebook-score-text">
+    {% set score = row.scores.get(key) %}<strong>{{ score if score is not none else '—' }}</strong>
+    {% set rubric = criterion.get('scores',{}) if criterion is mapping else {} %}
+    {% set description = rubric.get(score|string,{}) if rubric is mapping and score is not none else {} %}
+    {% if description %} — <span class="score-explanation">{{ (description.get('label_ru' if pdf_language == 'ru' else 'label_kz') or description.get('label_kz') or description.get('label_ru') or '') if description is mapping else description }}</span>{% endif %}
+  </td></tr>
+{% endfor %}
+</tbody></table>
+<p>{{ label('Балл','Балл') }}: {{ row.total_score }} / {{ row.max_score }} · {{ row.percent }}%</p>
+
+{% endfor %}

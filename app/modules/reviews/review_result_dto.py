@@ -91,6 +91,7 @@ class ReviewResultHistoryItemDTO:
     """
 
     review_result_id: int
+    month_item_id: int
 
     review_place: str
     review_place_label: str

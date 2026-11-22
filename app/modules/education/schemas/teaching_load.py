@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 
 # =========================================================
@@ -81,6 +81,7 @@ class TeachingLoadPageDTO:
     classes: list[TeachingLoadClassDTO]
     subjects: list[TeachingLoadSubjectDTO]
     teachers: list[TeachingLoadTeacherDTO]
+    teacher_choices: dict = field(default_factory=dict)
 
 
 # =========================================================

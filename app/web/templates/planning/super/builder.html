@@ -100,12 +100,13 @@
 
   <tbody>
     {% for r in rows4 %}
-      <tr>
+      <tr id="template-rows4-{{ r.id }}">
         <td>{{ loop.index }}</td>
         <td style="white-space: pre-line;">{{ r.control_object }}</td>
         <td style="white-space: pre-line;">{{ r.risk_text or "" }}</td>
         <td style="white-space: pre-line;">{{ r.decision_text or "" }}</td>
         <td>
+          <a class="btn" data-sm-action="edit" style="margin-bottom:6px;" href="{{ request.url_for('super_template_row_edit', table_kind='rows4', row_id=r.id) }}?template_id={{ selected_template_id }}&amp;direction_id={{ selected_direction_id }}">{{ 'Редактировать' if ui_language() == 'ru' else 'Өңдеу' }}</a>
           <form method="post"
                 action="/planning/super/builder/rows4/{{ r.id }}/delete"
                 onsubmit="return confirm({{ _('Удалить строку?')|tojson|forceescape }});">
@@ -165,7 +166,7 @@
 
   <tbody>
     {% for r in rows11 %}
-      <tr>
+      <tr id="template-rows11-{{ r.id }}">
         <td>{{ loop.index }}</td>
         <td>{{ r.topic }}</td>
         <td>{{ r.goal or "" }}</td>
@@ -178,6 +179,7 @@
         <td>{{ r.management_decision or "" }}</td>
         <td>{{ r.second_control or "" }}</td>
         <td>
+          <a class="btn" data-sm-action="edit" style="margin-bottom:6px;" href="{{ request.url_for('super_template_row_edit', table_kind='rows11', row_id=r.id) }}?template_id={{ selected_template_id }}&amp;direction_id={{ selected_direction_id }}">{{ 'Редактировать' if ui_language() == 'ru' else 'Өңдеу' }}</a>
           <form method="post"
                 action="/planning/super/builder/rows11/{{ r.id }}/delete"
                 onsubmit="return confirm({{ _('Удалить строку?')|tojson|forceescape }});">

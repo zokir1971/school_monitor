@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import Sequence
+from types import SimpleNamespace
 
 import sqlalchemy as sa
 from sqlalchemy import delete, func, select, update
@@ -162,6 +163,65 @@ class SchoolMonthlyPlanRepo:
             stmt = stmt.execution_options(populate_existing=True)
         res = await db.execute(stmt)
         return list(res.scalars().unique().all())
+
+    @staticmethod
+    async def list_items_for_page(db: AsyncSession, *, month_plan_id: int):
+        """Two projection queries for the monthly read page; no ORM hydration.
+
+        The editing/submission list_items method remains unchanged. Each result
+        contains only scalar page fields and explicitly read review venues.
+        """
+        from app.modules.planning.models import PlanDirection
+        i = SchoolMonthPlanItem.__table__
+        r = SchoolPlanRow11.__table__
+        d = PlanDirection.__table__
+        v = SchoolMonthPlanItemReviewPlace.__table__
+        item_names = ("id", "source_row11_id", "is_included", "week_of_month",
+                      "planned_start", "planned_end", "notes", "status")
+        source_names = ("topic", "goal", "control_object", "methods", "deadlines",
+                        "period_type", "period_value_int", "period_values", "direction_id")
+        stmt = (select(
+            *(i.c[name] for name in item_names),
+            r.c.id.label("source_id"),
+            *(r.c[name].label("source_" + name) for name in source_names),
+            d.c.id.label("direction_id"), d.c.short_title.label("direction_title"),
+            d.c.sort_order.label("direction_order"),
+        ).select_from(i.outerjoin(r, r.c.id == i.c.source_row11_id)
+                       .outerjoin(d, d.c.id == r.c.direction_id))
+                .where(i.c.month_plan_id == month_plan_id).order_by(i.c.id))
+        rows = (await db.execute(stmt)).mappings().all()
+        if not rows:
+            return []
+        venues = (await db.execute(
+            select(v.c.month_item_id, v.c.review_place)
+            .select_from(v.join(i, i.c.id == v.c.month_item_id))
+            .where(i.c.month_plan_id == month_plan_id)
+            .order_by(v.c.month_item_id, v.c.review_place, v.c.id)
+        )).all()
+        by_item = {}
+        for venue in venues:
+            by_item.setdefault(venue.month_item_id, []).append(
+                SimpleNamespace(review_place=venue.review_place)
+            )
+        directions = {}
+        result = []
+        for row in rows:
+            direction = None
+            if row["direction_id"] is not None:
+                key = row["direction_id"]
+                if key not in directions:
+                    directions[key] = SimpleNamespace(
+                        short_title=row["direction_title"], sort_order=row["direction_order"])
+                direction = directions[key]
+            source = None
+            if row["source_id"] is not None:
+                source = SimpleNamespace(
+                    id=row["source_id"], direction=direction,
+                    **{name: row["source_" + name] for name in source_names})
+            result.append(SimpleNamespace(
+                **{name: row[name] for name in item_names}, source_row11=source,
+                review_places=by_item.get(row["id"], [])))
+        return result
 
     @staticmethod
     async def get_assignment_summaries_by_month_plan(

@@ -21,6 +21,12 @@ class Settings(BaseSettings):
 
     DATABASE_URL: str
 
+    # Per-process limits. Multiply by the number of application workers.
+    # Existing defaults are retained; smaller server profiles are opt-in.
+    DB_POOL_SIZE: int = Field(default=20, ge=1)
+    DB_MAX_OVERFLOW: int = Field(default=40, ge=0)
+    DB_POOL_TIMEOUT_SECONDS: float = Field(default=30.0, gt=0, allow_inf_nan=False)
+
     APP_ENV: str = "dev"
     DEBUG: bool = False
 
@@ -31,6 +37,20 @@ class Settings(BaseSettings):
 
     # Секрет для хеширования регистрационных кодов
     CODE_PEPPER: str
+
+    # ---------------------------------------------------------
+    # AI / OpenAI
+    # ---------------------------------------------------------
+
+    OPENAI_API_KEY: str | None = None
+
+    OPENAI_MODEL: str = "gpt-5.6"
+
+    OPENAI_TIMEOUT_SECONDS: float = Field(
+        default=60.0,
+        gt=0,
+        le=300.0,
+    )
 
     # ---------------------------------------------------------
     # Файловое хранилище
@@ -102,6 +122,19 @@ class Settings(BaseSettings):
                 "development",
             }
         )
+
+    @property
+    def openai_api_key(self) -> str | None:
+        if self.OPENAI_API_KEY is None:
+            return None
+
+        normalized = self.OPENAI_API_KEY.strip()
+
+        return normalized or None
+
+    @property
+    def openai_model(self) -> str:
+        return self.OPENAI_MODEL.strip()
 
     @property
     def use_s3(self) -> bool:

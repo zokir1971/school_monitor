@@ -2,7 +2,7 @@
 {% block title %}{{ _('Роли сотрудника') }}{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{{ url_for('static', path='css/member_roles.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', path='css/member_roles.css') }}?v=276">
 {% endblock %}
 
 {% block content %}
@@ -48,7 +48,7 @@
   function roleRowHtml(idx, roleVal="", ctxVal=""){
     const options = ROLES.map(r => {
       const sel = r.value === roleVal ? "selected" : "";
-      return `<option value="${r.value}" ${sel}>${r.label_kz}</option>`;
+      return `<option value="${r.value}" ${sel}>${escapeRoleText(r.label_kz)}</option>`;
     }).join("");
 
     return window.SchoolMonitorI18n.t("st_874a9eb095ab", {p0: (idx), p1: (options), p2: (escapeRoleText(ctxVal || "")), p3: (idx)})   ;

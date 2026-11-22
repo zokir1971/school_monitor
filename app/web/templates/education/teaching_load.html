@@ -218,7 +218,7 @@
             {{ _('Пән') }}
           </label>
 
-          <select id="subject_id"
+          <select data-teacher-subject id="subject_id"
                   name="subject_id"
                   class="form-control"
                   required>
@@ -246,7 +246,7 @@
             {{ _('Мұғалім') }}
           </label>
 
-          <select id="staff_member_id"
+          <select data-curriculum-teacher id="staff_member_id"
                   name="staff_member_id"
                   class="form-control"
                   required>
@@ -262,6 +262,9 @@
             {% endfor %}
 
           </select>
+          <button type="button" data-teacher-toggle aria-pressed="false" data-show-all="{{ 'Показать всех' if ui_language()=='ru' else 'Барлығын көрсету' }}" data-show-matching="{{ 'Только по предмету' if ui_language()=='ru' else 'Тек пән бойынша' }}">{{ 'Показать всех' if ui_language()=='ru' else 'Барлығын көрсету' }}</button>
+          <span data-teacher-hint aria-live="polite" data-empty="{{ 'Подходящие учителя не найдены. Проверьте предмет и специальность в карточке сотрудника.' if ui_language()=='ru' else 'Сәйкес мұғалімдер табылмады. Қызметкердің пәні мен мамандығын тексеріңіз.' }}"></span>
+
 
         </div>
 
@@ -507,4 +510,8 @@
 
 </div>
 
+{% endblock %}
+{% block extra_js %}{{ super() }}
+<script type="application/json" id="curriculum-teacher-choices">{{ page.teacher_choices|tojson }}</script>
+<script defer src="{{ url_for('static',path='js/education/curriculum_teacher_choices.js') }}?v=251"></script>
 {% endblock %}

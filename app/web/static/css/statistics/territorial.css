@@ -1,0 +1,83 @@
+.ts-page{box-sizing:border-box;max-width:1600px;margin:0 auto;padding:20px;color:#18243a;min-width:0}
+.ts-page *{box-sizing:border-box}
+.ts-heading{display:flex;justify-content:space-between;align-items:start;gap:16px}
+.ts-heading h1{margin:0;font-size:24px}
+.ts-heading p{margin:8px 0 18px;color:#52627b;overflow-wrap:anywhere}
+.ts-heading>span{font-size:13px;color:#52627b;flex-shrink:0}
+.ts-filters{background:#fff;border:1px solid #dae2ee;padding:12px;border-radius:12px;min-width:0}
+.ts-filter-grid{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end}
+.ts-filter-grid label{display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;min-width:0;flex:1 1 160px}
+.ts-filter-grid input,.ts-filter-grid select{height:40px;border:1px solid #b9c8df;border-radius:7px;padding:7px 9px;font:inherit;min-width:0;width:100%;background:#fff;color:#18243a}
+.ts-filter-grid input:focus,.ts-filter-grid select:focus{outline:2px solid #93b7ff;outline-offset:1px}
+.ts-filter-grid small{color:#61738b;font-weight:400}
+.ts-filter-grid .ts-year-filter{flex:0 1 105px}.ts-filter-grid .ts-month-filter{flex:0 1 165px}.ts-filter-grid .ts-sort-filter{flex:0 1 205px}.ts-filter-grid .ts-direction-filter{flex:2 1 270px}
+.ts-filter-actions{display:flex;justify-content:flex-end;align-items:center;flex-wrap:wrap;gap:8px;flex:0 0 auto;min-width:0}
+.ts-page a{color:#174fc9}
+.ts-back{display:inline-block;max-width:100%;overflow-wrap:anywhere;text-decoration:none;font-size:13px}
+.ts-back:hover{text-decoration:underline}
+.ts-school-state{display:flex;flex-wrap:wrap;gap:8px 20px;font-size:13px;margin:14px 0;color:#52627b}
+.ts-school-state strong{color:#18243a}
+.ts-cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:12px 0}
+.ts-card{background:#fff;border:1px solid #dce4f0;border-radius:10px;padding:9px 12px;display:grid;grid-template-rows:34px 28px 16px;gap:2px;min-width:0}
+.ts-card-title{font-size:13px;line-height:18px;color:#52627b;overflow-wrap:anywhere}
+.ts-card-value{font-size:24px;line-height:28px;font-variant-numeric:tabular-nums}
+.ts-card small{font-size:12px;line-height:16px;color:#61738b}
+.ts-card--warning{border-color:#edc58f}
+.ts-card--warning strong,.ts-overdue{color:#ac4305;font-weight:700}
+.ts-note{font-size:13px;line-height:1.5;color:#52627b}
+.ts-table-wrap{overflow:auto;border:1px solid #d4dfed;border-radius:10px;max-height:65vh;background:#fff;max-width:100%;isolation:isolate}
+.ts-table{border-collapse:separate;border-spacing:0;table-layout:fixed;width:100%;min-width:1250px;font-size:13px;line-height:1.45}
+.ts-col-name{width:24%}.ts-col-coverage{width:8%}.ts-col-tasks{width:9%}.ts-col-assigned{width:10%}.ts-col-completed{width:9%}.ts-col-status{width:13%}.ts-col-overdue{width:7%}.ts-col-reports{width:11%}.ts-col-review{width:9%}
+.ts-table--school .ts-col-name{width:30%}.ts-table--school .ts-col-tasks{width:9%}.ts-table--school .ts-col-assigned{width:11%}.ts-table--school .ts-col-completed{width:10%}.ts-table--school .ts-col-status{width:14%}.ts-table--school .ts-col-overdue{width:7%}.ts-table--school .ts-col-reports{width:10%}.ts-table--school .ts-col-review{width:9%}
+.ts-table th,.ts-table td{border-bottom:1px solid #e1e7f0;border-right:1px solid #edf1f7;padding:10px;text-align:left;vertical-align:top;overflow-wrap:anywhere}
+.ts-table thead{position:sticky;top:0;z-index:3}
+.ts-table thead th{background:#edf3ff;text-align:center;vertical-align:middle;font-size:12px;line-height:17px;font-weight:600}
+.ts-table thead th[rowspan]{text-align:left}
+.ts-table tbody th{font-weight:500}
+.ts-table tbody th,.ts-table tfoot th{position:sticky;left:0;z-index:1;background:#fff}
+.ts-table tr:nth-child(even) td,.ts-table tr:nth-child(even) th[scope=row]{background:#f7f9fc}
+.ts-page .ts-entity-link{display:inline;white-space:normal;overflow-wrap:anywhere;word-break:normal;max-width:100%;font-size:13px;line-height:1.5;text-decoration:none;border:0;background:none;padding:0}
+.ts-page .ts-entity-link:hover,.ts-page .ts-entity-link:focus-visible{text-decoration:underline}
+.ts-table .ts-number{text-align:center;font-variant-numeric:tabular-nums}
+.ts-number>strong{font-weight:600}
+.ts-number small{display:block;margin-top:5px;color:#64748b;font-size:12px}
+.ts-stat-line{display:flex;justify-content:space-between;align-items:baseline;gap:7px;margin-bottom:4px}
+.ts-stat-line:last-child{margin-bottom:0}
+.ts-stat-line>span{min-width:0;color:#52627b;font-size:12px;line-height:17px}
+.ts-stat-line>strong{flex-shrink:0;font-weight:600;font-variant-numeric:tabular-nums}
+.ts-empty{color:#64748b;font-size:12px}
+.ts-empty-row{text-align:center!important;padding:24px!important;color:#64748b}
+.ts-table tfoot th,.ts-table tfoot td{background:#edf3ff;font-weight:600}
+.ts-pagination{display:flex;justify-content:center;align-items:center;flex-wrap:wrap;gap:14px;padding:16px}
+.ts-definitions{background:#fff;border:1px solid #dce4f0;border-radius:10px;padding:14px;font-size:13px;line-height:1.6}
+.ts-definitions summary{cursor:pointer;font-weight:600}
+.ts-definitions li{margin-bottom:8px}
+@media(min-width:1200px){.ts-filters--school .ts-filter-grid{flex-wrap:nowrap}}
+@media(max-width:700px){.ts-page{padding:12px}.ts-heading h1{font-size:20px}.ts-heading{flex-wrap:wrap}.ts-cards{grid-template-columns:repeat(2,minmax(0,1fr))}.ts-table tbody th,.ts-table tfoot th{position:static}.ts-table{min-width:1120px}.ts-card{grid-template-rows:50px 28px 16px}}
+@media(max-width:600px){.ts-filter-actions{flex-basis:100%;justify-content:flex-start}.ts-filter-grid .ts-direction-filter{flex-basis:100%}}
+@media(max-width:420px){.ts-filter-grid .ts-year-filter,.ts-filter-grid .ts-month-filter,.ts-filter-grid .ts-sort-filter{flex:1 1 120px}.ts-card{padding:8px}.ts-card-title{font-size:12px}}
+.ts-table thead th:first-child[rowspan]{position:sticky;left:0;z-index:4}
+@media(max-width:700px){.ts-table thead th:first-child[rowspan]{position:static}}
+
+/* School overview: room for coverage, task counts and overdue totals. */
+.ts-table--schools .ts-col-name{width:23%}
+.ts-table--schools .ts-col-coverage{width:10%}
+.ts-table--schools .ts-col-tasks{width:9%}
+.ts-table--schools .ts-col-status{width:12%}
+.ts-table--schools .ts-col-overdue{width:8%}
+.ts-table--schools .ts-col-reports{width:10%}
+
+.ts-table .ts-tasks-heading{white-space:nowrap;overflow-wrap:normal;padding-left:6px;padding-right:6px}
+
+/* Region overview: compact district names, readable coverage and assignment labels. */
+.ts-table--districts .ts-col-name{width:16%}
+.ts-table--districts .ts-col-coverage{width:12%}
+.ts-table--districts .ts-col-assigned{width:14%}
+.ts-table--districts .ts-coverage .ts-stat-line>span,
+.ts-table--districts .ts-assigned .ts-stat-line>span{overflow-wrap:normal;word-break:normal}
+
+.ts-super-navigation{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}.ts-region-filter{flex:1 1 180px;min-width:0}
+
+.ts-ratio{display:block;font-size:11px;line-height:1.45;color:#476484;margin:3px 0}.ts-help-reasons{margin:7px 0 0;padding-left:16px;font-size:11px;line-height:1.5;color:#985313;font-weight:400}
+
+.ts-filters--school .ts-filter-grid{flex-wrap:wrap}

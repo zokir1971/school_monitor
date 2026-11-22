@@ -1,3 +1,4 @@
+from sqlalchemy.exc import IntegrityError
 # app/routers/web/auth/register_admin_by_code.py
 
 from app.core.i18n import resolve_language
@@ -5,6 +6,7 @@ from app.core.i18n import resolve_language
 from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy import select
+from sqlalchemy.orm import raiseload
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
@@ -28,17 +30,17 @@ async def _context_after_error(db, ctx):
         return result
     result["role"] = code.target_role
     if code.target_role == UserRole.REGION_ADMIN:
-        query = select(Region).order_by(Region.name)
+        query = select(Region).options(raiseload("*")).order_by(Region.name)
         if code.region_id:
             query = query.where(Region.id == code.region_id)
         result["regions"] = (await db.execute(query)).scalars().all()
     elif code.target_role == UserRole.DISTRICT_ADMIN and code.district_id:
-        result["district"] = await db.get(District, code.district_id)
+        result["district"] = await db.get(District, code.district_id, options=[raiseload("*")])
     elif code.target_role == UserRole.SCHOOL_ADMIN and code.school_id:
-        school = await db.get(School, code.school_id)
+        school = await db.get(School, code.school_id, options=[raiseload("*")])
         if school:
             result["school"] = school
-            result["district"] = await db.get(District, school.district_id) if school.district_id else None
+            result["district"] = await db.get(District, school.district_id, options=[raiseload("*")]) if school.district_id else None
     return result
 
 
@@ -76,7 +78,7 @@ async def register_admin_preview(
     ctx = {"step": 2, "invite_code": invite_code_norm, "role": rc.target_role}
 
     if rc.target_role == UserRole.REGION_ADMIN:
-        q = select(Region).order_by(Region.name)
+        q = select(Region).options(raiseload("*")).order_by(Region.name)
         if rc.region_id:
             q = q.where(Region.id == rc.region_id)
         ctx["regions"] = (await db.execute(q)).scalars().all()
@@ -92,7 +94,7 @@ async def register_admin_preview(
                 error="Код повреждён: нет district_id",
                 status_code=400,
             )
-        ctx["district"] = await db.get(District, rc.district_id)
+        ctx["district"] = await db.get(District, rc.district_id, options=[raiseload("*")])
         return render(templates, request, "auth/register_admin.html", ctx)
 
     if rc.target_role == UserRole.SCHOOL_ADMIN:
@@ -106,7 +108,7 @@ async def register_admin_preview(
                 status_code=400,
             )
 
-        school = await db.get(School, rc.school_id)
+        school = await db.get(School, rc.school_id, options=[raiseload("*")])
         if not school:
             return render_error(
                 templates,
@@ -117,7 +119,7 @@ async def register_admin_preview(
                 status_code=400,
             )
 
-        district = await db.get(District, school.district_id) if school.district_id else None
+        district = await db.get(District, school.district_id, options=[raiseload("*")]) if school.district_id else None
         ctx.update({"district": district, "school": school})
         return render(templates, request, "auth/register_admin.html", ctx)
 
@@ -185,13 +187,15 @@ async def register_admin_action(
             email=email,
             phone=phone,
         )
-    except ValueError as e:
+    except (ValueError, IntegrityError) as e:
+        await db.rollback()
+        message = str(e) if isinstance(e, ValueError) else "Пользователь с такими данными уже зарегистрирован"
         return render_error(
             templates,
             request,
             "auth/register_admin.html",
             await _context_after_error(db, ctx),
-            error=str(e),
+            error=message,
             status_code=400,
         )
 

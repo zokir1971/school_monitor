@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from typing import AsyncGenerator
+from fastapi import Request
 
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
@@ -29,8 +30,9 @@ settings = get_settings()
 engine = create_async_engine(
     settings.DATABASE_URL,
     pool_pre_ping=True,
-    pool_size=20,
-    max_overflow=40,
+    pool_size=settings.DB_POOL_SIZE,
+    max_overflow=settings.DB_MAX_OVERFLOW,
+    pool_timeout=settings.DB_POOL_TIMEOUT_SECONDS,
     echo=False,
 )
 
@@ -49,6 +51,14 @@ async_session_maker = async_sessionmaker(
 # FastAPI dependency
 # ---------------------------------
 
-async def get_db() -> AsyncGenerator[AsyncSession, None]:
+async def get_db(request: Request = None) -> AsyncGenerator[AsyncSession, None]:
     async with async_session_maker() as session:
-        yield session
+        from app.modules.statistics.activity_tracking import module_for, observe_session
+        cleanup = None
+        if request is not None and request.method in ('POST', 'PUT', 'PATCH', 'DELETE') and module_for(request.url.path):
+            cleanup = observe_session(session.sync_session, request.scope)
+        try:
+            yield session
+        finally:
+            if cleanup:
+                cleanup()

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from sqlalchemy import select, func, case, distinct, exists, or_
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import joinedload, raiseload
 
 from app.modules.planning.enums import PlanItemStatus, PlanStatus
 from app.modules.planning.models import PlanDirection
@@ -33,11 +34,13 @@ class SchoolPlanStatisticsRepository:
     ) -> SchoolPlan | None:
         stmt = (
             select(SchoolPlan)
+            .options(raiseload("*"), joinedload(SchoolPlan.school))
             .where(
                 SchoolPlan.school_id == school_id,
                 SchoolPlan.status == PlanStatus.ACTIVE,
             )
             .order_by(SchoolPlan.id.desc())
+            .limit(1)
         )
 
         result = await db.execute(stmt)

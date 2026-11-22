@@ -1,6 +1,7 @@
 """Transactional document lifecycle using the existing VSK storage/signature flow."""
 import hashlib
 import logging
+import re
 from uuid import uuid4
 from datetime import datetime,timezone,timedelta
 from app.modules.reports.repositories import assessment_report_repo as repo
@@ -62,21 +63,13 @@ def body(templates,snapshot,**extra):
 
 
 async def make_pdf(html):
-    from playwright.async_api import async_playwright
-    async with async_playwright() as p:
-        browser=await p.chromium.launch(headless=True)
-        try:
-            page=await browser.new_page()
-            await page.set_content(html,wait_until='load')
-            if await page.locator('math-field').count():
-                # Never freeze a PDF while mathematical elements still contain raw LaTeX.
-                await page.wait_for_function(
-                    "customElements.get('math-field') && [...document.querySelectorAll('math-field')].every(el => el.shadowRoot && el.shadowRoot.querySelector('[part=content]')?.childElementCount > 0 && getComputedStyle(el.shadowRoot.querySelector('[part=container]')).visibility !== 'hidden')",
-                    timeout=30000)
-                import asyncio
-                await asyncio.wait_for(page.evaluate("async () => { await document.fonts.ready; await new Promise(requestAnimationFrame); await new Promise(requestAnimationFrame); }"),timeout=30)
-            return await page.pdf(format='A4',print_background=True,margin=dict(top='12mm',bottom='12mm',left='10mm',right='10mm'))
-        finally:await browser.close()
+    from app.core.report_pdf_renderer import render_report_pdf
+    # The shared style template includes MathLive for interactive previews.
+    # A PDF without math fields needs neither its CDN script nor its fonts.
+    # Be conservative: even a tag inside a comment keeps the dependency.
+    if not re.search(r'<math-field(?=[\s/>])', html, flags=re.IGNORECASE):
+        html = html.replace('<script defer src="https://cdn.jsdelivr.net/npm/mathlive"></script>', '')
+    return await render_report_pdf(html, structured=True)
 
 
 async def save(db,user,page,params,snapshot,request,templates,*,complete=False,refresh_pdf=False):

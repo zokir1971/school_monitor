@@ -29,6 +29,15 @@ class ReviewPlaceSyncRepo:
         lookup = {v:v for v in ReviewPlace}
         lookup.update({v.value:v for v in ReviewPlace})
         lookup.update({v.label_kz:v for v in ReviewPlace})
+        # Confirmed legacy abbreviations; structured selections remain authoritative.
+        lookup.update({
+            "ДЖК": ReviewPlace.DIRECTOR_COUNCIL,
+            "ДЖО": ReviewPlace.DIRECTOR_COUNCIL,
+            "ӘКО": ReviewPlace.METHOD_COUNCIL,
+            "Әдістемелік отырысы": ReviewPlace.METHOD_COUNCIL,
+            "Әдістеме-лік отырысы": ReviewPlace.METHOD_COUNCIL,
+            "ПК": ReviewPlace.PED_COUNCIL,
+        })
         values = {part.strip() for part in re.split(r'[,;\n]+',code(raw)) if part.strip()}
         if any(v not in lookup for v in values):
             return None

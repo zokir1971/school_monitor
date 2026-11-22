@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Редактирование строки шаблона' if ru else 'Үлгі жолын өңдеу' }}{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{{ url_for('static', path='css/planning_edit.css') }}">{% endblock %}
+{% block content %}
+{% set labels = {
+ 'topic': ('Тема контроля', 'Бақылау тақырыбы'),
+ 'goal': ('Цель контроля', 'Бақылау мақсаты'),
+ 'control_object': ('Объект контроля', 'Бақылау нысаны'),
+ 'control_type': ('Вид контроля', 'Бақылау түрі'),
+ 'methods': ('Методы контроля', 'Бақылау әдісі'),
+ 'deadlines': ('Сроки выполнения', 'Орындау мерзімі'),
+ 'responsibles': ('Ответственные', 'Жауаптылар'),
+ 'review_place': ('Место рассмотрения', 'Қарау орны'),
+ 'management_decision': ('Управленческое решение', 'Басқарушылық шешім'),
+ 'second_control': ('Повторный контроль', 'Қайта бақылау'),
+ 'risk_text': ('Проблемы и риски', 'Мәселелер, тәуекелдер'),
+ 'decision_text': ('Варианты управленческих решений', 'Басқарушылық шешімдердің нұсқалары')
+} %}
+<div class="card" style="max-width:1080px;margin:20px auto;padding:20px;">
+  <h2>{{ 'Редактирование строки шаблона' if ru else 'Үлгі жолын өңдеу' }} · №{{ row.row_order }}</h2>
+  <p>{{ row.template_name }} · {{ row.direction_name }}</p>
+  <p>{{ 'Изменения сохраняются в образце. Уже созданные школьные планы автоматически не обновляются.' if ru else 'Өзгерістер үлгіде сақталады. Бұрын құрылған мектеп жоспарлары автоматты жаңартылмайды.' }}</p>
+  {% if error %}<div class="alert alert--error" role="alert">{{ error.split(' / ')[0] if ru else error.split(' / ')[-1] }}</div>{% endif %}
+  {% if conflict %}<p><a href="{{ reopen_url }}" class="btn" data-sm-action="nav">{{ 'Открыть актуальную строку' if ru else 'Жолдың өзекті нұсқасын ашу' }}</a></p>{% endif %}
+  <form method="post" action="{{ request.url_for('super_template_row_update', table_kind=kind, row_id=row.id) }}">
+    <input type="hidden" name="template_id" value="{{ template_id }}">
+    <input type="hidden" name="direction_id" value="{{ direction_id }}">
+    <input type="hidden" name="revision" value="{{ revision }}">
+    {% for name in fields %}
+    <div style="margin-bottom:14px;">
+      <label for="edit-{{ name }}" style="display:block;font-weight:600;margin-bottom:5px;">{{ labels[name][0] if ru else labels[name][1] }}{% if name == ('topic' if kind == 'rows11' else 'control_object') %} *{% endif %}</label>
+      {% if name == 'review_place' %}
+      {% set codes = places|map(attribute='value')|list %}
+      <select name="review_place" id="edit-review_place" style="width:100%;padding:8px;">
+        <option value="" {% if not values[name] %}selected{% endif %}>{{ 'Не указано' if ru else 'Көрсетілмеген' }}</option>
+        {% if values[name] and values[name] not in codes %}
+        <option value="{{ values[name] }}" selected>{{ ('Текущее значение: ' if ru else 'Ағымдағы мән: ') ~ values[name] }}</option>
+        {% endif %}
+        {% for place in places %}<option value="{{ place.value }}" {% if values[name] == place.value %}selected{% endif %}>{{ {'ped_council':'Педагогический совет','method_council':'Методический совет','director_council':'Совещание при директоре','administrative_council':'Административный совет','method_assoc':'Методическое объединение'}[place.value] if ru else place.label_kz }}</option>{% endfor %}
+      </select>
+      <p class="muted">{{ 'Выберите орган рассмотрения. Сроки и указание «по графику» записывайте в поле сроков.' if ru else 'Қарау органын таңдаңыз. Мерзімдер мен «кесте бойынша» белгісін мерзім өрісіне жазыңыз.' }}</p>
+      {% else %}
+      <textarea id="edit-{{ name }}" name="{{ name }}" rows="3" maxlength="50000" style="width:100%;box-sizing:border-box;padding:8px;" {% if name == ('topic' if kind == 'rows11' else 'control_object') %}required{% endif %}>{{ values[name] }}</textarea>
+      {% endif %}
+    </div>
+    {% endfor %}
+    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+      <a href="{{ back_url }}" class="btn" data-sm-action="nav">{{ 'Отмена' if ru else 'Болдырмау' }}</a>
+      <button type="submit" class="btn btn--primary" data-sm-action="primary" {% if conflict %}disabled{% endif %}>{{ 'Сохранить' if ru else 'Сақтау' }}</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

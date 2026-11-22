@@ -83,6 +83,8 @@ class CheckingNotebooksFillContextDTO:
     school_id: int
     school_name: str
 
+    academic_year: str = ""
+    algorithm_parameters: dict = field(default_factory=dict)
     checker_post: str = ""
 
     teacher_name: str = ""
@@ -114,6 +116,13 @@ class CheckingNotebooksFillDTO:
     report: CheckingNotebooksReport | None
     document: TaskExecutionDocument | None
     template: UserReportTemplate | None
+
+    multiclass: bool = False
+    can_multiclass: bool = False
+    class_options: list = field(default_factory=list)
+    class_checks: list = field(default_factory=list)
+    class_totals: dict = field(default_factory=dict)
+    notebook_revision: str = ""
 
 
 @dataclass(slots=True)

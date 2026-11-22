@@ -44,9 +44,12 @@ logger = logging.getLogger(__name__)
 async def lifespan(_app: FastAPI):
     logger.info("Application startup...")
 
-    yield
-
-    logger.info("Application shutdown...")
+    try:
+        yield
+    finally:
+        from app.core.report_pdf_renderer import close_report_pdf_renderer
+        await close_report_pdf_renderer()
+        logger.info("Application shutdown...")
 
 
 # -------------------------------
@@ -57,6 +60,8 @@ app = FastAPI(lifespan=lifespan)
 
 setup_report_verify_registry()
 
+from app.modules.statistics.activity_tracking import SchoolActivityMiddleware
+app.add_middleware(SchoolActivityMiddleware)
 app.add_middleware(AuthRedirectMiddleware)
 app.add_middleware(UILanguageMiddleware)
 

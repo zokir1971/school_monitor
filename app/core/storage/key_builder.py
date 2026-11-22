@@ -135,7 +135,7 @@ class SchoolObjectKeyBuilder:
         stored_file_name = (
             f"{safe_review_place}_"
             f"{safe_protocol_number}_"
-            f"{protocol_date.isoformat()}"
+            f"{protocol_date.isoformat()}_{uuid4().hex}"
             f"{extension}"
         )
 

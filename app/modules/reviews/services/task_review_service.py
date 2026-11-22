@@ -7,7 +7,7 @@ from datetime import date, timezone, datetime
 from pathlib import Path
 from typing import cast
 
-from fastapi import UploadFile
+from fastapi import UploadFile, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError
 
@@ -34,6 +34,22 @@ logger = logging.getLogger(__name__)
 
 
 class TaskReviewService:
+
+    @staticmethod
+    async def _authorize_plan(db: AsyncSession, *, user: User, school_plan_id: int):
+        if user.role != UserRole.SCHOOL_ADMIN or user.school_id is None:
+            raise HTTPException(403, "Рассмотрение задач доступно администратору своей школы.")
+        plan = await TaskReviewRepository.get_school_plan_by_id(db, school_plan_id=school_plan_id)
+        if plan is None or plan.school_id != user.school_id or plan.status != PlanStatus.ACTIVE:
+            raise HTTPException(403, "Нет доступа к активному плану выбранной школы.")
+        return plan
+
+    @staticmethod
+    async def cleanup_protocol_file(object_key: str) -> None:
+        try:
+            await SchoolStorageService(storage=get_storage()).delete(object_key=object_key)
+        except Exception:
+            logger.warning("Не удалось удалить новый файл протокола после отката.", exc_info=True)
 
     @staticmethod
     def _get_task_name(
@@ -536,6 +552,8 @@ class TaskReviewService:
                 protocol_file.filename or ""
         ).strip()
 
+        if len(original_file_name) > 255:
+            raise ValueError("Имя файла протокола не должно превышать 255 символов.")
         if not original_file_name:
             raise ValueError(
                 "Не выбран файл протокола."
@@ -609,7 +627,8 @@ class TaskReviewService:
             )
 
         # 5. Чтение и проверка содержимого
-        file_content = await protocol_file.read()
+        max_file_size = 20 * 1024 * 1024
+        file_content = await protocol_file.read(max_file_size + 1)
 
         if not file_content:
             raise ValueError(
@@ -832,6 +851,8 @@ class TaskReviewService:
             *,
             dto: TaskReviewBatchCreateDTO,
             school_plan_id: int,
+        user: User,
+        pending_file_keys: list[str] | None = None,
             protocol_file: UploadFile,
     ) -> list[SchoolMonthPlanItemReviewResult]:
         """
@@ -857,6 +878,9 @@ class TaskReviewService:
         """
 
         # 1. Нормализация выбранных задач.
+        await cls._authorize_plan(db, user=user, school_plan_id=school_plan_id)
+        if dto.reviewed_by_user_id != user.id:
+            raise HTTPException(403, "Недопустимый автор рассмотрения.")
         unique_ids = list(dict.fromkeys(dto.month_item_ids))
 
         if not unique_ids:
@@ -911,13 +935,7 @@ class TaskReviewService:
             )
 
         for item in month_items:
-            source_row11 = item.source_row11
-            allowed_places = (
-                {place.review_place for place in source_row11.review_places}
-                if source_row11 is not None
-                else set()
-            )
-
+            allowed_places = {place.review_place for place in item.review_places}
             if dto.review_place not in allowed_places:
                 invalid_place_ids.append(item.id)
 
@@ -996,6 +1014,8 @@ class TaskReviewService:
                 comment=dto.comment,
             )
 
+            if pending_file_keys is not None:
+                pending_file_keys.append(task_review.protocol_file_path)
             protocol_id = cast(int, task_review.id)
 
             # 5. Документы задач создаются без flush внутри цикла.
@@ -1141,12 +1161,24 @@ class TaskReviewService:
             *,
             month_item_ids: list[int],
             school_plan_id: int,
+            user: User,
+            review_place: ReviewPlace,
+            method_association_id: int | None = None,
     ) -> int:
         """
         Переводит выбранные просроченные задачи
         в статус NOT_EXECUTED.
         """
 
+        plan = await TaskReviewService._authorize_plan(db, user=user, school_plan_id=school_plan_id)
+        if review_place == ReviewPlace.METHOD_ASSOC:
+            association = (await TaskReviewRepository.get_method_association_by_id(
+                db, method_association_id=method_association_id, school_id=plan.school_id,
+            )) if method_association_id is not None else None
+            if association is None:
+                raise ValueError("Выбранное методическое объединение не найдено, неактивно или относится к другой школе.")
+        elif method_association_id is not None:
+            raise ValueError("Методическое объединение можно выбирать только для места рассмотрения METHOD_ASSOC.")
         unique_ids = list(
             dict.fromkeys(month_item_ids)
         )
@@ -1161,6 +1193,7 @@ class TaskReviewService:
                 db,
                 month_item_ids=unique_ids,
                 school_plan_id=school_plan_id,
+                review_place=review_place,
             )
         )
 

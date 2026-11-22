@@ -51,7 +51,7 @@
         if (success && /^\d+$/.test(savedSchedule || '') && e.name === 'item_' + savedSchedule + '_week') return;
         const saved = values.get(id+':'+index);
         const assignmentCo = e.form?.id === 'assignee-form' && e.name === 'co_executor_staff_role_ids';
-        if (!saved || (e.disabled && !assignmentCo)) return;
+        if (!saved || (e.disabled && !assignmentCo && !e.hasAttribute('data-draft-restore-disabled'))) return;
         if (e.tagName === 'SELECT') [...e.options].forEach(o=>{o.selected = saved.values.includes(o.value);});
         else if (e.type === 'checkbox' || e.type === 'radio') e.checked = saved.checked;
         else e.value = saved.value;
@@ -60,6 +60,9 @@
       if (assignmentPrimary && typeof Event !== 'undefined') assignmentPrimary.dispatchEvent(new Event('change', {bubbles:true}));
       touched = true;
     }
+    // Notify dependent controls once all draft values have been applied.
+    // Do not emit generic changes: other pages may save on change.
+    document.dispatchEvent(new Event('sm:planning-draft-restored'));
     let interrupted = false;
     ['wheel','touchstart','pointerdown','keydown'].forEach(event => addEventListener(event,()=>{interrupted=true;}, {once:true,passive:true}));
     const position = () => { if (previous && !interrupted && !document.querySelector('[data-plan-outcome]')) scrollTo(previous.x,previous.y); };

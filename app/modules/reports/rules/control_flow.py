@@ -638,6 +638,26 @@ def validate_report_areas(raw, allowed_pairs, codes):
     return result
 
 
+def is_scope_extension(previous, current):
+    """Only additive dimensions; existing named areas retain their exact bounds."""
+    if previous.get('version') != 2 or current.get('version') != 2:
+        return False
+    if any(previous.get(key) != current.get(key) for key in ('scope', 'year_start')):
+        return False
+    for key in ('subject_ids', 'class_ids'):
+        if not set(previous.get(key) or []).issubset(current.get(key) or []):
+            return False
+    # Missing historical pairs cannot safely prove an additive change.
+    if 'subject_class_pairs' not in previous or 'subject_class_pairs' not in current:
+        return False
+    pairs = lambda p: {(row['subject_id'], row['class_id']) for row in p['subject_class_pairs']}
+    if not pairs(previous).issubset(pairs(current)):
+        return False
+    old_areas = {row[0]: row for row in area_scope(previous)}
+    new_areas = {row[0]: row for row in area_scope(current)}
+    return all(new_areas.get(key) == value for key, value in old_areas.items())
+
+
 def area_scope(parameters):
     # Display names do not change scope; pair/code changes do.
     return sorted((a['id'],tuple(sorted(a['report_codes'])),tuple(sorted((p['subject_id'],p['class_id']) for p in a['pairs']))) for a in (parameters or {}).get('report_areas',[]))

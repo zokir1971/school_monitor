@@ -1,10 +1,14 @@
 from __future__ import annotations
 
+from starlette.concurrency import run_in_threadpool
+
 from dataclasses import dataclass
 
 from app.core.i18n import normalize_language
 
 from sqlalchemy import or_, select
+from sqlalchemy.orm import raiseload
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import hash_password, verify_password
@@ -15,12 +19,6 @@ from app.modules.users.models import User, UserRole
 
 class StaffRegistrationError(Exception):
     pass
-
-
-@dataclass
-class StaffRegistrationResult:
-    user: User
-    staff_member: SchoolStaffMember
 
 
 class StaffLoginError(Exception):
@@ -80,7 +78,7 @@ class StaffAuthService:
             raise StaffRegistrationError("Пароли не совпадают")
 
         staff_member = await db.scalar(
-            select(SchoolStaffMember).where(SchoolStaffMember.iin == iin)
+            select(SchoolStaffMember).options(raiseload("*")).where(SchoolStaffMember.iin == iin)
         )
         if not staff_member:
             raise StaffRegistrationError("Сотрудник с таким ИИН не найден")
@@ -119,7 +117,7 @@ class StaffAuthService:
             username=username,
             iin=iin,
             full_name=staff_member.full_name,
-            password_hash=hash_password(password),
+            password_hash=await run_in_threadpool(hash_password, password),
             role=role,
             is_active=True,
             email=email,
@@ -129,8 +127,12 @@ class StaffAuthService:
         )
 
         db.add(user)
-        await db.flush()
-        await db.commit()
+        try:
+            await db.flush()
+            await db.commit()
+        except IntegrityError as exc:
+            await db.rollback()
+            raise StaffRegistrationError("Пользователь с такими данными уже зарегистрирован") from exc
         await db.refresh(user)
 
         return StaffRegistrationResult(
@@ -153,14 +155,8 @@ class StaffAuthService:
         if not password:
             raise StaffLoginError("Введите пароль")
 
-        user = await db.scalar(
-            select(User).where(
-                or_(
-                    User.username == identifier,
-                    User.iin == identifier,
-                )
-            )
-        )
+        from app.modules.users.repo import UserRepo
+        user = await UserRepo.get_by_identifier(db, identifier)
         if not user:
             raise StaffLoginError("Пользователь не найден")
 
@@ -175,13 +171,13 @@ class StaffAuthService:
                 "Вход для этой роли через эту форму недоступен"
             )
 
-        if not verify_password(password, user.password_hash):
+        if not await run_in_threadpool(verify_password, password, user.password_hash):
             raise StaffLoginError("Неверный пароль")
 
         staff_member = None
         if user.staff_member_id:
             staff_member = await db.scalar(
-                select(SchoolStaffMember).where(
+                select(SchoolStaffMember).options(raiseload("*")).where(
                     SchoolStaffMember.id == user.staff_member_id
                 )
             )

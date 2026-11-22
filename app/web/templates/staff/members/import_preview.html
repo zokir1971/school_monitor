@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Предпросмотр импорта персонала') }}{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{{ url_for('static', path='css/education/nobd_import.css') }}">{% endblock %}
+{% block content %}
+<div class="nobd-page">
+  <h1>{{ _('Предпросмотр импорта персонала') }}</h1>
+  <p><strong>{{ _('Школа назначения:') }} {{ school_name }} · ID {{ school_id }}</strong></p>
+  <p>{{ _('До подтверждения данные не записываются в БД.') }}</p>
+  {% if error %}<div class="nobd-notice nobd-notice--error" role="alert">{{ _(error) }}</div>{% endif %}
+  {% if preview %}
+  <section class="nobd-panel">
+    <p>{{ _('Файл:') }} {{ filename }}</p>
+    {% for name in preview.organizations %}<p><strong>{{ _('Организация из файла:') }}</strong> {{ name }}</p>{% endfor %}
+    {% if not preview.organizations %}<p class="nobd-notice nobd-notice--warning">{{ _('В файле не указана организация. Сверьте ФИО и школу назначения.') }}</p>{% endif %}
+    <dl class="nobd-stats">
+      <div><dt>{{ _('В школе до импорта') }}</dt><dd>{{ stats.existing }}</dd></div>
+      <div><dt>{{ _('Будут добавлены') }}</dt><dd>{{ stats.new }}</dd></div>
+      <div><dt>{{ _('Найдены по ИИН в этой школе') }}</dt><dd>{{ stats.matched }}</dd></div>
+      <div><dt>{{ _('Пропущено: ИИН, ФИО или должность') }}</dt><dd>{{ preview.skipped }}</dd></div>
+    </dl>
+    {% if stats.risky %}<div class="nobd-notice nobd-notice--warning" role="alert"><strong>{{ _('Большинство записей новые — возможна выгрузка другой школы.') }}</strong><p>{{ _('Проверьте принадлежность файла. При первой загрузке это допустимо.') }}</p></div>{% endif %}
+    <div class="nobd-table-wrap" style="max-height:360px;overflow:auto" tabindex="0">
+      <table class="nobd-table"><thead><tr><th>№</th><th>{{ _('ФИО') }}</th><th>{{ _('Должность') }}</th></tr></thead>
+        <tbody>{% for row in preview.rows %}<tr><td>{{ loop.index }}</td><td>{{ row.full_name }}</td><td>{{ row.position or '—' }}</td></tr>{% endfor %}</tbody>
+      </table>
+    </div>
+    <form method="post" action="{{ request.url_for('school_staff_import_apply') }}" class="nobd-confirm">
+      <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="preview_token" value="{{ preview_token }}">
+      <label class="nobd-check"><input type="checkbox" name="confirm_school" value="yes" required><span>{{ _('Проверил ФИО и подтверждаю принадлежность файла школе назначения.') }}</span></label>
+      {% if stats.risky %}<label class="nobd-check"><input type="checkbox" name="confirm_new_records" value="yes" required><span>{{ _('Проверил большое количество новых записей. Файл относится к этой школе.') }}</span></label>{% endif %}
+      {% if preview.skipped %}<label class="nobd-check"><input type="checkbox" name="confirm_skipped" value="yes" required><span>{{ _('Согласен пропустить строки, которые не подходят для импорта.') }}</span></label>{% endif %}
+      <label class="nobd-field">{{ _('Введите ID школы назначения:') }} {{ school_id }}<input name="school_id_confirmation" inputmode="numeric" autocomplete="off" required style="max-width:160px"></label>
+      <p class="nobd-note">{{ _('Отсутствующие в файле сотрудники не удаляются. Роли и назначения сохраняются. Предпросмотр действует 1 час и используется один раз.') }}</p>
+      <div class="nobd-actions"><button class="nobd-button nobd-button--primary" type="submit">{{ _('Подтвердить импорт') }}</button><a href="/staff/school">{{ _('Отмена') }}</a></div>
+    </form>
+  </section>
+  {% else %}<a href="/staff/school">{{ _('Вернуться и выбрать файл заново') }}</a>{% endif %}
+</div>
+{% endblock %}

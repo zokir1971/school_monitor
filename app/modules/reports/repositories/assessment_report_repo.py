@@ -110,7 +110,7 @@ async def replace_pdf_file(db,previous,stored):
     return changed is not None
 
 
-async def inspection_sources(db, *, school_id, task_id):
+async def inspection_sources(db, *, school_id, task_id, teacher_ids=None, sections=None):
     """One scoped batch: selected positions, assignments and current typed reports."""
     from app.modules.reports.models_template_reports import LessonObservationReport, CheckingNotebooksReport
     O,Q=LessonObservationReport.__table__,CheckingNotebooksReport.__table__
@@ -120,6 +120,7 @@ async def inspection_sources(db, *, school_id, task_id):
         X.c.status.label('assignment_status'),D.c.id.label('document_id'),D.c.status.label('document_status'),D.c.schema_json['summary'].label('reading_summary'),D.c.schema_json['max_score'].label('lesson_max'),
         O.c.total.label('lesson_score'),O.c.class_name.label('lesson_class'),O.c.lesson_datetime.label('lesson_date'),
         O.c.feedback.label('lesson_feedback'),Q.c.total_score.label('notebook_score'),Q.c.max_score.label('notebook_max'),
+        Q.c.rows_json['class_checks_version'].label('notebook_checks_version'),Q.c.rows_json['class_checks'].label('notebook_checks'),
         Q.c.class_name.label('notebook_class'),Q.c.check_date.label('notebook_date'),Q.c.conclusion.label('notebook_conclusion'))
         .select_from(T.join(E,E.c.id==T.c.execution_data_id).join(I,I.c.id==E.c.month_item_id)
             .join(N,N.c.id==I.c.month_plan_id).join(B,B.c.id==N.c.school_plan_id).join(Y,Y.c.id==T.c.report_type_id)
@@ -127,4 +128,10 @@ async def inspection_sources(db, *, school_id, task_id):
             .outerjoin(O,O.c.task_execution_document_id==D.c.id).outerjoin(Q,Q.c.task_execution_document_id==D.c.id))
         .where(I.c.id==task_id,B.c.school_id==school_id,Y.c.code.in_(['lesson_observation','checking_notebooks_table','reading_speed_table']))
         .order_by(T.c.id).limit(2001))
+    if sections is not None:
+        codes = {'lessons': 'lesson_observation', 'notebooks': 'checking_notebooks_table', 'reading': 'reading_speed_table'}
+        query = query.where(Y.c.code.in_([codes[key] for key in sections if key in codes]))
+    if teacher_ids is not None:
+        query = query.where(or_(Y.c.code == 'reading_speed_table', and_(
+            T.c.target_kind.in_(['teacher', 'primary_teacher']), T.c.target_value.in_([str(tid) for tid in teacher_ids]))))
     return [dict(row) for row in (await db.execute(query)).mappings()]

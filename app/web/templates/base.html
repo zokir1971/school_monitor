@@ -20,7 +20,7 @@
   <link rel="stylesheet" href="{{ url_for('static', path='css/ui_language.css') }}">
   {% block extra_css %}{% endblock %}
   <link rel="stylesheet" href="{{ url_for('static',path='css/teacher/assessment/question_bank/media_layout.css') }}?v=74">
-<script id="ui-i18n" type="application/json">{{ {'language': ui_language(), 'messages': ui_messages()} | tojson }}</script>
+<script id="ui-i18n" type="application/json">{{ ui_i18n_json() }}</script>
 <script src="{{ url_for('static', path='js/ui_i18n.js') }}?v=i18n3"></script>
 <script src="{{ url_for('static', path='js/ui_language_scroll.js') }}?v=1"></script>
 <link rel="stylesheet" href="{{ url_for('static',path='student_portal/ui_actions.css') }}?v=172">
@@ -262,7 +262,7 @@
 
 <script src="https://unpkg.com/htmx.org@1.9.12"></script>
 
-<script src="{{ url_for('static', path='js/planning_page_state.js') }}?v=planning181" data-user="{{ user.id if user is defined and user else 'anonymous' }}"></script>
+<script src="{{ url_for('static', path='js/planning_page_state.js') }}?v=planning232" data-user="{{ user.id if user is defined and user else 'anonymous' }}"></script>
 <script src="{{ url_for('static', path='js/planning/internal_notice_badge.js') }}?v=182" defer></script>
 </body>
 </html>

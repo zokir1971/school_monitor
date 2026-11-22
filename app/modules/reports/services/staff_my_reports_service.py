@@ -22,7 +22,7 @@ class StaffMyReportsService:
     Сервис быстрого входа сотрудника в назначенные ему отчеты.
 
     Назначение:
-    - показать выбранные отчёты задач ответственного и назначения сотрудника;
+    - показать только отчёты, назначенные текущему сотруднику;
     - подготовить DTO для страницы выбора задачи;
     - проверить доступ к выбранной задаче перед переходом
       на страницу подготовки отчетов.
@@ -122,12 +122,13 @@ class StaffMyReportsService:
         *,
         user: User,
         month: int,
+        page: int = 1,
     ) -> StaffMyReportsPageDTO:
         """
         Получить страницу быстрого доступа к отчетам сотрудника.
 
-        Ответственный видит выбранные отчёты своих задач, включая нераспределённые.
-        Остальные сотрудники видят свои назначения. Данные загружаются пакетно.
+        Все сотрудники, включая ответственного за задачу, видят только свои назначения.
+        Пагинация выполняется по отчётам в SQL, данные загружаются пакетно.
         """
 
         cls._validate_month(month)
@@ -136,7 +137,12 @@ class StaffMyReportsService:
             cls._require_user_context(user)
         )
 
-        rows=await MyReportCatalogRepo.list_reports(db,school_id=school_id,staff_member_id=staff_member_id,month=month)
+        if page < 1:
+            raise ValueError("Некорректный номер страницы.")
+        page_size = 20
+        rows=await MyReportCatalogRepo.list_reports(db,school_id=school_id,staff_member_id=staff_member_id,month=month,page=page,page_size=page_size)
+        has_next = len(rows) > page_size
+        rows = rows[:page_size]
         grouped={}
         for row in rows:
             task_id=int(row['month_item_id'])
@@ -164,7 +170,7 @@ class StaffMyReportsService:
                 is_my_report=mine,can_assign=bool(row['is_primary']) and not_archived and not row['completed_at'],
                 has_draft=bool(row['document_id']) and not finished))
             if mine:task.assigned_reports_count+=1
-        return StaffMyReportsPageDTO(month=month,tasks=list(grouped.values()))
+        return StaffMyReportsPageDTO(month=month,tasks=list(grouped.values()),page=page,page_size=page_size,has_next=has_next,report_count=len(rows))
 
     # =========================================================
     # ACCESS TO SELECTED TASK

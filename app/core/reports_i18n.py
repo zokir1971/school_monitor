@@ -2,7 +2,7 @@
 import re
 from starlette.responses import JSONResponse
 from app.core.i18n import resolve_language,translate
-from app.core.reports_ui_messages import REPORTS_ERROR_MESSAGES,REPORTS_FEEDBACK_MESSAGES
+from app.core.reports_ui_messages import REPORTS_ERROR_MESSAGES,REPORTS_FEEDBACK_MESSAGES,REPORTS_WORKFLOW_TRANSLATIONS
 from app.core.execution_i18n import execution_http_exception_handler
 
 
@@ -17,6 +17,11 @@ def reports_message(request,value,status_code=400):
     from app.core.report_completion_i18n import COMPLETION_FEEDBACK_MESSAGES
     from app.core.report_pdf_i18n import DOCUMENT_LANGUAGE_ERROR
     language=resolve_language(request)
+    from app.modules.reports.rules.notebook_classes import MESSAGES
+    if isinstance(value, str) and value in MESSAGES:
+        return MESSAGES[value] if language == 'kk' else value
+    if isinstance(value, str) and value in REPORTS_WORKFLOW_TRANSLATIONS:
+        return REPORTS_WORKFLOW_TRANSLATIONS[value] if language == "kk" else value
     if isinstance(value,str) and value in (*REPORTS_ERROR_MESSAGES,*REPORTS_FEEDBACK_MESSAGES,*REPORT_FORM_ERROR_MESSAGES,*CONSTRUCTOR_ERROR_MESSAGES,*COMPLETION_FEEDBACK_MESSAGES,DOCUMENT_LANGUAGE_ERROR):
         return translate(value,language)
     if isinstance(value,str):

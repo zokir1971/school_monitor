@@ -30,10 +30,16 @@ async def get_current_user(
     if not user_id:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
 
-    user = await UserRepo.get_by_id(db, user_id)
+    from app.core.request_user239 import reuse_verified_user
+    user = await reuse_verified_user(request, db)
+    if user is None:
+        user = await UserRepo.get_by_id(db, user_id)
     from app.core.access_session import session_matches
     if not session_matches(request, user):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
+
+    from app.modules.statistics.activity_tracking import verified_actor
+    verified_actor(request, user)
 
     from app.core.i18n import resolve_language
     request.state.ui_language = resolve_language(request, user)

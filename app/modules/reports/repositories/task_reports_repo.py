@@ -4,7 +4,7 @@ from __future__ import annotations
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.modules.reports.repositories.execution_repo import ExecutionRepo
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import raiseload, selectinload
 
 from app.modules.planning.models_month_plan import (
     SchoolMonthPlan,
@@ -57,19 +57,8 @@ class TaskReportsRepo:
         """
 
         stmt = (
-            select(SchoolMonthPlanItem)
-            .where(
-                SchoolMonthPlanItem.id == month_item_id,
-                SchoolMonthPlanItem.assignees.any(
-                    SchoolMonthPlanItemAssignee.staff_role.has(
-                        SchoolStaffRole.staff_member.has(
-                            SchoolStaffMember.user_account.has(
-                                User.id == user_id
-                            )
-                        )
-                    )
-                )
-            )
+            select(SchoolMonthPlanItem).options(raiseload("*"))
+            .where(SchoolMonthPlanItem.id == month_item_id)
             .options(
                 selectinload(SchoolMonthPlanItem.assignees)
                 .selectinload(SchoolMonthPlanItemAssignee.staff_role)
@@ -83,6 +72,7 @@ class TaskReportsRepo:
                 .selectinload(SchoolPlan.school),
             )
         )
+        stmt = ExecutionRepo._apply_executor_user_filter(stmt, user_id=user_id)
         return await db.scalar(stmt)
 
     @classmethod
@@ -96,7 +86,7 @@ class TaskReportsRepo:
         Получить выбранный отчет вместе с его типом.
         """
         stmt = (
-            select(TaskExecutionSelectedReport)
+            select(TaskExecutionSelectedReport).options(raiseload("*"))
             .where(
                 TaskExecutionSelectedReport.id == selected_report_id
             )

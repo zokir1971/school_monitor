@@ -6,7 +6,7 @@ from collections.abc import Sequence
 
 from sqlalchemy import case, exists, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import joinedload, selectinload
+from sqlalchemy.orm import joinedload, selectinload, raiseload
 
 from app.modules.planning.enums import (
     AssignmentKind,
@@ -204,6 +204,8 @@ class StaffTasksRepo:
                 staff_assignee_exists,
             )
             .options(
+                raiseload("*"),
+                selectinload(SchoolMonthPlanItem.execution_data),
                 *cls._task_details_options()
             )
             .order_by(
@@ -329,6 +331,8 @@ class StaffTasksRepo:
         stmt = (
             select(SchoolMonthPlanItem)
             .options(
+                # Do not traverse default eager relationships beyond this task.
+                raiseload("*"),
                 *cls._task_details_options()
             )
             .join(

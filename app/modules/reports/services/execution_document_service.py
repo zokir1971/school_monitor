@@ -111,10 +111,29 @@ class ExecutionDocumentService:
             )
 
         # 2. Блокировка задачи
-        await ExecutionDocumentRepo.lock_task_row(
+        locked_task = await ExecutionDocumentRepo.lock_task_row(
             db,
             month_item_id=month_item_id,
         )
+
+        if locked_task is None:
+            raise HTTPException(404, "Задача не найдена")
+        if any(str(getattr(locked_task[k], 'value', locked_task[k])) == 'archived' for k in ('month_status', 'annual_status')):
+            raise ValueError("Архивную задачу изменять нельзя.")
+        if locked_task['completed_at'] or str(getattr(locked_task['status'], 'value', locked_task['status'])) in ('done', 'reviewed'):
+            raise ValueError("Задача завершена. Используйте замену документа с указанием причины.")
+        if required_document_id is not None:
+            required = await ExecutionRepo.get_required_documents_for_task(db, month_item_id=month_item_id)
+            if required_document_id not in {item.id for item in required}:
+                raise ValueError("Документ не относится к этой задаче.")
+
+        content = await upload_file.read(SchoolStorageService.MAX_FILE_SIZE + 1)
+        if not content:
+            raise ValueError("Файл пуст.")
+        if len(content) > SchoolStorageService.MAX_FILE_SIZE:
+            raise ValueError("Размер файла превышает 20 МБ.")
+        if len(upload_file.filename or "document") > 255:
+            raise ValueError("Имя файла слишком длинное.")
 
         # 3. Контекст школы для object key
         storage_context = (
@@ -161,8 +180,6 @@ class ExecutionDocumentService:
         # flush нужен, чтобы получить doc.id без commit
         await db.flush()
 
-        content = await upload_file.read()
-
         original_file_name = (
                 upload_file.filename
                 or "document"
@@ -174,6 +191,7 @@ class ExecutionDocumentService:
         )
 
         stored_file = None
+        commit_started = False
 
         try:
             # 6. Физическое сохранение файла
@@ -201,12 +219,21 @@ class ExecutionDocumentService:
             )
 
             await ExecutionDocumentRepo.refresh_before_commit(db, document=doc)
+            commit_started = True
             await db.commit()
 
         except Exception:
             await db.rollback()
 
-            if stored_file is not None:
+            remove_new = not commit_started
+            if stored_file is not None and commit_started:
+                from app.modules.reports.repositories.document_correction_repo import DocumentCorrectionRepo
+                try:
+                    remove_new = not await DocumentCorrectionRepo.referenced(db, stored_file.object_key)
+                except Exception:
+                    logger.exception("Commit outcome unknown; preserving uploaded final document")
+                    remove_new = False
+            if stored_file is not None and remove_new:
                 try:
                     await storage_service.delete(
                         object_key=stored_file.object_key,
@@ -226,11 +253,14 @@ class ExecutionDocumentService:
                 and old_object_key != stored_file.object_key
         ):
             from app.modules.reports.repositories.document_correction_repo import DocumentCorrectionRepo
-            if not await DocumentCorrectionRepo.referenced(db, old_object_key):
-                await cls._delete_replaced_document_file(
-                    storage_service=storage_service,
-                    object_key=old_object_key,
-                )
+            try:
+                if not await DocumentCorrectionRepo.referenced(db, old_object_key):
+                    await cls._delete_replaced_document_file(
+                        storage_service=storage_service,
+                        object_key=old_object_key,
+                    )
+            except Exception:
+                logger.exception("Could not clean replaced final document after successful commit")
 
         return doc
 

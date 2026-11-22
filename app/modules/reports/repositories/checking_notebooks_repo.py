@@ -6,7 +6,7 @@ from datetime import datetime
 
 from sqlalchemy import String, and_, cast, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import aliased
+from sqlalchemy.orm import raiseload, aliased
 
 from app.modules.org.models import School
 from app.modules.planning.models_month_plan import SchoolMonthPlan, SchoolMonthPlanItem
@@ -41,7 +41,7 @@ class CheckingNotebooksRepo:
             selected_report_id: int,
     ) -> TaskExecutionSelectedReport | None:
         result = await db.execute(
-            select(TaskExecutionSelectedReport)
+            select(TaskExecutionSelectedReport).options(raiseload("*"))
             .where(TaskExecutionSelectedReport.id == selected_report_id)
         )
         return result.scalar_one_or_none()
@@ -132,6 +132,8 @@ class CheckingNotebooksRepo:
                 ReportTypeModel.code.label("report_code"),
                 ReportTypeModel.name_kz.label("report_label"),
 
+                SchoolPlan.academic_year.label("academic_year"),
+                TaskExecutionData.algorithm_parameters.label("algorithm_parameters"),
                 School.id.label("school_id"),
                 School.name.label("school_name"),
 
@@ -141,7 +143,7 @@ class CheckingNotebooksRepo:
                 teacher.full_name.label("teacher_name"),
                 teacher.subject.label("teacher_subject"),
             )
-            .select_from(TaskExecutionSelectedReport)
+            .options(raiseload("*")).select_from(TaskExecutionSelectedReport)
             .join(
                 TaskSelectedReportAssignment,
                 TaskSelectedReportAssignment.selected_report_id
@@ -234,6 +236,8 @@ class CheckingNotebooksRepo:
             report_code=str(row.report_code or ""),
             report_label=str(row.report_label or ""),
 
+            academic_year=str(row.academic_year or ""),
+            algorithm_parameters=row.algorithm_parameters or {},
             school_id=int(row.school_id),
             school_name=str(row.school_name or ""),
 
@@ -270,7 +274,7 @@ class CheckingNotebooksRepo:
             document_id: int,
     ) -> CheckingNotebooksReport | None:
         result = await db.execute(
-            select(CheckingNotebooksReport)
+            select(CheckingNotebooksReport).options(raiseload("*"))
             .where(CheckingNotebooksReport.task_execution_document_id == document_id)
         )
         return result.scalar_one_or_none()
@@ -296,7 +300,7 @@ class CheckingNotebooksRepo:
             return {}
 
         stmt = (
-            select(CheckingNotebooksReport)
+            select(CheckingNotebooksReport).options(raiseload("*"))
             .where(
                 CheckingNotebooksReport.task_execution_document_id.in_(
                     document_ids
@@ -333,7 +337,7 @@ class CheckingNotebooksRepo:
             report_id: int,
     ) -> CheckingNotebooksReport | None:
         result = await db.execute(
-            select(CheckingNotebooksReport)
+            select(CheckingNotebooksReport).options(raiseload("*"))
             .where(CheckingNotebooksReport.id == report_id)
         )
         return result.scalar_one_or_none()
@@ -345,7 +349,7 @@ class CheckingNotebooksRepo:
             document_id: int,
             observer_user_id: int,
     ) -> CheckingNotebooksReport | None:
-        stmt = select(CheckingNotebooksReport).where(
+        stmt = select(CheckingNotebooksReport).options(raiseload("*")).where(
             CheckingNotebooksReport.task_execution_document_id == document_id,
             CheckingNotebooksReport.observer_user_id == observer_user_id,
         )
@@ -477,7 +481,7 @@ class CheckingNotebooksRepo:
         report.recommendations = dto.recommendations
 
         await db.flush()
-        await db.refresh(report)
+        await db.refresh(report, attribute_names=list(type(report).__mapper__.column_attrs.keys()))
 
         return report
 

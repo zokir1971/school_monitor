@@ -1,0 +1,14 @@
+/* Restrict the larger click target to report score cells. */
+td[data-report-score-cell]:has(input[type="radio"]:enabled) {
+  cursor: pointer;
+}
+td[data-report-score-cell]:has(input[type="radio"]:enabled):hover {
+  background-color: #eff6ff;
+}
+td[data-report-score-cell]:has(input[type="radio"]:checked) {
+  background-color: #e8f0ff;
+}
+td[data-report-score-cell]:focus-within {
+  outline: 2px solid #2563eb;
+  outline-offset: -2px;
+}

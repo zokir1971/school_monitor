@@ -714,6 +714,16 @@ class SchoolPlanEditService:
             for item in (row.review_places or [])
         }
 
+        # Legacy school rows may have only the free-text value. Hydrate the
+        # existing value so saving another field does not silently clear it.
+        # Explicit choices win; an empty school value stays empty even if
+        # the source template contains a recommendation.
+        if not selected_review_places:
+            from app.modules.planning.repositories.review_place_sync_repo import ReviewPlaceSyncRepo
+            legacy_places = ReviewPlaceSyncRepo.legacy_places(row.review_place)
+            if legacy_places is not None:
+                selected_review_places = legacy_places
+
         selected_documents = {
             item.document_type.value
             for item in (row.required_documents or [])

@@ -137,10 +137,12 @@
           {{ _('Поддержка: CSV файл из НОБД (персонал.csv) Upsert по ИИН.') }}
         </div>
 
+        <p class="muted">{{ _('Школа назначения:') }} {{ school_name }} · ID {{ user.school_id }}</p>
         <form method="post" action="/staff/school/import" enctype="multipart/form-data">
+          <input type="hidden" name="csrf" value="{{ import_csrf }}">
           <div class="row">
-            <input type="file" name="file" accept=".csv,.xlsx" required>
-            <button class="btn btn--ghost" type="submit" data-sm-action="primary">{{ _('Загрузить') }}</button>
+            <input type="file" name="file" accept=".csv" required>
+            <button class="btn btn--ghost" type="submit" data-sm-action="primary">{{ _('Предпросмотр') }}</button>
           </div>
         </form>
 

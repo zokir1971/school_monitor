@@ -1,3 +1,4 @@
+from xml.sax.saxutils import escape
 from app.core.i18n import translate
 from io import BytesIO
 from datetime import datetime
@@ -87,7 +88,7 @@ def generate_codes_pdf(
 
     if scope_label and scope_name:
         story.extend([
-            Paragraph(f"{scope_label}: {scope_name}", normal_style),
+            Paragraph(f"{escape(str(scope_label))}: {escape(str(scope_name))}", normal_style),
             Spacer(1, 6),
         ])
 
@@ -129,7 +130,7 @@ def generate_codes_pdf(
 
     for item in issued:
         table_data.append([
-            Paragraph(str(context(item)), cell_style),
+            Paragraph(escape(str(context(item))), cell_style),
             Paragraph(str(item.get("raw_code", "")), cell_style),
             Paragraph(str(item.get("quota_total", "")), cell_style),
             Paragraph(t(str(item.get("expires_at") or "без срока")), cell_style),

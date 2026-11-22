@@ -3,6 +3,8 @@
 
 from __future__ import annotations
 
+from starlette.concurrency import run_in_threadpool
+
 from datetime import datetime
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -37,8 +39,8 @@ class UserCrudService:
         if actor.role != UserRole.SUPERUSER:
             raise ValueError("нет прав отключать пользователей")
 
-        async with db.begin():
-            target.is_active = False
+        target.is_active = False
+        await db.commit()
         return target
 
     # ---------------------------
@@ -222,11 +224,8 @@ class UserCrudService:
         # 7. SAVE
         # =========================================================
 
-        async with db.begin():
-            await RegistrationCodeRepo.add(
-                db,
-                obj,
-            )
+        await RegistrationCodeRepo.add(db, obj)
+        await db.commit()
 
         # =========================================================
         # 8. RESULT
@@ -263,7 +262,7 @@ class UserCrudService:
 
         user = User(
             username=username,
-            password_hash=hash_password(password),
+            password_hash=await run_in_threadpool(hash_password, password),
             role=role,
             email=email,
             phone=phone,

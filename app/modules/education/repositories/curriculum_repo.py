@@ -45,6 +45,20 @@ class CurriculumRepo:
         return offers, groups, members, roster, assignments
 
     @staticmethod
+    async def assignment_state(db, school_id, offer):
+        groups = list((await db.execute(select(SchoolSubjectSubgroup).where(
+            SchoolSubjectSubgroup.school_id == school_id,
+            SchoolSubjectSubgroup.class_subject_id == offer.id,
+            SchoolSubjectSubgroup.is_active.is_(True)))).scalars().all())
+        assignments = list((await db.execute(select(SchoolClassSubjectTeacher).where(
+            SchoolClassSubjectTeacher.school_id == school_id,
+            SchoolClassSubjectTeacher.school_class_id == offer.school_class_id,
+            SchoolClassSubjectTeacher.subject_id == offer.subject_id,
+            SchoolClassSubjectTeacher.is_active.is_(True))
+            .order_by(SchoolClassSubjectTeacher.id))).scalars().all())
+        return groups, assignments
+
+    @staticmethod
     async def offer(db, school_id, offer_id):
         return (await db.execute(select(SchoolClassSubject)
                                  .where(SchoolClassSubject.school_id == school_id,

@@ -41,9 +41,10 @@ class UserRepo:
                     User.username == identifier,
                     User.iin == identifier,
                 )
-            )
+            ).order_by(User.id).limit(2)
         )
-        return res.scalar_one_or_none()
+        users = list(res.scalars().all())
+        return users[0] if len(users) == 1 else None
 
     @staticmethod
     async def get_by_email(db: AsyncSession, email: str) -> User | None:
@@ -111,5 +112,6 @@ class RegistrationCodeRepo:
             select(RegistrationCode)
             .where(RegistrationCode.code_lookup_hash == lookup_hash)
             .with_for_update()
+            .execution_options(populate_existing=True)
         )
         return res.scalar_one_or_none()

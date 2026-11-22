@@ -1,0 +1,88 @@
+{% macro label(ru, kk) -%}{{ ru if ui_language() == 'ru' else kk }}{%- endmacro %}
+{% macro criteria_table(prefix, saved, disabled=false) %}
+{% set columns = namespace(values=[]) %}
+{% for value in score_scale %}{% if value|int not in columns.values %}{% set columns.values = columns.values + [value|int] %}{% endif %}{% endfor %}
+{% for item in criteria %}{% if item is mapping and item.get('scores') %}{% for value in item.get('scores') %}{% if value|int not in columns.values %}{% set columns.values = columns.values + [value|int] %}{% endif %}{% endfor %}{% endif %}{% endfor %}
+{% set score_columns = columns.values|sort %}
+<div class="table-wrap"><table class="lesson-score-table notebook-criteria-table">
+  <colgroup><col class="notebook-number-column"><col>{% for value in score_columns %}<col class="notebook-score-column">{% endfor %}</colgroup>
+  <thead><tr><th scope="col">№</th><th scope="col">{{ label('Критерий', 'Критерий') }}</th>{% for value in score_columns %}<th scope="col" class="notebook-score-heading" aria-label="{{ label('Балл','Балл') }} {{ value }}">{{ value }}</th>{% endfor %}</tr></thead>
+  <tbody>{% for criterion in criteria %}
+    {% set key = (criterion.get('key') or 'criterion_' ~ loop.index0) if criterion is mapping else 'criterion_' ~ loop.index0 %}
+    {% set text = (criterion.get('label_ru' if ui_language() == 'ru' else 'label_kz') or criterion.get('label_kz') or criterion.get('text') or criterion.get('name') or key) if criterion is mapping else criterion %}
+    {% set own = criterion.get('scores') if criterion is mapping else none %}
+    {% set allowed = (own.keys() if own is mapping and own else (own or score_scale))|map('int')|list %}
+    <tr data-nb-score-group><td>{{ loop.index }}</td><td class="notebook-criterion-text">
+      <span class="notebook-criterion-name">{{ report_form_label(text) }}</span>
+      {% if own is mapping and own %}<div class="notebook-rubric-inline">
+        {% for value in allowed|sort %}{% set description = own.get(value|string,{}) %}<span><b>{{ value }}</b> — {{ (description.get('label_ru' if ui_language() == 'ru' else 'label_kz') or description.get('label_kz') or description.get('label_ru') or '') if description is mapping else description }}{% if not loop.last %};{% endif %}</span> {% endfor %}
+      </div>{% endif %}
+    </td>
+    {% for value in score_columns %}
+      <td class="notebook-score-cell" {% if value in allowed %}data-nb-score-cell{% endif %}>
+        {% if value in allowed %}
+          {% set explanation = own.get(value|string, {}) if own is mapping else {} %}
+          {% set reason = (explanation.get('label_ru' if ui_language() == 'ru' else 'label_kz') or explanation.get('label_kz') or explanation.get('label_ru') or '') if explanation is mapping else explanation %}
+          <label class="notebook-score-choice" title="{{ reason }}">
+            <input type="radio" name="{{ prefix }}{{ key }}" data-nb-score value="{{ value }}" title="{{ reason }}" aria-label="{{ report_form_label(text) }}: {{ value }} — {{ reason }}" {% if saved.get(key) is not none and saved.get(key)|string == value|string %}checked{% endif %} {% if disabled %}disabled{% endif %}>
+          </label>
+        {% else %}<span aria-hidden="true">—</span>{% endif %}
+      </td>
+    {% endfor %}</tr>
+  {% endfor %}</tbody>
+</table></div>
+{% endmacro %}
+
+{% macro presence_table(entries, totals) %}
+<div class="table-wrap"><table class="lesson-score-table notebook-presence-table">
+  <thead><tr>{% for ru,kk in [('Класс','Сынып'),('Учеников','Оқушылар'),('Проверено','Тексерілді'),('Есть тетрадь','Дәптері бар'),('Нет тетради','Дәптері жоқ'),('Не проверены','Тексерілмеген')] %}<th>{{ label(ru,kk) }}</th>{% endfor %}</tr></thead>
+  <tbody>{% for row in entries %}<tr><th>{{ row.class_name }}</th>{% for key in ['students','checked','have','missing','unchecked'] %}<td>{{ row[key] if row[key] is not none else '—' }}</td>{% endfor %}</tr>{% endfor %}</tbody>
+  <tfoot><tr><th>{{ label('Итого','Барлығы') }}</th>{% for key in ['students','checked','have','missing','unchecked'] %}<td>{{ totals.get(key) if totals.get(key) is not none else '—' }}</td>{% endfor %}</tr></tfoot>
+</table></div>
+{% endmacro %}
+
+<section class="card report-card" id="notebook-classes" data-no-draft-restore data-user="{{ user.id }}" data-template="{{ template_id or '' }}">
+  <h3>{{ label('Классы и наличие тетрадей','Сыныптар және дәптерлердің болуы') }}</h3>
+  <script type="application/json" id="notebook-rating-data">{{ (schema.get('rating',{}).get('levels') or [])|tojson }}</script>
+  {% if schema.get('rating',{}).get('levels') %}<p class="notebook-rating-legend">{% for item in schema.rating.levels %}{{ item['from'] }}–{{ item['to'] }}% — {{ item.label_ru if ui_language() == 'ru' else item.label_kz }}{% if not loop.last %}; {% endif %}{% endfor %}</p>{% endif %}
+  {% if readonly %}
+    {{ presence_table(class_checks, class_totals) }}
+    {% for row in class_checks %}<details class="notebook-class-panel"><summary class="notebook-class-toggle"><span>{{ row.class_name }} — {{ label('Таблица оценивания','Бағалау кестесі') }} · {{ row.total_score }} / {{ row.max_score }} · {{ row.percent }}%</span><span class="notebook-class-chevron" aria-hidden="true">⌄</span></summary>
+      {{ criteria_table('nb_' ~ row.key ~ '_score_', row.scores, true) }}
+
+    </details>{% endfor %}
+  {% else %}
+    <input type="hidden" name="notebook_classes_version" value="1">
+    <input type="hidden" name="notebook_revision" value="{{ notebook_revision }}">
+    <p>{{ label('Численность — из контингента education на дату проверки. Выберите классы одного предмета. При изменении даты численность пересчитывается при сохранении.', 'Оқушылар саны — education контингентінен тексеру күніне алынады. Бір пәннің сыныптарын таңдаңыз. Күн өзгерсе, оқушылар саны сақтау кезінде қайта есептеледі.') }}</p>
+    <label for="notebook-subject">{{ label('Предмет','Пән') }}</label>
+    {% set first_subject = class_checks[0].subject_id if class_checks else (class_options[0].subject_id if class_options else none) %}
+    <select id="notebook-subject"><option value="">—</option>{% for group in class_options|groupby('subject_id') %}<option value="{{ group.grouper }}" {% if group.grouper == first_subject %}selected{% endif %}>{{ (group.list[0].name_ru or group.list[0].name_kz) if ui_language() == 'ru' else group.list[0].name_kz }}</option>{% endfor %}</select>
+    {% if not class_options %}<p>{{ label('Нет подходящих классов. Проверьте назначения учителя в education и область задачи.', 'Сәйкес сыныптар жоқ. education модуліндегі мұғалім тағайындауларын және тапсырма ауқымын тексеріңіз.') }}</p>{% endif %}
+    <div class="table-wrap"><table class="lesson-score-table notebook-presence-table">
+      <thead><tr><th>{{ label('Выбор / класс','Таңдау / сынып') }}</th><th>{{ label('Учеников','Оқушылар') }}</th><th>{{ label('Есть тетрадь','Дәптері бар') }}</th><th>{{ label('Нет тетради','Дәптері жоқ') }}</th><th>{{ label('Проверено','Тексерілді') }}</th><th>{{ label('Не проверены','Тексерілмеген') }}</th></tr></thead>
+      <tbody>{% for option in class_options %}
+        {% set saved = (class_checks|selectattr('key','equalto',option.key)|list|first) or {} %}
+        <tr data-nb-row data-key="{{ option.key }}" data-subject="{{ option.subject_id }}" data-students="{{ option.students }}" data-class-name="{{ option.class_name }}">
+          <th><label><input type="checkbox" name="notebook_class" value="{{ option.key }}" {% if saved %}checked{% endif %}> {{ option.class_name }} {% if option.unavailable %}⚠ {{ label('Нагрузка изменилась','Жүктеме өзгерді') }}{% endif %}</label></th>
+          <td>{{ option.students }}</td>
+          {% for field,ru,kk in [('have','Есть тетрадь','Дәптері бар'),('missing','Нет тетради','Дәптері жоқ')] %}<td><input type="number" min="0" max="{{ option.students }}" step="1" name="nb_{{ option.key }}_{{ field }}" value="{{ saved.get(field) if saved.get(field) is not none else '' }}" data-nb-count="{{ field }}" aria-label="{{ option.class_name }}: {{ label(ru,kk) }}" style="width:85px"></td>{% endfor %}
+          <td data-nb-checked>—</td><td data-nb-unchecked>—</td>
+        </tr>
+      {% endfor %}</tbody>
+      <tfoot><tr><th>{{ label('Итого','Барлығы') }}</th>{% for field in ['students','have','missing','checked','unchecked'] %}<td data-nb-total="{{ field }}">—</td>{% endfor %}</tr></tfoot>
+    </table></div>
+    <p data-nb-error role="alert" hidden>{{ label('Введите целые неотрицательные числа. Сумма «есть» и «нет» не должна превышать численность класса.', 'Теріс емес бүтін сандарды енгізіңіз. «Бар» және «жоқ» қосындысы сыныптағы оқушылар санынан аспауы тиіс.') }}</p>
+    <div id="notebook-class-scores">
+      {% for row in class_checks %}<details class="notebook-class-panel" data-nb-panel="{{ row.key }}" data-class-name="{{ row.class_name }}" name="notebook-class-results" {% if loop.first %}open{% endif %}><summary class="notebook-class-toggle"><span data-nb-class-title>{{ row.class_name }} — {{ label('Таблица оценивания','Бағалау кестесі') }}</span><span class="notebook-class-chevron" aria-hidden="true">⌄</span></summary>
+        {{ criteria_table('nb_' ~ row.key ~ '_score_', row.scores) }}
+        {% if row.note %}<input type="hidden" name="nb_{{ row.key }}_note" value="{{ row.note }}">{% endif %}
+        <p data-nb-class-total></p>
+      </details>{% endfor %}
+    </div>
+    <template id="notebook-score-template"><details class="notebook-class-panel" name="notebook-class-results"><summary class="notebook-class-toggle"><span data-nb-class-title></span><span class="notebook-class-chevron" aria-hidden="true">⌄</span></summary>
+      {{ criteria_table('nb___KEY___score_', {}) }}
+      <p data-nb-class-total></p>
+    </details></template>
+  {% endif %}
+</section>

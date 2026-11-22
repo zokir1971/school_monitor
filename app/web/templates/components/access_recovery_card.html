@@ -3,9 +3,10 @@
 {% if access_role in ['superuser', 'region_admin', 'district_admin', 'school_admin'] %}
 <a class="card role-dashboard__card sm-access-card" href="/access-recovery/manage">
   <div class="card__inner">
-    <div class="card__top role-dashboard__card-top"><span class="card__icon" aria-hidden="true">🔐</span><span class="sm-access-card__arrow" aria-hidden="true">→</span></div>
+    <div class="card__top role-dashboard__card-top"><span class="card__icon" aria-hidden="true">🔐</span>{% if not unified_access_card|default(false) %}<span class="sm-access-card__arrow" aria-hidden="true">→</span>{% endif %}</div>
     <h3 class="card__title">{{ 'Доступ пользователей' if access_ru else 'Пайдаланушылардың қолжетімділігі' }}</h3>
     <p class="card__desc">{{ 'Поиск логина и выдача одноразового кода восстановления пароля.' if access_ru else 'Логинді іздеу және құпиясөзді қалпына келтіруге бір реттік код беру.' }}</p>
+    {% if unified_access_card|default(false) %}<div class="card__footer"><span>{{ 'Открыть' if access_ru else 'Ашу' }}</span><span class="card__arrow" aria-hidden="true">→</span></div>{% endif %}
   </div>
 </a>
 {% endif %}

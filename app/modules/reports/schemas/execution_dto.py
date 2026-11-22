@@ -34,6 +34,7 @@ class ExecutionFormDTO:
     report_area_exclusions: list[dict] = field(default_factory=list)
 
     generated_reports_json: str = "[]"
+    completion_mode: str = ""
 
 
     @classmethod
@@ -155,7 +156,14 @@ class ExecutionFormDTO:
             report_teacher_ids = {code: [str(value) for value in values] for code, values in parameters.get('report_teacher_ids', {}).items()}
         teacher_id = teacher_ids[0] if len(teacher_ids) == 1 else ""
 
+        raw_mode = getattr(execution_data, "completion_mode", None)
+        completion_mode = clean(getattr(raw_mode, "value", raw_mode))
+        if completion_mode not in ("simple_final_document", "final_with_system_reports"):
+            # Older saved algorithms may predate persistence of the chosen flow.
+            completion_mode = "final_with_system_reports" if report_types or parameters.get('version') == 2 else ""
+
         return cls(
+            completion_mode=completion_mode,
             control_scope=clean(getattr(execution_data, "control_scope", None)),
             control_form=clean(getattr(execution_data, "control_form", None)),
             control_kind=clean(getattr(execution_data, "control_kind", None)),

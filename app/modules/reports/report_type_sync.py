@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 
+from sqlalchemy.orm import raiseload
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -64,7 +65,7 @@ class ReportTypeSyncService:
         enum_items = cls._build_enum_items()
 
         rows = await db.execute(
-            select(ReportTypeModel)
+            select(ReportTypeModel).options(raiseload("*"))
         )
         existing_rows = rows.scalars().all()
         existing_by_code = {row.code: row for row in existing_rows}

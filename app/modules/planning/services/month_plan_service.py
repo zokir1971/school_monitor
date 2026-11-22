@@ -134,10 +134,9 @@ class SchoolMonthlyPlanningService:
         ORM-модели сотрудников в шаблон не передаются.
         """
 
-        items = await SchoolMonthlyPlanRepo.list_items(
+        items = await SchoolMonthlyPlanRepo.list_items_for_page(
             db,
             month_plan_id=month_plan_id,
-            with_source=True,
         )
 
         assignment_summaries = (

@@ -4,9 +4,12 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', path='css/template_report.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', path='css/reports/score_cells.css') }}?v=256">
+<link rel="stylesheet" href="{{ url_for('static', path='css/reports/notebook_classes.css') }}?v=268">
 {% endblock %}
 
 {% block content %}
+<div class="notebook-report-page">
 
 <div class="page-header">
   <div>
@@ -19,6 +22,10 @@
     {{ _('Назад к отчетам') }}
   </a>
 </div>
+
+{% if success %}
+  <div class="alert alert-success" role="status">{{ reports_feedback(success) }}</div>
+{% endif %}
 
 {% if error %}
   <div class="alert alert-danger">{{ reports_feedback(error) }}</div>
@@ -150,7 +157,7 @@ report.level: {{ report.level if report else "NO REPORT" }}
         <th>{{ _('Сынып') }}</th>
         <td>
           <input type="text"
-                 name="info_class_name"
+                 name="info_class_name" {% if multiclass %}readonly{% endif %}
                  value="{{ saved_info.get('class_name', '') }}"
                  {% if readonly %}disabled{% endif %}>
         </td>
@@ -160,7 +167,7 @@ report.level: {{ report.level if report else "NO REPORT" }}
         <th>{{ _('Пән') }}</th>
         <td colspan="3">
           <input type="text"
-                 name="info_subject_name"
+                 name="info_subject_name" {% if multiclass %}readonly{% endif %}
                  value="{{ saved_info.get('subject_name', '') }}"
                  {% if readonly %}disabled{% endif %}>
         </td>
@@ -171,6 +178,15 @@ report.level: {{ report.level if report else "NO REPORT" }}
 
   </div>
 
+  {% if multiclass %}
+    {% include 'staff/reports/user_templates/notebook_class_results.html' %}
+  {% else %}
+    {% if can_multiclass %}
+      <div class="card report-card">
+        <a class="btn btn-secondary" href="{{ request.url.include_query_params(multiclass='true') }}">{{ 'Проверить несколько классов' if ui_language() == 'ru' else 'Бірнеше сыныпты тексеру' }}</a>
+        <p>{{ 'В новом формате выберите классы и заполните оценки отдельно для каждого. Прежний черновик изменится после сохранения.' if ui_language() == 'ru' else 'Жаңа форматта сыныптарды таңдап, әрқайсысын бөлек бағалаңыз. Бұрынғы жоба сақтағаннан кейін өзгереді.' }}</p>
+      </div>
+    {% endif %}
   <!-- 2. Критерии оценки -->
 <div class="card report-card section-score-card">
   <div class="card-title-row">
@@ -200,7 +216,7 @@ report.level: {{ report.level if report else "NO REPORT" }}
             {% set criterion_scores = {} %}
           {% else %}
             {% set criterion_key = criterion.get("key") or "criterion_" ~ criterion_index %}
-            {% set criterion_text = criterion.get("label_kz") or criterion.get("text") or criterion.get("name") or _("Критерий") ~ " " ~ loop.index %}
+            {% set criterion_text = criterion.get("label_ru" if ui_language() == "ru" else "label_kz") or criterion.get("label_kz") or criterion.get("text") or criterion.get("name") or _("Критерий") ~ " " ~ loop.index %}
             {% set criterion_scores = criterion.get("scores", {}) %}
           {% endif %}
 
@@ -222,7 +238,7 @@ report.level: {{ report.level if report else "NO REPORT" }}
               {% if criterion_scores %}
                 <div class="muted" style="margin-top: 4px;">
                   {% for score_value, score_data in criterion_scores.items() %}
-                    {{ score_value }} — {{ report_form_label(score_data.get("label_kz", "")) }}{% if not loop.last %}; {% endif %}
+                    {{ score_value }} — {{ report_form_label(score_data.get("label_ru" if ui_language() == "ru" else "label_kz") or score_data.get("label_kz", "")) }}{% if not loop.last %}; {% endif %}
                   {% endfor %}
                 </div>
               {% endif %}
@@ -233,7 +249,7 @@ report.level: {{ report.level if report else "NO REPORT" }}
             </td>
 
             {% for value in score_scale %}
-              <td class="cell-score">
+              <td class="cell-score" data-report-score-cell>
                 <input type="radio"
                        name="{{ score_name }}"
                        value="{{ value }}"
@@ -248,6 +264,7 @@ report.level: {{ report.level if report else "NO REPORT" }}
     </table>
   </div>
 </div>
+  {% endif %}
   <!-- 3. Итог -->
 <div class="card report-card total-card">
   <div class="card-title-row">
@@ -288,7 +305,8 @@ report.level: {{ report.level if report else "NO REPORT" }}
              id="level"
              name="info_level"
              value="{{ level }}">
-      <input type="text" id="level_display" value="{{ report_score_level_label(level) }}" readonly>
+      {% set rating_level = (schema.get('rating',{}).get('levels',[])|selectattr('label_kz','equalto',level)|list|first) %}
+      <input type="text" id="level_display" value="{{ (rating_level.label_ru if ui_language() == 'ru' else rating_level.label_kz) if rating_level else report_score_level_label(level) }}" readonly>
     </div>
   </div>
 </div>
@@ -360,9 +378,14 @@ report.level: {{ report.level if report else "NO REPORT" }}
 
 </form>
 
+<script defer src="{{ url_for('static', path='js/reports/score_cells.js') }}?v=256"></script>
+{% if multiclass %}
+<script defer src="{{ url_for('static', path='js/reports/notebook_classes.js') }}?v=268"></script>
+{% else %}
 <script>
 (function () {
   const radios = document.querySelectorAll('input[type="radio"][name^="score_"]');
+  const ratingLevels = {{ (schema.get('rating',{}).get('levels') or [])|tojson }}.slice().sort((a,b) => b.from - a.from);
   const totalInput = document.getElementById("total_score");
   const maxInput = document.getElementById("max_score");
   const percentInput = document.getElementById("percent");
@@ -387,20 +410,10 @@ report.level: {{ report.level if report else "NO REPORT" }}
     totalInput.value = total;
     percentInput.value = percent;
 
-    if (percent >= 85) {
-      levelInput.value = "Жоғары";
-    } else if (percent >= 60) {
-      levelInput.value = "Орта";
-    } else if (percent > 0) {
-      levelInput.value = "Төмен";
-    } else {
-      levelInput.value = "—";
-    }
-
+    const rating = ratingLevels.find(item => percent >= item.from);
+    levelInput.value = rating ? rating.label_kz : '—';
     if (levelDisplayInput) {
-      const levelKeys = {"Жоғары": "report_form_level_high", "Орта": "report_form_level_medium", "Төмен": "report_form_level_low"};
-      const key = levelKeys[levelInput.value];
-      levelDisplayInput.value = key ? window.SchoolMonitorI18n.t(key) : levelInput.value;
+      levelDisplayInput.value = rating ? (document.documentElement.lang === 'ru' ? rating.label_ru : rating.label_kz) : '—';
     }
   }
 
@@ -417,6 +430,7 @@ report.level: {{ report.level if report else "NO REPORT" }}
   }
 })();
 </script>
+{% endif %}
 
 <style>
 .lesson-score-table {
@@ -448,4 +462,5 @@ report.level: {{ report.level if report else "NO REPORT" }}
 }
 </style>
 
+</div>
 {% endblock %}

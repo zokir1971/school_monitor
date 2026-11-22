@@ -59,11 +59,10 @@ def calculate_percent(
     return round(total_score * 100 / max_score)
 
 
-def calculate_level(percent: int) -> str:
-    if percent >= 90:
-        return "Жоғары"
-    if percent >= 70:
-        return "Жеткілікті"
-    if percent >= 50:
-        return "Орташа"
-    return "Төмен"
+def calculate_level(percent: int, *, rating: dict | None = None) -> str:
+    from app.modules.reports.rules.notebook_criteria import CHECKING_NOTEBOOKS_RATING
+    levels = (rating or {}).get('levels') or CHECKING_NOTEBOOKS_RATING['levels']
+    for level in sorted(levels, key=lambda item: item['from'], reverse=True):
+        if percent >= level['from']:
+            return level['label_kz']
+    return min(levels, key=lambda item: item['from'])['label_kz']

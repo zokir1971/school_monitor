@@ -23,7 +23,7 @@ class SchoolStaffService:
     @staticmethod
     async def page_data(db, *, school_id: int):
         members = await SchoolStaffRepo.list_members(db, school_id=school_id, include_inactive=True)
-        roles_map = await SchoolStaffRepo.list_staff_roles_map(db, school_id=school_id)
+        roles_map = {m.id: m.roles for m in members}
         return {"members": members, "roles_map": roles_map}
 
     @staticmethod
@@ -48,13 +48,14 @@ class SchoolStaffService:
             raise HTTPException(status_code=400, detail="Должность обязательна")
 
         # ✅ строгая проверка должности (если ты убрал ручной ввод)
-        if position_text.lower() not in ALLOWED_POSITIONS:
+        if not is_allowed_staff(position_text=position_text):
             raise HTTPException(status_code=400, detail="Недопустимая должность")
 
         exists = await SchoolStaffRepo.get_member_by_iin(db, school_id=school_id, iin=iin)
         if exists:
             raise HTTPException(status_code=400, detail="Сотрудник с таким ИИН уже существует")
 
+        roles = SchoolStaffRoleService._validate_roles(roles or [])
         # ✅ передаём position_text в создание
         m = await SchoolStaffRepo.create_member(
             db,
@@ -78,7 +79,7 @@ class SchoolStaffService:
 
     @staticmethod
     async def dismiss_member(db, *, school_id: int, member_id: int):
-        m = await SchoolStaffRepo.get_member(db, school_id=school_id, member_id=member_id)
+        m = await SchoolStaffRepo.get_member(db, school_id=school_id, member_id=member_id, include_roles=False)
         if not m:
             raise HTTPException(404, "Сотрудник не найден")
         await SchoolStaffRepo.dismiss_member(db, school_id=school_id, member_id=member_id)
@@ -144,7 +145,7 @@ class SchoolStaffService:
 
     @staticmethod
     async def update_member_fields(db, *, school_id: int, member_id: int, update_data: dict):
-        m = await SchoolStaffRepo.get_member(db, school_id=school_id, member_id=member_id)
+        m = await SchoolStaffRepo.get_member(db, school_id=school_id, member_id=member_id, include_roles=False)
         if not m:
             raise HTTPException(status_code=404, detail="Сотрудник не найден")
 
@@ -185,63 +186,25 @@ class SchoolStaffImportService:
 
         for idx, row in enumerate(data.rows, start=1):
             try:
-                if idx <= 5:
-                    logger.info("ROW %s raw=%r", idx, row)
-
                 iin = get_iin(row)
                 full_name = build_full_name(row)
-
-                if idx <= 5:
-                    logger.info(
-                        "IMPORT DEBUG idx=%s iin=%r full_name=%r keys=%s",
-                        idx, iin, full_name, list(row.keys())
-                    )
 
                 if not iin:
                     report.skipped += 1
                     bad_iin_count += 1
-                    if idx <= 20:
-                        logger.info(
-                            "SKIP idx=%s reason=bad_iin raw_iin=%r row=%r",
-                            idx,
-                            get_value(row, "ИИН", contains=["иин"]),
-                            row,
-                        )
                     continue
 
                 if not full_name:
                     report.skipped += 1
                     missing_name_count += 1
-                    if idx <= 20:
-                        logger.info("SKIP idx=%s reason=missing_full_name row=%r", idx, row)
                     continue
 
                 fields = map_row_to_fields(row)
                 position_text = fields.get("position_text")
 
-                if idx <= 5:
-                    logger.info(
-                        "IMPORT DEBUG idx=%s position=%r mapped_fields=%r",
-                        idx,
-                        position_text,
-                        {
-                            "position_text": fields.get("position_text"),
-                            "education": fields.get("education"),
-                            "academic_degree": fields.get("academic_degree"),
-                            "qualification_category": fields.get("qualification_category"),
-                        }
-                    )
-
                 if not is_allowed_staff(position_text=position_text):
                     report.skipped += 1
                     filtered_count += 1
-                    if idx <= 20:
-                        logger.info(
-                            "SKIP idx=%s reason=filtered position=%r row=%r",
-                            idx,
-                            position_text,
-                            row,
-                        )
                     continue
 
                 prepared_row = {
@@ -265,12 +228,7 @@ class SchoolStaffImportService:
 
             except Exception as e:
                 report.errors += 1
-                logger.exception(
-                    "STAFF IMPORT ERROR idx=%s row=%r error=%s",
-                    idx,
-                    row,
-                    str(e),
-                )
+                logger.exception('STAFF IMPORT ERROR idx=%s error_type=%s', idx, type(e).__name__)
 
         rows_for_upsert = list(prepared_by_iin.values())
 
@@ -290,33 +248,34 @@ class SchoolStaffImportService:
 
         incoming_iins = list(prepared_by_iin.keys())
 
-        # одним запросом получаем уже существующие ИИН
-        stmt_existing = select(SchoolStaffMember.iin).where(
-            SchoolStaffMember.school_id == school_id,
-            SchoolStaffMember.iin.in_(incoming_iins),
-        )
-        result_existing = await db.execute(stmt_existing)
-        existing_iins = set(result_existing.scalars().all())
+        existing_iins = set()
+        for offset in range(0, len(incoming_iins), 1000):
+            stmt_existing = select(SchoolStaffMember.iin).where(
+                SchoolStaffMember.school_id == school_id,
+                SchoolStaffMember.iin.in_(incoming_iins[offset:offset + 1000]))
+            existing_iins.update((await db.execute(stmt_existing)).scalars().all())
 
         report.updated = sum(1 for iin in incoming_iins if iin in existing_iins)
         report.created = sum(1 for iin in incoming_iins if iin not in existing_iins)
 
-        stmt = insert(SchoolStaffMember).values(rows_for_upsert)
+        for offset in range(0, len(rows_for_upsert), 1000):
+            batch = rows_for_upsert[offset:offset + 1000]
+            stmt = insert(SchoolStaffMember).values(batch)
 
-        # обновляем только нужные поля
-        stmt = stmt.on_conflict_do_update(
-            constraint="uq_staff_school_iin",
-            set_={
-                "full_name": stmt.excluded.full_name,
-                "is_active": stmt.excluded.is_active,
-                "position_text": stmt.excluded.position_text,
-                "education": stmt.excluded.education,
-                "academic_degree": stmt.excluded.academic_degree,
-                "qualification_category": stmt.excluded.qualification_category,
-            },
-        )
+            # обновляем только нужные поля
+            stmt = stmt.on_conflict_do_update(
+                constraint="uq_staff_school_iin",
+                set_={
+                    "full_name": stmt.excluded.full_name,
+                    "is_active": stmt.excluded.is_active,
+                    "position_text": stmt.excluded.position_text,
+                    "education": stmt.excluded.education,
+                    "academic_degree": stmt.excluded.academic_degree,
+                    "qualification_category": stmt.excluded.qualification_category,
+                },
+            )
 
-        await db.execute(stmt)
+            await db.execute(stmt)
         await db.commit()
 
         logger.info(
@@ -352,20 +311,27 @@ class SchoolStaffRoleService:
             if role_val not in allowed:
                 raise HTTPException(status_code=400, detail=f"Недопустимая роль: {role_val}")
 
-            cleaned.append({"role": role_val, "context": ctx})
+            if len(ctx) > 200:
+                raise HTTPException(400, 'Контекст роли: не более 200 символов')
+            item = {"role": role_val, "context": ctx}
+            if item not in cleaned:
+                cleaned.append(item)
         return cleaned
 
     @staticmethod
     async def get_member_roles_for_edit(
             db: AsyncSession, *, school_id: int, member_id: int
     ) -> list[dict[str, str]]:
-        # проверим, что сотрудник принадлежит школе
-        m = await SchoolStaffRepo.get_member(db, school_id=school_id, member_id=member_id)
-        if not m:
-            raise HTTPException(status_code=404, detail="Сотрудник не найден")
+        _, roles = await SchoolStaffRoleService.get_member_role_edit_data(db, school_id=school_id, member_id=member_id)
+        return roles
 
-        existing = await SchoolStaffRoleRepo.list_by_member(db, school_id=school_id, member_id=member_id)
-        return [{"role": x.role.value, "context": x.role_context or ""} for x in existing]
+    @staticmethod
+    async def get_member_role_edit_data(db, *, school_id: int, member_id: int):
+        member = await SchoolStaffRepo.get_member(db, school_id=school_id, member_id=member_id)
+        if member is None:
+            raise HTTPException(404, 'Сотрудник не найден')
+        return member, [{'role': r.role.value, 'context': r.role_context or ''}
+                        for r in member.roles if r.is_active]
 
     @staticmethod
     async def replace_member_roles(
@@ -375,16 +341,8 @@ class SchoolStaffRoleService:
             member_id: int,
             roles: list[dict[str, str]],
     ) -> None:
-        # проверим сотрудника (безопасность)
-        m = await SchoolStaffRepo.get_member(db, school_id=school_id, member_id=member_id)
-        if not m:
-            raise HTTPException(status_code=404, detail="Сотрудник не найден")
-
         cleaned = SchoolStaffRoleService._validate_roles(roles)
-
-        await SchoolStaffRoleRepo.delete_by_member(db, school_id=school_id, member_id=member_id)
-        if cleaned:
-            await SchoolStaffRoleRepo.add_many(db, school_id=school_id, member_id=member_id, roles=cleaned)
+        await SchoolStaffRoleRepo.replace_active(db, school_id=school_id, member_id=member_id, roles=cleaned)
 
     @staticmethod
     async def list_candidates_for_role(

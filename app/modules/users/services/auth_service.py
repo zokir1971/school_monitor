@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from starlette.concurrency import run_in_threadpool
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -27,21 +29,13 @@ class UserAuthService:
         if not identifier or not password:
             return None
 
-        stmt = select(User)
-
-        # если введено 12 цифр — считаем это ИИН
-        if identifier.isdigit() and len(identifier) == 12:
-            stmt = stmt.where(User.iin == identifier)
-        else:
-            stmt = stmt.where(User.username == identifier)
-
-        res = await db.execute(stmt)
-        user = res.scalar_one_or_none()
+        from app.modules.users.repo import UserRepo
+        user = await UserRepo.get_by_identifier(db, identifier)
 
         if not user or not user.is_active:
             return None
 
-        if not verify_password(password, user.password_hash):
+        if not await run_in_threadpool(verify_password, password, user.password_hash):
             return None
 
         user.last_login_at = utcnow()

@@ -2,6 +2,7 @@
 
 
 import re
+from functools import lru_cache
 
 
 def _norm_pos(s: str | None) -> str:
@@ -28,6 +29,9 @@ ALLOWED_POSITIONS = {
         "воспитатель",
         "директор",
         "заведующий библиотекой",
+        "заведующий интернатом",
+        "заместитель директора по информатизации",
+        "заместитель директора по иностранному языку",
         "заместитель директора по профильному обучению",
         "заместитель директора по учебно-воспитательной работе",
         "заместитель директора по учебной работе",
@@ -58,6 +62,13 @@ ALLOWED_POSITIONS = {
         "тәлімгер",
         "директор",
         "кітапхана меңгерушісі",
+        "интернат меңгерушісі",
+        "ақпараттандыру бойынша директор орынбасары",
+        "ақпараттандыру бойынша директордың орынбасары",
+        "директордың ақпараттандыру жөніндегі орынбасары",
+        "директордың шет тілі жөніндегі орынбасары",
+        "бастауыш сыныптар бойынша директор орынбасары",
+        "директордың бастауыш сыныптар жөніндегі орынбасары",
         "оқу-тәрбие жұмысы бойынша директордың орынбасары",
         "директордың оқу жұмысы жөніндегі орынбасары",
         "директордың тәрбие ісі жөніндегі орынбасары",
@@ -76,17 +87,23 @@ ALLOWED_POSITIONS = {
         "оқытушы/ мұғалім",
         "мұғалім-дефектолог",
         "логопед-мұғалім",
-        "тәрбиеші"
+        "тәрбиеші",
         "шебер",
     },
 }
 
-ALL_ALLOWED_POSITIONS = (
-        ALLOWED_POSITIONS["ru"] |
-        ALLOWED_POSITIONS["kz"]
+# Normalize once per process, including slash spacing in legacy labels.
+def _compact_slashes(value: str) -> str:
+    return value.replace(" / ", "/").replace("/ ", "/").replace(" /", "/")
+
+
+ALL_ALLOWED_POSITIONS = frozenset(
+    _compact_slashes(_norm_pos(value))
+    for names in ALLOWED_POSITIONS.values() for value in names
 )
 
 
+@lru_cache(maxsize=256)
 def is_allowed_staff(*, position_text: str | None) -> bool:
     p = _norm_pos(position_text)
     if not p:
@@ -95,7 +112,7 @@ def is_allowed_staff(*, position_text: str | None) -> bool:
     if p in ALL_ALLOWED_POSITIONS:
         return True
 
-    p2 = p.replace(" / ", "/").replace("/ ", "/").replace(" /", "/")
+    p2 = _compact_slashes(p)
     if p2 in ALL_ALLOWED_POSITIONS:
         return True
 

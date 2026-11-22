@@ -2,6 +2,8 @@
 from __future__ import annotations
 from app.core.planning_profile import measure_export_phase
 
+from app.modules.planning.services.direction_sample_service import load_direction_samples
+
 from typing import cast
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request, Response
@@ -350,6 +352,10 @@ async def school_direction_edit(
     # Данные для read-only отображения rows11
     # =====================================================
 
+    template_samples = await load_direction_samples(
+        db, template_id=plan.template_id, direction_id=direction_id, rows=dto.rows11,
+    )
+
     row_months_map: dict[int, list[int]] = {}
     row_required_docs_map: dict[int, list[str]] = {}
     row_review_places_map: dict[int, list[str]] = {}
@@ -394,6 +400,7 @@ async def school_direction_edit(
             # Период
             "MONTH_NAMES": MONTH_NAMES,
             "row_months_selected": row_months_map,
+            "template_samples": template_samples,
 
             # Итоговые документы
             "document_types": list(DocumentType),

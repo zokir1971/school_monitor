@@ -39,159 +39,18 @@ CHECKING_NOTEBOOKS_INFO_FIELDS = [
 ]
 
 
-CHECKING_NOTEBOOKS_DEFAULT_CRITERIA = [
-    {
-        "key": "exists",
-        "label_ru": "Наличие тетради",
-        "label_kz": "Дәптердің болуы",
-        "scores": {
-            "2": {
-                "label_ru": "полностью выполняет",
-                "label_kz": "толық орындайды",
-            },
-            "1": {
-                "label_ru": "частично выполняет",
-                "label_kz": "ішінара орындайды",
-            },
-            "0": {
-                "label_ru": "не выполняет",
-                "label_kz": "орындамайды",
-            },
-        },
-    },
-    {
-        "key": "design",
-        "label_ru": "Оформление тетради",
-        "label_kz": "Дәптердің рәсімделуі",
-        "scores": {
-            "2": {
-                "label_ru": "аккуратно, требования соблюдены",
-                "label_kz": "ұқыпты, талаптар сақталған",
-            },
-            "1": {
-                "label_ru": "есть отдельные нарушения",
-                "label_kz": "жекелеген бұзушылықтар бар",
-            },
-            "0": {
-                "label_ru": "требования не соблюдены",
-                "label_kz": "талаптар сақталмаған",
-            },
-        },
-    },
-    {
-        "key": "homework",
-        "label_ru": "Выполнение домашнего задания",
-        "label_kz": "Үй тапсырмасының орындалуы",
-        "scores": {
-            "2": {
-                "label_ru": "выполняет полностью",
-                "label_kz": "толық орындайды",
-            },
-            "1": {
-                "label_ru": "выполняет частично",
-                "label_kz": "ішінара орындайды",
-            },
-            "0": {
-                "label_ru": "не выполняет",
-                "label_kz": "орындамайды",
-            },
-        },
-    },
-    {
-        "key": "literacy",
-        "label_ru": "Грамотность",
-        "label_kz": "Сауаттылық",
-        "scores": {
-            "2": {
-                "label_ru": "без ошибок",
-                "label_kz": "қатесіз",
-            },
-            "1": {
-                "label_ru": "есть отдельные ошибки",
-                "label_kz": "жекелеген қателер бар",
-            },
-            "0": {
-                "label_ru": "много ошибок",
-                "label_kz": "қателер көп",
-            },
-        },
-    },
-    {
-        "key": "teacher_check",
-        "label_ru": "Проверка учителем",
-        "label_kz": "Мұғалімнің тексеруі",
-        "scores": {
-            "2": {
-                "label_ru": "проверяется регулярно",
-                "label_kz": "жүйелі түрде тексеріледі",
-            },
-            "1": {
-                "label_ru": "проверяется нерегулярно",
-                "label_kz": "жүйесіз тексеріледі",
-            },
-            "0": {
-                "label_ru": "не проверяется",
-                "label_kz": "тексерілмейді",
-            },
-        },
-    },
-    {
-        "key": "correction",
-        "label_ru": "Работа над ошибками",
-        "label_kz": "Қатемен жұмыс",
-        "scores": {
-            "2": {
-                "label_ru": "выполняется",
-                "label_kz": "орындалады",
-            },
-            "1": {
-                "label_ru": "выполняется частично",
-                "label_kz": "ішінара орындалады",
-            },
-            "0": {
-                "label_ru": "не выполняется",
-                "label_kz": "орындалмайды",
-            },
-        },
-    },
-]
+from copy import deepcopy
+from app.modules.reports.rules.notebook_criteria import CHECKING_NOTEBOOKS_CRITERIA, CHECKING_NOTEBOOKS_RATING
 
-
-CHECKING_NOTEBOOKS_RATING = {
-    "max_score_per_criterion": 2,
-    "levels": [
-        {
-            "from": 90,
-            "to": 100,
-            "label_ru": "Высокий",
-            "label_kz": "Жоғары",
-        },
-        {
-            "from": 70,
-            "to": 89,
-            "label_ru": "Достаточный",
-            "label_kz": "Жеткілікті",
-        },
-        {
-            "from": 50,
-            "to": 69,
-            "label_ru": "Средний",
-            "label_kz": "Орташа",
-        },
-        {
-            "from": 0,
-            "to": 49,
-            "label_ru": "Низкий",
-            "label_kz": "Төмен",
-        },
-    ],
-}
+CHECKING_NOTEBOOKS_DEFAULT_CRITERIA = deepcopy(CHECKING_NOTEBOOKS_CRITERIA)
 
 
 def build_default_checking_notebooks_schema() -> dict:
-    return {
-        "type": "checking_notebooks_table",
-        "info_fields": CHECKING_NOTEBOOKS_INFO_FIELDS,
-        "criteria": CHECKING_NOTEBOOKS_DEFAULT_CRITERIA,
-        "rating": CHECKING_NOTEBOOKS_RATING,
-    }
+    return deepcopy({
+        'version': 3,
+        'type': 'checking_notebooks_table',
+        'info_fields': CHECKING_NOTEBOOKS_INFO_FIELDS,
+        'criteria': CHECKING_NOTEBOOKS_DEFAULT_CRITERIA,
+        'score_scale': [0, 1, 2],
+        'rating': CHECKING_NOTEBOOKS_RATING,
+    })

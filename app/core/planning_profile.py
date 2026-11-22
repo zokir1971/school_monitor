@@ -48,7 +48,7 @@ def selected_scope(scope):
 def measure_export_phase(name):
     """Measure fixed phase names only; no request/content values enter reports."""
     sample = _current.get()
-    if sample is None or name not in ('export_data', 'preview_render', 'pdf_render'):
+    if sample is None or name not in ('export_data', 'preview_render', 'pdf_render', 'excel_data', 'excel_build', 'excel_import', 'excel_styles', 'excel_rows', 'excel_cells', 'excel_finalize'):
         yield
         return
     started = time.perf_counter()
@@ -63,6 +63,30 @@ def measure_export_phase(name):
         result['sql_count'] += sample['sql_count']-sql_before
         result['sql_ms'] = round(result['sql_ms']+sample['sql_ms']-sql_ms_before, 2)
 
+
+
+# Process-local HMAC lets diagnostics match selections without logging filter
+# values, territorial/user identifiers or school search text.
+_excel_selection_secret = None
+
+def record_excel_context(role, language, kind, selection, sheets):
+    sample = _current.get()
+    if sample is None:
+        return
+    import hashlib
+    import hmac
+    import secrets
+    global _excel_selection_secret
+    if _excel_selection_secret is None:
+        _excel_selection_secret = secrets.token_bytes(32)
+    encoded = json.dumps(selection, sort_keys=True, ensure_ascii=False, default=str).encode('utf-8')
+    sample['excel_context'] = {
+        'role': role if role in ('superuser','region_admin','district_admin') else 'other',
+        'language': language if language in ('ru','kk') else 'other',
+        'kind': kind,
+        'selection_key': hmac.new(_excel_selection_secret, encoded, hashlib.sha256).hexdigest()[:24],
+        'sheets': [{'view': view, 'rows': len(rows)} for view, rows in sheets],
+    }
 
 def attach_observers(engine):
     global _session_observer_attached

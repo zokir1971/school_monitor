@@ -4,6 +4,7 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', path='css/template_report.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', path='css/reports/score_cells.css') }}?v=256">
 {% endblock %}
 
 {% block content %}
@@ -312,7 +313,7 @@
                     <td class="cell-criterion">{{ report_form_label(criterion_text) }}</td>
 
                     {% for value in score_scale %}
-                      <td class="cell-score">
+                      <td class="cell-score" data-report-score-cell>
                         <input
                           type="radio"
                           name="{{ score_name }}"
@@ -356,7 +357,7 @@
                   <td class="cell-criterion">{{ report_form_label(criterion_text) }}</td>
 
                   {% for value in score_scale %}
-                    <td class="cell-score">
+                    <td class="cell-score" data-report-score-cell>
                       <input
                         type="radio"
                         name="{{ score_name }}"
@@ -465,6 +466,7 @@
 
 </form>
 
+<script defer src="{{ url_for('static', path='js/reports/score_cells.js') }}?v=256"></script>
 <script>
 (function () {
   const radios = document.querySelectorAll('input[type="radio"][name^="score_"]');

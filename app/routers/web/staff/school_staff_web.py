@@ -1,17 +1,21 @@
 from __future__ import annotations
 
 import re
+import base64
+from urllib.parse import urlencode
+
+from app.core import import_guard275 as guard
+from app.modules.staff import import_preview275 as staff_preview
+from app.modules.education.repositories.school_scope_repo import SchoolScopeRepo
 from datetime import date
 from decimal import Decimal, InvalidOperation
 
 from fastapi import APIRouter, Depends, Request
 from fastapi import HTTPException
-from fastapi import UploadFile, File
 from fastapi.responses import HTMLResponse
 from fastapi.responses import RedirectResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
 from app.db.session import get_db
 from app.modules.planning.enums import ResponsibleRole
@@ -35,7 +39,7 @@ router = APIRouter(
 
 def _require_school_id(user) -> int:
     school_id = getattr(user, "school_id", None)
-    if not school_id:
+    if not school_id or not user.is_active:
         raise HTTPException(status_code=403, detail="Нет school_id")
     return int(school_id)
 
@@ -51,27 +55,24 @@ async def school_staff_page(
 ):
     school_id = _require_school_id(user)
 
-    q = (
-        select(SchoolStaffMember)
-        .where(SchoolStaffMember.school_id == school_id)
-        .options(selectinload(SchoolStaffMember.roles))
-        .order_by(
-            SchoolStaffMember.is_active.desc(),
-            SchoolStaffMember.full_name.asc(),
-        )
-    )
-
-    members = (await db.execute(q)).scalars().all()
+    members = await SchoolStaffRepo.list_member_cards(db, school_id=school_id)
     allowed_positions = sorted(ALLOWED_POSITIONS["kz"])
-    return templates.TemplateResponse(
+    response = templates.TemplateResponse(
         "staff/members/school_staff.html",
         {
             "user": user,
             "request": request,
             "members": members,
-            "allowed_positions": allowed_positions
+            "allowed_positions": allowed_positions,
+            "import_csrf": guard.csrf_token(request, "staff_import_csrf"),
+            "school_name": await SchoolScopeRepo.get_name(db, school_id=school_id),
         },
     )
+    response.set_cookie("staff_import_csrf", response.context["import_csrf"], httponly=True,
+                        samesite="lax", secure=request.url.scheme == "https",
+                        path="/staff/school", max_age=guard.TTL)
+    response.headers["Cache-Control"] = "no-store"
+    return response
 
 
 # =========================
@@ -131,24 +132,84 @@ async def school_staff_create_member(
     )
 
 
+async def _show_import(request, db, user, **context):
+    context.update(request=request, user=user, school_id=_require_school_id(user),
+                   school_name=await SchoolScopeRepo.get_name(db, school_id=user.school_id),
+                   csrf=guard.csrf_token(request, "staff_import_csrf"))
+    response = templates.TemplateResponse("staff/members/import_preview.html", context)
+    response.headers["Cache-Control"] = "no-store"
+    return response
+
+
 @router.post("/import", name="school_staff_import")
-async def school_staff_import(
-        db: AsyncSession = Depends(get_db),
-        user=Depends(require_roles(UserRole.SCHOOL_ADMIN)),
-        file: UploadFile = File(...),
-):
+async def school_staff_import(request: Request, db: AsyncSession = Depends(get_db),
+                             user=Depends(require_roles(UserRole.SCHOOL_ADMIN))):
     school_id = _require_school_id(user)
+    form = await request.form()
+    guard.check_csrf(request, form, "staff_import_csrf")
+    try:
+        upload = form.get("file")
+        if not hasattr(upload, "read") or not (upload.filename or "").lower().endswith(".csv"):
+            raise ValueError("Выберите CSV-файл персонала НОБД.")
+        raw = await upload.read(guard.MAX_BYTES + 1)
+        await upload.close()
+        data = staff_preview.parse(raw)
+        stats, fingerprint = await staff_preview.snapshot(db, school_id, data)
+        filename = upload.filename.replace("\\", "/").rsplit("/", 1)[-1][:200]
+        token = guard.stage(dict(user_id=user.id, school_id=school_id, data=data, stats=stats,
+                                 fingerprint=fingerprint, filename=filename,
+                                 raw=base64.b64encode(raw).decode("ascii")), "staff")
+        return RedirectResponse("/staff/school/import/preview?" + urlencode({"token": token}), status_code=303)
+    except (ValueError, UnicodeError) as exc:
+        return await _show_import(request, db, user, error=str(exc))
 
-    if not file.filename.lower().endswith(".csv"):
-        return RedirectResponse("/staff/school?error=Нужен%20CSV%20файл", status_code=303)
 
-    raw = await file.read()
+@router.get("/import/preview", name="school_staff_import_preview")
+async def school_staff_import_preview(request: Request, db: AsyncSession = Depends(get_db),
+                                     user=Depends(require_roles(UserRole.SCHOOL_ADMIN))):
+    _require_school_id(user)
+    try:
+        payload, _ = guard.load(request.query_params.get("token", ""), user, "staff")
+        return await _show_import(request, db, user, preview=payload["data"], stats=payload["stats"],
+                                  preview_token=request.query_params["token"], filename=payload["filename"])
+    except ValueError as exc:
+        return await _show_import(request, db, user, error=str(exc))
 
-    report = await SchoolStaffImportService.import_csv(db, school_id=school_id, raw=raw)
-    await db.commit()
 
-    msg = f"Импорт:%20создано%20{report.created},%20обновлено%20{report.updated},%20пропущено%20{report.skipped},%20ошибок%20{report.errors}"
-    return RedirectResponse(f"/staff/school?success={msg}", status_code=303)
+@router.post("/import/apply", name="school_staff_import_apply")
+async def school_staff_import_apply(request: Request, db: AsyncSession = Depends(get_db),
+                                   user=Depends(require_roles(UserRole.SCHOOL_ADMIN))):
+    school_id = _require_school_id(user)
+    form = await request.form()
+    guard.check_csrf(request, form, "staff_import_csrf")
+    payload = None
+    claimed = None
+    try:
+        payload, path = guard.load(str(form.get("preview_token", "")), user, "staff")
+        guard.confirm(form, school_id, payload["stats"])
+        if payload["data"]["skipped"] and form.get("confirm_skipped") != "yes":
+            raise ValueError("Подтвердите пропуск строк, которые не подходят для импорта.")
+        # Same per-school lock as the student importer, held until the batch commits.
+        await SchoolScopeRepo.lock_import(db, school_id=school_id)
+        _, fingerprint = await staff_preview.snapshot(db, school_id, payload["data"])
+        if fingerprint != payload["fingerprint"]:
+            raise ValueError("Персонал изменился после предпросмотра. Загрузите файл заново.")
+        claimed = guard.claim(path)
+        report = await SchoolStaffImportService.import_csv(db, school_id=school_id,
+                                                          raw=base64.b64decode(payload["raw"]))
+        message = f"Импорт: создано {report.created}, обновлено {report.updated}, пропущено {report.skipped}."
+        return RedirectResponse("/staff/school?" + urlencode({"success": message}), status_code=303)
+    except ValueError as exc:
+        await db.rollback()
+        await db.refresh(user)
+        # A fresh preview avoids applying an outdated or already claimed batch.
+        return await _show_import(request, db, user, error=str(exc))
+    except Exception:
+        await db.rollback()
+        raise
+    finally:
+        if claimed:
+            claimed.unlink(missing_ok=True)
 
 
 @router.get("/members/{member_id}/edit", name="school_staff_member_edit", response_class=HTMLResponse)
@@ -160,7 +221,7 @@ async def school_staff_member_edit(
 ):
     school_id = _require_school_id(user)
 
-    m = await SchoolStaffRepo.get_member(db, school_id=school_id, member_id=member_id)
+    m = await SchoolStaffRepo.get_member(db, school_id=school_id, member_id=member_id, include_roles=False)
     if not m:
         raise HTTPException(status_code=404, detail="Сотрудник не найден")
 
@@ -228,7 +289,7 @@ async def school_staff_member_edit_save(
     form = await request.form()
 
     # 1) получаем сотрудника (проверка школы)
-    m = await SchoolStaffRepo.get_member(db, school_id=school_id, member_id=member_id)
+    m = await SchoolStaffRepo.get_member(db, school_id=school_id, member_id=member_id, include_roles=False)
     if not m:
         raise HTTPException(status_code=404, detail="Сотрудник не найден")
 
@@ -285,7 +346,7 @@ async def school_staff_restore_member(
 ):
     school_id = _require_school_id(user)
 
-    m = await SchoolStaffRepo.get_member(db, school_id=school_id, member_id=member_id)
+    m = await SchoolStaffRepo.get_member(db, school_id=school_id, member_id=member_id, include_roles=False)
     if not m:
         raise HTTPException(status_code=404, detail="Сотрудник не найден")
 
@@ -318,8 +379,7 @@ async def roles_page(
 ):
     school_id = _require_school_id(user)
 
-    m = await SchoolStaffRepo.get_member(db, school_id=school_id, member_id=member_id)
-    member_roles = await SchoolStaffRoleService.get_member_roles_for_edit(db, school_id=school_id, member_id=member_id)
+    m, member_roles = await SchoolStaffRoleService.get_member_role_edit_data(db, school_id=school_id, member_id=member_id)
 
     responsible_roles = [{"value": r.value, "label_kz": r.label_kz} for r in ResponsibleRole.__members__.values()]
 

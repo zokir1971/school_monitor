@@ -7,12 +7,12 @@
 <link rel="stylesheet" href="{{ url_for('static',path='css/assessment/navigation.css') }}?v=99">
 <script defer src="{{ url_for('static',path='js/assessment/navigation.js') }}?v=99"></script>
   <link rel="stylesheet" href="{{ url_for('static', path='css/admin.css') }}">
+<link rel="stylesheet" href="{{ url_for('static',path='css/dashboards/super_dashboard.css') }}?v=288">
 {% endblock %}
 
 {% block content %}
 
-<div class="dashboard">
-{{ assessment_section() }}
+<div class="dashboard super-dashboard">
 
   <!-- Администрирование -->
 <section class="dashboard-section">
@@ -22,7 +22,9 @@
   {% set subject_card_role = user.role.value if user.role is not string else user.role %}
 
   <div class="card-grid">
-{% include 'components/access_recovery_card.html' %}
+
+
+{% with unified_access_card=true %}{% include 'components/access_recovery_card.html' %}{% endwith %}
       
     {% if feature_link_available(request.url_for('schools_page')) %}<a class="card" href="{{ request.url_for('schools_page') }}">
       <div class="card__inner">
@@ -91,6 +93,30 @@
   </div>
 </section>
 
+{% if role == 'superuser' %}
+<section class="dashboard-section" id="super-statistics">
+  <h3 class="section-title">Статистика</h3>
+  <div class="card-grid">
+    <a class="card" href="/statistics/activity">
+      <div class="card__inner"><div class="card__top"><div class="card__icon">📊</div></div>
+        <h3 class="card__title">{{ 'Активность школ' if ui_language()=='ru' else 'Мектептердің белсенділігі' }}</h3>
+        <p class="card__desc">{{ 'Использование системы по регионам и районам' if ui_language()=='ru' else 'Жүйені өңірлер мен аудандар бойынша пайдалану' }}</p>
+        <div class="card__footer"><span>{{ _('Открыть') }}</span><span class="card__arrow">→</span></div>
+      </div>
+    </a>
+    <a class="card" href="/statistics/territory">
+      <div class="card__inner"><div class="card__top"><div class="card__icon">📊</div></div>
+        <h3 class="card__title">{{ 'Статистика ВШК' if ui_language()=='ru' else 'МІБ статистикасы' }}</h3>
+        <p class="card__desc">{{ 'Планирование, выполнение и отчёты по территориям' if ui_language()=='ru' else 'Аумақтар бойынша жоспарлау, орындау және есептер' }}</p>
+        <div class="card__footer"><span>{{ _('Открыть') }}</span><span class="card__arrow">→</span></div>
+      </div>
+    </a>
+  </div>
+</section>
+{% endif %}
+
+{{ assessment_section(unified=true) }}
+
 <section class="dashboard-section">
   <h3 class="section-title">{{ _('Школьный контроль') }}</h3>
 
@@ -138,7 +164,7 @@
 
   <!-- 📊 Отчёты -->
   <section class="dashboard-section">
-    <h3>{{ _('Отчёты и аналитика') }}</h3>
+    <h3 class="section-title">{{ _('Отчёты и аналитика') }}</h3>
 
     <div class="card-grid">
       {% if feature_link_available('/reports/schools') %}<a class="card" href="/reports/schools" >

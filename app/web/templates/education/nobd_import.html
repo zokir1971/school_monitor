@@ -10,7 +10,7 @@
       <h1>{{ _('Оқушылар контингенті және сыныптар') }}</h1>
       <p>{{ _('Загрузите выгрузку НОБД, проверьте состав классов и выберите направление обучения.') }}</p>
     </div>
-    <span class="nobd-badge">{{ school_name }}</span>
+    <span class="nobd-badge">{{ school_name }} · ID {{ school_id }}</span>
   </header>
   {% if error %}<div class="nobd-notice nobd-notice--error" role="alert"><strong>{{ _('Не удалось продолжить') }}</strong><p>{{ _(error) }}</p></div>{% endif %}
   {% if result %}
@@ -65,6 +65,8 @@
       <div><dt>{{ _('Сменят класс') }}</dt><dd>{{ counters.moved_students }}</dd></div>
     </dl>
     {% endif %}
+    {% if import_stats and import_stats.risky %}<div class="nobd-notice nobd-notice--warning" role="alert"><strong>{{ _('Большинство записей новые — возможна выгрузка другой школы.') }}</strong><p>{{ _('Проверьте принадлежность файла. При первой загрузке это допустимо.') }}</p></div>{% endif %}
+    <details><summary>{{ _('Проверить ФИО учеников из файла') }}</summary><div class="nobd-table-wrap" style="max-height:300px;overflow:auto" tabindex="0"><table class="nobd-table"><thead><tr><th>№</th><th>{{ _('ФИО') }}</th><th>{{ _('Класс') }}</th></tr></thead><tbody>{% for row in preview.rows %}<tr><td>{{ loop.index }}</td><td>{{ row.last_name }} {{ row.first_name }} {{ row.middle_name or '' }}</td><td>{{ row.key.replace(':', '') }}</td></tr>{% endfor %}</tbody></table></div></details>
     {% if preview.errors %}
     <div class="nobd-notice nobd-notice--error" role="alert"><strong>{{ _('Импорт заблокирован') }}</strong><p>{{ _('Исправьте ошибки и загрузите файл снова.') }}</p><ul class="nobd-errors">{% for e in preview.errors %}<li>{{ e }}</li>{% endfor %}</ul></div>
     {% endif %}
@@ -114,6 +116,8 @@
       <div class="nobd-confirm">
         <h3>{{ _('Подтверждение импорта') }}</h3>
         <label class="nobd-check"><input type="checkbox" name="confirm_school" value="yes" required><span>{{ _('Подтверждаю школу «') }}{{ school_name }}{{ _('» и учебный год') }} {{ year }}–{{ year|int + 1 }}.</span></label>
+        <label class="nobd-field">{{ _('Введите ID школы назначения:') }} {{ school_id }}<input name="school_id_confirmation" inputmode="numeric" autocomplete="off" required style="max-width:160px"></label>
+        {% if import_stats and import_stats.risky %}<label class="nobd-check"><input type="checkbox" name="confirm_new_records" value="yes" required><span>{{ _('Проверил большое количество новых записей. Файл относится к этой школе.') }}</span></label>{% endif %}
         <label class="nobd-check"><input type="checkbox" name="confirm_tracks" value="yes"><span>{{ _('Подтверждаю изменение ранее сохранённых направлений, если изменил выбор.') }}</span></label>
         <label class="nobd-check"><input type="checkbox" name="confirm_languages" value="yes"><span>{{ _('Подтверждаю ручной выбор при пустом, неизвестном или смешанном языке НОБД, расхождения с НОБД и изменение ранее сохранённых языков.') }}</span></label>
         <div class="nobd-actions"><button class="nobd-button nobd-button--primary" type="submit" data-sm-action="primary">{{ _('Сохранить в БД') }}</button><span class="nobd-muted">{{ _('Предпросмотр действует 1 час.') }}</span></div>

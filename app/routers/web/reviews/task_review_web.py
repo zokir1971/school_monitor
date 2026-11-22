@@ -20,7 +20,7 @@ from app.modules.reviews.services.task_review_service import TaskReviewService
 from app.modules.users.deps import require_roles
 from app.modules.users.enums import UserRole
 from app.modules.users.models import User
-from app.routers.web.helpers.render import render_error
+from app.routers.web.helpers.render import render, render_error
 from app.routers.web.web_common import templates
 
 logger = logging.getLogger(__name__)
@@ -119,7 +119,7 @@ async def task_review_selection_page(
             method_association_id=method_association_id,
         )
 
-        return templates.TemplateResponse(
+        return render(templates, request,
             "reviews/task_review.html",
             {
                 "request": request,
@@ -178,6 +178,8 @@ async def staff_task_review_batch(
     протокол и результаты задач фиксируются одним commit.
     """
 
+    pending_file_keys: list[str] = []
+    committed = False
     form = await request.form()
     raw_month_item_ids = form.getlist("month_item_ids")
 
@@ -225,9 +227,12 @@ async def staff_task_review_batch(
             dto=dto,
             school_plan_id=school_plan_id,
             protocol_file=protocol_file,
+            user=user,
+            pending_file_keys=pending_file_keys,
         )
 
         await db.commit()
+        committed = True
 
         return RedirectResponse(
             url=_selection_url(
@@ -243,6 +248,7 @@ async def staff_task_review_batch(
     except ValueError as exc:
         if db.in_transaction():
             await db.rollback()
+            await db.refresh(user)
 
         try:
             page_data = await TaskReviewService.get_review_selection_page_data(
@@ -294,6 +300,7 @@ async def staff_task_review_batch(
     except OSError:
         if db.in_transaction():
             await db.rollback()
+            await db.refresh(user)
 
         logger.exception(
             "Ошибка файлового хранилища при сохранении рассмотрения."
@@ -353,6 +360,9 @@ async def staff_task_review_batch(
         raise
 
     finally:
+        if not committed:
+            for object_key in pending_file_keys:
+                await TaskReviewService.cleanup_protocol_file(object_key)
         await protocol_file.close()
 
 
@@ -366,7 +376,7 @@ async def staff_task_review_mark_overdue(
         review_place: ReviewPlace = Form(...),
         method_association_id: int | None = Form(default=None),
         db: AsyncSession = Depends(get_db),
-        _user: User = Depends(require_roles(UserRole.SCHOOL_ADMIN)),
+        user: User = Depends(require_roles(UserRole.SCHOOL_ADMIN)),
 ):
     """Переводит выбранные просроченные задачи в NOT_EXECUTED."""
 
@@ -394,6 +404,9 @@ async def staff_task_review_mark_overdue(
             db,
             month_item_ids=unique_ids,
             school_plan_id=school_plan_id,
+            user=user,
+            review_place=review_place,
+            method_association_id=method_association_id,
         )
 
         await db.commit()

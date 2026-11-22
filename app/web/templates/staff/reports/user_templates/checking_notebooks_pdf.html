@@ -72,6 +72,19 @@
             font-weight: 600;
         }
 
+        .criteria-table { table-layout: fixed; }
+        .criteria-table th { width: auto; }
+        .criteria-table thead { display: table-header-group; }
+        .criteria-table tr { break-inside: avoid; page-break-inside: avoid; }
+        .criteria-table .criterion-text { text-align: left; overflow-wrap: break-word; }
+        .criteria-table .notebook-class-heading th { text-align: left; background: #eff6ff; padding: 8px 10px; }
+        .criteria-table tbody td { padding: 5px 7px; font-size: 11px; line-height: 1.25; vertical-align: middle; }
+        .criteria-table .notebook-score-text { text-align: left; overflow-wrap: break-word; }
+        .score-explanation { display: inline; margin: 0; font-size: inherit; line-height: inherit; font-weight: normal; }
+        .notebook-presence-table { table-layout: fixed; }
+        .notebook-presence-table th { width: auto; text-align: center; overflow-wrap: break-word; font-size: 10px; padding: 6px 5px; }
+        .notebook-presence-table td { text-align: center; padding: 6px 5px; }
+
         .muted {
             color: #6b7280;
         }
@@ -178,14 +191,17 @@
     </tbody>
 </table>
 
+{% if data.get('class_checks_version') == 1 %}
+{% include 'staff/reports/user_templates/notebook_classes_pdf.html' %}
+{% else %}
 <h2>{{ pdf_text('2. Бағалау критерийлері / Критерий оценки') }}</h2>
 
-<table class="criteria-table">
+<table class="criteria-table"><colgroup><col style="width:6%"><col style="width:47%"><col style="width:47%"></colgroup>
     <thead>
     <tr>
-        <th style="width: 50px;">№</th>
+        <th>№</th>
         <th>{{ pdf_text('Критерий') }}</th>
-        <th style="width: 100px;">{{ pdf_text('Балл') }}</th>
+        <th>{{ pdf_text('Балл') }}</th>
     </tr>
     </thead>
 
@@ -223,8 +239,11 @@
                 {{ pdf_criterion_text(criterion, criterion_text) }}
             </td>
 
-            <td>
+            <td class="notebook-score-text">
                 {{ saved_score if saved_score is not none else "—" }}
+                {% set rubric = criterion.get('scores',{}) if criterion is mapping else {} %}
+                {% set description = rubric.get(saved_score|string,{}) if rubric is mapping and saved_score is not none else {} %}
+                {% if description %} — <span class="score-explanation">{{ (description.get('label_ru' if pdf_language == 'ru' else 'label_kz') or description.get('label_kz') or description.get('label_ru') or '') if description is mapping else description }}</span>{% endif %}
             </td>
         </tr>
 
@@ -233,7 +252,9 @@
     </tbody>
 </table>
 
+{% endif %}
 <h2>{{ pdf_text('3. Қорытында / Итог') }}</h2>
+{% if schema.get('rating',{}).get('levels') %}<p class="muted">{% for item in schema.rating.levels %}{{ item['from'] }}–{{ item['to'] }}% — {{ item.label_ru if pdf_language == 'ru' else item.label_kz }}{% if not loop.last %}; {% endif %}{% endfor %}</p>{% endif %}
 
 <table class="summary-table">
     <tbody>
@@ -255,7 +276,8 @@
 
     <tr>
         <th>{{ pdf_text('Деңгейі / Уровень') }}</th>
-        <td>{{ pdf_level_text(level or "—") }}</td>
+        <td>{% set level_info = (schema.get('rating',{}).get('levels',[])|selectattr('label_kz','equalto',level)|list|first) %}
+            {{ (level_info.get('label_ru' if pdf_language == 'ru' else 'label_kz') or level) if level_info else pdf_level_text(level or '—') }}</td>
     </tr>
 
     </tbody>

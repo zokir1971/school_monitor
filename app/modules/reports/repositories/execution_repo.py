@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 
 from sqlalchemy import delete, select, update, insert, exists, or_
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import raiseload, selectinload
 
 from app.modules.planning.enums import PlanItemStatus
 from app.modules.planning.models_month_plan import (
@@ -68,7 +68,7 @@ class ExecutionRepo:
           без дополнительных lazy-запросов
         """
         stmt = (
-            select(TaskExecutionData)
+            select(TaskExecutionData).options(raiseload("*"))
             .where(TaskExecutionData.month_item_id == month_item_id)
             .options(
                 selectinload(TaskExecutionData.selected_reports).selectinload(
@@ -87,7 +87,7 @@ class ExecutionRepo:
             user_id: int,
     ) -> SchoolMonthPlanItem | None:
         stmt = (
-            select(SchoolMonthPlanItem)
+            select(SchoolMonthPlanItem).options(raiseload("*"))
             .where(SchoolMonthPlanItem.id == month_item_id)
             .where(
                 SchoolMonthPlanItem.status.in_(
@@ -95,7 +95,8 @@ class ExecutionRepo:
                 )
             )
             .options(
-                selectinload(SchoolMonthPlanItem.assignees),
+                selectinload(SchoolMonthPlanItem.review_places),
+                selectinload(SchoolMonthPlanItem.source_row11),
             )
         )
 
@@ -166,12 +167,12 @@ class ExecutionRepo:
             revision = int(stored_parameters.get('revision') or 0)
             if expected_revision != revision:
                 raise ValueError('Алгоритм изменён в другом окне. Обновите страницу. / Алгоритм басқа терезеде өзгертілген. Бетті жаңартыңыз.')
-            from app.modules.reports.rules.control_flow import area_scope
+            from app.modules.reports.rules.control_flow import area_scope, is_scope_extension
             if stored_parameters.get('report_areas_mode') and 'report_areas_mode' not in algorithm_parameters:
                 raise ValueError('Обновите форму алгоритма: в ней отсутствуют сохранённые области. / Алгоритм нысанын жаңартыңыз: сақталған ауқымдар жоқ.')
             dimension_keys = ('scope', 'year_start', 'subject_ids', 'class_ids', 'subject_class_pairs')
             dimensions_changed = any(stored_parameters.get(key) != algorithm_parameters.get(key) for key in dimension_keys) or area_scope(stored_parameters) != area_scope(algorithm_parameters)
-            if dimensions_changed:
+            if dimensions_changed and not is_scope_extension(stored_parameters, algorithm_parameters):
                 protected_scope = (await db.execute(select(S.c.id).where(S.c.execution_data_id == execution_data_id, or_(
                     exists(select(D.c.id).where(D.c.selected_report_id == S.c.id)),
                     exists(select(C.c.id).where(C.c.selected_report_id == S.c.id)),
@@ -233,7 +234,7 @@ class ExecutionRepo:
         - не тянем ненужные связи required_document дальше
         """
         stmt = (
-            select(SchoolMonthPlanItem)
+            select(SchoolMonthPlanItem).options(raiseload("*"))
             .where(SchoolMonthPlanItem.id == month_item_id)
             .options(
                 selectinload(SchoolMonthPlanItem.source_row11).selectinload(
@@ -252,10 +253,18 @@ class ExecutionRepo:
 
     @staticmethod
     def _apply_executor_user_filter(stmt, *, user_id: int):
+        school_id = select(User.school_id).where(User.id == user_id, User.is_active.is_(True)).scalar_subquery()
         return stmt.where(
+            SchoolMonthPlanItem.is_included.is_(True),
+            SchoolMonthPlanItem.month_plan.has(
+                SchoolMonthPlan.school_plan.has(SchoolPlan.school_id == school_id)
+            ),
             SchoolMonthPlanItem.assignees.any(
                 SchoolMonthPlanItemAssignee.staff_role.has(
+                    (SchoolStaffRole.is_active.is_(True)) &
                     SchoolStaffRole.staff_member.has(
+                        SchoolStaffMember.is_active.is_(True) &
+                        (SchoolStaffMember.school_id == school_id) &
                         SchoolStaffMember.user_account.has(User.id == user_id)
                     )
                 )
@@ -504,7 +513,7 @@ class ExecutionRepo:
           по version desc, id desc
         """
         stmt = (
-            select(TaskExecutionDocument)
+            select(TaskExecutionDocument).options(raiseload("*"))
             .where(
                 TaskExecutionDocument.month_item_id == month_item_id,
                 TaskExecutionDocument.is_current.is_(True),
@@ -513,7 +522,7 @@ class ExecutionRepo:
             .order_by(
                 TaskExecutionDocument.version.desc(),
                 TaskExecutionDocument.id.desc(),
-            )
+            ).limit(1)
         )
 
         result = await db.execute(stmt)

@@ -642,7 +642,7 @@
 
                 <div class="meta-hint">
                   {{ _('Үлгі:') }}
-                  <span class="badge badge--muted">{{ r.deadlines or '-' }}</span>
+                  <span class="badge badge--muted">{{ template_samples.get(r.id, {}).get('deadlines') or '-' }}</span>
                 </div>
 
 
@@ -656,7 +656,7 @@
     <div class="js-role-view roles-pills" id="roleView_{{ r.id }}" data-row-id="{{ r.id }}">
       {% if r.role_assignments and r.role_assignments|length %}
         {% for ra in r.role_assignments %}
-          <span class="badge">{{ _(ra.role.label_kz) }}</span>
+          <span class="badge" title="{{ ra.role.full_kz if kk else ra.role.full_ru }}">{{ ra.role.label_kz if kk else ra.role.short_ru }}</span>
         {% endfor %}
       {% else %}
         <span class="badge direction-empty">{{ 'Көрсетілмеген' if kk else 'Не указан' }}</span>
@@ -665,7 +665,7 @@
 
     <div class="meta-hint">
       {{ _('Үлгі:') }}
-      <span class="badge badge--muted">{{ r.responsibles or '-' }}</span>
+      <span class="badge badge--muted">{{ template_samples.get(r.id, {}).get('responsibles') or '-' }}</span>
     </div>
 
   </div>
@@ -688,7 +688,7 @@
 
     <div class="meta-hint">
       {{ _('Үлгі:') }}
-      <span class="badge badge--muted">{{ r.review_place or '-' }}</span>
+      <span class="badge badge--muted">{{ template_samples.get(r.id, {}).get('review_place') or '-' }}</span>
     </div>
 
 
@@ -748,7 +748,7 @@
 
     <div class="meta-hint">
       {{ _('Үлгі:') }}
-      <span class="badge badge--muted">{{ r.management_decision or '-' }}</span>
+      <span class="badge badge--muted">{{ template_samples.get(r.id, {}).get('management_decision') or '-' }}</span>
     </div>
 
 

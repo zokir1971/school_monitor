@@ -348,3 +348,8 @@ async def super_rows11_delete(
 # Learning objective PDF importer.
 from app.routers.web.assessment.learning_objective_import_web import router as learning_objective_import_router
 router.include_router(learning_objective_import_router)
+
+
+# Scoped row editing in the superuser template builder.
+from app.routers.web.planning.template_row_edit_web import router as template_row_edit_router
+router.include_router(template_row_edit_router)

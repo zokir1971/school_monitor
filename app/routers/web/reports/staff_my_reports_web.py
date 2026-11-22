@@ -74,6 +74,8 @@ async def staff_my_reports_page(
             le=12,
         ),
 
+        page: int = Query(default=1, ge=1, le=100000),
+
         task_id: int | None = Query(
             default=None,
             gt=0,
@@ -127,6 +129,7 @@ async def staff_my_reports_page(
                 db,
                 user=user,
                 month=target_month,
+                page=page,
             )
 
             return render(
@@ -171,6 +174,7 @@ async def staff_my_reports_page(
             db,
             user=user,
             month=target_month,
+            page=page,
         )
 
     except ValueError as exc:

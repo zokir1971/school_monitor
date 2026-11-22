@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+from starlette.concurrency import run_in_threadpool
+
 from app.core.i18n import normalize_language
 
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, update, case, or_
 
 from app.core.security import (
     hash_password,
@@ -50,10 +53,14 @@ class AdminRegistrationService:
             if not rc:
                 raise ValueError("Неверный код")
 
+            now = utcnow()
             # 2) Проверки валидности кода (уже внутри транзакции)
             if not rc.is_active or rc.revoked_at is not None:
                 raise ValueError("Код не активен или отозван")
-            if rc.expires_at is not None and rc.expires_at <= now:
+            expires_at = rc.expires_at
+            if expires_at is not None and expires_at.tzinfo is None:
+                expires_at = expires_at.replace(tzinfo=now.tzinfo)
+            if expires_at is not None and expires_at <= now:
                 raise ValueError("Срок действия кода истёк")
             if rc.quota_left <= 0:
                 raise ValueError("Квота по коду исчерпана")
@@ -71,7 +78,7 @@ class AdminRegistrationService:
                 if rc.region_id is not None and selected_region_id != rc.region_id:
                     raise ValueError("Выбранная область не соответствует коду")
 
-                region = await db.get(Region, selected_region_id)
+                region = (await db.execute(select(Region.id).where(Region.id == selected_region_id))).first()
                 if not region:
                     raise ValueError("Область не найдена")
 
@@ -82,7 +89,7 @@ class AdminRegistrationService:
                 if rc.district_id is None:
                     raise ValueError("Код повреждён: нет district_id")
 
-                d = await db.get(District, rc.district_id)
+                d = (await db.execute(select(District.id).where(District.id == rc.district_id))).first()
 
                 if not d:
                     raise ValueError("Район по коду не найден")
@@ -100,7 +107,7 @@ class AdminRegistrationService:
                 if rc.school_id is None:
                     raise ValueError("Код повреждён: нет school_id")
 
-                s = await db.get(School, rc.school_id)
+                s = (await db.execute(select(School.id).where(School.id == rc.school_id))).first()
 
                 if not s:
                     raise ValueError("Школа по коду не найдена")
@@ -139,7 +146,7 @@ class AdminRegistrationService:
                 username=username_norm,
                 full_name=full_name.strip() if full_name else None,
                 iin=iin.strip() if iin else None,
-                password_hash=hash_password(password),
+                password_hash=await run_in_threadpool(hash_password, password),
                 role=target_role,
                 email=email.strip().lower() if email else None,
                 phone=phone.strip() if phone else None,
@@ -152,9 +159,15 @@ class AdminRegistrationService:
             user = await UserRepo.add(db, user)
 
             # 7) Списываем квоту и пишем аудит
-            rc.quota_left -= 1
-            if rc.quota_left <= 0:
-                rc.is_active = False  # удобно, чтобы сразу “не работал”
+            C = type(rc).__table__
+            remaining = (await db.execute(update(C).where(
+                C.c.id == rc.id, C.c.is_active.is_(True), C.c.revoked_at.is_(None),
+                C.c.quota_left > 0, or_(C.c.expires_at.is_(None), C.c.expires_at > now),
+            ).values(quota_left=C.c.quota_left - 1,
+                     is_active=case((C.c.quota_left > 1, True), else_=False))
+            .returning(C.c.quota_left))).scalar_one_or_none()
+            if remaining is None:
+                raise ValueError("Код уже использован, отозван или истёк")
 
             use = RegistrationCodeUse(
                 code_id=rc.id,

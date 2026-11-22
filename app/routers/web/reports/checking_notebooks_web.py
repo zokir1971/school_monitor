@@ -7,10 +7,12 @@ from fastapi import APIRouter, Request, Depends, HTTPException, Query
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.report_pdf_renderer import schedule_report_pdf_warmup
 from app.core.storage.factory import get_storage
 from app.db.session import get_db
 from app.modules.reports.repositories.checking_notebooks_repo import CheckingNotebooksRepo
 from app.modules.reports.services.checking_notebooks_service import CheckingNotebooksService
+from app.modules.reports.rules.notebook_classes import NotebookDraftConflict, CONFLICT_MESSAGE
 from app.modules.reports.services.execution_document_service import ExecutionDocumentService
 from app.modules.reports.utils.report_signature import ReportSignatureService
 from app.modules.users.deps import require_roles
@@ -32,6 +34,7 @@ async def checking_notebooks_fill_page(
         month_item_id: int,
         selected_report_id: int,
         template_id: int | None = Query(default=None),
+        multiclass: bool = Query(default=False),
         db: AsyncSession = Depends(get_db),
         user: User = Depends(
             require_roles(
@@ -66,6 +69,7 @@ async def checking_notebooks_fill_page(
                 selected_report_id=selected_report_id,
                 template_id=template_id,
                 user=user,
+                multiclass_requested=multiclass,
             )
         )
 
@@ -75,7 +79,7 @@ async def checking_notebooks_fill_page(
             detail=str(exc),
         ) from exc
 
-    return render(
+    response = render(
         templates,
         request,
         "staff/reports/user_templates/checking_notebooks_fill.html",
@@ -99,6 +103,12 @@ async def checking_notebooks_fill_page(
             "saved_info": page_data.saved_info,
 
             "rows": page_data.rows,
+            "multiclass": page_data.multiclass,
+            "can_multiclass": page_data.can_multiclass,
+            "class_options": page_data.class_options,
+            "class_checks": page_data.class_checks,
+            "class_totals": page_data.class_totals,
+            "notebook_revision": page_data.notebook_revision,
             "total_score": page_data.total_score,
             "max_score": page_data.max_score,
             "percent": page_data.percent,
@@ -117,6 +127,13 @@ async def checking_notebooks_fill_page(
             "success": request.query_params.get("success"),
         },
     )
+
+    if not page_data.report or page_data.report.submitted_at is None:
+        schedule_report_pdf_warmup()
+
+    response.headers['Cache-Control'] = 'private, no-store'
+    response.headers['Vary'] = 'Cookie'
+    return response
 
 
 @router.post(
@@ -155,6 +172,22 @@ async def staff_user_checking_notebooks_fill_submit(
             user=user,
             templates=templates,
             template_id=template_id,
+        )
+
+    except NotebookDraftConflict:
+        # Do not retry a stale write or replace the fresh server revision with old values.
+        query = {'error': CONFLICT_MESSAGE, 'reset_form': '1'}
+        if form.get('notebook_classes_version') == '1':
+            query['multiclass'] = 'true'
+        if template_id is not None:
+            query['template_id'] = str(template_id)
+        if request.query_params.get('month'):
+            query['month'] = request.query_params['month']
+        return RedirectResponse(
+            url=str(request.url_for('checking_notebooks_fill_page', month_item_id=month_item_id,
+                                    selected_report_id=selected_report_id)) + '?' + urlencode(query),
+            status_code=303,
+            headers={'Cache-Control': 'no-store'},
         )
 
     except ValueError as exc:

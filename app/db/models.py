@@ -32,3 +32,5 @@ from app.modules.assessment.models_diagnostic_attempts import DiagnosticAttempt 
 from app.modules.assessment.models_diagnostic_preparation import DiagnosticPreparation  # noqa: F401
 
 from app.modules.users.models_recovery import AccessRecoveryGrant, AccessRecoveryAudit, AccessRecoveryLimit  # noqa: F401
+
+from app.modules.statistics.activity_tables import activity_days, activity_state  # noqa: F401

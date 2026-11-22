@@ -9,9 +9,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.modules.assessment.repositories.question_bank_expert_repo import (
     QuestionBankExpertRepo,
 )
-from app.modules.assessment.repositories.teacher_question_bank_repo import (
-    TeacherQuestionBankRepo,
-)
 from app.modules.users.enums import (
     UserRole,
     UserWorkspace,
@@ -185,25 +182,19 @@ class UserWorkspaceService:
                         label="Қызметкер",
                     )
 
-                teaching_scope = (
-                    await TeacherQuestionBankRepo
-                    .list_teaching_scope(
+                # A teacher already uses PRIMARY; no extra teacher panel is added.
+                # Other roles need only an existence check, not the full scope list.
+                if user_role != UserRole.TEACHER:
+                    has_teaching_scope = await UserWorkspaceRepo.has_active_teaching_scope(
                         db,
                         staff_member_id=staff_member_id,
                     )
-                )
-
-                # Для TEACHER основной workspace
-                # уже является интерфейсом учителя.
-                if (
-                        teaching_scope
-                        and user_role != UserRole.TEACHER
-                ):
-                    cls._append_if_missing(
-                        items,
-                        code=UserWorkspace.TEACHER,
-                        label="Мұғалім",
-                    )
+                    if has_teaching_scope:
+                        cls._append_if_missing(
+                            items,
+                            code=UserWorkspace.TEACHER,
+                            label="Мұғалім",
+                        )
 
         # -----------------------------------------------------
         # QUESTION BANK EXPERT

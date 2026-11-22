@@ -109,7 +109,7 @@ async def staff_task_execute_save(
     if month:
         query_parts.append(f"month={month}")
 
-    location = f"{redirect_url}?{'&'.join(query_parts)}"
+    location = f"{redirect_url}?{'&'.join(query_parts)}#task-execution-actions"
 
     return RedirectResponse(
         url=location,
@@ -191,11 +191,7 @@ async def staff_report_execute_page(
 
             "required_documents": page_data["required_documents"],
             "final_documents": page_data["final_documents"],
-            "current_final_document": (
-                page_data["final_documents"][0]
-                if page_data["final_documents"]
-                else None
-            ),
+            "current_final_document": page_data["current_final_document"],
 
             "completion_ready": page_data["completion_ready"],
 
@@ -322,6 +318,7 @@ async def staff_report_execute_submit(
         raise
 
     except (ValueError, TypeError) as e:
+        await db.rollback()
         return RedirectResponse(
             url=f"{base_url}?error={str(e)}",
             status_code=303,

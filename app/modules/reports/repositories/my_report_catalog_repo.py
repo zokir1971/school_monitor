@@ -11,7 +11,7 @@ I,M,P,R,A,H,F,T,E,Y,D,X=[c.__table__ for c in (
  SchoolStaffRole,SchoolStaffMember,TaskExecutionSelectedReport,TaskExecutionData,ReportTypeModel,TaskExecutionDocument,TaskSelectedReportAssignment)]
 
 
-def query(*,school_id,staff_member_id,month=None,month_item_id=None):
+def query(*,school_id,staff_member_id,month=None,month_item_id=None,mine_only=False):
     primary=exists(select(A.c.id).join(H,H.c.id==A.c.staff_role_id).where(A.c.month_item_id==I.c.id,
         A.c.assignment_kind=='primary',H.c.staff_member_id==staff_member_id,H.c.school_id==school_id,H.c.is_active.is_(True)))
     latest=(select(D.c.id).where(D.c.selected_report_id==T.c.id,D.c.is_final.is_(False),D.c.is_current.is_(True))
@@ -26,6 +26,7 @@ def query(*,school_id,staff_member_id,month=None,month_item_id=None):
             .outerjoin(R,R.c.id==I.c.source_row11_id).outerjoin(X,X.c.selected_report_id==T.c.id)
             .outerjoin(F,and_(F.c.id==X.c.staff_member_id,F.c.school_id==school_id)).outerjoin(D,D.c.id==latest))
         .where(P.c.school_id==school_id,I.c.is_included.is_(True),or_(primary,X.c.staff_member_id==staff_member_id)))
+    if mine_only:stmt=stmt.where(X.c.staff_member_id==staff_member_id)
     if month is not None:stmt=stmt.where(M.c.month==month)
     if month_item_id is not None:stmt=stmt.where(I.c.id==month_item_id)
     return stmt.order_by(I.c.planned_start.asc().nulls_last(),I.c.id,Y.c.sort_order,Y.c.id,T.c.id)
@@ -33,8 +34,8 @@ def query(*,school_id,staff_member_id,month=None,month_item_id=None):
 
 class MyReportCatalogRepo:
     @staticmethod
-    async def list_reports(db,*,school_id,staff_member_id,month):
-        return list((await db.execute(query(school_id=school_id,staff_member_id=staff_member_id,month=month))).mappings())
+    async def list_reports(db,*,school_id,staff_member_id,month,page=1,page_size=20):
+        return list((await db.execute(query(school_id=school_id,staff_member_id=staff_member_id,month=month,mine_only=True).offset((page-1)*page_size).limit(page_size+1))).mappings())
 
     @staticmethod
     async def has_task_access(db,*,school_id,staff_member_id,month_item_id):

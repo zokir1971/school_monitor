@@ -1,6 +1,8 @@
 # app/routers/web/statistics/school_statistics.py
 from fastapi import APIRouter, Depends, Request, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
+from app.modules.staff.models_staff_school import SchoolStaffMember
 from starlette.responses import HTMLResponse
 
 from app.core.i18n import resolve_language, translate
@@ -193,7 +195,13 @@ async def staff_statistics_page(
         )
     )
 
-    staff_member = user.staff_member
+    # Only the two displayed fields are needed; do not load the staff graph.
+    staff_member = None
+    if user.staff_member_id is not None:
+        staff_member = (await db.execute(
+            select(SchoolStaffMember.full_name, SchoolStaffMember.position_text)
+            .where(SchoolStaffMember.id == user.staff_member_id)
+        )).first()
 
     # Передаем данные в шаблон.
 

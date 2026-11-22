@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, Request, HTTPException, Query
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.report_pdf_renderer import schedule_report_pdf_warmup
 from app.core.storage.factory import get_storage
 from app.db.session import get_db
 from app.modules.reports.repositories.lesson_observation_repo import LessonObservationRepo
@@ -87,6 +88,9 @@ async def staff_user_lesson_observation_fill_page(
             error=str(exc),
             status_code=404,
         )
+
+    if not page_data.report or page_data.report.submitted_at is None:
+        schedule_report_pdf_warmup()
 
     return render(
         templates,

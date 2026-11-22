@@ -1,3 +1,5 @@
+from app.modules.education.repositories.teacher_choices_repo import TeacherChoicesRepo
+from app.modules.education.helpers.teacher_subject_choices import build_teacher_choices
 from sqlalchemy import select
 from datetime import date, datetime, timezone
 from app.modules.education.helpers.curriculum_policy import (
@@ -372,7 +374,7 @@ class ClassCurriculumService:
         rules = {r.id: r for r in await Repo.rules(db)}
         profiles = {p.id: p for p in await Repo.profiles(db)}
         offers, groups, members, roster, assignments = await Repo.school_state(db, school_id, year)
-        teachers = list(await SchoolStaffRepo.list_members(db, school_id=school_id, include_inactive=False))
+        teachers = list(await TeacherChoicesRepo.list_active(db, school_id=school_id))
         class_map = {c.id: c for c in classes}
         roster_by = {c.id: [] for c in classes}
         for cid, s in roster:
@@ -423,7 +425,7 @@ class ClassCurriculumService:
         return dict(school_name=name, year=year, classes=classes, rows=rows,
                     class_blocks=class_blocks, teachers=teachers, languages=LANGUAGES,
                     teachers_by_id={t.id:t for t in teachers},
-                    teacher_choices=[dict(id=t.id,name=t.full_name) for t in teachers])
+                    teacher_choices=build_teacher_choices(teachers, subjects.values(), assignments))
 
     @staticmethod
     async def assign(db, school_id, offer_id, subgroup_id, staff_id):
@@ -434,13 +436,13 @@ class ClassCurriculumService:
         c = await SchoolClassRepo.get_by_id_for_school(db, class_id=offer.school_class_id, school_id=school_id)
         if c is None or not c.is_active:
             raise ValueError('Класс неактивен.')
-        _, groups, _, _, assignments = await Repo.school_state(db, school_id, c.academic_year_start)
+        groups, assignments = await Repo.assignment_state(db, school_id, offer)
         if offer.split_enabled:
             if not any(g.id == subgroup_id and g.class_subject_id == offer.id and g.is_active for g in groups):
                 raise ValueError('Выберите подгруппу этого предмета.')
         elif subgroup_id is not None:
             raise ValueError('Предмет ведётся всем классом.')
-        teacher = await SchoolStaffRepo.get_member(db, school_id=school_id, member_id=staff_id, include_inactive=False)
+        teacher = await TeacherChoicesRepo.get_active(db, school_id=school_id, staff_member_id=staff_id)
         if teacher is None:
             raise ValueError('Активный сотрудник вашей школы не найден.')
         current = [a for a in assignments if

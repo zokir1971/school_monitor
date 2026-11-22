@@ -1,20 +1,30 @@
 import re
 from functools import lru_cache
 from jinja2 import pass_context
+from jinja2.filters import do_tojson
+from jinja2.utils import htmlsafe_json_dumps
+from app.core.render_locale import _active_locale
 from app.core.i18n import SUPPORTED_LANGUAGES, catalog, resolve_language, normalize_language
 
 
 def install_i18n(environment):
     @pass_context
     def ui_language(context):
+        snapshot = _active_locale.get()
+        if snapshot is not None and snapshot.matches(context):
+            return snapshot.language
         language = resolve_language(context["request"], context.get("user"))
         context["request"].state.ui_language = language
         return language
 
     @pass_context
     def gettext(context, message, **values):
-        language = ui_language(context)
-        text = catalog(language).gettext(message)
+        snapshot = _active_locale.get()
+        if snapshot is not None and snapshot.matches(context):
+            text = snapshot.gettext(message)
+        else:
+            language = ui_language(context)
+            text = catalog(language).gettext(message)
         return text % values if values else text
 
     @pass_context
@@ -69,6 +79,34 @@ def install_i18n(environment):
         # Static UI strings only. A fresh dictionary prevents mutation from
         # leaking to another request; user-entered text is never cached here.
         return _ui_messages_for_language(ui_language(context)).copy()
+
+    @lru_cache(maxsize=2)
+    def _ui_payload_json_for_language(language):
+        # Immutable application UI strings only: never request or school data.
+        # Same serializer and script escaping as the default Jinja tojson filter.
+        return htmlsafe_json_dumps(
+            {"language": language, "messages": _ui_messages_for_language(language)},
+            sort_keys=True,
+        )
+
+    @pass_context
+    def ui_i18n_json(context):
+        environment = context.environment
+        # Respect custom globals, JSON policies and replacement tojson filters.
+        # Those paths retain per-render construction and serialization.
+        if (context.resolve("ui_language") is ui_language
+                and context.resolve("ui_messages") is ui_messages
+                and environment.filters.get("tojson") is do_tojson
+                and environment.policies["json.dumps_function"] is None
+                and environment.policies["json.dumps_kwargs"] == {"sort_keys": True}):
+            return _ui_payload_json_for_language(ui_language(context))
+        payload = {
+            "language": context.call(context.resolve("ui_language")),
+            "messages": context.call(context.resolve("ui_messages")),
+        }
+        return environment.call_filter("tojson", payload, context=context)
+
+    environment.globals["ui_i18n_json"] = ui_i18n_json
 
     @lru_cache(maxsize=2)
     def _month_labels_for_language(language):
@@ -132,12 +170,31 @@ def install_i18n(environment):
 
     @pass_context
     def staff_role_label(context, role):
+        if getattr(role, "full_ru", None) and ui_language(context) == "ru":
+            return role.full_ru
         label = getattr(role, "label_kz", None)
         return gettext(context, label) if label else str(getattr(role, "value", role))
 
     @pass_context
     def staff_role_options(context, options):
-        return [dict(option, label_kz=gettext(context, option["label_kz"])) for option in options]
+        from app.modules.planning.enums import ResponsibleRole
+        language = ui_language(context)
+        result = []
+        for option in options:
+            try:
+                label = ResponsibleRole(option["value"]).option_label(language)
+            except ValueError:
+                label = gettext(context, option["label_kz"])
+            result.append(dict(option, label_kz=label))
+        return result
+
+    @pass_context
+    def responsible_role_option_label(context, value):
+        from app.modules.planning.enums import ResponsibleRole
+        try:
+            return ResponsibleRole(value).option_label(ui_language(context))
+        except ValueError:
+            return str(value)
 
     @pass_context
     def staff_flash(context, kind, value=None):
@@ -348,7 +405,8 @@ def install_i18n(environment):
     environment.globals.update(monthly_message=monthly_message, monthly_assignment_label=monthly_assignment_label)
     environment.globals.update(planning_status_label=planning_status_label, planning_error=planning_error)
     environment.globals.update(staff_position_label=staff_position_label,
-        staff_role_label=staff_role_label, staff_role_options=staff_role_options, staff_flash=staff_flash)
+        staff_role_label=staff_role_label, staff_role_options=staff_role_options,
+        responsible_role_option_label=responsible_role_option_label, staff_flash=staff_flash)
     environment.globals.update(expert_specialty_name=expert_specialty_name,
         expert_policy_name=expert_policy_name, expert_standard_label=expert_standard_label,
         education_labels=education_labels)

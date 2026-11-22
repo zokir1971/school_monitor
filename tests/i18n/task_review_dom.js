@@ -1,0 +1,38 @@
+// Minimal event/DOM model: executes the real rendered review script, no network.
+const vm=require('vm'),fs=require('fs');const args=JSON.parse(fs.readFileSync(0,'utf8'));
+const assert=(v,m)=>{if(!v)throw Error(m)};
+const el=(extra={})=>Object.assign({value:'',checked:false,disabled:false,required:false,hidden:false,files:[],textContent:'',events:{},addEventListener(e,f){this.events[e]=f},focus(){this.focused=true}},extra);
+const row=()=>({classList:{toggle(){}}});
+const tasks=[el(),el()],overdue=[el(),el()];
+const batch=el(),overdueForm=el(),ids={};
+for(const id of ['review-place-filter','method-association-filter-group','method-association-filter','select-all-overdue','mark-overdue-button','select-all-tasks','selected-review-count','protocol-selected-task-count','selected-task-count','submit-review-button','clear-selection-button','protocol-number','protocol-date','protocol-file'])ids[id]=el();
+ids['batch-review-form']=batch;ids['review-place-filter'].value=args.place;ids['method-association-filter'].value='5';ids['protocol-file'].type='file';
+let methodId=args.place==='method_assoc'?'5':'';
+batch.querySelector=q=>({value:q.includes('method_association_id')?methodId:args.place});
+overdueForm.querySelectorAll=()=>overdue;
+for(const c of tasks)c.closest=()=>row();for(const c of overdue)c.closest=q=>q==='form'?overdueForm:row();
+let alerts=[],confirms=[],confirmValue=true;
+const document={addEventListener(e,f){f()},getElementById(id){return ids[id]||null},querySelector(q){return q==='.overdue-task-checkbox'?overdue[0]:null},querySelectorAll(){return [...tasks,tasks[0]]}};
+vm.runInNewContext(args.script,{document,alert:s=>alerts.push(s),window:{confirm:s=>{confirms.push(s);return confirmValue}}});
+assert(ids['method-association-filter'].required===(args.place==='method_assoc'),'association required');
+assert(ids['method-association-filter'].disabled===(args.place!=='method_assoc'),'association disabled');
+assert(ids['submit-review-button'].disabled,'empty submit');assert(ids['mark-overdue-button'].disabled,'empty overdue');
+const fire=(target,event)=>{let blocked=false;target.events[event]({preventDefault(){blocked=true}});return blocked};
+assert(fire(overdueForm,'submit'),'overdue none blocked');
+ids['select-all-overdue'].checked=true;fire(ids['select-all-overdue'],'change');assert(overdue.every(c=>c.checked)&&!ids['mark-overdue-button'].disabled,'overdue selected');
+confirmValue=false;assert(fire(overdueForm,'submit'),'overdue cancel');confirmValue=true;assert(!fire(overdueForm,'submit'),'overdue confirm');
+assert(fire(batch,'submit'),'batch no task');tasks[0].checked=true;fire(tasks[0],'change');
+assert(ids['selected-task-count'].textContent==='1'&&ids['protocol-selected-task-count'].textContent==='1'&&ids['selected-review-count'].textContent==='1','count');assert(ids['select-all-tasks'].indeterminate,'partial selection');
+assert(fire(batch,'submit'),'number missing');ids['protocol-number'].value='DATA №1';fire(ids['protocol-number'],'input');
+assert(fire(batch,'submit'),'date missing');ids['protocol-date'].value='2026-10-24';fire(ids['protocol-date'],'input');
+assert(fire(batch,'submit'),'file missing');
+ids['protocol-file'].files=[{name:'DATA.pdf',size:20*1024*1024+1}];assert(fire(batch,'submit'),'size limit');
+ids['protocol-file'].files=[{name:'DATA.exe',size:2}];assert(fire(batch,'submit'),'extension');
+ids['protocol-file'].files=[{name:'DATA <FILE> {p0}.PDF',size:20*1024*1024}];fire(ids['protocol-file'],'change');assert(!ids['submit-review-button'].disabled,'complete ready');
+if(args.place==='method_assoc'){methodId='';fire(tasks[0],'change');assert(ids['submit-review-button'].disabled,'association missing');methodId='5';fire(tasks[0],'change');assert(!ids['submit-review-button'].disabled,'association restored')}
+confirmValue=false;assert(fire(batch,'submit'),'batch cancel');confirmValue=true;assert(!fire(batch,'submit'),'batch confirm');
+assert(confirms.at(-1).includes('DATA <FILE> {p0}.PDF'),'file name preserved');
+fire(ids['clear-selection-button'],'click');assert(tasks.every(c=>!c.checked)&&ids['submit-review-button'].disabled&&ids['selected-task-count'].textContent==='0','clear');
+ids['select-all-tasks'].checked=true;fire(ids['select-all-tasks'],'change');assert(tasks.every(c=>c.checked)&&ids['selected-task-count'].textContent==='2','all unique tasks');
+ids['review-place-filter'].value='ped_council';fire(ids['review-place-filter'],'change');assert(ids['method-association-filter'].value===''&&!ids['method-association-filter'].required&&ids['method-association-filter'].disabled,'association cleared');
+process.stdout.write(JSON.stringify({alerts,confirms,count:ids['selected-task-count'].textContent}));

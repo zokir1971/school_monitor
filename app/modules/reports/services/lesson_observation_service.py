@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from app.modules.reports.services.report_write_transaction import (lock_report_task, report_write_transaction, delete_unreferenced_report_file)
+
 from app.core.i18n import resolve_language
 from app.core.report_pdf_i18n import select_document_language, saved_report_language, report_pdf_context
 
@@ -11,7 +13,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from fastapi import Request
-from playwright.async_api import async_playwright
+from app.core.report_pdf_renderer import render_report_pdf
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -481,292 +483,297 @@ class LessonObservationService(BaseReportService):
             cls.require_user_context(user)
         )
 
-        context = await LessonObservationRepo.get_fill_context(
-            db,
-            month_item_id=month_item_id,
-            selected_report_id=selected_report_id,
-            school_id=school_id,
-            staff_member_id=staff_member_id,
-        )
-
-        if context is None:
-            raise ValueError(
-                "Отчет не найден, не относится к выбранной задаче "
-                "или не назначен текущему сотруднику."
+        async with report_write_transaction(db) as created_files:
+            await lock_report_task(db, month_item_id=month_item_id, selected_report_id=selected_report_id, user=user)
+            context = await LessonObservationRepo.get_fill_context(
+                db,
+                month_item_id=month_item_id,
+                selected_report_id=selected_report_id,
+                school_id=school_id,
+                staff_member_id=staff_member_id,
             )
 
-        if (
-                context.report_code
-                != ReportType.LESSON_OBSERVATION.value
-        ):
-            raise ValueError(
-                "Выбранный отчет не является листом наблюдения."
+            if context is None:
+                raise ValueError(
+                    "Отчет не найден, не относится к выбранной задаче "
+                    "или не назначен текущему сотруднику."
+                )
+
+            if (
+                    context.report_code
+                    != ReportType.LESSON_OBSERVATION.value
+            ):
+                raise ValueError(
+                    "Выбранный отчет не является листом наблюдения."
+                )
+
+            selected_report = context.selected_report
+
+            if selected_report.target_kind != "teacher":
+                raise ValueError(
+                    "Для листа наблюдения должен быть выбран учитель."
+                )
+
+            document = context.document
+            report = context.report
+
+            if document is not None and str(getattr(document.status, 'value', document.status)) not in ('draft', 'rejected'):
+                raise ValueError("Завершённый отчёт доступен только для просмотра.")
+
+            if (
+                    report is not None
+                    and report.submitted_at is not None
+            ):
+                raise ValueError(
+                    "Отчет уже подписан. Редактирование запрещено."
+                )
+
+            document_language = select_document_language(
+                form.get("document_language"), saved_report_language(report), resolve_language(request, user)
             )
 
-        selected_report = context.selected_report
+            # =========================================================
+            # TEMPLATE / DOCUMENT SNAPSHOT
+            # =========================================================
 
-        if selected_report.target_kind != "teacher":
-            raise ValueError(
-                "Для листа наблюдения должен быть выбран учитель."
-            )
+            if document is not None and document.schema_json:
+                schema = document.schema_json or {}
 
-        document = context.document
-        report = context.report
+            else:
+                if document is not None:
+                    raw_mode = (
+                        document.template_mode
+                        or (
+                            ReportTemplateMode.CUSTOM.value
+                            if document.custom_template_id is not None
+                            else ReportTemplateMode.STANDARD.value
+                        )
+                    )
 
-        if (
-                report is not None
-                and report.submitted_at is not None
-        ):
-            raise ValueError(
-                "Отчет уже подписан. Редактирование запрещено."
-            )
-
-        document_language = select_document_language(
-            form.get("document_language"), saved_report_language(report), resolve_language(request, user)
-        )
-
-        # =========================================================
-        # TEMPLATE / DOCUMENT SNAPSHOT
-        # =========================================================
-
-        if document is not None and document.schema_json:
-            schema = document.schema_json or {}
-
-        else:
-            if document is not None:
-                raw_mode = (
-                    document.template_mode
-                    or (
-                        ReportTemplateMode.CUSTOM.value
+                    resolved_template_id = (
+                        document.custom_template_id
                         if document.custom_template_id is not None
-                        else ReportTemplateMode.STANDARD.value
+                        else template_id
+                    )
+
+                elif template_id is not None:
+                    raw_mode = ReportTemplateMode.CUSTOM
+                    resolved_template_id = template_id
+
+                else:
+                    raw_mode = ReportTemplateMode.STANDARD
+                    resolved_template_id = None
+
+                resolved = await ReportTemplateResolver.resolve(
+                    db,
+                    report_code=context.report_code,
+                    template_mode=raw_mode,
+                    owner_user_id=user.id,
+                    template_id=resolved_template_id,
+                )
+
+                schema = resolved.schema
+
+                if document is None:
+                    document = TaskExecutionDocument(
+                        month_item_id=month_item_id,
+                        report_type_id=selected_report.report_type_id,
+                        selected_report_id=selected_report_id,
+
+                        report_code=context.report_code,
+                        report_label=(
+                            resolved.report_label
+                            or context.report_label
+                        ),
+
+                        document_type=DocumentType.REPORT,
+                        status=TaskDocumentStatus.DRAFT,
+                        source=TaskDocumentSource.GENERATED,
+
+                        version=1,
+                        is_current=True,
+                        is_final=False,
+
+                        title=(
+                            resolved.template_title
+                            or resolved.report_label
+                            or context.report_label
+                        ),
+
+                        uploaded_by_user_id=user.id,
+
+                        custom_template_id=resolved.user_template_id,
+                        template_mode=resolved.template_mode.value,
+                        schema_json=resolved.schema,
+                    )
+
+                    db.add(document)
+                    await db.flush()
+
+                else:
+                    # Legacy document без snapshot нормализуем только
+                    # при явном Save/Complete.
+                    document.schema_json = resolved.schema
+                    document.template_mode = (
+                        resolved.template_mode.value
+                    )
+                    document.custom_template_id = (
+                        resolved.user_template_id
+                    )
+
+            if not schema:
+                raise ValueError(
+                    "Для листа наблюдения не найдена структура шаблона."
+                )
+
+            # =========================================================
+            # DTO
+            # =========================================================
+
+            dto = cls._build_dto_from_form(
+                form=form,
+                month_item_id=month_item_id,
+                selected_report_id=selected_report_id,
+                task_execution_document_id=document.id,
+                user=user,
+            )
+
+            # Шапочные данные не доверяем форме:
+            # они всегда берутся из серверного контекста.
+            dto.staff_member_id = context.teacher_staff_id
+            dto.observer_user_id = user.id
+
+            dto.teacher_full_name = context.teacher_full_name
+            dto.teacher_position = context.teacher_position
+            dto.teacher_category = context.teacher_category
+            dto.teacher_subject = context.teacher_subject
+
+            dto.observer_full_name = user.full_name or ""
+            dto.observer_position = context.observer_position
+            dto.school_name = context.school_name
+
+            report = await LessonObservationRepo.save_from_dto(
+                db,
+                dto=dto,
+            )
+            report.criteria_scores = {**(report.criteria_scores or {}), "document_language": document_language}
+
+
+            await db.flush()
+            await db.refresh(report, attribute_names=list(type(report).__mapper__.column_attrs.keys()))
+
+            # =========================================================
+            # STORAGE / SIGN
+            # =========================================================
+
+            storage_service = SchoolStorageService(
+                storage=get_storage(),
+            )
+
+            new_object_key: str | None = None
+            old_object_key: str | None = report.pdf_signed_file
+
+            if action == "complete":
+                report.submitted_at = datetime.now(
+                    timezone.utc
+                )
+
+                token = ReportSignatureService.create_token(
+                    report_type="lesson_observation",
+                    report_id=report.id,
+                    document_id=report.task_execution_document_id,
+                    total=report.total,
+                )
+
+                await ReportVerifyRepo.deactivate_old_signatures(
+                    db,
+                    report_type="lesson_observation",
+                    report_id=report.id,
+                    document_id=report.task_execution_document_id,
+                )
+
+                signature = await ReportVerifyRepo.create_signature_token(
+                    db,
+                    token=token,
+                    report_type="lesson_observation",
+                    report_id=report.id,
+                    document_id=report.task_execution_document_id,
+                )
+
+                verify_url = str(
+                    request.url_for(
+                        "report_verify_by_code_page",
+                        code=signature.code,
                     )
                 )
 
-                resolved_template_id = (
-                    document.custom_template_id
-                    if document.custom_template_id is not None
-                    else template_id
+                qr_data_uri = (
+                    ReportSignatureService
+                    .generate_qr_data_uri(
+                        verify_url=verify_url,
+                    )
                 )
 
-            elif template_id is not None:
-                raw_mode = ReportTemplateMode.CUSTOM
-                resolved_template_id = template_id
+                pdf_content = await cls._generate_signed_pdf(
+                    request=request,
+                    templates=templates,
+                    report=report,
+                    schema=schema,
+                    qr_data_uri=qr_data_uri,
+                    document=document,
+                )
+
+                storage_context = (
+                    await ExecutionDocumentRepo
+                    .get_storage_context_for_month_item(
+                        db,
+                        month_item_id=month_item_id,
+                    )
+                )
+
+                original_file_name = (
+                    f"lesson_observation_{report.id}_signed.pdf"
+                )
+
+                stored_file = await storage_service.save_task_report(
+                    context=storage_context,
+                    document_id=document.id,
+                    report_code="lesson_observation",
+                    content=pdf_content,
+                    original_file_name=original_file_name,
+                    content_type="application/pdf",
+                )
+
+                new_object_key = stored_file.object_key
+                created_files.append(new_object_key)
+
+                report.qr_file = None
+                report.pdf_signed_file = stored_file.object_key
+
+                document.title = original_file_name
+                document.original_file_name = (
+                    stored_file.original_file_name
+                )
+                document.stored_file_name = (
+                    stored_file.stored_file_name
+                )
+                document.file_path = stored_file.object_key
+                document.mime_type = stored_file.content_type
+                document.file_size = stored_file.file_size
+
+                document.status = TaskDocumentStatus.SUBMITTED
+                document.submitted_by_user_id = user.id
+                document.submitted_at = datetime.now(
+                    timezone.utc
+                )
 
             else:
-                raw_mode = ReportTemplateMode.STANDARD
-                resolved_template_id = None
+                if document.status != TaskDocumentStatus.SUBMITTED:
+                    document.status = TaskDocumentStatus.DRAFT
 
-            resolved = await ReportTemplateResolver.resolve(
-                db,
-                report_code=context.report_code,
-                template_mode=raw_mode,
-                owner_user_id=user.id,
-                template_id=resolved_template_id,
-            )
+            db.add(report)
+            db.add(document)
 
-            schema = resolved.schema
-
-            if document is None:
-                document = TaskExecutionDocument(
-                    month_item_id=month_item_id,
-                    report_type_id=selected_report.report_type_id,
-                    selected_report_id=selected_report_id,
-
-                    report_code=context.report_code,
-                    report_label=(
-                        resolved.report_label
-                        or context.report_label
-                    ),
-
-                    document_type=DocumentType.REPORT,
-                    status=TaskDocumentStatus.DRAFT,
-                    source=TaskDocumentSource.GENERATED,
-
-                    version=1,
-                    is_current=True,
-                    is_final=False,
-
-                    title=(
-                        resolved.template_title
-                        or resolved.report_label
-                        or context.report_label
-                    ),
-
-                    uploaded_by_user_id=user.id,
-
-                    custom_template_id=resolved.user_template_id,
-                    template_mode=resolved.template_mode.value,
-                    schema_json=resolved.schema,
-                )
-
-                db.add(document)
-                await db.flush()
-
-            else:
-                # Legacy document без snapshot нормализуем только
-                # при явном Save/Complete.
-                document.schema_json = resolved.schema
-                document.template_mode = (
-                    resolved.template_mode.value
-                )
-                document.custom_template_id = (
-                    resolved.user_template_id
-                )
-
-        if not schema:
-            raise ValueError(
-                "Для листа наблюдения не найдена структура шаблона."
-            )
-
-        # =========================================================
-        # DTO
-        # =========================================================
-
-        dto = cls._build_dto_from_form(
-            form=form,
-            month_item_id=month_item_id,
-            selected_report_id=selected_report_id,
-            task_execution_document_id=document.id,
-            user=user,
-        )
-
-        # Шапочные данные не доверяем форме:
-        # они всегда берутся из серверного контекста.
-        dto.staff_member_id = context.teacher_staff_id
-        dto.observer_user_id = user.id
-
-        dto.teacher_full_name = context.teacher_full_name
-        dto.teacher_position = context.teacher_position
-        dto.teacher_category = context.teacher_category
-        dto.teacher_subject = context.teacher_subject
-
-        dto.observer_full_name = user.full_name or ""
-        dto.observer_position = context.observer_position
-        dto.school_name = context.school_name
-
-        report = await LessonObservationRepo.save_from_dto(
-            db,
-            dto=dto,
-        )
-        report.criteria_scores = {**(report.criteria_scores or {}), "document_language": document_language}
-
-
-        await db.flush()
-        await db.refresh(report)
-
-        # =========================================================
-        # STORAGE / SIGN
-        # =========================================================
-
-        storage_service = SchoolStorageService(
-            storage=get_storage(),
-        )
-
-        new_object_key: str | None = None
-        old_object_key: str | None = report.pdf_signed_file
-
-        if action == "complete":
-            report.submitted_at = datetime.now(
-                timezone.utc
-            )
-
-            token = ReportSignatureService.create_token(
-                report_type="lesson_observation",
-                report_id=report.id,
-                document_id=report.task_execution_document_id,
-                total=report.total,
-            )
-
-            await ReportVerifyRepo.deactivate_old_signatures(
-                db,
-                report_type="lesson_observation",
-                report_id=report.id,
-                document_id=report.task_execution_document_id,
-            )
-
-            signature = await ReportVerifyRepo.create_signature_token(
-                db,
-                token=token,
-                report_type="lesson_observation",
-                report_id=report.id,
-                document_id=report.task_execution_document_id,
-            )
-
-            verify_url = str(
-                request.url_for(
-                    "report_verify_by_code_page",
-                    code=signature.code,
-                )
-            )
-
-            qr_data_uri = (
-                ReportSignatureService
-                .generate_qr_data_uri(
-                    verify_url=verify_url,
-                )
-            )
-
-            pdf_content = await cls._generate_signed_pdf(
-                request=request,
-                templates=templates,
-                report=report,
-                schema=schema,
-                qr_data_uri=qr_data_uri,
-                document=document,
-            )
-
-            storage_context = (
-                await ExecutionDocumentRepo
-                .get_storage_context_for_month_item(
-                    db,
-                    month_item_id=month_item_id,
-                )
-            )
-
-            original_file_name = (
-                f"lesson_observation_{report.id}_signed.pdf"
-            )
-
-            stored_file = await storage_service.save_task_report(
-                context=storage_context,
-                document_id=document.id,
-                report_code="lesson_observation",
-                content=pdf_content,
-                original_file_name=original_file_name,
-                content_type="application/pdf",
-            )
-
-            new_object_key = stored_file.object_key
-
-            report.qr_file = None
-            report.pdf_signed_file = stored_file.object_key
-
-            document.title = original_file_name
-            document.original_file_name = (
-                stored_file.original_file_name
-            )
-            document.stored_file_name = (
-                stored_file.stored_file_name
-            )
-            document.file_path = stored_file.object_key
-            document.mime_type = stored_file.content_type
-            document.file_size = stored_file.file_size
-
-            document.status = TaskDocumentStatus.SUBMITTED
-            document.submitted_by_user_id = user.id
-            document.submitted_at = datetime.now(
-                timezone.utc
-            )
-
-        else:
-            if document.status != TaskDocumentStatus.SUBMITTED:
-                document.status = TaskDocumentStatus.DRAFT
-
-        db.add(report)
-        db.add(document)
-
-        try:
             if action == "complete":
                 assignment = (
                     await ReportAssignmentRepo
@@ -788,42 +795,22 @@ class LessonObservationService(BaseReportService):
 
             await db.commit()
 
-        except (SQLAlchemyError, RuntimeError):
-            await db.rollback()
+            await db.refresh(report, attribute_names=list(type(report).__mapper__.column_attrs.keys()))
 
-            logger.exception(
-                "Не удалось сохранить лист наблюдения: "
-                "month_item_id=%s, selected_report_id=%s, "
-                "document_id=%s",
-                month_item_id,
-                selected_report_id,
-                document.id,
-            )
-
-            if new_object_key:
-                await cls._safe_delete_storage_object(
-                    storage_service=storage_service,
-                    object_key=new_object_key,
+            # Старый объект удаляем только после успешного commit.
+            if (
+                    action == "complete"
+                    and old_object_key
+                    and new_object_key
+                    and old_object_key != new_object_key
+                    and old_object_key.startswith("schools/")
+            ):
+                await delete_unreferenced_report_file(
+                    db=db, storage_service=storage_service,
+                    object_key=old_object_key,
                 )
 
-            raise
-
-        await db.refresh(report)
-
-        # Старый объект удаляем только после успешного commit.
-        if (
-                action == "complete"
-                and old_object_key
-                and new_object_key
-                and old_object_key != new_object_key
-                and old_object_key.startswith("schools/")
-        ):
-            await cls._safe_delete_storage_object(
-                storage_service=storage_service,
-                object_key=old_object_key,
-            )
-
-        return report
+            return report
 
     # =========================================================
     # FORM -> DTO
@@ -860,9 +847,7 @@ class LessonObservationService(BaseReportService):
                 )
             )
 
-        total_score = cls.parse_int(
-            form.get("total_score")
-        )
+        total_score = sum(scores.values())
 
         return LessonObservationFormDTO(
             month_item_id=month_item_id,
@@ -932,18 +917,10 @@ class LessonObservationService(BaseReportService):
                 "total_score": total_score,
             },
 
-            col_sum_0=cls.parse_int(
-                form.get("col_sum_0")
-            ),
-            col_sum_1=cls.parse_int(
-                form.get("col_sum_1")
-            ),
-            col_sum_2=cls.parse_int(
-                form.get("col_sum_2")
-            ),
-            col_sum_3=cls.parse_int(
-                form.get("col_sum_3")
-            ),
+            col_sum_0=sum(value == 0 for value in scores.values()),
+            col_sum_1=sum(value == 1 for value in scores.values()),
+            col_sum_2=sum(value == 2 for value in scores.values()),
+            col_sum_3=sum(value == 3 for value in scores.values()),
 
             total=total_score,
 
@@ -1005,31 +982,4 @@ class LessonObservationService(BaseReportService):
             **report_pdf_context(request, report, document),
         )
 
-        async with async_playwright() as playwright:
-            browser = await playwright.chromium.launch(
-                headless=True,
-            )
-
-            try:
-                page = await browser.new_page()
-
-                await page.set_content(
-                    html,
-                    wait_until="networkidle",
-                )
-
-                pdf_content = await page.pdf(
-                    format="A4",
-                    print_background=True,
-                    margin={
-                        "top": "15mm",
-                        "right": "15mm",
-                        "bottom": "15mm",
-                        "left": "15mm",
-                    },
-                )
-
-            finally:
-                await browser.close()
-
-        return pdf_content
+        return await render_report_pdf(html)

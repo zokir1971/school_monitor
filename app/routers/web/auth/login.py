@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import logging
 
+from starlette.concurrency import run_in_threadpool
+
 from fastapi import (
     APIRouter,
     Depends,
@@ -139,8 +141,8 @@ async def login_submit(
     ok = (
         user is not None
         and bool(user.password_hash)
-        and verify_password(
-            password,
+        and await run_in_threadpool(
+            verify_password, password,
             str(user.password_hash),
         )
     )
@@ -201,6 +203,12 @@ async def login_submit(
     #
     # Это также не позволяет workspace предыдущего входа
     # остаться активным после новой авторизации.
+
+    from app.modules.users.models import utcnow
+    user.last_login_at = utcnow()
+    await db.commit()
+    from app.modules.statistics.activity_tracking import verified_actor
+    verified_actor(request, user, login=True)
 
     from app.core.access_session import bind_session
     bind_session(request, user)

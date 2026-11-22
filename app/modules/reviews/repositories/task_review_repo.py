@@ -7,7 +7,7 @@ from datetime import date
 from sqlalchemy import func, select, update, or_
 from app.modules.reports.repositories.document_correction_repo import DocumentCorrectionRepo
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import selectinload, raiseload
 
 from app.modules.org.models import School
 from app.modules.planning.enums import PlanItemStatus, PlanStatus, ReviewPlace
@@ -19,7 +19,6 @@ from app.modules.planning.models_month_plan import (
 from app.modules.planning.models_school import (
     SchoolPlan,
     SchoolPlanRow11,
-    SchoolPlanRow11ReviewPlace,
 )
 from app.modules.reports.enums import (
     DocumentType,
@@ -56,6 +55,7 @@ class TaskReviewRepository:
 
         stmt = (
             select(SchoolPlan)
+            .options(raiseload("*"))
             .where(
                 SchoolPlan.school_id == school_id,
                 SchoolPlan.status == PlanStatus.ACTIVE,
@@ -89,6 +89,7 @@ class TaskReviewRepository:
 
         stmt = (
             select(SchoolPlan)
+            .options(raiseload("*"))
             .where(
                 SchoolPlan.id == school_plan_id
             )
@@ -324,6 +325,8 @@ class TaskReviewRepository:
                 SchoolMonthPlan.school_plan_id == school_plan_id,
             )
             .options(
+                raiseload("*"),
+                selectinload(SchoolMonthPlanItem.review_places),
                 # Для пакетного рассмотрения сервису нужны только:
                 # - допустимые места рассмотрения исходной строки;
                 # - история рассмотрений с родительским SchoolTaskReview.
@@ -439,6 +442,7 @@ class TaskReviewRepository:
                 == review_place,
             )
             .options(
+                raiseload("*"),
                 # Для строки выбора нужны название задачи,
                 # исполнители и факт наличия рассмотрений.
                 selectinload(
@@ -529,20 +533,15 @@ class TaskReviewRepository:
                 SchoolMonthPlan.id == SchoolMonthPlanItem.month_plan_id,
             )
             .join(
-                SchoolPlanRow11,
-                SchoolPlanRow11.id == SchoolMonthPlanItem.source_row11_id,
-            )
-            .join(
-                SchoolPlanRow11ReviewPlace,
-                SchoolPlanRow11ReviewPlace.row11_id
-                == SchoolPlanRow11.id,
+                SchoolMonthPlanItemReviewPlace,
+                SchoolMonthPlanItemReviewPlace.month_item_id == SchoolMonthPlanItem.id,
             )
             .where(
                 SchoolMonthPlan.school_plan_id == school_plan_id,
 
                 SchoolMonthPlanItem.is_included.is_(True),
 
-                SchoolPlanRow11ReviewPlace.review_place
+                SchoolMonthPlanItemReviewPlace.review_place
                 == review_place,
 
                 SchoolMonthPlanItem.status.in_(
@@ -558,6 +557,7 @@ class TaskReviewRepository:
                 or_(~SchoolMonthPlanItem.review_results.any(), DocumentCorrectionRepo.pending_expression(SchoolMonthPlanItem.id)),
             )
             .options(
+                raiseload("*"),
                 # Для отображения просроченной строки нужны только
                 # название, исполнители и факт рассмотрения.
                 selectinload(
@@ -1017,6 +1017,7 @@ class TaskReviewRepository:
             *,
             month_item_ids: Sequence[int],
             school_plan_id: int,
+        review_place: ReviewPlace,
     ) -> int:
         """
         Атомарно переводит подходящие просроченные задачи
@@ -1044,6 +1045,7 @@ class TaskReviewRepository:
                 SchoolMonthPlanItem.id.in_(unique_ids),
                 SchoolMonthPlan.school_plan_id == school_plan_id,
                 SchoolMonthPlanItem.is_included.is_(True),
+                SchoolMonthPlanItem.review_places.any(SchoolMonthPlanItemReviewPlace.review_place == review_place),
                 SchoolMonthPlanItem.status.in_(
                     {
                         PlanItemStatus.TODO,

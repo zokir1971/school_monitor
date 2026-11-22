@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+from app.modules.education.repositories.teacher_choices_repo import TeacherChoicesRepo, TeacherChoice
+from app.modules.education.helpers.teacher_subject_choices import build_teacher_choices
+
 from datetime import date
 from typing import cast
 
@@ -31,7 +34,6 @@ from app.modules.education.schemas.teaching_load import (
     TeachingLoadTeacherDTO,
 )
 from app.modules.staff.models_staff_school import SchoolStaffMember
-from app.modules.staff.staff_repo import SchoolStaffRepo
 
 
 class TeachingLoadError(ValueError):
@@ -216,6 +218,7 @@ class TeachingLoadService:
             ),
 
             assignments=assignment_dtos,
+            teacher_choices=build_teacher_choices(teachers, subjects, assignments),
 
             classes=[
                 TeachingLoadClassDTO(
@@ -522,17 +525,14 @@ class TeachingLoadService:
         *,
         school_id: int,
         staff_member_id: int,
-    ) -> SchoolStaffMember:
+    ) -> TeacherChoice:
         """
         Получить активного сотрудника
         строго внутри школы.
         """
 
-        teacher = await SchoolStaffRepo.get_member(
-            db,
-            school_id=school_id,
-            member_id=staff_member_id,
-            include_inactive=False,
+        teacher = await TeacherChoicesRepo.get_active(
+            db, school_id=school_id, staff_member_id=staff_member_id,
         )
 
         if teacher is None:
@@ -548,17 +548,13 @@ class TeachingLoadService:
         db: AsyncSession,
         *,
         school_id: int,
-    ) -> list[SchoolStaffMember]:
+    ) -> list[TeacherChoice]:
         """
         Активные сотрудники школы, которым
         потенциально можно назначить нагрузку.
         """
 
-        members = await SchoolStaffRepo.list_members(
-            db,
-            school_id=school_id,
-            include_inactive=False,
-        )
+        members = await TeacherChoicesRepo.list_active(db, school_id=school_id)
 
         return list(members)
 
@@ -604,7 +600,7 @@ class TeachingLoadService:
     def _teacher_name(
         *,
         assignment: SchoolClassSubjectTeacher,
-        teacher: SchoolStaffMember | None,
+        teacher: SchoolStaffMember | TeacherChoice | None,
     ) -> str:
         """
         Для активного сотрудника берём актуальное ФИО.

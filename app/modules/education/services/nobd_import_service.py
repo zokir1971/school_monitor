@@ -32,7 +32,7 @@ class NobdImportService:
         em = {e.student_id: e for e in enrollments}
         all_classes = {c.id: c for c in classes}
         counters = dict(class_languages_saved=0, new_students=0, updated_students=0, unchanged_students=0,
-                        new_classes=0, moved_students=0)
+                        new_classes=0, moved_students=0, existing_students=len(students))
         for g in data['groups']:
             c = cm.get(g['key'])
             g['saved_track'] = c.education_track if c else None

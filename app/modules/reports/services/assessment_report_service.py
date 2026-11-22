@@ -10,6 +10,7 @@ from app.modules.assessment.repositories import vsk_quality_report_repo as data_
 from app.modules.reports.repositories import assessment_report_repo as report_repo
 from app.modules.reports.assessment_report_types import REPORT_TYPES
 from app.modules.reports.rules.control_flow import report_algorithm_bounds
+from app.modules.reports.rules.inspection_evidence import class_index, source_rows, group_source_rows
 from app.modules.assessment.services.knowledge_quality_calculator import KnowledgeQualityCalculator
 from app.modules.assessment.helpers.question_prose_layout import explanation_blocks
 
@@ -420,7 +421,8 @@ async def prepare_inspection_page(db,user,page,params,catalog):
         if cid not in classes or sid not in subject_ids or (page['scope']['teacher_id'] and tid!=page['scope']['teacher_id']):continue
         if requested and tid not in requested:continue
         teacher=pool.setdefault(tid,dict(id=tid,name=assignment['full_name'],classes={},subjects={}))
-        teacher['classes'][cid]=classes[cid];teacher['subjects'][sid]=subjects[sid]
+        teacher['classes'].setdefault(cid, dict(classes[cid], subject_ids=set()))['subject_ids'].add(sid)
+        teacher['subjects'][sid]=subjects[sid]
     if len(pool)>100:raise QualityReportError('Уточните предметы и классы: не более 100 учителей в одном отчёте. / Пәндер мен сыныптарды нақтылаңыз: бір есепте 100 мұғалімнен аспайды.')
     teachers=[dict(t,class_names=', '.join(c['name'] for c in t['classes'].values()),
         grades=sorted({c['grade_level'] for c in t['classes'].values()}),
@@ -464,7 +466,8 @@ async def prepare_inspection_page(db,user,page,params,catalog):
         if len(teacher['classes'])==1:form.setdefault('inspection_'+str(teacher['id'])+'_adal_class_id',str(next(iter(teacher['classes']))))
     if not assessment_enabled():sections=[code for code in sections if code!='quality']
     page.update(adal_criteria=ADAL_AZAMAT_CRITERIA,adal_meta=ADAL_AZAMAT_META,inspection_visit_confirmations=INSPECTION_VISIT_CONFIRMATIONS,inspection_teachers=teachers,inspection_form=form,inspection_selected=selected,inspection_sections=sections)
-    page['inspection_sources']=(await report_repo.inspection_sources(db,school_id=user.school_id,task_id=page['context']['task_id'])) if set(sections).intersection({'lessons','notebooks','reading'}) else []
+    page['inspection_sources']=(await report_repo.inspection_sources(db,school_id=user.school_id,task_id=page['context']['task_id'],
+        teacher_ids=[integer(tid) for tid in selected],sections=sections)) if set(sections).intersection({'lessons','notebooks','reading'}) else []
     if len(page['inspection_sources'])>2000:raise QualityReportError('В задаче слишком много исходных отчётов. Уточните область контроля. / Тапсырмада бастапқы есептер тым көп. Бақылау ауқымын нақтылаңыз.')
     reading_sources=[r for r in page['inspection_sources'] if r['code']=='reading_speed_table' and isinstance(r.get('reading_summary'),dict)
         and value(r['document_status']) in ('submitted','approved','accepted') and value(r['assignment_status'])!='waived']
@@ -551,7 +554,8 @@ def build_inspection(page,params):
             if reading['below'] is not None and (reading['checked'] is None or reading['below']>reading['checked']):raise field_error('Количество ниже критерия не может превышать число проверенных. / Критерийден төмен саны тексерілгендер санынан аспауы тиіс.',prefix+'reading_below')
             if (reading['checked'] is not None and not reading['criteria']) or (completing and (reading['checked'] is None or reading['below'] is None)):raise field_error('Заполните показатель или критерий чтения. / Оқу көрсеткішін немесе критерийін толтырыңыз.',prefix+('reading_checked' if reading['checked'] is None else 'reading_below' if reading['below'] is None else 'reading_criteria'))
         teachers.append(dict(id=reference['id'],name=reference['name'],class_names=reference['class_names'],subject_names=reference['subject_names'],homeroom=homeroom,adal_azamat=plan,documents=documents,visits=visits,reading=reading))
-    sources=[];selected_ids={str(t['id']) for t in teachers};class_names={re.sub(r'\s+','',c['name']).casefold() for c in page['classes'] if not page['filters']['class_ids'] or c['id'] in page['filters']['class_ids']}
+    sources=[];selected_ids={str(t['id']) for t in teachers}
+    index=class_index({c['id']:c for c in page['classes']})
     for source in page['inspection_sources']:
         section={'lesson_observation':'lessons','checking_notebooks_table':'notebooks','reading_speed_table':'reading'}[source['code']]
         if section not in sections:continue
@@ -563,21 +567,29 @@ def build_inspection(page,params):
         class_name=source['lesson_class'] if section=='lessons' else source['notebook_class'] if section=='notebooks' else source['target_label']
         observed_day=(observed.astimezone(timezone(timedelta(hours=5))).date() if observed.tzinfo else observed.date()) if observed else None
         if state=='completed' and observed_day and not start<=observed_day<=end:state='outside_period'
-        if state=='completed' and section in ('lessons','notebooks') and class_name and re.sub(r'\s+','',class_name).casefold() not in class_names:state='outside_scope'
         if completing and section in ('lessons','notebooks') and state=='pending':raise review_error('Завершите выбранные исходные отчёты перед завершением сводного. / Жинақ есепті аяқтамас бұрын таңдалған бастапқы есептерді аяқтаңыз.',teacher=source['target_label'],section=section,parameter=dict(ru='Исходный отчёт №'+str(source['document_id'] or source['selected_id']),kk='Бастапқы есеп №'+str(source['document_id'] or source['selected_id'])))
-        schema={'max_score':source.get('lesson_max', (source.get('schema_json') or {}).get('max_score'))}
-        sources.append(dict(teacher_id=str(source['target_value']),code=source['code'],section=section,selected_id=source['selected_id'],document_id=source['document_id'],teacher=source['target_label'],class_name=class_name,
-            state=state,score=(source['lesson_score'] if section=='lessons' else source['notebook_score']) if state=='completed' else None,
-            max_score=(schema.get('max_score') if section=='lessons' else source['notebook_max']) if state=='completed' else None,
-            note=(source['lesson_feedback'] if section=='lessons' else source['notebook_conclusion']) or ''))
+        if section in ('lessons','notebooks'):
+            reference=pool[str(source['target_value'])]
+            try: entries=source_rows(source,section,reference['classes'],index)
+            except ValueError as exc: raise QualityReportError(str(exc)) from exc
+        else:
+            entries=[dict(class_name=class_name,class_id=None,subject_id=None,in_scope=True,score=None,max_score=None,note=source.get('notebook_conclusion') or '')]
+        for entry in entries:
+            entry_state='outside_scope' if state=='completed' and not entry['in_scope'] else state
+            sources.append(dict(teacher_id=str(source['target_value']),code=source['code'],section=section,selected_id=source['selected_id'],document_id=source['document_id'],teacher=source['target_label'],class_name=entry['class_name'],
+                class_id=entry['class_id'],subject_id=entry['subject_id'],grade_level=entry.get('grade_level'),state=entry_state,
+                score=entry['score'] if entry_state=='completed' else None,
+                max_score=entry['max_score'] if entry_state=='completed' else None,note=entry['note']))
+            if len(sources)>5000:raise QualityReportError('Уточните область: более 5000 строк исходных отчётов. / Ауқымды нақтылаңыз: бастапқы есептерде 5000 жолдан артық.')
+    covered={(row['section'],row['teacher_id']) for row in sources}
     for section,code in [('lessons','lesson_observation'),('notebooks','checking_notebooks_table')]:
         if section not in sections:continue
         for teacher in teachers:
-            if not any(row['section']==section and row['teacher_id']==str(teacher['id']) for row in sources):
+            if (section,str(teacher['id'])) not in covered:
                 if completing:raise review_error('В алгоритме выберите и завершите исходный отчёт. / Алгоритмде бастапқы есепті таңдап, аяқтаңыз.',teacher=teacher,section=section)
                 sources.append(dict(teacher_id=str(teacher['id']),code=code,section=section,selected_id=None,document_id=None,teacher=teacher['name'],class_name=teacher['class_names'],state='not_checked',score=None,max_score=None,note=''))
     if 'quality' in sections and not page['selected']:raise review_error('Выберите оценочные работы. / Бағалау жұмыстарын таңдаңыз.',section='quality',field='work_ids' if page['candidates'] else 'grade')
-    return json_value(dict(version=2,sections=sections,labels=INSPECTION_SECTIONS,visit_purposes=INSPECTION_VISIT_PURPOSES,visit_confirmations=INSPECTION_VISIT_CONFIRMATIONS,states=INSPECTION_STATES,date_from=start,date_to=end,teachers=teachers,sources=sources))
+    return json_value(dict(version=4,sections=sections,labels=INSPECTION_SECTIONS,visit_purposes=INSPECTION_VISIT_PURPOSES,visit_confirmations=INSPECTION_VISIT_CONFIRMATIONS,states=INSPECTION_STATES,date_from=start,date_to=end,teachers=teachers,sources=sources,source_groups=group_source_rows(sources)))
 
 
 def work_key(row):

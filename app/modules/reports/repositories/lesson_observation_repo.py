@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from sqlalchemy import String, and_, cast, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import aliased, selectinload
+from sqlalchemy.orm import raiseload, aliased, selectinload
 
 from app.modules.org.models import School
 from app.modules.planning.models_month_plan import SchoolMonthPlan, SchoolMonthPlanItem
@@ -62,7 +62,7 @@ class LessonObservationRepo:
         """
 
         stmt = (
-            select(TaskExecutionSelectedReport)
+            select(TaskExecutionSelectedReport).options(raiseload("*"))
             .where(
                 TaskExecutionSelectedReport.id
                 == selected_report_id
@@ -188,7 +188,7 @@ class LessonObservationRepo:
                 ),
                 teacher.subject.label("teacher_subject"),
             )
-            .select_from(TaskExecutionSelectedReport)
+            .options(raiseload("*")).select_from(TaskExecutionSelectedReport)
             .join(
                 TaskSelectedReportAssignment,
                 TaskSelectedReportAssignment.selected_report_id
@@ -339,7 +339,7 @@ class LessonObservationRepo:
             document_id: int,
     ) -> LessonObservationReport | None:
         result = await db.execute(
-            select(LessonObservationReport)
+            select(LessonObservationReport).options(raiseload("*"))
             .where(
                 LessonObservationReport.task_execution_document_id
                 == document_id
@@ -369,7 +369,7 @@ class LessonObservationRepo:
             return {}
 
         stmt = (
-            select(LessonObservationReport)
+            select(LessonObservationReport).options(raiseload("*"))
             .where(
                 LessonObservationReport.task_execution_document_id.in_(
                     document_ids
@@ -406,7 +406,7 @@ class LessonObservationRepo:
             report_id: int,
     ) -> LessonObservationReport | None:
         result = await db.execute(
-            select(LessonObservationReport)
+            select(LessonObservationReport).options(raiseload("*"))
             .where(
                 LessonObservationReport.id
                 == report_id
@@ -422,7 +422,7 @@ class LessonObservationRepo:
             observer_user_id: int,
     ) -> LessonObservationReport | None:
         result = await db.execute(
-            select(LessonObservationReport)
+            select(LessonObservationReport).options(raiseload("*"))
             .where(
                 LessonObservationReport.task_execution_document_id
                 == document_id,
@@ -663,6 +663,6 @@ class LessonObservationRepo:
         report.feedback = dto.feedback
 
         await db.flush()
-        await db.refresh(report)
+        await db.refresh(report, attribute_names=list(type(report).__mapper__.column_attrs.keys()))
 
         return report

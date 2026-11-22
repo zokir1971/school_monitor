@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import raiseload, selectinload
 
 from app.modules.reports.models_documents import ReportTypeModel
 from app.modules.reports.models_template_reports import UserReportTemplate
@@ -37,7 +37,7 @@ class UserReportTemplateRepo:
         """
 
         stmt = (
-            select(ReportTypeModel)
+            select(ReportTypeModel).options(raiseload("*"))
             .where(
                 ReportTypeModel.code == report_code,
                 ReportTypeModel.is_active.is_(True),
@@ -61,7 +61,7 @@ class UserReportTemplateRepo:
         """
 
         stmt = (
-            select(UserReportTemplate)
+            select(UserReportTemplate).options(raiseload("*"))
             .where(
                 UserReportTemplate.owner_user_id == owner_user_id,
                 UserReportTemplate.is_active.is_(True),
@@ -91,7 +91,7 @@ class UserReportTemplateRepo:
         """
 
         stmt = (
-            select(UserReportTemplate)
+            select(UserReportTemplate).options(raiseload("*"))
             .where(
                 UserReportTemplate.id == template_id,
                 UserReportTemplate.owner_user_id == owner_user_id,
@@ -189,7 +189,7 @@ class UserReportTemplateRepo:
         """
 
         stmt = (
-            select(UserReportTemplate)
+            select(UserReportTemplate).options(raiseload("*"))
             .where(
                 UserReportTemplate.id == template_id,
                 UserReportTemplate.is_active.is_(True),

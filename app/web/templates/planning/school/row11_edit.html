@@ -661,6 +661,7 @@
         <select
           id="month"
           name="month"
+          data-draft-restore-disabled
           class="row11-select"
         >
           <option value="">
@@ -699,6 +700,8 @@
             <input
               type="checkbox"
               class="row11-month-checkbox"
+              name="draft_months"
+              data-draft-restore-disabled
               value="{{ month_number }}"
               {% if month_number in page.selected_months %}checked{% endif %}
             >
@@ -773,7 +776,7 @@
               >
 
               <span class="row11-option__label">
-                {{ _(option.label) }}
+                {{ responsible_role_option_label(option.value) }}
               </span>
 
             </label>
@@ -1041,11 +1044,16 @@ document.addEventListener("DOMContentLoaded", () => {
     );
   });
 
-  syncPeriodFields();
-
-  if (periodType.value === "months") {
+  function refreshPeriod() {
+    syncPeriodFields();
     syncSelectedMonths();
   }
+
+  // The shared draft restore runs after this DOMContentLoaded listener.
+  document.addEventListener("sm:planning-draft-restored", refreshPeriod);
+  window.addEventListener("pageshow", refreshPeriod);
+  periodType.form.addEventListener("submit", syncSelectedMonths);
+  refreshPeriod();
 });
 </script>
 

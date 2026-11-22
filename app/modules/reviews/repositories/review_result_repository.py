@@ -6,7 +6,7 @@ from typing import Any
 
 from sqlalchemy import Select, case, func, or_, select, and_
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import selectinload, raiseload
 
 from app.modules.planning.enums import (
     PlanItemStatus,
@@ -22,6 +22,7 @@ from app.modules.planning.models_month_plan import (
 from app.modules.planning.models_school import (
     SchoolPlan,
 )
+from app.modules.users.models import User
 from app.modules.reports.enums import DocumentType
 from app.modules.reports.models_documents import TaskExecutionDocument
 from app.modules.staff.models_staff_school import (
@@ -234,7 +235,7 @@ class ReviewResultRepository:
 
             selectinload(
                 SchoolMonthPlanItem.responsible_user
-            ),
+            ).joinedload(User.staff_member),
 
             selectinload(
                 SchoolMonthPlanItem.review_places
@@ -259,7 +260,7 @@ class ReviewResultRepository:
 
             review_results_option.selectinload(
                 SchoolMonthPlanItemReviewResult.reviewed_by_user
-            ),
+            ).joinedload(User.staff_member),
         )
 
     @staticmethod
@@ -303,7 +304,7 @@ class ReviewResultRepository:
 
             selectinload(
                 SchoolMonthPlanItemReviewResult.reviewed_by_user
-            ),
+            ).joinedload(User.staff_member),
 
             selectinload(
                 SchoolMonthPlanItemReviewResult.month_item
@@ -321,7 +322,7 @@ class ReviewResultRepository:
                 SchoolMonthPlanItemReviewResult.month_item
             ).selectinload(
                 SchoolMonthPlanItem.responsible_user
-            ),
+            ).joinedload(User.staff_member),
 
             selectinload(
                 SchoolMonthPlanItemReviewResult.month_item
@@ -355,6 +356,7 @@ class ReviewResultRepository:
 
         stmt = (
             select(SchoolPlan)
+            .options(raiseload("*"))
             .where(
                 SchoolPlan.school_id == school_id,
                 SchoolPlan.status == PlanStatus.ACTIVE,
@@ -516,6 +518,7 @@ class ReviewResultRepository:
                 ),
             )
             .options(
+                raiseload("*"),
                 *cls._task_list_options()
             )
         )
@@ -615,15 +618,16 @@ class ReviewResultRepository:
                 SchoolMonthPlanItem.is_included.is_(True),
             )
             .options(
+                raiseload("*"),
                 *cls._task_detail_options()
             )
         )
 
         if review_place is not None:
             stmt = stmt.where(
-                SchoolMonthPlanItem.review_places.any(
-                    SchoolMonthPlanItemReviewPlace.review_place
-                    == review_place
+                or_(
+                    SchoolMonthPlanItem.review_places.any(SchoolMonthPlanItemReviewPlace.review_place == review_place),
+                    SchoolMonthPlanItem.review_results.any(SchoolMonthPlanItemReviewResult.review_place == review_place),
                 )
             )
 
@@ -649,7 +653,8 @@ class ReviewResultRepository:
         db: AsyncSession,
         *,
         review_result_id: int,
-        school_plan_id: int,
+        school_plan_id: int | None = None,
+        school_id: int | None = None,
         participant_user_id: int | None = None,
         participant_staff_id: int | None = None,
     ) -> SchoolMonthPlanItemReviewResult | None:
@@ -663,6 +668,9 @@ class ReviewResultRepository:
         - доступ сотрудника к задаче.
         """
 
+        if school_plan_id is None and school_id is None:
+            raise ValueError("Не указана область доступа к результату.")
+
         stmt = (
             select(SchoolMonthPlanItemReviewResult)
             .join(
@@ -675,19 +683,23 @@ class ReviewResultRepository:
                 SchoolMonthPlan.id
                 == SchoolMonthPlanItem.month_plan_id,
             )
+            .join(SchoolPlan, SchoolPlan.id == SchoolMonthPlan.school_plan_id)
             .where(
                 SchoolMonthPlanItemReviewResult.id
                 == review_result_id,
 
-                SchoolMonthPlan.school_plan_id
-                == school_plan_id,
-
                 SchoolMonthPlanItem.is_included.is_(True),
             )
             .options(
+                raiseload("*"),
                 *cls._review_result_options()
             )
         )
+
+        if school_plan_id is not None:
+            stmt = stmt.where(SchoolMonthPlan.school_plan_id == school_plan_id)
+        if school_id is not None:
+            stmt = stmt.where(SchoolPlan.school_id == school_id)
 
         stmt = cls._apply_participant_filter(
             stmt,
@@ -765,6 +777,7 @@ class ReviewResultRepository:
                 SchoolMonthPlanItem.is_included.is_(True),
             )
             .options(
+                raiseload("*"),
                 *cls._review_result_options()
             )
         )
@@ -936,14 +949,17 @@ class ReviewResultRepository:
 
         return result.scalar_one_or_none() is not None
 
-    @staticmethod
+    @classmethod
     async def get_available_protocols(
+            cls,
             db: AsyncSession,
             *,
             school_plan_id: int,
             year: int,
             review_place: ReviewPlace,
             month: int | None = None,
+            participant_user_id: int | None = None,
+            participant_staff_id: int | None = None,
     ) -> list[SchoolTaskReview]:
         """
         Возвращает протоколы, по которым имеются результаты
@@ -981,6 +997,9 @@ class ReviewResultRepository:
             )
         )
 
+        stmt = cls._apply_participant_filter(
+            stmt, participant_user_id=participant_user_id, participant_staff_id=participant_staff_id,
+        )
         if month is not None:
             stmt = stmt.where(
                 SchoolMonthPlan.month == month

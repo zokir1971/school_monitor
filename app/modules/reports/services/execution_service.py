@@ -82,6 +82,7 @@ class ExecutionService:
         await ExecutionRepo.replace_selected_reports(db, execution_data_id=execution_data.id,
                                                     selected_reports=plan['selected_reports'],
                                                     algorithm_parameters=plan['parameters'], expected_revision=algorithm_revision)
+        execution_data.completion_mode = TaskCompletionMode.FINAL_WITH_SYSTEM_REPORTS.value
         execution_data.control_scope = control_scope or None
         execution_data.control_form = control_form or None
         execution_data.control_kind = control_kind or None
@@ -209,6 +210,10 @@ class ExecutionService:
             user_id: int,
             completion_mode: TaskCompletionMode,
     ):
+        locked_task = await ExecutionDocumentRepo.lock_task_row(db, month_item_id=month_item_id)
+        if locked_task and any(str(getattr(locked_task[k], 'value', locked_task[k])) == 'archived' for k in ('month_status', 'annual_status')):
+            raise ValueError("Архивную задачу изменять нельзя.")
+
         task = await ExecutionRepo.get_executor_month_item_for_execution(
             db,
             month_item_id=month_item_id,

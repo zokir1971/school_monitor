@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
-from sqlalchemy import delete, select, update
+from sqlalchemy import delete, select, update, insert
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import selectinload, raiseload
+from types import SimpleNamespace
 
 from app.modules.planning.enums import ResponsibleRole
 from app.modules.staff.models_staff_school import (
@@ -36,7 +37,7 @@ class SchoolStaffRepo:
         stmt = (
             select(SchoolStaffMember)
             .where(SchoolStaffMember.school_id == school_id)
-            .options(selectinload(SchoolStaffMember.roles))
+            .options(raiseload('*'), selectinload(SchoolStaffMember.roles.and_(SchoolStaffRole.school_id == school_id)))
             .order_by(SchoolStaffMember.full_name.asc(), SchoolStaffMember.id.asc())
         )
 
@@ -57,6 +58,8 @@ class SchoolStaffRepo:
             school_id: int,
             member_id: int,
             include_inactive: bool = True,
+            include_roles: bool = True,
+            lock: bool = False,
     ) -> SchoolStaffMember | None:
         """
         Получить сотрудника по id
@@ -82,12 +85,12 @@ class SchoolStaffRepo:
                 SchoolStaffMember.id
                 == member_id,
             )
-            .options(
-                selectinload(
-                    SchoolStaffMember.roles
-                )
-            )
+            .options(raiseload('*'))
         )
+        if include_roles:
+            stmt = stmt.options(selectinload(SchoolStaffMember.roles.and_(SchoolStaffRole.school_id == school_id)))
+        if lock:
+            stmt = stmt.with_for_update(of=SchoolStaffMember)
 
         if not include_inactive:
             stmt = stmt.where(
@@ -136,6 +139,9 @@ class SchoolStaffRepo:
             )
             .where(
                 User.id == user_id,
+                User.school_id == SchoolStaffMember.school_id,
+                SchoolStaffRole.school_id == SchoolStaffMember.school_id,
+                SchoolStaffMember.is_active.is_(True),
                 SchoolStaffRole.is_active.is_(True),
             )
             .order_by(SchoolStaffRole.id.asc())
@@ -162,6 +168,7 @@ class SchoolStaffRepo:
             SchoolStaffMember.iin == iin,
         )
 
+        stmt = stmt.options(raiseload('*'))
         result = await db.execute(stmt)
         return result.scalars().first()
 
@@ -206,28 +213,12 @@ class SchoolStaffRepo:
         roles: list[tuple[ResponsibleRole, str]],
     ):
         """
-        Полностью заменяет роли сотрудника.
-
-        Сначала удаляет старые, затем добавляет новые.
+        Обновляет активный набор ролей, сохраняя ID и ссылки назначений.
+        Удалённые из набора роли становятся неактивными.
         """
 
-        await db.execute(
-            delete(SchoolStaffRole).where(
-                SchoolStaffRole.school_id == school_id,
-                SchoolStaffRole.staff_member_id == member_id,
-            )
-        )
-
-        for role, ctx in roles:
-            db.add(
-                SchoolStaffRole(
-                    school_id=school_id,
-                    staff_member_id=member_id,
-                    role=role,
-                    role_context=(ctx or "").strip(),
-                    is_active=True,
-                )
-            )
+        normalized = [r if isinstance(r, dict) else {'role': r[0], 'context': r[1]} for r in roles]
+        await SchoolStaffRoleRepo.replace_active(db, school_id=school_id, member_id=member_id, roles=normalized)
 
     # ---------------------------
     # 🔹 Уволить сотрудника
@@ -270,11 +261,30 @@ class SchoolStaffRepo:
         stmt = (
             select(SchoolStaffMember)
             .where(SchoolStaffMember.school_id == school_id)
+            .options(raiseload('*'))
             .order_by(SchoolStaffMember.full_name.asc())
         )
 
         result = await db.execute(stmt)
         return result.scalars().all()
+
+    @staticmethod
+    async def list_member_cards(db, *, school_id: int):
+        """Two narrow Core batches; no ORM relationship graph for the list page."""
+        M, R = SchoolStaffMember.__table__, SchoolStaffRole.__table__
+        rows = (await db.execute(select(M.c.id, M.c.school_id, M.c.full_name,
+            M.c.iin, M.c.position_text, M.c.is_active).where(M.c.school_id == school_id)
+            .order_by(M.c.is_active.desc(), M.c.full_name, M.c.id))).mappings().all()
+        if not rows:
+            return []
+        members = {r['id']: SimpleNamespace(**r, roles=[]) for r in rows}
+        roles = (await db.execute(select(R.c.id, R.c.staff_member_id, R.c.role,
+            R.c.role_context, R.c.is_active).join(M, M.c.id == R.c.staff_member_id)
+            .where(R.c.school_id == school_id, M.c.school_id == school_id)
+            .order_by(R.c.id))).mappings()
+        for role in roles:
+            members[role['staff_member_id']].roles.append(SimpleNamespace(**role))
+        return list(members.values())
 
 
 class SchoolStaffRoleRepo:
@@ -294,6 +304,7 @@ class SchoolStaffRoleRepo:
         """
         stmt = (
             select(SchoolStaffRole)
+            .options(raiseload('*'))
             .where(
                 SchoolStaffRole.school_id == school_id,
                 SchoolStaffRole.staff_member_id == member_id,
@@ -369,12 +380,59 @@ class SchoolStaffRoleRepo:
         """
         stmt = (
             select(SchoolStaffRole)
+            .options(raiseload('*'))
             .where(
                 SchoolStaffRole.school_id == school_id,
                 SchoolStaffRole.role == role,
                 SchoolStaffRole.is_active.is_(True),
             )
-            .options(selectinload(SchoolStaffRole.staff_member))
+            .join(SchoolStaffMember, SchoolStaffMember.id == SchoolStaffRole.staff_member_id)
+            .where(SchoolStaffMember.school_id == school_id, SchoolStaffMember.is_active.is_(True))
+            .options(selectinload(SchoolStaffRole.staff_member).raiseload('*'))
         )
         result = await db.scalars(stmt)
         return list(result.all())
+
+
+    @staticmethod
+    async def replace_active(db, *, school_id: int, member_id: int, roles):
+        """Serialize by member and preserve role IDs referenced by existing tasks."""
+        from fastapi import HTTPException
+        R, M = SchoolStaffRole.__table__, SchoolStaffMember.__table__
+        wanted = {}
+        for row in roles:
+            role = ResponsibleRole(row['role'])
+            context = str(row.get('context') or '').strip()
+            if len(context) > 200:
+                raise HTTPException(400, 'Контекст роли: не более 200 символов')
+            wanted[(role, context)] = dict(school_id=school_id, staff_member_id=member_id,
+                role=role, role_context=context, is_active=True)
+        member = (await db.execute(select(M.c.id).where(M.c.school_id == school_id,
+            M.c.id == member_id).with_for_update())).scalar_one_or_none()
+        if member is None:
+            raise HTTPException(404, 'Сотрудник не найден')
+        existing = (await db.execute(select(R.c.id, R.c.role, R.c.role_context, R.c.is_active)
+            .where(R.c.school_id == school_id, R.c.staff_member_id == member_id).order_by(R.c.id))).mappings().all()
+        by_key = {}
+        deactivate, reactivate = [], []
+        for row in existing:
+            key = (row['role'], row['role_context'] or '')
+            by_key.setdefault(key, []).append(row)
+            if row['is_active'] and key not in wanted:
+                deactivate.append(row['id'])
+        additions = []
+        for key, values in wanted.items():
+            matches = by_key.get(key, [])
+            if any(row['is_active'] for row in matches):
+                continue
+            if matches:
+                reactivate.append(matches[0]['id'])
+            else:
+                additions.append(values)
+        scope = (R.c.school_id == school_id, R.c.staff_member_id == member_id)
+        if deactivate:
+            await db.execute(update(R).where(*scope, R.c.id.in_(deactivate)).values(is_active=False))
+        if reactivate:
+            await db.execute(update(R).where(*scope, R.c.id.in_(reactivate)).values(is_active=True))
+        if additions:
+            await db.execute(insert(R), additions)
