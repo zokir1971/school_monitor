@@ -67,12 +67,12 @@
               </td>
               <td>{{ m.iin }}</td>
               <td>
-                {% if m.roles and m.roles|length > 0 %}
-                  {% for r in m.roles %}
+                {% set active_roles = m.roles|selectattr('is_active')|list %}
+                {% if active_roles %}
+                  {% for r in active_roles %}
                     <span class="badge badge--role">
                       {{ staff_role_label(r.role) }}
                       {% if r.role_context %} — {{ r.role_context }}{% endif %}
-                      {% if not r.is_active %} {{ _('(не акт.)') }}{% endif %}
                     </span>
                   {% endfor %}
                 {% else %}
