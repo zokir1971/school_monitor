@@ -164,6 +164,11 @@ def install_i18n(environment):
 
     @pass_context
     def staff_position_label(context, value):
+        from app.modules.staff.utils.staff_position_filter import SCIENTIFIC_METHODICAL_ALIASES, _norm_pos
+        if _norm_pos(value) in SCIENTIFIC_METHODICAL_ALIASES:
+            from app.modules.planning.enums import ResponsibleRole
+            role = ResponsibleRole.D_SCIENTIFIC_METHODICAL
+            return role.full_ru if ui_language(context) == 'ru' else role.full_kz
         from app.core.staff_ui_messages import STAFF_POSITION_MESSAGES
         normalized = (value or "").strip().lower()
         return gettext(context, normalized) if normalized in STAFF_POSITION_MESSAGES else value

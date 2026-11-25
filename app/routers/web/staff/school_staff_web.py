@@ -22,6 +22,8 @@ from app.modules.planning.enums import ResponsibleRole
 from app.modules.staff.models_staff_school import SchoolStaffMember
 from app.modules.staff.service_school_staff import SchoolStaffImportService, SchoolStaffRoleService
 from app.modules.staff.staff_repo import SchoolStaffRepo
+from app.modules.staff.staff_directory import directory, filters_from, filter_url, roles_revision
+from app.core.i18n import resolve_language
 from app.modules.staff.utils.staff_position_filter import ALLOWED_POSITIONS
 from app.modules.users.deps import require_roles
 from app.modules.users.enums import UserRole
@@ -55,14 +57,17 @@ async def school_staff_page(
 ):
     school_id = _require_school_id(user)
 
-    members = await SchoolStaffRepo.list_member_cards(db, school_id=school_id)
+    page_data = await directory(db, school_id=school_id, filters=filters_from(request.query_params))
+    role_csrf = guard.csrf_token(request, 'staff_roles_csrf')
     allowed_positions = sorted(ALLOWED_POSITIONS["kz"])
     response = templates.TemplateResponse(
         "staff/members/school_staff.html",
         {
             "user": user,
             "request": request,
-            "members": members,
+            **page_data,
+            "role_csrf": role_csrf,
+            "role_choices": [{"value": r.value, "label": r.option_label(resolve_language(request,user))} for r in ResponsibleRole],
             "allowed_positions": allowed_positions,
             "import_csrf": guard.csrf_token(request, "staff_import_csrf"),
             "school_name": await SchoolScopeRepo.get_name(db, school_id=school_id),
@@ -71,6 +76,8 @@ async def school_staff_page(
     response.set_cookie("staff_import_csrf", response.context["import_csrf"], httponly=True,
                         samesite="lax", secure=request.url.scheme == "https",
                         path="/staff/school", max_age=guard.TTL)
+    response.set_cookie("staff_roles_csrf", role_csrf, httponly=True, samesite="lax",
+                        secure=request.url.scheme == "https", path="/staff/school", max_age=guard.TTL)
     response.headers["Cache-Control"] = "no-store"
     return response
 
@@ -424,3 +431,45 @@ async def roles_save(
         url=str(request.url_for("school_staff_page")) + "?success=Сохранено",
         status_code=303,
     )
+
+
+@router.post("/members/{member_id}/roles-inline", name="school_staff_inline_roles_save")
+async def inline_roles_save(
+        request: Request,
+        member_id: int,
+        db: AsyncSession = Depends(get_db),
+        user=Depends(require_roles(UserRole.SCHOOL_ADMIN)),
+):
+    school_id = _require_school_id(user)
+    ru = resolve_language(request,user) == 'ru'
+    form = await request.form()
+    try:
+        guard.check_csrf(request, form, 'staff_roles_csrf')
+    except HTTPException:
+        raise HTTPException(403, 'Обновите страницу и повторите отправку.' if ru else 'Бетті жаңартып, қайта жіберіңіз.')
+    filters = filters_from(form)
+    # The member lock spans revision validation and the existing history-preserving writer.
+    member = await SchoolStaffRepo.get_member(db,school_id=school_id,member_id=member_id,lock=True)
+    if member is None:
+        raise HTTPException(404, 'Сотрудник не найден' if ru else 'Қызметкер табылмады')
+    if not member.is_active:
+        raise HTTPException(400, 'Сначала восстановите сотрудника' if ru else 'Алдымен қызметкерді қалпына келтіріңіз')
+    if str(form.get('role_revision','')) != roles_revision(member.roles):
+        raise HTTPException(409, 'Роли уже изменены. Обновите страницу.' if ru else 'Рөлдер өзгертілген. Бетті жаңартыңыз.')
+    entries = {}
+    for key,value in form.items():
+        match = ROLE_KEY_RE.fullmatch(key)
+        if match:
+            index = int(match.group(1))
+            if index > 49:
+                raise HTTPException(400, 'Не более 50 ролей' if ru else '50 рөлден аспауы керек')
+            entries.setdefault(index,{})[match.group(2)] = str(value or '').strip()
+    roles = [entries[index] for index in sorted(entries) if entries[index].get('role')]
+    try:
+        await SchoolStaffRoleService.replace_member_roles(db,school_id=school_id,member_id=member_id,roles=roles)
+    except HTTPException as exc:
+        if exc.status_code == 400:
+            raise HTTPException(400, 'Проверьте выбранные роли и контексты.' if ru else 'Таңдалған рөлдер мен контекстерді тексеріңіз.')
+        raise
+    await db.commit()
+    return RedirectResponse(filter_url(filters)+'&roles_saved='+str(member_id)+'#staff-member-'+str(member_id),status_code=303)

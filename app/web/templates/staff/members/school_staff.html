@@ -4,14 +4,17 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', path='css/staff.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', path='css/staff_directory.css') }}?v=343">
 {% endblock %}
 
 {% block content %}
+{% set ru = ui_language() == 'ru' %}
+<div class="staff-directory" data-school-id="{{ user.school_id }}">
 
 <div class="page-head">
   <div>
     <h1 class="page-title">{{ _('👥 Управление персоналом') }}</h1>
-    <div class="page-subtitle">{{ _('Добавляй сотрудников, назначай должности (ResponsibleRole), увольняй и импортируй из файла.') }}</div>
+    <div class="page-subtitle">{{ school_name }} · ID {{ user.school_id }}</div>
   </div>
 
   <div class="row">
@@ -30,7 +33,15 @@
   <div class="alert alert--success" style="margin-bottom:12px">{{ success }}</div>
 {% endif %}
 
-<div class="grid-2">
+{% if request.query_params.get('roles_saved') %}<div class="alert alert--success" role="status">{{ 'Роли сохранены.' if ru else 'Рөлдер сақталды.' }}</div>{% endif %}
+<div class="staff-directory-summary" aria-label="{{ 'Численность сотрудников школы' if ru else 'Мектеп қызметкерлерінің саны' }}">
+  <span>{{ 'Всего сотрудников' if ru else 'Барлық қызметкерлер' }}: <strong>{{ staff_summary.total }}</strong></span>
+  <span>{{ 'Активных' if ru else 'Белсенді' }}: <strong>{{ staff_summary.active }}</strong></span>
+  <span>{{ 'Уволенных' if ru else 'Жұмыстан босатылған' }}: <strong>{{ staff_summary.inactive }}</strong></span>
+  <span>{{ 'Найдено' if ru else 'Табылды' }}: <strong>{{ filtered_count }}</strong> · {{ 'На странице' if ru else 'Бетте' }}: {{ members|length }}</span>
+</div>
+<form id="staff-filters" method="get" action="/staff/school"></form>
+<div class="grid-2 staff-directory-layout">
 
   {# =================== LEFT: TABLE =================== #}
   <section class="card">
@@ -40,7 +51,7 @@
         <div class="hint">{{ _('Выбирай сотрудников для назначения исполнителей в задачах. Уволенные сохраняются для истории.') }}</div>
       </div>
       <div class="row">
-        <span class="muted">{{ _('Всего:') }} {{ members|length }}</span>
+        <a href="#staff-tools" data-sm-action="nav" data-sm-size="compact">{{ 'Добавить / Импорт' if ru else 'Қосу / Импорт' }}</a>
       </div>
     </div>
 
@@ -52,14 +63,29 @@
               <th style="width:52px">ID</th>
               <th>{{ _('ФИО') }}</th>
               <th style="width:120px">{{ _('ИИН') }}</th>
-              <th>{{ _('Должности') }}</th>
+              <th class="staff-roles-column">{{ _('Должности') }}</th>
               <th style="width:120px">{{ _('Статус') }}</th>
-              <th style="width:220px">{{ _('Действия') }}</th>
+              <th class="staff-actions-column">{{ _('Действия') }}</th>
+            </tr>
+            <tr class="staff-directory-filters">
+              <th></th>
+              <th><input form="staff-filters" name="name" value="{{ filters.name }}" maxlength="200" aria-label="{{ 'Поиск по ФИО' if ru else 'Аты-жөні бойынша іздеу' }}" placeholder="{{ 'Часть имени' if ru else 'Аты-жөнінің бөлігі' }}"></th>
+              <th><input form="staff-filters" name="iin" value="{{ filters.iin }}" maxlength="12" inputmode="numeric" pattern="[0-9]*" aria-label="{{ 'Поиск по ИИН' if ru else 'ЖСН бойынша іздеу' }}"></th>
+              <th><select form="staff-filters" name="role" aria-label="{{ 'Фильтр ролей' if ru else 'Рөл сүзгісі' }}">
+                <option value="">{{ 'Все роли' if ru else 'Барлық рөлдер' }}</option>
+                <option value="none" {% if filters.role=='none' %}selected{% endif %}>{{ 'Без активных ролей' if ru else 'Белсенді рөлі жоқ' }}</option>
+                {% for choice in role_choices %}<option value="{{ choice.value }}" {% if filters.role==choice.value %}selected{% endif %}>{{ choice.label }}</option>{% endfor %}
+              </select></th>
+              <th><select form="staff-filters" name="status" aria-label="{{ 'Статус сотрудника' if ru else 'Қызметкер мәртебесі' }}">
+                {% for value,caption in [('active', 'Активные' if ru else 'Белсенді'),('inactive','Уволенные' if ru else 'Жұмыстан босатылған'),('all','Все' if ru else 'Барлығы')] %}<option value="{{ value }}" {% if filters.status==value %}selected{% endif %}>{{ caption }}</option>{% endfor %}
+              </select></th>
+              <th><div class="row"><button form="staff-filters" type="submit" data-sm-action="primary" data-sm-size="compact">{{ 'Применить' if ru else 'Қолдану' }}</button><a href="/staff/school" data-sm-action="nav" data-sm-size="compact">{{ 'Сбросить' if ru else 'Тазарту' }}</a></div></th>
             </tr>
           </thead>
           <tbody>
           {% for m in members %}
-            <tr>
+            {% set active_roles = m.roles|selectattr('is_active')|list %}
+            <tr id="staff-member-{{ m.id }}">
               <td>#{{ m.id }}</td>
               <td>
                 <div style="font-weight:600;color:#111827">{{ m.full_name }}</div>
@@ -67,7 +93,6 @@
               </td>
               <td>{{ m.iin }}</td>
               <td>
-                {% set active_roles = m.roles|selectattr('is_active')|list %}
                 {% if active_roles %}
                   {% for r in active_roles %}
                     <span class="badge badge--role">
@@ -87,7 +112,10 @@
                 {% endif %}
               </td>
               <td>
-                <div class="row">
+                <div class="row staff-member-actions">
+                  {% if m.is_active %}
+                    <a href="/staff/school/members/{{ m.id }}/roles" data-staff-role-toggle aria-controls="staff-roles-{{ m.id }}" aria-expanded="false" data-sm-action="primary" data-sm-size="compact">{{ 'Роли' if ru else 'Рөлдер' }}</a>
+                  {% endif %}
                   <a class="btn btn--ghost btn--sm" href="/staff/school/members/{{ m.id }}/edit" data-sm-action="edit">{{ _('Редактировать') }}</a>
 
                   {% if m.is_active %}
@@ -108,19 +136,67 @@
                 </div>
               </td>
             </tr>
+            <tr class="staff-role-editor" id="staff-roles-{{ m.id }}" hidden>
+              <td colspan="6">
+                <form method="post" action="/staff/school/members/{{ m.id }}/roles-inline" data-staff-role-form
+                      data-empty-confirm="{{ 'Снять все роли сотрудника?' if ru else 'Қызметкердің барлық рөлін алып тастау керек пе?' }}"
+                      data-had-roles="{{ 1 if active_roles else 0 }}">
+                  <strong>{{ 'Роли:' if ru else 'Рөлдер:' }} {{ m.full_name }}</strong>
+                  <input type="hidden" name="csrf" value="{{ role_csrf }}">
+                  <input type="hidden" name="role_revision" value="{{ m.roles_revision }}">
+                  {% for key,value in filters.items() %}<input type="hidden" name="{{ key }}" value="{{ value }}">{% endfor %}
+                  <div data-staff-role-rows>
+                    {% for r in active_roles %}
+                    <div class="staff-role-row">
+                      <select name="roles[{{ loop.index0 }}].role" data-staff-role-select aria-label="{{ 'Роль' if ru else 'Рөл' }}">
+                        <option value="">{{ 'Выберите роль' if ru else 'Рөлді таңдаңыз' }}</option>
+                        {% for choice in role_choices %}<option value="{{ choice.value }}" {% if choice.value==r.role.value %}selected{% endif %}>{{ choice.label }}</option>{% endfor %}
+                      </select>
+                      <input name="roles[{{ loop.index0 }}].context" value="{{ r.role_context }}" maxlength="200" data-staff-role-context
+                             aria-label="{{ 'Контекст роли' if ru else 'Рөл контексті' }}" placeholder="{{ 'МО, класс или другое уточнение' if ru else 'ӘБ, сынып немесе басқа нақтылау' }}">
+                      <button type="button" data-staff-role-remove data-sm-action="danger" data-sm-size="compact">{{ 'Убрать' if ru else 'Алып тастау' }}</button>
+                    </div>
+                    {% endfor %}
+                  </div>
+                  <template data-staff-role-template>
+                    <div class="staff-role-row">
+                      <select data-staff-role-select aria-label="{{ 'Роль' if ru else 'Рөл' }}">
+                        <option value="">{{ 'Выберите роль' if ru else 'Рөлді таңдаңыз' }}</option>
+                        {% for choice in role_choices %}<option value="{{ choice.value }}">{{ choice.label }}</option>{% endfor %}
+                      </select>
+                      <input data-staff-role-context maxlength="200" aria-label="{{ 'Контекст роли' if ru else 'Рөл контексті' }}"
+                             placeholder="{{ 'МО, класс или другое уточнение' if ru else 'ӘБ, сынып немесе басқа нақтылау' }}">
+                      <button type="button" data-staff-role-remove data-sm-action="danger" data-sm-size="compact">{{ 'Убрать' if ru else 'Алып тастау' }}</button>
+                    </div>
+                  </template>
+                  <div class="row">
+                    <button type="button" data-staff-role-add data-sm-action="nav" data-sm-size="compact">{{ '+ Добавить роль' if ru else '+ Рөл қосу' }}</button>
+                    <button type="submit" data-sm-action="primary" data-sm-size="compact">{{ 'Сохранить роли' if ru else 'Рөлдерді сақтау' }}</button>
+                    <button type="button" data-staff-role-cancel data-sm-action="nav" data-sm-size="compact">{{ 'Отмена' if ru else 'Болдырмау' }}</button>
+                  </div>
+                  <p class="muted">{{ 'Снятые роли сохраняются в истории задач.' if ru else 'Алып тасталған рөлдер тапсырмалар тарихында сақталады.' }}</p>
+                </form>
+              </td>
+            </tr>
+          {% else %}<tr><td colspan="6">{{ 'Сотрудники по этим условиям не найдены.' if ru else 'Бұл шарттар бойынша қызметкерлер табылмады.' }}</td></tr>
           {% endfor %}
           </tbody>
         </table>
       </div>
 
+      <nav class="staff-directory-pagination" aria-label="{{ 'Страницы списка' if ru else 'Тізім беттері' }}">
+        {% if previous_url %}<a href="{{ previous_url }}" data-sm-action="nav" data-sm-size="compact">{{ '← Предыдущая' if ru else '← Алдыңғы' }}</a>{% endif %}
+        <span>{{ 'Страница' if ru else 'Бет' }} {{ filters.page }} / {{ page_count }}</span>
+        {% if next_url %}<a href="{{ next_url }}" data-sm-action="nav" data-sm-size="compact">{{ 'Следующая →' if ru else 'Келесі →' }}</a>{% endif %}
+      </nav>
       <div class="muted" style="margin-top:10px">
-        {{ _('Подсказка: увольнение — это soft-delete (is_active=false). История назначений в планах сохранится.') }}
+        {{ 'Уволенные сотрудники и снятые роли сохраняются в истории.' if ru else 'Жұмыстан босатылған қызметкерлер мен алып тасталған рөлдер тарихта сақталады.' }}
       </div>
     </div>
   </section>
 
   {# =================== RIGHT: FORMS =================== #}
-  <aside class="card">
+  <aside class="card" id="staff-tools">
     <div class="card__header">
       <div>
         <h2 class="card__title">{{ _('Добавить / Импорт') }}</h2>
@@ -208,57 +284,12 @@
           {# сюда будем добавлять hidden inputs roles[*] #}
         </form>
       </div>
-      {# ----------- ADMIN ROLES NAV ----------- #}
-<div class="card card--section" style="margin-top:16px">
-  <div class="card__header">
-    <div>
-      <h3 class="card__title" style="margin:0">{{ _('Администрация школы — назначение ролей') }}</h3>
-      <div class="card__hint" style="color:#6b7280;font-size:13px;margin-top:4px">
-        {{ _('Выберите сотрудника и перейдите на страницу назначения ResponsibleRole (директор, замы и т.д.).') }}
-      </div>
-    </div>
-  </div>
-
-  <div class="card__body" style="padding:14px">
-    <div class="form-grid" style="max-width:720px">
-      <div class="field" style="grid-column:1 / -1">
-        <label>{{ _('Сотрудник') }}</label>
-        <select id="memberRoleSelect">
-          <option value="">{{ _('— выбери сотрудника —') }}</option>
-          {% for m in members %}
-            <option value="{{ m.id }}">{{ m.full_name }}</option>
-          {% endfor %}
-        </select>
-        <div class="muted">{{ _('Роли назначаются отдельно и используются при формировании месячного плана.') }}</div>
-      </div>
-    </div>
-
-    <div class="row" style="margin-top:10px">
-      <a class="btn btn--primary" id="goRolesBtn" href="#" onclick="return goToRoles()" data-sm-action="primary">{{ _('Назначить роли') }}</a>
-      <a class="btn btn--ghost" href="/staff/school" data-sm-action="edit">{{ _('Обновить') }}</a>
-    </div>
-  </div>
-</div>
-
-<script>
-  function goToRoles(){
-    const sel = document.getElementById("memberRoleSelect");
-    const id = sel ? sel.value : "";
-    if(!id){
-      alert(window.SchoolMonitorI18n.t("st_7cd59f175b99"));
-      return false;
-    }
-    window.location.href = `/staff/school/members/${id}/roles`;
-    return false;
-  }
-</script>
-
-
-
     </div>
   </aside>
 
 </div>
+</div>
 
 <script src="{{ url_for('static', path='js/school_staff.js') }}?v=i18n7"></script>
+<script defer src="{{ url_for('static', path='js/staff_directory.js') }}?v=342"></script>
 {% endblock %}

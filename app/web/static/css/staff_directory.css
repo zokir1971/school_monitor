@@ -1,0 +1,24 @@
+.staff-directory .staff-directory-layout{grid-template-columns:minmax(0,1fr)}
+.staff-directory-summary{position:sticky;top:64px;z-index:30;display:flex;flex-wrap:wrap;gap:8px 20px;padding:10px 14px;margin:12px 0;background:#eff6ff;border:1px solid #cbdcf6;border-radius:10px}
+.staff-directory-summary strong{font-size:18px;color:#1749a5}
+.staff-directory .table-wrap{overflow-x:auto}
+.staff-directory table.grid{width:100%;min-width:900px}
+.staff-directory-filters input,.staff-directory-filters select{box-sizing:border-box;min-width:0;width:100%;max-width:240px;padding:7px;border:1px solid #cbd5e1;border-radius:7px;background:white;font:inherit}
+.staff-directory-filters th{vertical-align:top}
+.staff-directory .row{flex-wrap:wrap}
+.staff-role-editor[hidden]{display:none!important}
+.staff-role-editor>td{background:#f3f7fe;padding:14px}
+.staff-role-row{display:grid;grid-template-columns:minmax(220px,1fr) minmax(180px,1fr) auto;gap:8px;margin:10px 0}
+.staff-role-row input,.staff-role-row select{min-width:0;box-sizing:border-box;width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:7px;font:inherit;background:white}
+.staff-directory-pagination{display:flex;align-items:center;gap:12px;margin-top:12px}
+.staff-directory tr[id],.staff-directory #staff-tools{scroll-margin-top:125px}
+@media(max-width:700px){.staff-directory-summary{position:static}.staff-role-row{grid-template-columns:1fr}}
+
+/* Reserve one action row by taking space from the roles column. */
+.staff-directory table.grid{table-layout:fixed;min-width:1060px}
+.staff-directory table.grid .staff-roles-column{width:24%}
+.staff-directory table.grid .staff-actions-column{width:310px}
+.staff-directory .staff-member-actions{display:flex;flex-wrap:nowrap;align-items:center;gap:6px;white-space:nowrap}
+.staff-directory .staff-member-actions>form{display:inline-flex;margin:0;flex:0 0 auto}
+.staff-directory .badge--role{box-sizing:border-box;max-width:100%;white-space:normal;overflow-wrap:anywhere}
+html body .staff-directory .staff-member-actions [data-sm-action="danger"]{--sm-fill:#c62828;--sm-fg:#fff;--sm-border:#c62828;--sm-hover:#a61c1c}
