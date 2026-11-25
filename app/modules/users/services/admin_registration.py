@@ -15,7 +15,7 @@ from app.core.security import (
 )
 from app.modules.org.models import Region, School, District
 from app.modules.users.enums import UserRole
-from app.modules.users.models import User, RegistrationCodeUse
+from app.modules.users.models import User, RegistrationCodeUse, RegistrationCode
 from app.modules.users.repo import UserRepo, RegistrationCodeRepo
 from app.common.time import utcnow
 from app.modules.users.validators import validate_user_scope
@@ -48,6 +48,12 @@ class AdminRegistrationService:
         # + блокируем строку кода, чтобы не было гонок по quota_left
         # ---------------------------
         async with db.begin():
+            # Same lock order as issuance and school transfer: school, then code.
+            code_school_id = await db.scalar(select(RegistrationCode.school_id).where(
+                RegistrationCode.code_lookup_hash == lookup_hash))
+            if code_school_id is not None:
+                await db.execute(select(School.__table__.c.id).where(
+                    School.__table__.c.id == code_school_id).with_for_update())
             # 1) Берём код с блокировкой
             rc = await RegistrationCodeRepo.get_by_lookup_hash_for_update(db, lookup_hash)
             if not rc:

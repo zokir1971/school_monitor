@@ -1,6 +1,7 @@
 # app/modules/assessment/repositories/knowledge_quality_dynamics_repo.py
 
 from __future__ import annotations
+from app.modules.org.governance import filter_school_statement, reporting_district_id, district_school_ids, governance_filter
 
 from dataclasses import dataclass
 
@@ -568,710 +569,167 @@ class KnowledgeQualityDynamicsRepo:
     # =====================================================
 
     @classmethod
-    async def get_district_filter_rows(
-            cls,
-            db: AsyncSession,
-            *,
-            district_id: int,
-    ) -> list[KnowledgeQualityDynamicsFilterRow]:
+    async def get_district_filter_rows(cls, db: AsyncSession, *, district_id: int) -> list[KnowledgeQualityDynamicsFilterRow]:
         """
-        Доступные комбинации фильтров динамики района.
+            Доступные комбинации фильтров динамики района.
 
-        Используются только официальные контрольные точки:
+            Используются только официальные контрольные точки:
 
-            checkpoint_snapshot IS NOT NULL
+                checkpoint_snapshot IS NOT NULL
 
-        Один SQL-запрос:
-            academic_year_start + subject_id + grade_level
-        """
-
-        stmt = (
-            select(
-                AssessmentQualitySummary
-                .academic_year_start_snapshot
-                .label(
-                    "academic_year_start"
-                ),
-
-                AssessmentQualitySummary
-                .subject_id
-                .label(
-                    "subject_id"
-                ),
-
-                AssessmentQualitySummary
-                .grade_level_snapshot
-                .label(
-                    "grade_level"
-                ),
-            )
-            .select_from(
-                AssessmentQualitySummary
-            )
-            .where(
-                AssessmentQualitySummary
-                .district_id_snapshot
-                == district_id,
-
-                AssessmentQualitySummary
-                .checkpoint_snapshot
-                .is_not(None),
-
-                AssessmentQualitySummary.subject_id
-                .is_not(None),
-
-                AssessmentQualitySummary
-                .grade_level_snapshot
-                .is_not(None),
-            )
-            .distinct()
-            .order_by(
-                AssessmentQualitySummary
-                .academic_year_start_snapshot
-                .desc(),
-
-                AssessmentQualitySummary.subject_id
-                .asc(),
-
-                AssessmentQualitySummary
-                .grade_level_snapshot
-                .asc(),
-            )
-        )
-
-        rows = (
-            await db.execute(
-                stmt
-            )
-        ).all()
-
-        return [
-            KnowledgeQualityDynamicsFilterRow(
-                academic_year_start=int(
-                    row.academic_year_start
-                ),
-                subject_id=int(
-                    row.subject_id
-                ),
-                grade_level=int(
-                    row.grade_level
-                ),
-            )
-            for row in rows
-        ]
+            Один SQL-запрос:
+                academic_year_start + subject_id + grade_level
+            """
+        stmt = select(AssessmentQualitySummary.academic_year_start_snapshot.label('academic_year_start'), AssessmentQualitySummary.subject_id.label('subject_id'), AssessmentQualitySummary.grade_level_snapshot.label('grade_level')).select_from(AssessmentQualitySummary).where(AssessmentQualitySummary.district_id_snapshot == district_id, AssessmentQualitySummary.checkpoint_snapshot.is_not(None), AssessmentQualitySummary.subject_id.is_not(None), AssessmentQualitySummary.grade_level_snapshot.is_not(None)).distinct().order_by(AssessmentQualitySummary.academic_year_start_snapshot.desc(), AssessmentQualitySummary.subject_id.asc(), AssessmentQualitySummary.grade_level_snapshot.asc())
+        rows = (await db.execute(stmt.where(AssessmentQualitySummary.school_id.in_(district_school_ids(district_id))))).all()
+        return [KnowledgeQualityDynamicsFilterRow(academic_year_start=int(row.academic_year_start), subject_id=int(row.subject_id), grade_level=int(row.grade_level)) for row in rows]
 
     @classmethod
-    async def get_district_checkpoint_rows(
-            cls,
-            db: AsyncSession,
-            *,
-            district_id: int,
-            academic_year_start: int,
-            subject_id: int | None = None,
-            grade_level: int | None = None,
-            school_id: int | None = None,
-    ) -> list[KnowledgeQualityDynamicsRow]:
+    async def get_district_checkpoint_rows(cls, db: AsyncSession, *, district_id: int, academic_year_start: int, subject_id: int | None=None, grade_level: int | None=None, school_id: int | None=None) -> list[KnowledgeQualityDynamicsRow]:
         """
-        Общая динамика района.
+            Общая динамика района.
 
-        Группировка:
-            checkpoint
+            Группировка:
+                checkpoint
 
-        Допустимый drill-down:
-            district
-            -> subject
-            -> grade
-            -> school
+            Допустимый drill-down:
+                district
+                -> subject
+                -> grade
+                -> school
 
-        Ни класс, ни учитель сюда не передаются.
-        """
-
-        stmt = (
-            select(
-                AssessmentQualitySummary
-                .checkpoint_snapshot
-                .label(
-                    "checkpoint"
-                ),
-
-                *cls._aggregate_columns(),
-            )
-            .select_from(
-                AssessmentQualitySummary
-            )
-            .where(
-                AssessmentQualitySummary
-                .district_id_snapshot
-                == district_id,
-
-                AssessmentQualitySummary
-                .academic_year_start_snapshot
-                == academic_year_start,
-
-                AssessmentQualitySummary
-                .checkpoint_snapshot
-                .is_not(None),
-            )
-        )
-
+            Ни класс, ни учитель сюда не передаются.
+            """
+        stmt = select(AssessmentQualitySummary.checkpoint_snapshot.label('checkpoint'), *cls._aggregate_columns()).select_from(AssessmentQualitySummary).where(AssessmentQualitySummary.district_id_snapshot == district_id, AssessmentQualitySummary.academic_year_start_snapshot == academic_year_start, AssessmentQualitySummary.checkpoint_snapshot.is_not(None))
         if subject_id is not None:
-            stmt = stmt.where(
-                AssessmentQualitySummary.subject_id
-                == subject_id
-            )
-
+            stmt = stmt.where(AssessmentQualitySummary.subject_id == subject_id)
         if grade_level is not None:
-            stmt = stmt.where(
-                AssessmentQualitySummary
-                .grade_level_snapshot
-                == grade_level
-            )
-
+            stmt = stmt.where(AssessmentQualitySummary.grade_level_snapshot == grade_level)
         if school_id is not None:
-            stmt = stmt.where(
-                AssessmentQualitySummary.school_id
-                == school_id
-            )
-
-        stmt = (
-            stmt
-            .group_by(
-                AssessmentQualitySummary
-                .checkpoint_snapshot
-            )
-            .order_by(
-                AssessmentQualitySummary
-                .checkpoint_snapshot
-                .asc()
-            )
-        )
-
-        rows = (
-            await db.execute(
-                stmt
-            )
-        ).all()
-
-        return [
-            cls._row_to_dynamics(
-                row
-            )
-            for row in rows
-        ]
+            stmt = stmt.where(AssessmentQualitySummary.school_id == school_id)
+        stmt = stmt.group_by(AssessmentQualitySummary.checkpoint_snapshot).order_by(AssessmentQualitySummary.checkpoint_snapshot.asc())
+        rows = (await db.execute(stmt.where(AssessmentQualitySummary.school_id.in_(district_school_ids(district_id))))).all()
+        return [cls._row_to_dynamics(row) for row in rows]
 
     # =====================================================
     # DISTRICT -> SCHOOLS
     # =====================================================
 
     @classmethod
-    async def get_district_school_checkpoint_rows(
-            cls,
-            db: AsyncSession,
-            *,
-            district_id: int,
-            academic_year_start: int,
-            subject_id: int | None = None,
-            grade_level: int | None = None,
-    ) -> list[KnowledgeQualityEntityDynamicsRow]:
+    async def get_district_school_checkpoint_rows(cls, db: AsyncSession, *, district_id: int, academic_year_start: int, subject_id: int | None=None, grade_level: int | None=None) -> list[KnowledgeQualityEntityDynamicsRow]:
         """
-        Динамика района с разбивкой по школам.
+            Динамика района с разбивкой по школам.
 
-        Одна SQL-строка:
-            school_id + checkpoint
+            Одна SQL-строка:
+                school_id + checkpoint
 
-        Используется, чтобы район мог определить,
-        в какой школе возник рост или снижение.
-        """
-
-        stmt = (
-            select(
-                AssessmentQualitySummary
-                .school_id
-                .label(
-                    "entity_id"
-                ),
-
-                AssessmentQualitySummary
-                .checkpoint_snapshot
-                .label(
-                    "checkpoint"
-                ),
-
-                *cls._aggregate_columns(),
-            )
-            .select_from(
-                AssessmentQualitySummary
-            )
-            .where(
-                AssessmentQualitySummary
-                .district_id_snapshot
-                == district_id,
-
-                AssessmentQualitySummary
-                .academic_year_start_snapshot
-                == academic_year_start,
-
-                AssessmentQualitySummary
-                .checkpoint_snapshot
-                .is_not(None),
-            )
-        )
-
+            Используется, чтобы район мог определить,
+            в какой школе возник рост или снижение.
+            """
+        stmt = select(AssessmentQualitySummary.school_id.label('entity_id'), AssessmentQualitySummary.checkpoint_snapshot.label('checkpoint'), *cls._aggregate_columns()).select_from(AssessmentQualitySummary).where(AssessmentQualitySummary.district_id_snapshot == district_id, AssessmentQualitySummary.academic_year_start_snapshot == academic_year_start, AssessmentQualitySummary.checkpoint_snapshot.is_not(None))
         if subject_id is not None:
-            stmt = stmt.where(
-                AssessmentQualitySummary.subject_id
-                == subject_id
-            )
-
+            stmt = stmt.where(AssessmentQualitySummary.subject_id == subject_id)
         if grade_level is not None:
-            stmt = stmt.where(
-                AssessmentQualitySummary
-                .grade_level_snapshot
-                == grade_level
-            )
-
-        stmt = (
-            stmt
-            .group_by(
-                AssessmentQualitySummary.school_id,
-
-                AssessmentQualitySummary
-                .checkpoint_snapshot,
-            )
-            .order_by(
-                AssessmentQualitySummary.school_id.asc(),
-
-                AssessmentQualitySummary
-                .checkpoint_snapshot
-                .asc(),
-            )
-        )
-
-        rows = (
-            await db.execute(
-                stmt
-            )
-        ).all()
-
-        return [
-            cls._row_to_entity_dynamics(
-                row
-            )
-            for row in rows
-        ]
+            stmt = stmt.where(AssessmentQualitySummary.grade_level_snapshot == grade_level)
+        stmt = stmt.group_by(AssessmentQualitySummary.school_id, AssessmentQualitySummary.checkpoint_snapshot).order_by(AssessmentQualitySummary.school_id.asc(), AssessmentQualitySummary.checkpoint_snapshot.asc())
+        rows = (await db.execute(stmt.where(AssessmentQualitySummary.school_id.in_(district_school_ids(district_id))))).all()
+        return [cls._row_to_entity_dynamics(row) for row in rows]
 
     # =====================================================
     # REGION
     # =====================================================
 
     @classmethod
-    async def get_region_filter_rows(
-            cls,
-            db: AsyncSession,
-            *,
-            region_id: int,
-    ) -> list[KnowledgeQualityDynamicsFilterRow]:
+    async def get_region_filter_rows(cls, db: AsyncSession, *, region_id: int, governance: str='') -> list[KnowledgeQualityDynamicsFilterRow]:
         """
-        Доступные комбинации фильтров динамики региона.
+            Доступные комбинации фильтров динамики региона.
 
-        Используются только официальные
-        контрольные точки:
+            Используются только официальные
+            контрольные точки:
 
-            checkpoint_snapshot IS NOT NULL
+                checkpoint_snapshot IS NOT NULL
 
-        Один SQL-запрос:
-            academic_year_start + subject_id + grade_level
-        """
-
-        stmt = (
-            select(
-                AssessmentQualitySummary
-                .academic_year_start_snapshot
-                .label(
-                    "academic_year_start"
-                ),
-
-                AssessmentQualitySummary
-                .subject_id
-                .label(
-                    "subject_id"
-                ),
-
-                AssessmentQualitySummary
-                .grade_level_snapshot
-                .label(
-                    "grade_level"
-                ),
-            )
-            .select_from(
-                AssessmentQualitySummary
-            )
-            .where(
-                AssessmentQualitySummary
-                .region_id_snapshot
-                == region_id,
-
-                AssessmentQualitySummary
-                .checkpoint_snapshot
-                .is_not(None),
-
-                AssessmentQualitySummary
-                .subject_id
-                .is_not(None),
-
-                AssessmentQualitySummary
-                .grade_level_snapshot
-                .is_not(None),
-            )
-            .distinct()
-            .order_by(
-                AssessmentQualitySummary
-                .academic_year_start_snapshot
-                .desc(),
-
-                AssessmentQualitySummary
-                .subject_id
-                .asc(),
-
-                AssessmentQualitySummary
-                .grade_level_snapshot
-                .asc(),
-            )
-        )
-
-        rows = (
-            await db.execute(
-                stmt
-            )
-        ).all()
-
-        return [
-            KnowledgeQualityDynamicsFilterRow(
-                academic_year_start=int(
-                    row.academic_year_start
-                ),
-                subject_id=int(
-                    row.subject_id
-                ),
-                grade_level=int(
-                    row.grade_level
-                ),
-            )
-            for row in rows
-        ]
+            Один SQL-запрос:
+                academic_year_start + subject_id + grade_level
+            """
+        # Keep the regional cascade stable when a governance subset is empty.
+        # Actual checkpoint aggregates still apply the governance filter.
+        governance_filter(governance)
+        stmt = select(AssessmentQualitySummary.academic_year_start_snapshot.label('academic_year_start'), AssessmentQualitySummary.subject_id.label('subject_id'), AssessmentQualitySummary.grade_level_snapshot.label('grade_level')).select_from(AssessmentQualitySummary).where(AssessmentQualitySummary.region_id_snapshot == region_id, AssessmentQualitySummary.checkpoint_snapshot.is_not(None), AssessmentQualitySummary.subject_id.is_not(None), AssessmentQualitySummary.grade_level_snapshot.is_not(None)).distinct().order_by(AssessmentQualitySummary.academic_year_start_snapshot.desc(), AssessmentQualitySummary.subject_id.asc(), AssessmentQualitySummary.grade_level_snapshot.asc())
+        rows = (await db.execute(stmt)).all()
+        return [KnowledgeQualityDynamicsFilterRow(academic_year_start=int(row.academic_year_start), subject_id=int(row.subject_id), grade_level=int(row.grade_level)) for row in rows]
 
     @classmethod
-    async def get_region_checkpoint_rows(
-            cls,
-            db: AsyncSession,
-            *,
-            region_id: int,
-            academic_year_start: int,
-            subject_id: int | None = None,
-            grade_level: int | None = None,
-            district_id: int | None = None,
-            school_id: int | None = None,
-    ) -> list[KnowledgeQualityDynamicsRow]:
+    async def get_region_checkpoint_rows(cls, db: AsyncSession, *, region_id: int, academic_year_start: int, subject_id: int | None=None, grade_level: int | None=None, district_id: int | None=None, school_id: int | None=None, governance: str='') -> list[KnowledgeQualityDynamicsRow]:
         """
-        Общая динамика региона.
+            Общая динамика региона.
 
-        Drill-down:
-            region
-            -> subject
-            -> grade
-            -> district
-            -> school
-        """
-
-        stmt = (
-            select(
-                AssessmentQualitySummary
-                .checkpoint_snapshot
-                .label(
-                    "checkpoint"
-                ),
-
-                *cls._aggregate_columns(),
-            )
-            .select_from(
-                AssessmentQualitySummary
-            )
-            .where(
-                AssessmentQualitySummary
-                .region_id_snapshot
-                == region_id,
-
-                AssessmentQualitySummary
-                .academic_year_start_snapshot
-                == academic_year_start,
-
-                AssessmentQualitySummary
-                .checkpoint_snapshot
-                .is_not(None),
-            )
-        )
-
+            Drill-down:
+                region
+                -> subject
+                -> grade
+                -> district
+                -> school
+            """
+        stmt = select(AssessmentQualitySummary.checkpoint_snapshot.label('checkpoint'), *cls._aggregate_columns()).select_from(AssessmentQualitySummary).where(AssessmentQualitySummary.region_id_snapshot == region_id, AssessmentQualitySummary.academic_year_start_snapshot == academic_year_start, AssessmentQualitySummary.checkpoint_snapshot.is_not(None))
         if subject_id is not None:
-            stmt = stmt.where(
-                AssessmentQualitySummary.subject_id
-                == subject_id
-            )
-
+            stmt = stmt.where(AssessmentQualitySummary.subject_id == subject_id)
         if grade_level is not None:
-            stmt = stmt.where(
-                AssessmentQualitySummary
-                .grade_level_snapshot
-                == grade_level
-            )
-
+            stmt = stmt.where(AssessmentQualitySummary.grade_level_snapshot == grade_level)
         if district_id is not None:
-            stmt = stmt.where(
-                AssessmentQualitySummary
-                .district_id_snapshot
-                == district_id
-            )
-
+            stmt = stmt.where(reporting_district_id(AssessmentQualitySummary.district_id_snapshot, AssessmentQualitySummary.region_id_snapshot, school_id=AssessmentQualitySummary.school_id) == district_id)
         if school_id is not None:
-            stmt = stmt.where(
-                AssessmentQualitySummary.school_id
-                == school_id
-            )
-
-        stmt = (
-            stmt
-            .group_by(
-                AssessmentQualitySummary
-                .checkpoint_snapshot
-            )
-            .order_by(
-                AssessmentQualitySummary
-                .checkpoint_snapshot
-                .asc()
-            )
-        )
-
-        rows = (
-            await db.execute(
-                stmt
-            )
-        ).all()
-
-        return [
-            cls._row_to_dynamics(
-                row
-            )
-            for row in rows
-        ]
+            stmt = stmt.where(AssessmentQualitySummary.school_id == school_id)
+        stmt = stmt.group_by(AssessmentQualitySummary.checkpoint_snapshot).order_by(AssessmentQualitySummary.checkpoint_snapshot.asc())
+        rows = (await db.execute(filter_school_statement(stmt, AssessmentQualitySummary.school_id, governance))).all()
+        return [cls._row_to_dynamics(row) for row in rows]
 
     # =====================================================
     # REGION -> DISTRICTS
     # =====================================================
 
     @classmethod
-    async def get_region_district_checkpoint_rows(
-            cls,
-            db: AsyncSession,
-            *,
-            region_id: int,
-            academic_year_start: int,
-            subject_id: int | None = None,
-            grade_level: int | None = None,
-    ) -> list[KnowledgeQualityEntityDynamicsRow]:
+    async def get_region_district_checkpoint_rows(cls, db: AsyncSession, *, region_id: int, academic_year_start: int, subject_id: int | None=None, grade_level: int | None=None, governance: str='') -> list[KnowledgeQualityEntityDynamicsRow]:
         """
-        Динамика региона с разбивкой по районам.
+            Динамика региона с разбивкой по районам.
 
-        Одна SQL-строка:
-            district_id + checkpoint
-        """
-
-        stmt = (
-            select(
-                AssessmentQualitySummary
-                .district_id_snapshot
-                .label(
-                    "entity_id"
-                ),
-
-                AssessmentQualitySummary
-                .checkpoint_snapshot
-                .label(
-                    "checkpoint"
-                ),
-
-                *cls._aggregate_columns(),
-            )
-            .select_from(
-                AssessmentQualitySummary
-            )
-            .where(
-                AssessmentQualitySummary
-                .region_id_snapshot
-                == region_id,
-
-                AssessmentQualitySummary
-                .district_id_snapshot
-                .is_not(None),
-
-                AssessmentQualitySummary
-                .academic_year_start_snapshot
-                == academic_year_start,
-
-                AssessmentQualitySummary
-                .checkpoint_snapshot
-                .is_not(None),
-            )
-        )
-
+            Одна SQL-строка:
+                district_id + checkpoint
+            """
+        # Reuse one SQL expression and its bound parameter in SELECT/GROUP BY.
+        # Equal Python values in separate expressions are different asyncpg $n parameters.
+        district_group = reporting_district_id(AssessmentQualitySummary.district_id_snapshot, AssessmentQualitySummary.region_id_snapshot, school_id=AssessmentQualitySummary.school_id).label('entity_id')
+        stmt = select(district_group, AssessmentQualitySummary.checkpoint_snapshot.label('checkpoint'), *cls._aggregate_columns()).select_from(AssessmentQualitySummary).where(AssessmentQualitySummary.region_id_snapshot == region_id, district_group.is_not(None), AssessmentQualitySummary.academic_year_start_snapshot == academic_year_start, AssessmentQualitySummary.checkpoint_snapshot.is_not(None))
         if subject_id is not None:
-            stmt = stmt.where(
-                AssessmentQualitySummary.subject_id
-                == subject_id
-            )
-
+            stmt = stmt.where(AssessmentQualitySummary.subject_id == subject_id)
         if grade_level is not None:
-            stmt = stmt.where(
-                AssessmentQualitySummary
-                .grade_level_snapshot
-                == grade_level
-            )
-
-        stmt = (
-            stmt
-            .group_by(
-                AssessmentQualitySummary
-                .district_id_snapshot,
-
-                AssessmentQualitySummary
-                .checkpoint_snapshot,
-            )
-            .order_by(
-                AssessmentQualitySummary
-                .district_id_snapshot
-                .asc(),
-
-                AssessmentQualitySummary
-                .checkpoint_snapshot
-                .asc(),
-            )
-        )
-
-        rows = (
-            await db.execute(
-                stmt
-            )
-        ).all()
-
-        return [
-            cls._row_to_entity_dynamics(
-                row
-            )
-            for row in rows
-        ]
+            stmt = stmt.where(AssessmentQualitySummary.grade_level_snapshot == grade_level)
+        stmt = stmt.group_by(district_group, AssessmentQualitySummary.checkpoint_snapshot).order_by(district_group.asc(), AssessmentQualitySummary.checkpoint_snapshot.asc())
+        rows = (await db.execute(filter_school_statement(stmt, AssessmentQualitySummary.school_id, governance))).all()
+        return [cls._row_to_entity_dynamics(row) for row in rows]
 
     # =====================================================
     # REGION -> DISTRICT -> SCHOOLS
     # =====================================================
 
     @classmethod
-    async def get_region_school_checkpoint_rows(
-            cls,
-            db: AsyncSession,
-            *,
-            region_id: int,
-            district_id: int,
-            academic_year_start: int,
-            subject_id: int | None = None,
-            grade_level: int | None = None,
-    ) -> list[KnowledgeQualityEntityDynamicsRow]:
+    async def get_region_school_checkpoint_rows(cls, db: AsyncSession, *, region_id: int, district_id: int, academic_year_start: int, subject_id: int | None=None, grade_level: int | None=None, governance: str='') -> list[KnowledgeQualityEntityDynamicsRow]:
         """
-        Динамика школ конкретного района
-        внутри региональной аналитики.
+            Динамика школ конкретного района
+            внутри региональной аналитики.
 
-        Обязательные security/analytics boundaries:
-            region_id
-            district_id
+            Обязательные security/analytics boundaries:
+                region_id
+                district_id
 
-        Одна SQL-строка:
-            school_id + checkpoint
-        """
-
-        stmt = (
-            select(
-                AssessmentQualitySummary
-                .school_id
-                .label(
-                    "entity_id"
-                ),
-
-                AssessmentQualitySummary
-                .checkpoint_snapshot
-                .label(
-                    "checkpoint"
-                ),
-
-                *cls._aggregate_columns(),
-            )
-            .select_from(
-                AssessmentQualitySummary
-            )
-            .where(
-                AssessmentQualitySummary
-                .region_id_snapshot
-                == region_id,
-
-                AssessmentQualitySummary
-                .district_id_snapshot
-                == district_id,
-
-                AssessmentQualitySummary
-                .academic_year_start_snapshot
-                == academic_year_start,
-
-                AssessmentQualitySummary
-                .checkpoint_snapshot
-                .is_not(None),
-            )
-        )
-
+            Одна SQL-строка:
+                school_id + checkpoint
+            """
+        stmt = select(AssessmentQualitySummary.school_id.label('entity_id'), AssessmentQualitySummary.checkpoint_snapshot.label('checkpoint'), *cls._aggregate_columns()).select_from(AssessmentQualitySummary).where(AssessmentQualitySummary.region_id_snapshot == region_id, reporting_district_id(AssessmentQualitySummary.district_id_snapshot, AssessmentQualitySummary.region_id_snapshot, school_id=AssessmentQualitySummary.school_id) == district_id, AssessmentQualitySummary.academic_year_start_snapshot == academic_year_start, AssessmentQualitySummary.checkpoint_snapshot.is_not(None))
         if subject_id is not None:
-            stmt = stmt.where(
-                AssessmentQualitySummary.subject_id
-                == subject_id
-            )
-
+            stmt = stmt.where(AssessmentQualitySummary.subject_id == subject_id)
         if grade_level is not None:
-            stmt = stmt.where(
-                AssessmentQualitySummary
-                .grade_level_snapshot
-                == grade_level
-            )
-
-        stmt = (
-            stmt
-            .group_by(
-                AssessmentQualitySummary.school_id,
-
-                AssessmentQualitySummary
-                .checkpoint_snapshot,
-            )
-            .order_by(
-                AssessmentQualitySummary.school_id.asc(),
-
-                AssessmentQualitySummary
-                .checkpoint_snapshot
-                .asc(),
-            )
-        )
-
-        rows = (
-            await db.execute(
-                stmt
-            )
-        ).all()
-
-        return [
-            cls._row_to_entity_dynamics(
-                row
-            )
-            for row in rows
-        ]
+            stmt = stmt.where(AssessmentQualitySummary.grade_level_snapshot == grade_level)
+        stmt = stmt.group_by(AssessmentQualitySummary.school_id, AssessmentQualitySummary.checkpoint_snapshot).order_by(AssessmentQualitySummary.school_id.asc(), AssessmentQualitySummary.checkpoint_snapshot.asc())
+        rows = (await db.execute(filter_school_statement(stmt, AssessmentQualitySummary.school_id, governance))).all()
+        return [cls._row_to_entity_dynamics(row) for row in rows]

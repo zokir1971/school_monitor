@@ -3,6 +3,7 @@
 {% block title %}{{ _(page_title) }}{% endblock %}
 
 {% block content %}
+{% import "admin/_school_governance.html" as governance with context %}
 <style>
   .page {
     max-width: 860px;
@@ -128,7 +129,8 @@
   }
 </style>
 
-{% set form_action = request.url_for('school_update', school_id=school.id) if school else request.url_for('school_create') %}
+{% set editing = school and not is_create %}
+{% set form_action = request.url_for('school_update', school_id=school.id) if editing else request.url_for('school_create') %}
 {% set school_name = school.name if school else '' %}
 {% set school_address = school.address if school and school.address else '' %}
 {% set current_district_id = school.district_id if school else None %}
@@ -137,7 +139,7 @@
   <div class="title">
     <h1>{{ _(page_title) }}</h1>
     <div class="sub">
-      {% if school %}
+      {% if editing %}
         {{ _('Изменение данных школы') }}
       {% else %}
         {{ _('Создание новой школы') }}
@@ -183,6 +185,16 @@
         </div>
 
         <div class="field field--full">
+          <label for="governance_level">{{ governance.title() }}</label>
+          <select id="governance_level" name="governance_level" required>
+            {% for value in ['district', 'region'] %}
+              <option value="{{ value }}" {% if (school.governance_level if school else 'district') == value %}selected{% endif %}>{{ governance.label(value) }}</option>
+            {% endfor %}
+          </select>
+          <div class="sub">{{ 'Местонахождение сохраняется. Коды выдаёт администратор выбранного уровня. При смене подчинения или района оставшиеся регистрации по ранее выданным кодам школы будут отменены.' if ui_language() == 'ru' else 'Мектептің орналасқан жері сақталады. Кодтарды таңдалған деңгейдің әкімшісі береді. Бағыныстылық немесе аудан өзгерсе, бұрын берілген мектеп кодтары бойынша қалған тіркелулер жойылады.' }}</div>
+        </div>
+
+        <div class="field field--full">
           <label for="name">{{ _('Название школы') }}</label>
           <input
             id="name"
@@ -208,7 +220,7 @@
 
       <div class="actions">
         <button type="submit" class="btn btn--primary" data-sm-action="primary">
-          {% if school %}{{ _('Сохранить изменения') }}{% else %}{{ _('Создать школу') }}{% endif %}
+          {% if editing %}{{ _('Сохранить изменения') }}{% else %}{{ _('Создать школу') }}{% endif %}
         </button>
 
         <a href="{{ request.url_for('schools_page') }}" class="btn btn--secondary" data-sm-action="nav" data-sm-back="true">
@@ -222,7 +234,6 @@
 <script>
   const regionSelect = document.getElementById("region_id");
   const districtSelect = document.getElementById("district_id");
-  const initialDistrictId = "{{ current_district_id or '' }}";
 
   async function loadDistricts(regionId, selectedDistrictId = "") {
     districtSelect.innerHTML = {{ _('<option value="">Загрузка...</option>')|tojson }};
@@ -266,10 +277,6 @@
     });
   }
 
-  window.addEventListener("DOMContentLoaded", async function () {
-    if (regionSelect && regionSelect.value) {
-      await loadDistricts(regionSelect.value, initialDistrictId);
-    }
-  });
+
 </script>
 {% endblock %}

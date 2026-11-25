@@ -40,7 +40,12 @@ class _RenderLocale:
             return self._translate(message)
         translated = self._messages.get(message, _missing)
         if translated is _missing:
-            translated = self._translate(message)
+            from app.modules.planning.review_places import label_for_message
+            from app.core.system_message_pairs import paired_message
+            selected = label_for_message(message, self.language)
+            if selected is None:
+                selected = paired_message(message, self.language)
+            translated = selected if selected is not None else self._translate(message)
             if len(self._messages) < 256:
                 self._messages[message] = translated
         return translated

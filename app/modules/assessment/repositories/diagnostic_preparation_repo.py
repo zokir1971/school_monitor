@@ -3,7 +3,7 @@ from sqlalchemy import select,func
 from app.modules.education.models import SchoolClass,SchoolStudent,SchoolStudentEnrollment as Enrollment
 from app.modules.org.models import School,District
 from app.modules.assessment.repositories.work_plan_assignment_repo import class_query
-from app.modules.assessment.repositories.diagnostic_selection_repo import selection
+from app.modules.assessment.repositories.diagnostic_selection_repo import selection, apply_selection
 from app.modules.assessment.helpers.work_plan_rules import WorkPlanError
 
 
@@ -23,9 +23,7 @@ async def enrollment_summary(db,context,year,class_ids):
 
 async def filtered_ids(db,plan,year,values):
     filters=await selection(db,plan,year,values)  # Validates every supplied geographic ID.
-    q=class_query(plan,year)
-    for column,key in ((District.region_id,'filter_region_id'),(District.id,'filter_district_id'),(School.id,'filter_school_id')):
-        if filters[key] is not None:q=q.where(column==filters[key])
+    q=apply_selection(class_query(plan,year),filters)
     ids=list((await db.execute(select(q.subquery().c.id).order_by('id').limit(5001))).scalars())
     if not 1<=len(ids)<=5000:raise WorkPlanError('По фильтру нужны 1–5000 классов. Сузьте фильтр. / Сүзгі бойынша 1–5000 сынып қажет. Сүзгіні тарылтыңыз.')
     return ids

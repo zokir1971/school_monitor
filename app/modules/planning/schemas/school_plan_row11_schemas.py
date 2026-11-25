@@ -58,6 +58,8 @@ class SchoolPlanRow11EditPageDTO:
         default_factory=list
     )
 
+    content_revision: str = ""
+
     # State
     is_custom: bool = False
     is_archived: bool = False
@@ -70,6 +72,8 @@ class SchoolPlanRow11EditPageDTO:
 @dataclass(slots=True)
 class SchoolPlanRow11UpdateDTO:
     topic: str
+    content_language: str | None = None
+    content_revision: str = ""
 
     goal: str | None = None
     control_object: str | None = None

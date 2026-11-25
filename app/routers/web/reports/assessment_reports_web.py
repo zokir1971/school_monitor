@@ -77,7 +77,8 @@ def register_report(code,config):
         params=await request.form(max_fields=12000)
         action=params.get('action')
         if action is None and params.get('refresh') and code in ('class_summary','teacher_analysis'):action='filter'
-        if action not in ('preview','save','complete','refresh_pdf','filter','next_page','previous_page','add_page'):raise HTTPException(400,'Unknown action')
+        if action not in ('preview','save','complete','refresh_pdf','filter','next_page','previous_page','add_page','assemble','new_version'):raise HTTPException(400,'Unknown action')
+        if action in ('assemble','new_version') and code!='analytical_reference':raise HTTPException(400,'Unknown action')
         if action in ('next_page','previous_page','add_page') and not config.get('structured'):raise HTTPException(400,'Unknown action')
         page=None
         try:
@@ -96,6 +97,9 @@ def register_report(code,config):
             if action=='refresh_pdf':
                 await documents.save(db,user,page,params,(page['document'] or {}).get('schema_json') or {},request,templates,refresh_pdf=True)
                 return RedirectResponse(str(request.url_for(name+'_fill_page',month_item_id=month_item_id,selected_report_id=selected_report_id))+'?pdf_updated=1',303)
+            if action=='new_version':
+                await documents.start_final_draft(db,user,page,params)
+                return RedirectResponse(str(request.url_for(name+'_fill_page',month_item_id=month_item_id,selected_report_id=selected_report_id)),303)
             documents.ensure_editable(page)
             language=str(params.get('document_language') or resolve_language(request,user))
             if language not in ('ru','kk'):raise reports.QualityReportError('Выберите язык документа. / Құжат тілін таңдаңыз.')

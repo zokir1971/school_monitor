@@ -7,6 +7,7 @@ from fastapi import HTTPException
 from app.common.time import utcnow
 from app.core.security import registration_code_lookup_hash
 from app.modules.org.models import Region, District, School
+from app.modules.org.governance import school_authority_clause
 from app.modules.users.enums import UserRole
 from app.modules.users.models import User, RegistrationCode
 from app.modules.users.repo import RegistrationCodeRepo
@@ -27,11 +28,12 @@ class RegistrationCodeService:
         U = User.__table__
         user = (await db.execute(select(U.c.id, U.c.role, U.c.region_id, U.c.district_id, U.c.is_active)
                 .where(U.c.id == user_id))).mappings().one_or_none()
-        if not user or not user['is_active'] or user['role'] != LEVELS[level][0]:
+        allowed = (UserRole.DISTRICT_ADMIN, UserRole.REGION_ADMIN) if level == 'L3' else (LEVELS[level][0],)
+        if not user or not user['is_active'] or user['role'] not in allowed:
             raise HTTPException(403, 'Нет права выдавать коды этого уровня')
         if level == 'L2' and user['region_id'] is None:
             raise HTTPException(403, 'У пользователя не задан region_id')
-        if level == 'L3' and user['district_id'] is None:
+        if level == 'L3' and (user['region_id'] if user['role'] == UserRole.REGION_ADMIN else user['district_id']) is None:
             raise HTTPException(403, 'У пользователя не задан district_id')
         return user
 
@@ -40,14 +42,20 @@ class RegistrationCodeService:
         table = LEVELS[level][2].__table__
         statement = select(table.c.id, table.c.name)
         if level == 'L2': statement = statement.where(table.c.region_id == actor['region_id'])
-        if level == 'L3': statement = statement.where(table.c.district_id == actor['district_id'])
+        if level == 'L3':
+            district = District.__table__.alias('code_school_district')
+            statement = statement.add_columns(
+                district.c.name.label('district_name'), table.c.address,
+            ).join(district, district.c.id == table.c.district_id)
+            statement = statement.where(school_authority_clause(actor, table))
         return statement
 
     @staticmethod
     async def scope_name(db, *, actor, level):
         if level == 'L1': return None
-        table = (Region if level == 'L2' else District).__table__
-        key = actor['region_id'] if level == 'L2' else actor['district_id']
+        regional = level == 'L2' or actor.get('role') == UserRole.REGION_ADMIN
+        table = (Region if regional else District).__table__
+        key = actor['region_id'] if regional else actor['district_id']
         row = (await db.execute(select(table.c.id, table.c.name).where(table.c.id == key))).mappings().one_or_none()
         if row is None: raise HTTPException(403, 'Территория пользователя не найдена')
         return row
@@ -77,7 +85,7 @@ class RegistrationCodeService:
         # Lock actual target rows, even when there are no previous codes yet.
         # Every batch uses the same id order to avoid reversed batch lock order.
         rows = (await db.execute(cls.target_query(actor=actor, level=level)
-                .where(table.c.id.in_(ids)).order_by(table.c.id).with_for_update())).mappings().all()
+                .where(table.c.id.in_(ids)).order_by(table.c.id).with_for_update(of=table))).mappings().all()
         if len(rows) != len(ids):
             raise ValueError('Выбрана чужая или несуществующая организация')
         C = RegistrationCode.__table__
@@ -116,7 +124,8 @@ class RegistrationCodeService:
                 school_id=row['id'] if level == 'L3' else None,
                 issued_by_user_id=issued_by_user_id, issued_at=now,
                 quota_total=quota_total, quota_left=quota_total, is_active=True, expires_at=expires_at)
-            db.add(obj);result.append((raw, obj, row['name']))
+            display_name = ' — '.join((row['district_name'], row['name'])) if level == 'L3' else row['name']
+            db.add(obj);result.append((raw, obj, display_name))
         await db.flush()
         return result
 

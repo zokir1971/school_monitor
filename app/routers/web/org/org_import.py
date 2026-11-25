@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
-import os
-from tempfile import NamedTemporaryFile
+from zipfile import BadZipFile
+from openpyxl.utils.exceptions import InvalidFileException
+from starlette.concurrency import run_in_threadpool
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, Request
 from fastapi.responses import RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.exc import IntegrityError
 
 from app.core.i18n import resolve_language
 from app.core.schools_i18n import school_feedback
@@ -27,39 +29,44 @@ async def import_schools_xlsx(
     db: AsyncSession = Depends(get_db),
     _user=Depends(require_roles(UserRole.SUPERUSER)),
 ):
+    language = resolve_language(request, _user)
     if not file.filename:
-        raise HTTPException(status_code=400, detail=school_feedback('Файл не выбран', resolve_language(request, _user)))
+        raise HTTPException(
+            status_code=400, detail=school_feedback("Файл не выбран", language)
+        )
 
     if not file.filename.lower().endswith(".xlsx"):
-        raise HTTPException(status_code=400, detail=school_feedback('Разрешен только .xlsx файл', resolve_language(request, _user)))
+        raise HTTPException(
+            status_code=400,
+            detail=school_feedback("Разрешен только .xlsx файл", language),
+        )
 
-    tmp_path = None
     try:
-        with NamedTemporaryFile(delete=False, suffix=".xlsx") as tmp:
-            content = await file.read()
-            tmp.write(content)
-            tmp_path = tmp.name
-
-        rows = read_schools_from_xlsx(tmp_path)
+        await file.seek(0)
+        rows = await run_in_threadpool(read_schools_from_xlsx, file.file)
 
         if not rows:
-            raise HTTPException(status_code=400, detail=school_feedback('Файл пустой или не содержит данных', resolve_language(request, _user)))
+            raise HTTPException(
+                status_code=400,
+                detail=school_feedback("Файл пустой или не содержит данных", language),
+            )
 
         await OrgImportService.import_schools_from_rows(
             db,
             rows=rows,
         )
 
-        await db.commit()
-
         return RedirectResponse(
             url="/schools/",
             status_code=303,
         )
 
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=school_feedback(str(exc), resolve_language(request, _user))) from exc
+    except IntegrityError as exc:
+        raise HTTPException(409, school_feedback(None, language)) from exc
+    except (ValueError, BadZipFile, InvalidFileException) as exc:
+        raise HTTPException(
+            status_code=400, detail=school_feedback(str(exc), language)
+        ) from exc
 
     finally:
-        if tmp_path and os.path.exists(tmp_path):
-            os.remove(tmp_path)
+        await file.close()

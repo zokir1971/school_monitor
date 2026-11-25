@@ -8,6 +8,7 @@ from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text, Uni
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
+from app.modules.planning.content_i18n import LocalizedPlanText
 from app.db.types import PLAN_PERIOD_ENUM, RESPONSIBLE_ROLE_ENUM, REVIEW_PLACE_ENUM, DOCUMENT_TYPE_ENUM
 from app.modules.planning.enums import PlanPeriodType, ResponsibleRole, ReviewPlace
 from app.modules.reports.enums import DocumentType
@@ -96,7 +97,8 @@ class SchoolPlan(Base):
 # =========================================================
 # Row4 (таблица на 4 колонки)
 # =========================================================
-class SchoolPlanRow4(Base):
+class SchoolPlanRow4(LocalizedPlanText, Base):
+    __text_fields__ = ('control_object', 'risk_text', 'decision_text')
     __tablename__ = "school_plan_rows_4"
     __table_args__ = (
         # Внутри одного плана в одном направлении порядок должен быть уникальным
@@ -118,6 +120,8 @@ class SchoolPlanRow4(Base):
     )
 
     row_order: Mapped[int] = mapped_column(Integer, nullable=False, default=1, index=True)
+
+    is_excluded: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
 
     # колонки как в plan_template_rows_4
     no: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -167,7 +171,8 @@ class SchoolPlanRow4(Base):
 # =========================================================
 # Row11 (таблица на 11 колонок + период выполнения)
 # =========================================================
-class SchoolPlanRow11(Base):
+class SchoolPlanRow11(LocalizedPlanText, Base):
+    __text_fields__ = ('topic', 'goal', 'control_object', 'control_type', 'methods', 'deadlines', 'responsibles', 'review_place', 'management_decision', 'second_control')
     __tablename__ = "school_plan_rows_11"
     __table_args__ = (
         UniqueConstraint("school_plan_id", "direction_id", "row_order", name="uq_school_rows11_plan_dir_order"),
@@ -188,6 +193,8 @@ class SchoolPlanRow11(Base):
     )
 
     row_order: Mapped[int] = mapped_column(Integer, nullable=False, default=1, index=True)
+
+    is_excluded: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
 
     topic: Mapped[str] = mapped_column(Text, nullable=False)
     goal: Mapped[str | None] = mapped_column(Text, nullable=True)

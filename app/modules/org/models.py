@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
-from sqlalchemy import String, ForeignKey, UniqueConstraint
+from datetime import datetime
+from sqlalchemy import DateTime
+from app.common.time import utcnow
+from sqlalchemy import String, ForeignKey, UniqueConstraint, CheckConstraint, Index
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -77,6 +80,8 @@ class School(Base):
     __table_args__ = (
         # школа уникальна в пределах района
         UniqueConstraint("district_id", "name", name="uq_school_district_name"),
+        CheckConstraint("governance_level IN ('district', 'region')", name="ck_school_governance_level"),
+        Index("ix_school_governance_district", "governance_level", "district_id"),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -90,6 +95,10 @@ class School(Base):
 
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     address: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    # Administrative authority; district_id continues to describe location.
+    governance_level: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="district", server_default="district",
+    )
     settlement: Mapped[str | None] = mapped_column(
         String(255),
         nullable=True,
@@ -131,3 +140,15 @@ class School(Base):
         back_populates="school",
         lazy="raise",
     )
+
+
+class SchoolGovernanceChange(Base):
+    __tablename__ = "school_governance_changes"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    school_id: Mapped[int] = mapped_column(ForeignKey("schools.id", ondelete="RESTRICT"), nullable=False, index=True)
+    actor_user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="RESTRICT"), nullable=False)
+    old_level: Mapped[str] = mapped_column(String(16), nullable=False)
+    new_level: Mapped[str] = mapped_column(String(16), nullable=False)
+    old_district_id: Mapped[int] = mapped_column(nullable=False)
+    new_district_id: Mapped[int] = mapped_column(nullable=False)
+    changed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)

@@ -11,6 +11,7 @@ from sqlalchemy.orm import joinedload, selectinload, raiseload
 from app.modules.planning.enums import (
     AssignmentKind,
     PlanItemStatus,
+    PlanStatus,
 )
 from app.modules.planning.models_month_plan import (
     SchoolMonthPlan,
@@ -116,9 +117,9 @@ class StaffTasksRepo:
 
             selectinload(
                 SchoolMonthPlanItem.assignees
-            ).selectinload(
+            ).joinedload(
                 SchoolMonthPlanItemAssignee.staff_role
-            ).selectinload(
+            ).joinedload(
                 SchoolStaffRole.staff_member
             ),
         )
@@ -134,7 +135,7 @@ class StaffTasksRepo:
         statuses: list[PlanItemStatus] | None = None,
     ) -> list[SchoolMonthPlanItem]:
         """
-        Получить задачи сотрудника за выбранный месяц.
+        Получить задачи сотрудника за выбранный месяц активного годового плана.
 
         Возвращает задачи, где сотрудник назначен:
 
@@ -199,6 +200,7 @@ class StaffTasksRepo:
             )
             .where(
                 SchoolPlan.school_id == school_id,
+                SchoolPlan.status == PlanStatus.ACTIVE.value,
                 SchoolMonthPlan.month == month,
                 SchoolMonthPlanItem.is_included.is_(True),
                 staff_assignee_exists,
@@ -268,11 +270,7 @@ class StaffTasksRepo:
 
         stmt = (
             select(SchoolMonthPlanItem)
-            .options(
-                selectinload(
-                    SchoolMonthPlanItem.assignees
-                )
-            )
+            .options(raiseload("*"))
             .join(
                 SchoolMonthPlan,
                 SchoolMonthPlan.id

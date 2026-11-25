@@ -1,12 +1,14 @@
-.monthly-plan-page{--month-navigation-top:57px;--month-navigation-offset:145px}
-.monthly-direction-nav{position:sticky;top:var(--month-navigation-top);z-index:40;padding:12px 14px;margin:16px 0;background:#f5f8fd;border:1px solid #dbe4f0;border-radius:12px;box-shadow:0 3px 12px rgba(15,23,42,.05)}
-.monthly-direction-nav__label{display:block;color:#52637b;font-size:13px;font-weight:600;margin-bottom:8px}
-.monthly-direction-nav__links{display:flex;flex-wrap:wrap;gap:8px}
-.monthly-direction-nav__link{display:flex;flex:1 1 190px;min-width:0;max-width:340px;align-items:center;padding:9px 12px;border:1px solid #cbd9f0;border-radius:8px;background:#fff;color:#16448b;text-decoration:none;font:inherit;font-size:14px;line-height:1.25;transition:background .12s,color .12s}
-.monthly-direction-nav__link span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.monthly-plan-page{--month-navigation-top:57px;--month-navigation-offset:115px}
+/* One compact row; horizontal scrolling keeps all labels accessible on small screens. */
+.monthly-direction-nav{position:sticky;top:var(--month-navigation-top);z-index:40;padding:6px 8px;margin:10px 0;background:#f5f8fd;border:1px solid #dbe4f0;border-radius:10px;box-shadow:0 3px 12px rgba(15,23,42,.05)}
+.monthly-direction-nav__label{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+.monthly-direction-nav__links{display:flex;flex-wrap:nowrap;gap:6px;overflow-x:auto;min-width:0;scrollbar-width:thin;scroll-padding-inline:4px;padding:2px}
+.monthly-direction-nav__link{display:inline-flex;flex:0 0 auto;align-items:center;border:1px solid #cbd9f0;border-radius:8px;background:#fff;color:#16448b;text-decoration:none;white-space:nowrap}
+.monthly-direction-nav__link span{display:block;white-space:nowrap}
 .monthly-direction-nav__link:hover{background:#edf3ff;border-color:#6c94ef}
-.monthly-direction-nav__link:focus-visible{outline:3px solid #96b7ff;outline-offset:2px}
+.monthly-direction-nav__link:focus-visible{outline:2px solid #96b7ff;outline-offset:-2px}
 .monthly-direction-nav__link[aria-current=location]{background:#2863ec;border-color:#2863ec;color:#fff}
 .monthly-plan-page [data-monthly-direction],.monthly-plan-page tr[id^=month-item-]{scroll-margin-top:var(--month-navigation-offset)}
-@media(max-width:700px){.monthly-direction-nav{padding:9px 10px}.monthly-direction-nav__links{flex-wrap:nowrap;overflow-x:auto;padding:2px 2px 6px}.monthly-direction-nav__link{flex:0 0 auto;max-width:240px}}
 @media print{.monthly-direction-nav{display:none}}
+/* Shared button styling uses these variables, including its important declarations. */
+html body .monthly-direction-nav__link[data-sm-action][aria-current="location"]{--sm-fill:var(--sm-blue);--sm-fg:#fff;--sm-border:var(--sm-blue);--sm-hover:var(--sm-blue-hover)}

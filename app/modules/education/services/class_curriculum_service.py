@@ -260,6 +260,13 @@ class ClassCurriculumService:
             if cid in students_by_class:
                 students_by_class[cid].append(s)
         lookup = {(o.school_class_id, o.subject_id): o for o in offers}
+        offers_by_class = {}
+        for offer in offers:
+            offers_by_class.setdefault(offer.school_class_id, []).append(offer)
+        rules_by_class = {}
+        for rule in rules:
+            if rule.subject_id in active_subjects:
+                rules_by_class.setdefault((rule.instruction_language, rule.grade_level), []).append(rule)
         desired = {}
         warnings = []
         created = []
@@ -267,14 +274,11 @@ class ClassCurriculumService:
             if not c.instruction_language:
                 warnings.append(f'{c.name}: укажите язык обучения.')
                 continue
-            applicable = [r for r in rules if
-                          r.instruction_language == c.instruction_language and r.grade_level == c.grade_level
-                          and r.education_track in (
-                              '', c.education_track or '') and r.subject_id in active_subjects]
+            applicable = [r for r in rules_by_class.get((c.instruction_language, c.grade_level), [])
+                          if r.education_track in ('', c.education_track or '')]
             if not applicable:
-                for o in offers:
-                    if o.school_class_id == c.id:
-                        o.is_active = False
+                for o in offers_by_class.get(c.id, []):
+                    o.is_active = False
                 warnings.append(f'{c.name}: для языка и параллели нет активного набора предметов.')
                 continue
             chosen = {}
@@ -291,8 +295,8 @@ class ClassCurriculumService:
                 o.is_active = True
                 desired[(c.id, r.subject_id)] = (
                     o, r.split_threshold is not None and len(students_by_class[c.id]) >= r.split_threshold)
-            for o in offers:
-                if o.school_class_id == c.id and o.subject_id not in chosen:
+            for o in offers_by_class.get(c.id, []):
+                if o.subject_id not in chosen:
                     o.is_active = False
         Repo.add_many(db, created)
         await Repo.flush(db)
@@ -320,16 +324,25 @@ class ClassCurriculumService:
         groups += new_groups
         group_ids = {g.id: g for g in groups}
         now = datetime.now(timezone.utc)
+        members_by_offer = {}
+        for member in members:
+            if member.is_active:
+                members_by_offer.setdefault(member.class_subject_id, []).append(member)
+        groups_by_offer = {}
+        for group in groups:
+            groups_by_offer.setdefault(group.class_subject_id, []).append(group)
+        assignments_by_subject = {}
+        for assignment in assignments:
+            assignments_by_subject.setdefault((assignment.school_class_id, assignment.subject_id), []).append(assignment)
         new_members = []
         for o in offers:
             # Unconfigured classes remain untouched.
             if (o.school_class_id, o.subject_id) not in desired and o.is_active:
                 continue
-            active = [m for m in members if m.class_subject_id == o.id and m.is_active]
+            active = members_by_offer.get(o.id, [])
             split = o.is_active and o.split_enabled
-            for g in groups:
-                if g.class_subject_id == o.id:
-                    g.is_active = split
+            for g in groups_by_offer.get(o.id, []):
+                g.is_active = split
             allocation = {}
             if split:
                 previous = {m.student_id: group_ids[m.subgroup_id].number for m in active}
@@ -347,9 +360,7 @@ class ClassCurriculumService:
                     new_members.append(
                         SchoolSubjectSubgroupMember(class_subject_id=o.id, subgroup_id=group_map[(o.id, number)].id,
                                                     school_id=school_id, student_id=sid, joined_at=now, is_active=True))
-            for a in assignments:
-                if (a.school_class_id, a.subject_id) != (o.school_class_id, o.subject_id):
-                    continue
+            for a in assignments_by_subject.get((o.school_class_id, o.subject_id), []):
                 wrong = (split and a.subgroup_id is None) or (
                         not split and a.subgroup_id is not None) or not o.is_active
                 if wrong:
@@ -389,7 +400,7 @@ class ClassCurriculumService:
             if member.is_active:member_ids_by_group.setdefault(member.subgroup_id,set()).add(member.student_id)
         assignment_by_key={}
         for assignment in assignments:
-            if assignment.is_primary:
+            if assignment.is_primary and assignment.unassigned_at is None:
                 assignment_by_key.setdefault((assignment.school_class_id,assignment.subject_id,assignment.subgroup_id),assignment)
         rows = []
         for o in offers:
@@ -422,8 +433,25 @@ class ClassCurriculumService:
                 subject_rows=subject_rows,
                 subgroup_count=sum(len(row['groups']) for row in subject_rows),
             ))
+        from app.modules.education.helpers.class_assignment import assignment_version,coverage
+        teacher_ids={t.id for t in teachers}
+        assignments_by_class={}
+        for assignment in assignments:assignments_by_class.setdefault(assignment.school_class_id,[]).append(assignment)
+        for block in class_blocks:
+            block['coverage']=coverage(block['subject_rows'],teacher_ids)
+            block['configuration_ready']=all(not row['offer'].split_enabled or {entry['group'].number for entry in row['groups']}=={1,2} for row in block['subject_rows'])
+            block['assignment_version']=assignment_version(block['school_class'],year,
+                [row['offer']for row in block['subject_rows']],
+                [entry['group']for row in block['subject_rows']for entry in row['groups']],
+                assignments_by_class.get(block['school_class'].id,[]))
+        assignment_summary=dict(total=sum(b['coverage']['total']for b in class_blocks),
+            assigned=sum(b['coverage']['assigned']for b in class_blocks),
+            missing=sum(b['coverage']['missing_count']for b in class_blocks),
+            complete_classes=sum(b['coverage']['total']>0 and b['coverage']['missing_count']==0 for b in class_blocks),
+            unconfigured_classes=sum(not b['subject_rows']for b in class_blocks),
+            total_classes=len(class_blocks))
         return dict(school_name=name, year=year, classes=classes, rows=rows,
-                    class_blocks=class_blocks, teachers=teachers, languages=LANGUAGES,
+                    class_blocks=class_blocks, assignment_summary=assignment_summary, teachers=teachers, languages=LANGUAGES,
                     teachers_by_id={t.id:t for t in teachers},
                     teacher_choices=build_teacher_choices(teachers, subjects.values(), assignments))
 
@@ -468,3 +496,60 @@ class ClassCurriculumService:
                                       teacher_name_snapshot=teacher.full_name, is_primary=True, is_active=True,
                                       assigned_at=date.today())])
         await Repo.flush(db)
+
+    @staticmethod
+    async def assign_class(db,school_id,year,class_id,selections,expected_version):
+        """Validate all class slots, then apply atomically; caller commits."""
+        from app.modules.education.helpers.class_assignment import assignment_version,ClassAssignmentConflict
+        year_valid(year)
+        await SchoolScopeRepo.lock_import(db,school_id=school_id)
+        school_class=await SchoolClassRepo.get_by_id_for_school(db,class_id=class_id,school_id=school_id)
+        if school_class is None or not school_class.is_active or school_class.academic_year_start!=year:
+            raise ValueError('Активный класс вашей школы за выбранный учебный год не найден.')
+        offers,groups,assignments=await Repo.class_assignment_state(db,school_id,class_id)
+        if expected_version!=assignment_version(school_class,year,offers,groups,assignments):
+            raise ClassAssignmentConflict('Назначения или состав предметов изменились. Страница обновлена; проверьте назначения класса и повторите сохранение.')
+        if not offers:raise ValueError('Сначала сформируйте предметы класса.')
+        groups_by_offer={}
+        for group in groups:groups_by_offer.setdefault(group.class_subject_id,[]).append(group)
+        slots={}
+        for offer in offers:
+            if offer.split_enabled:
+                chosen=groups_by_offer.get(offer.id,[])
+                if len(chosen)!=2 or {g.number for g in chosen}!={1,2}:
+                    raise ValueError('Состав подгрупп неполный. Обновите предметы и подгруппы перед назначением.')
+                for group in chosen:slots[(offer.id,group.id)]=(offer,group.number)
+            else:slots[(offer.id,0)]=(offer,None)
+        if set(selections)!=set(slots):
+            raise ValueError('Форма должна содержать все предметы и подгруппы только выбранного класса. Обновите страницу.')
+        missing=[f'№{offer.subject_id}'+(f' / подгруппа {number}'if number else'')
+            for key,(offer,number)in slots.items()if not selections[key]]
+        if missing:raise ValueError('Выберите учителей для всех предметов класса. Не заполнено: '+', '.join(missing))
+        teachers={t.id:t for t in await TeacherChoicesRepo.list_active(db,school_id=school_id)}
+        if any(staff_id not in teachers for staff_id in selections.values()):
+            raise ValueError('Выбран неактивный учитель или сотрудник другой школы. Обновите список учителей.')
+        by_slot={}
+        for assignment in assignments:
+            by_slot.setdefault((assignment.subject_id,assignment.subgroup_id or 0),[]).append(assignment)
+        plans=[];unchanged=0
+        for (offer_id,group_id),staff_id in selections.items():
+            offer,_=slots[(offer_id,group_id)]
+            existing=by_slot.get((offer.subject_id,group_id),[])
+            current=[a for a in existing if a.is_primary]
+            if len(current)==1 and current[0].staff_member_id==staff_id and current[0].unassigned_at is None:
+                unchanged+=1;continue
+            for assignment in current:
+                assignment.is_active=False;assignment.unassigned_at=date.today()
+            reuse=next((a for a in existing if a.is_active and not a.is_primary and a.staff_member_id==staff_id and a.unassigned_at is None),None)
+            plans.append((offer,group_id,staff_id,reuse))
+        # Free active-primary unique keys before promoting or inserting replacements.
+        await Repo.flush(db)
+        additions=[]
+        for offer,group_id,staff_id,reuse in plans:
+            if reuse is not None:reuse.is_primary=True
+            else:additions.append(SchoolClassSubjectTeacher(school_id=school_id,school_class_id=class_id,
+                subject_id=offer.subject_id,subgroup_id=group_id or None,staff_member_id=staff_id,
+                teacher_name_snapshot=teachers[staff_id].full_name,is_primary=True,is_active=True,assigned_at=date.today()))
+        Repo.add_many(db,additions)
+        await Repo.flush(db)
+        return dict(warnings=[],assigned=len(slots),changed=len(plans),unchanged=unchanged)

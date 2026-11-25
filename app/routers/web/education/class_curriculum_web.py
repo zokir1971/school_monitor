@@ -1,6 +1,7 @@
 from datetime import date
 from time import perf_counter
 import secrets
+import re
 from urllib.parse import urlencode
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -56,10 +57,11 @@ def number(form, key, default=None):
         raise ValueError(f'Проверьте поле {key}.') from exc
 
 
-async def school_view(request, user, db, year, error=None, notice=None):
+async def school_view(request, user, db, year, error=None, notice=None, posted_assignments=None, posted_class_id=None):
     started=perf_counter()
     try:
         context = await Service.page(db, school_id(user), year)
+        context.update(posted_assignments=posted_assignments or {},posted_class_id=posted_class_id)
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from exc
     # POST /update can render this page on success or validation failure.
@@ -143,6 +145,8 @@ async def school_update(request: Request, db: AsyncSession = Depends(get_db),
     check_csrf(request, form)
     sid = school_id(user)
     year = current_year()
+    posted_assignments={}
+    posted_class_id=None
     try:
         year = number(form, 'academic_year_start')
         action = form.get('action')
@@ -151,6 +155,19 @@ async def school_update(request: Request, db: AsyncSession = Depends(get_db),
             result = c
         elif action == 'sync':
             result = await Service.sync(db, sid, year)
+        elif action == 'assign_class':
+            posted_class_id=number(form,'class_id')
+            selections={}
+            for key,value in form.multi_items():
+                if not key.startswith('teacher_'):continue
+                match=re.fullmatch(r'teacher_([1-9][0-9]*)_(0|[1-9][0-9]*)',key)
+                if not match:raise ValueError('Некорректное поле назначения.')
+                slot=tuple(map(int,match.groups()))
+                if slot in selections:raise ValueError('Повторяющееся поле назначения.')
+                posted_assignments[key]=str(value)
+                try:selections[slot]=int(value) if str(value).strip() else None
+                except (ValueError,TypeError):raise ValueError('Проверьте выбранного учителя.')
+            result=await Service.assign_class(db,sid,year,posted_class_id,selections,str(form.get('assignment_version') or ''))
         elif action == 'assign':
             await Service.assign(db, sid, number(form, 'offer_id'), number(form, 'subgroup_id', 0) or None,
                                  number(form, 'staff_id'))
@@ -168,4 +185,6 @@ async def school_update(request: Request, db: AsyncSession = Depends(get_db),
         error = str(exc) if isinstance(exc, ValueError) else 'Конфликт данных. Обновите страницу и повторите.'
         if not 2000 <= year <= 2100:
             year = current_year()
-        return await school_view(request, user, db, year, error=error)
+        from app.modules.education.helpers.class_assignment import ClassAssignmentConflict
+        if isinstance(exc,ClassAssignmentConflict):posted_assignments={}
+        return await school_view(request, user, db, year, error=error,posted_assignments=posted_assignments,posted_class_id=posted_class_id)

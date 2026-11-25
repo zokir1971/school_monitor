@@ -82,8 +82,29 @@
    if(trail[trail.length-1]!==here){trail.push(here);try{sessionStorage.setItem(key,JSON.stringify(trail.slice(-40)));}catch(_){}}
   }
  }
+ // Align fallback navigation with the content box rather than a separate fixed width.
+ function alignNavigation(){
+  const main=document.querySelector('main.app-main'),nav=main?.querySelector(':scope > .sm-page-nav');
+  if(!main||!nav)return;
+  const target=[...main.children].find(el=>el!==nav&&!el.matches('script,style,link,[hidden],.alert')&&
+   el.getBoundingClientRect().width>0&&(el.matches('h1,h2,form,table')||el.querySelector('h1,h2,form,table')));
+  if(!target)return;
+  const update=()=>{
+   const box=target.getBoundingClientRect(),outer=main.getBoundingClientRect();
+   const css=getComputedStyle(target),mc=getComputedStyle(main);
+   const start=box.left+parseFloat(css.borderLeftWidth||0)+parseFloat(css.paddingLeft||0);
+   const end=box.right-parseFloat(css.borderRightWidth||0)-parseFloat(css.paddingRight||0);
+   nav.style.marginLeft=Math.max(0,start-outer.left-parseFloat(mc.borderLeftWidth||0)-parseFloat(mc.paddingLeft||0))+'px';
+   nav.style.width=Math.max(0,end-start)+'px';
+   nav.dataset.smAligned='true';
+  };
+  update();
+  if(typeof ResizeObserver!=='undefined'){
+   const observer=new ResizeObserver(update);observer.observe(target);observer.observe(main);
+  }else window.addEventListener('resize',update,{passive:true});
+ }
  function start(){
-  scan(document);navigation();
+  scan(document);navigation();alignNavigation();
   // Native buttons keep their disabled behavior. Guard existing aria-disabled links too.
   document.addEventListener('click',event=>{const el=event.target.closest?.('a[data-sm-action][aria-disabled="true"]');if(el){event.preventDefault();event.stopImmediatePropagation();}},true);
   const pending=new Set();let frame=0;

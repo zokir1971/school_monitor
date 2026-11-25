@@ -3,8 +3,8 @@
 
 {% block extra_css %}
   <link rel="stylesheet" href="{{ url_for('static', path='css/monthly_plan.css') }}">
-  <link rel="stylesheet" href="{{ url_for('static', path='css/monthly_plan_actions.css') }}?v=167">
-  <link rel="stylesheet" href="{{ url_for('static', path='css/monthly_direction_navigation.css') }}?v=127">
+  <link rel="stylesheet" href="{{ url_for('static', path='css/monthly_plan_actions.css') }}?v=337">
+  <link rel="stylesheet" href="{{ url_for('static', path='css/monthly_direction_navigation.css') }}?v=337">
   <link rel="stylesheet" href="{{ url_for('static', path='css/monthly_plan_layout.css') }}?v=219">
   <style>
 .monthly-status {scroll-margin-top:145px;padding:18px 20px;margin:16px 0;border:1px solid #e9bb64;border-radius:12px;background:#fff8e8;color:#704717;}
@@ -183,8 +183,21 @@
     <nav class="monthly-direction-nav" aria-label="{{ 'Направления месячного плана' if ui_language()=='ru' else 'Айлық жоспар бағыттары' }}" data-monthly-direction-nav>
       <span class="monthly-direction-nav__label">{{ 'Направления' if ui_language()=='ru' else 'Бағыттар' }}</span>
       <div class="monthly-direction-nav__links">
+        {% set direction_tabs = {
+          1: ('I. Документация', 'I. Құжаттама'),
+          2: ('II. Качество знаний', 'II. Білім сапасы'),
+          3: ('III. Пробелы в знаниях', 'III. Білімдегі олқылықтар'),
+          4: ('IV. Исследования и одарённость', 'IV. Зерттеу және дарындылық'),
+          5: ('V. Профессиональное мастерство', 'V. Кәсіби шеберлік'),
+          6: ('VI. Воспитательная работа', 'VI. Тәрбие жұмысы')
+        } %}
         {% for block in blocks %}
-        <a class="monthly-direction-nav__link" href="#month-direction-{{ block.direction_id }}" title="{{ block.direction_name }}" data-sm-action="nav"><span>{{ block.direction_name }}</span></a>
+        {# Legacy directions may all have sort_order=1. Use their displayed Roman number;
+           an unrecognized/custom heading retains its full authored title. #}
+        {% set direction_numbers = {'I':1, 'II':2, 'III':3, 'IV':4, 'V':5, 'VI':6, '1':1, '2':2, '3':3, '4':4, '5':5, '6':6} %}
+        {% set heading_prefix = (block.direction_name or '').split('.')[0]|trim|replace('І', 'I') %}
+        {% set tab = direction_tabs.get(direction_numbers.get(heading_prefix)) %}
+        <a class="monthly-direction-nav__link" href="#month-direction-{{ block.direction_id }}" title="{{ block.direction_name }}" aria-label="{{ block.direction_name }}" data-sm-action="nav" data-sm-size="compact"><span>{{ tab[0 if ru else 1] if tab else block.direction_name }}</span></a>
         {% endfor %}
       </div>
     </nav>
@@ -200,7 +213,7 @@
 
       {% set readonly = (month_plan.status.value == 'archived') %}
       <input type="hidden" name="plan_revision" value="{{ plan_revision }}">
-      {% if month_plan.status.value == 'active' %}<div class="card" style="padding:12px;margin:12px 0"><label for="correction-reason">Причина исправления / Түзету себебі</label><input id="correction-reason" name="correction_reason" class="input" maxlength="1000" required style="width:100%"><p class="muted">Статусы выполнения и история сохраняются. / Орындалу мәртебесі мен тарихы сақталады.</p></div>{% endif %}
+      {% if month_plan.status.value == 'active' %}<div class="card" style="padding:12px;margin:12px 0"><label for="correction-reason">{{ 'Причина исправления' if ru else 'Түзету себебі' }}</label><input id="correction-reason" name="correction_reason" class="input" maxlength="1000" required style="width:100%"><p class="muted">{{ 'Статусы выполнения и история сохраняются.' if ru else 'Орындалу мәртебесі мен тарихы сақталады.' }}</p></div>{% endif %}
 
       {% for block in blocks %}
         {% set items = block.items %}
@@ -367,19 +380,19 @@
       {% endfor %}
     </form>
 
-    <div class="actions monthly-plan-actions" role="region" aria-label="Действия с планом / Жоспар әрекеттері">
+    <div class="actions monthly-plan-actions" role="region" aria-label="{{ 'Действия с планом' if ru else 'Жоспар әрекеттері' }}">
 
   <button
       type="submit"
       form="monthly-save-form"
       class="btn btn--primary"
       {% if readonly %}disabled{% endif %}
-   data-sm-action="primary">
-      Сохранить план / Жоспарды сақтау
+   data-sm-action="primary" data-sm-size="compact">
+      {{ 'Сохранить план' if ru else 'Жоспарды сақтау' }}
   </button>
 
   <button type="submit" form="monthly-save-form" name="intent" value="submit"
-      class="btn btn--primary" data-sm-action="success"
+      class="btn btn--primary" data-sm-action="success" data-sm-size="compact"
       {% if month_plan.status.value != 'draft' %}disabled{% endif %}>
     {{ 'Сохранить и отправить на исполнение' if ru else 'Сақтау және орындауға жіберу' }}
   </button>
@@ -390,7 +403,7 @@
           month_plan_id=month_plan.id
       ) }}"
       class="btn btn--secondary"
-   data-sm-action="nav">
+   data-sm-action="nav" data-sm-size="compact">
       {{ _('📲 Уведомления исполнителей') }}
 
       {% if notification_progress is defined
@@ -407,7 +420,7 @@
 
   {% if readonly %}
       <span class="muted">
-          Архивный план / Мұрағат жоспары
+          {{ 'Архивный план' if ru else 'Мұрағат жоспары' }}
       </span>
   {% endif %}
 

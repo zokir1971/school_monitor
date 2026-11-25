@@ -48,6 +48,8 @@ class MonthCorrectionService:
             raise HTTPException(409, 'План изменён другим пользователем. Обновите страницу / Жоспар өзгерді. Бетті жаңартыңыз')
         items = {r['id']:r for r in data['items']}
         schedule=await MonthSchedule.evaluate(db,data)
+        if {u.item_id for u in updates} & schedule.get('excluded_ids', set()):
+            raise HTTPException(409, 'Строка исключена из годового плана. Сначала восстановите её. / Жол жылдық жоспардан алынып тасталған. Алдымен оны қалпына келтіріңіз.')
         expected = schedule['visible_ids'] if target_item_id is None else {target_item_id}
         if not expected <= set(items) or len(updates) != len(expected) or {u.item_id for u in updates} != expected:
             raise HTTPException(400, 'Неполная форма плана. Обновите страницу / Жоспар нысаны толық емес')

@@ -50,6 +50,7 @@ class PdfBlock:
 class PdfDocument:
     plan: PdfPlan
     directions: tuple[PdfBlock, ...]
+    language: str = "kk"
 
 
 def snapshot_plan_pdf(dto):
@@ -63,7 +64,8 @@ def snapshot_plan_pdf(dto):
                        for row in block.rows11)
         blocks.append(PdfBlock(PdfDirection(block.direction.short_title,
                                              block.direction.full_title), rows4, rows11))
-    return PdfDocument(PdfPlan(dto.plan.id, dto.plan.academic_year), tuple(blocks))
+    from app.modules.planning.content_i18n import language
+    return PdfDocument(PdfPlan(dto.plan.id, dto.plan.academic_year), tuple(blocks), language())
 
 
 class PdfWorkerUnavailable(Exception):

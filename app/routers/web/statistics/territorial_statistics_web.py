@@ -15,7 +15,7 @@ router=APIRouter(prefix='/statistics',tags=['Statistics.Territory.Web'])
 async def territorial_statistics_page(request:Request,db:AsyncSession=Depends(get_db),
                                      user=Depends(require_roles(UserRole.SUPERUSER,UserRole.DISTRICT_ADMIN,UserRole.REGION_ADMIN))):
     data=await TerritorialStatisticsService.page(db,user,request.query_params)
-    filters={key:value for key,value in data.items()if key in ('year','month','region_id','direction_id','district_id','school_id','view','sort','order','attention','q')and value is not None}
+    filters={key:value for key,value in data.items()if key in ('year','month','governance','region_id','direction_id','district_id','school_id','view','sort','order','attention','q')and value is not None}
     def link(**changes):
         values=dict(filters,page=1);values.update(changes)
         return '/statistics/territory?'+urlencode({k:v for k,v in values.items()if v is not None and v!=''})

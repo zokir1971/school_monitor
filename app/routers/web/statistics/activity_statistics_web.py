@@ -17,7 +17,7 @@ async def school_activity_statistics_page(request: Request, db: AsyncSession = D
     if getattr(user.role, 'value', user.role) != 'superuser' or not user.is_active:
         raise HTTPException(403, 'Нет доступа / Қолжетімділік жоқ')
     data = await ActivityStatisticsService.page(db, user, request.query_params)
-    filters = {key: data[key] for key in ('period', 'start', 'end', 'region_id', 'district_id', 'view', 'sort', 'order', 'attention', 'q')}
+    filters = {key: data[key] for key in ('period', 'start', 'end', 'governance','region_id', 'district_id', 'view', 'sort', 'order', 'attention', 'q')}
 
     def link(**changes):
         values = dict(filters, page=1)

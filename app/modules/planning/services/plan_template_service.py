@@ -521,6 +521,7 @@ class SuperuserBuilderService:
         rows4: list[PlanTemplateRow4] = []
         rows11: list[PlanTemplateRow11] = []
 
+        td = None
         if template_id and direction_id:
             td = await db.scalar(
                 select(PlanTemplateDirection).where(
@@ -551,6 +552,7 @@ class SuperuserBuilderService:
             "directions": directions,
             "selected_template_id": template_id,
             "selected_direction_id": direction_id,
+            "selected_template_direction": td,
             "rows4": rows4,
             "rows11": rows11,
         }

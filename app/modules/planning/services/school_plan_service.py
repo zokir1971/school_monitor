@@ -1,7 +1,10 @@
 # app/modules/planning/services/school_plan_service.py
 from __future__ import annotations
+from copy import deepcopy
+from app.modules.planning.content_i18n import content_text, write_text, language, content_revision
+from app.modules.planning.template_samples import sample_text
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from fastapi import HTTPException
 from sqlalchemy import select, delete
@@ -93,15 +96,15 @@ def _clean_str(v) -> str | None:
     return s if s else None
 
 
-def _set_row_attr(row, *, field: str, value: str | None, not_null_empty_string: bool = False) -> None:
+def _set_row_attr(row, *, field: str, value: str | None, not_null_empty_string: bool = False, content_language: str | None = None) -> None:
     """
     Унификация присваивания:
     - not_null_empty_string=True -> "" вместо None
     """
     if not_null_empty_string:
-        setattr(row, field, value or "")
+        write_text(row, field, value or "", content_language)
     else:
-        setattr(row, field, value or None)
+        write_text(row, field, value or None, content_language)
 
 
 @dataclass
@@ -166,6 +169,7 @@ class SchoolPlanningService:
             tpl_rows4 = await SchoolPlanningRepo.list_template_rows4_by_td_ids(db, td_ids=td_ids)
             school_rows4: list[SchoolPlanRow4] = [
                 SchoolPlanRow4(
+                    text_i18n=deepcopy(r.text_i18n or {}),
                     school_plan_id=plan.id,
                     direction_id=td_to_direction[r.template_direction_id],
                     row_order=r.row_order,
@@ -183,6 +187,7 @@ class SchoolPlanningService:
 
             school_rows11: list[SchoolPlanRow11] = [
                 SchoolPlanRow11(
+                    text_i18n=deepcopy(r.text_i18n or {}),
                     school_plan_id=plan.id,
                     direction_id=td_to_direction[r.template_direction_id],
                     row_order=r.row_order,
@@ -220,6 +225,8 @@ class DirectionEditDTO:
     direction: PlanDirection
     rows4: list[SchoolPlanRow4]
     rows11: list[SchoolPlanRow11]
+    excluded_rows4: list[SchoolPlanRow4] = field(default_factory=list)
+    excluded_rows11: list[SchoolPlanRow11] = field(default_factory=list)
 
 
 class SchoolPlanEditService:
@@ -250,11 +257,14 @@ class SchoolPlanEditService:
 
         await db.commit()
 
-        # 4) Читаем строки после возможного создания
-        rows4 = await SchoolPlanningRepo.list_rows4_by_direction(db, plan_id=plan_id, direction_id=direction_id)
-        rows11 = await SchoolPlanningRepo.list_rows11_by_direction(db, plan_id=plan_id, direction_id=direction_id)
-
-        return DirectionEditDTO(direction=direction, rows4=rows4, rows11=rows11)
+        rows4 = await SchoolPlanningRepo.list_rows4_by_direction(db, plan_id=plan_id, direction_id=direction_id, include_excluded=True)
+        rows11 = await SchoolPlanningRepo.list_rows11_by_direction(db, plan_id=plan_id, direction_id=direction_id, include_excluded=True)
+        return DirectionEditDTO(
+            direction=direction, rows4=[r for r in rows4 if not r.is_excluded],
+            rows11=[r for r in rows11 if not r.is_excluded],
+            excluded_rows4=[r for r in rows4 if r.is_excluded],
+            excluded_rows11=[r for r in rows11 if r.is_excluded],
+        )
 
     # ---------- rows4 ----------
     @staticmethod
@@ -431,6 +441,15 @@ class SchoolPlanEditService:
             plan_id=row.school_plan_id,
             user=user,
         )
+        if row.is_excluded:
+            raise HTTPException(409, "Сначала восстановите строку в плане. / Алдымен жолды жоспарға қалпына келтіріңіз.")
+
+        row = await db.scalar(select(SchoolPlanRow11).where(SchoolPlanRow11.id==row11_id)
+            .options(raiseload('*')).with_for_update().execution_options(populate_existing=True))
+        if row.is_excluded:
+            raise HTTPException(409, 'Сначала восстановите строку в плане. / Алдымен жолды жоспарға қалпына келтіріңіз.')
+        if data.content_revision and data.content_revision != content_revision(row,data.content_language or language(user)):
+            raise HTTPException(409, 'Строка изменена. Обновите страницу. / Жол өзгертілді. Бетті жаңартыңыз.')
 
         # =================================================
         # 3. REQUIRED FIELD
@@ -564,20 +583,8 @@ class SchoolPlanEditService:
         # 8. MAIN FIELDS
         # =================================================
 
-        row.topic = topic
-        row.goal = _clean_str(data.goal)
-        row.control_object = _clean_str(
-            data.control_object
-        )
-        row.control_type = _clean_str(
-            data.control_type
-        )
-        row.methods = _clean_str(data.methods)
-
-        row.deadlines = _clean_str(data.deadlines)
-        row.second_control = _clean_str(
-            data.second_control
-        )
+        for key in ('topic','goal','control_object','control_type','methods','deadlines','second_control'):
+            write_text(row,key,topic if key=='topic'else _clean_str(getattr(data,key)),data.content_language or language(user))
 
         # =================================================
         # 9. PERIOD APPLY
@@ -675,6 +682,8 @@ class SchoolPlanEditService:
             plan_id=row.school_plan_id,
             user=user,
         )
+        if row.is_excluded:
+            raise HTTPException(409, "Сначала восстановите строку в плане. / Алдымен жолды жоспарға қалпына келтіріңіз.")
 
         # =====================================================
         # 3. DIRECTION
@@ -749,7 +758,7 @@ class SchoolPlanEditService:
         review_place_options = [
             SchoolPlanRow11OptionDTO(
                 value=place.value,
-                label=place.label_kz,
+                label=place.option_label(language(user)),
                 selected=place.value in selected_review_places,
             )
             for place in ReviewPlace.__members__.values()
@@ -798,25 +807,25 @@ class SchoolPlanEditService:
         # =====================================================
 
         sample_period_text = (
-            (template_row.deadlines or "").strip()
+            (content_text(template_row, 'deadlines', language(user)) or "").strip()
             if template_row is not None
             else ""
         ) or "—"
 
         sample_responsibles_text = (
-            (template_row.responsibles or "").strip()
+            (content_text(template_row, 'responsibles', language(user)) or "").strip()
             if template_row is not None
             else ""
         ) or "—"
 
         sample_review_place_text = (
-            (template_row.review_place or "").strip()
+            sample_text(template_row, 'review_place', language(user))
             if template_row is not None
             else ""
         ) or "—"
 
         sample_document_text = (
-            (template_row.management_decision or "").strip()
+            (content_text(template_row, 'management_decision', language(user)) or "").strip()
             if template_row is not None
             else ""
         ) or "—"
@@ -829,19 +838,20 @@ class SchoolPlanEditService:
             academic_year=plan.academic_year,
 
             direction_id=row.direction_id,
-            direction_name=direction.full_title,
+            direction_name=content_text(direction, "full_title", language(user)),
 
             row_id=row.id,
             row_order=row.row_order,
 
-            topic=row.topic or "",
-            goal=row.goal or "",
-            control_object=row.control_object or "",
-            control_type=row.control_type or "",
-            methods=row.methods or "",
+            topic=content_text(row, 'topic', language(user)) or "",
+            content_revision=content_revision(row, language(user)),
+            goal=content_text(row, 'goal', language(user)) or "",
+            control_object=content_text(row, 'control_object', language(user)) or "",
+            control_type=content_text(row, 'control_type', language(user)) or "",
+            methods=content_text(row, 'methods', language(user)) or "",
 
-            deadlines=row.deadlines or "",
-            second_control=row.second_control or "",
+            deadlines=content_text(row, 'deadlines', language(user)) or "",
+            second_control=content_text(row, 'second_control', language(user)) or "",
 
             period_type=period_type,
             month=month,
@@ -941,6 +951,8 @@ class SchoolRowsService:
             value: str | None,
             school_plan_id: int | None = None,
             direction_id: int | None = None,
+            content_language: str | None = None,
+            expected_value: str | None = None,
     ) -> None:
         # 1) выбрать модель и allowed
         if kind == "row4":
@@ -962,6 +974,8 @@ class SchoolRowsService:
 
         # 3) загрузить план и проверить доступ
         await _guard_plan_edit(db, plan_id=row.school_plan_id, user=user)
+        if row.is_excluded:
+            raise HTTPException(409, "Сначала восстановите строку в плане. / Алдымен жолды жоспарға қалпына келтіріңіз.")
 
         # 4) дополнительные сверки
         if school_plan_id is not None and school_plan_id != row.school_plan_id:
@@ -969,12 +983,19 @@ class SchoolRowsService:
         if direction_id is not None and direction_id != row.direction_id:
             raise HTTPException(status_code=400, detail="direction_id mismatch")
 
+        row = await db.scalar(select(model).where(model.id==row_id).options(raiseload('*'))
+            .with_for_update().execution_options(populate_existing=True))
+        if row.is_excluded:
+            raise HTTPException(409, 'Сначала восстановите строку в плане. / Алдымен жолды жоспарға қалпына келтіріңіз.')
+        if expected_value is not None and str(content_text(row,field,content_language or language(user))).strip()!=expected_value.strip():
+            raise HTTPException(409, 'Строка изменена. Обновите страницу. / Жол өзгертілді. Бетті жаңартыңыз.')
         # 5) обновить
         val_s = _clean_str(value)
         _set_row_attr(
             row,
             field=field,
             value=val_s,
+            content_language=content_language or language(user),
             not_null_empty_string=(kind == "row4" and field == "control_object"),
         )
 
@@ -997,6 +1018,8 @@ class SchoolRowsService:
             raise HTTPException(status_code=404, detail="Строка не найдена")
 
         await _guard_plan_edit(db, plan_id=row.school_plan_id, user=user)
+        if row.is_excluded:
+            raise HTTPException(409, "Сначала восстановите строку в плане. / Алдымен жолды жоспарға қалпына келтіріңіз.")
 
         # ---------- PERIOD (НЕ ТРОГАЮ) ----------
         try:

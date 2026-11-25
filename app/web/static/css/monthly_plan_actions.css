@@ -60,7 +60,7 @@
   gap: 8px;
   max-width: 1440px;
   margin: 0 auto;
-  padding: 12px;
+  padding: 6px 8px;
   border: 1px solid #d4deec;
   border-radius: 13px;
   background: #fff;
@@ -84,7 +84,7 @@
   cursor: not-allowed;
 }
 @media (max-width: 700px) {
-  .actions.monthly-plan-actions { inset-inline: 8px; padding: 9px; }
+  .actions.monthly-plan-actions { inset-inline: 8px; padding: 6px; }
   .monthly-plan-actions > .btn,
   .monthly-plan-actions > form { flex: 1 1 190px; min-width: 0; }
   .monthly-plan-actions > form .btn { width: 100%; }
@@ -93,4 +93,11 @@
 @media print {
   .monthly-plan-actions { display: none !important; }
   .monthly-plan-page { padding-bottom: 0; }
+}
+
+@media (max-width: 700px) {
+  html body .monthly-plan-actions [data-sm-action] {
+    min-width: 0 !important; max-width: 100% !important;
+    min-height: 40px !important; white-space: normal !important;
+  }
 }

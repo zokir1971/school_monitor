@@ -205,16 +205,9 @@ class SchoolPlanStatisticsService:
                 ),
             )
 
-            if row.review_place == ReviewPlace.PED_COUNCIL:
-                item.ped_council_count += 1
-            elif row.review_place == ReviewPlace.METHOD_COUNCIL:
-                item.method_council_count += 1
-            elif row.review_place == ReviewPlace.DIRECTOR_COUNCIL:
-                item.director_council_count += 1
-            elif row.review_place == ReviewPlace.ADMINISTRATIVE_COUNCIL:
-                item.administrative_council_count += 1
-            elif row.review_place == ReviewPlace.METHOD_ASSOC:
-                item.method_assoc_count += 1
+            place = ReviewPlace(getattr(row.review_place, 'value', row.review_place))
+            field = place.value + '_count'
+            setattr(item, field, getattr(item, field) + 1)
 
             item.total_review_places_count += 1
 
@@ -249,19 +242,11 @@ class SchoolPlanStatisticsService:
         totals = ReviewPlaceTotalsDTO()
 
         for row in review_place_stats:
-            totals.ped_council_count += row.ped_council_count
-            totals.method_council_count += row.method_council_count
-            totals.director_council_count += row.director_council_count
-            totals.administrative_council_count += row.administrative_council_count
-            totals.method_assoc_count += row.method_assoc_count
-
-        totals.total_review_places_count = (
-                totals.ped_council_count
-                + totals.method_council_count
-                + totals.director_council_count
-                + totals.administrative_council_count
-                + totals.method_assoc_count
-        )
+            for place in ReviewPlace:
+                field = place.value + '_count'
+                setattr(totals, field, getattr(totals, field) + getattr(row, field))
+        totals.total_review_places_count = sum(
+            getattr(totals, place.value + '_count') for place in ReviewPlace)
 
         return totals
 

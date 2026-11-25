@@ -33,7 +33,7 @@
     select.value = selected;
     select.disabled = !subject;
     select.dataset.choicesReady = cacheKey;
-    const form = select.closest('form');
+    const form = select.closest('[data-teacher-choice-row]') || select.closest('form');
     const toggle = form?.querySelector('[data-teacher-toggle]');
     if (toggle) {
       toggle.disabled = !subject;
@@ -50,7 +50,7 @@
   document.addEventListener('click', event => {
     const toggle = event.target.closest('[data-teacher-toggle]');
     if (!toggle) return;
-    const select = toggle.closest('form')?.querySelector(selector);
+    const select = (toggle.closest('[data-teacher-choice-row]') || toggle.closest('form'))?.querySelector(selector);
     if (!select) return;
     select.dataset.showAll = select.dataset.showAll === '1' ? '0' : '1';
     populate(select);

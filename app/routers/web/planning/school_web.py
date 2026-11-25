@@ -5,9 +5,14 @@ from app.core.planning_profile import measure_export_phase
 from app.modules.planning.services.direction_sample_service import load_direction_samples
 
 from typing import cast
+from urllib.parse import urlencode
+from app.modules.planning.services.annual_row_inclusion_service import set_excluded, delete_custom_row
+from app.modules.planning.services.annual_row_notices import notice_query, read_notice
+from app.core.i18n import resolve_language
+from app.core.ui_locale_context import ui_locale
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request, Response
-from sqlalchemy import select, delete
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import raiseload
 from starlette.responses import HTMLResponse, RedirectResponse
@@ -396,6 +401,9 @@ async def school_direction_edit(
             "direction": dto.direction,
             "rows4": dto.rows4,
             "rows11": dto.rows11,
+            "excluded_rows4": dto.excluded_rows4,
+            "excluded_rows11": dto.excluded_rows11,
+            "row_notice": read_notice(request, user),
 
             # Период
             "MONTH_NAMES": MONTH_NAMES,
@@ -481,6 +489,8 @@ async def school_row11_update(
         row11_id: int,
 
         topic: str = Form(...),
+        content_language: str | None = Form(default=None),
+        content_revision: str = Form(default=""),
         goal: str = Form(default=""),
         control_object: str = Form(default=""),
         control_type: str = Form(default=""),
@@ -533,6 +543,8 @@ async def school_row11_update(
 
     data = SchoolPlanRow11UpdateDTO(
         topic=topic,
+        content_language=content_language,
+        content_revision=content_revision,
 
         goal=goal,
         control_object=control_object,
@@ -633,66 +645,52 @@ async def school_add_row11(
 # -----------------------------
 # 6) Delete rows_11, rows_11
 # -----------------------------
+async def _annual_row_action(request, db, user, plan_id, direction_id, operation):
+    url = f"/planning/school/{plan_id}/direction/{direction_id}"
+    token = ui_locale.set(resolve_language(request, user))
+    try:
+        try:
+            await operation()
+            await db.commit()
+        except HTTPException as exc:
+            await db.rollback()
+            if exc.status_code != 409:
+                raise
+            url += "?" + urlencode(notice_query(exc))
+        except Exception:
+            await db.rollback()
+            raise
+        return RedirectResponse(url=url, status_code=303)
+    finally:
+        ui_locale.reset(token)
+
+
 @router.post("/{plan_id}/direction/{direction_id}/rows4/{row_id}/delete")
-async def school_delete_row4(
-        plan_id: int,
-        direction_id: int,
-        row_id: int,
-        db: AsyncSession = Depends(get_db),
-        user=Depends(require_roles(UserRole.SCHOOL_ADMIN)),
-):
-    school_id = _require_school_id(user)
-    await _get_plan_or_404(db, plan_id=plan_id, school_id=school_id)
-
-    row = (await db.execute(
-        select(SchoolPlanRow4).where(
-            SchoolPlanRow4.id == row_id,
-            SchoolPlanRow4.school_plan_id == plan_id,
-            SchoolPlanRow4.direction_id == direction_id,
-        )
-    )).scalar_one_or_none()
-
-    if row is None:
-        raise HTTPException(status_code=404, detail="Строка не найдена")
-
-    if not row.is_custom:
-        raise HTTPException(status_code=403, detail="Нельзя удалить строку из шаблона")
-
-    await db.execute(delete(SchoolPlanRow4).where(SchoolPlanRow4.id == row_id))
-    await db.commit()
-
-    return RedirectResponse(url=f"/planning/school/{plan_id}/direction/{direction_id}", status_code=303)
+async def school_delete_row4(request: Request, plan_id: int, direction_id: int, row_id: int,
+        db: AsyncSession = Depends(get_db), user=Depends(require_roles(UserRole.SCHOOL_ADMIN))):
+    return await _annual_row_action(request, db, user, plan_id, direction_id, lambda: delete_custom_row(
+        db, plan_id=plan_id, direction_id=direction_id, row_id=row_id, kind='rows4', user=user))
 
 
 @router.post("/{plan_id}/direction/{direction_id}/rows11/{row_id}/delete")
-async def school_delete_row11(
-        plan_id: int,
-        direction_id: int,
-        row_id: int,
-        db: AsyncSession = Depends(get_db),
-        user=Depends(require_roles(UserRole.SCHOOL_ADMIN)),
-):
-    school_id = _require_school_id(user)
-    await _get_plan_or_404(db, plan_id=plan_id, school_id=school_id)
+async def school_delete_row11(request: Request, plan_id: int, direction_id: int, row_id: int,
+        db: AsyncSession = Depends(get_db), user=Depends(require_roles(UserRole.SCHOOL_ADMIN))):
+    return await _annual_row_action(request, db, user, plan_id, direction_id, lambda: delete_custom_row(
+        db, plan_id=plan_id, direction_id=direction_id, row_id=row_id, kind='rows11', user=user))
 
-    row = (await db.execute(
-        select(SchoolPlanRow11).where(
-            SchoolPlanRow11.id == row_id,
-            SchoolPlanRow11.school_plan_id == plan_id,
-            SchoolPlanRow11.direction_id == direction_id,
-        )
-    )).scalar_one_or_none()
 
-    if row is None:
-        raise HTTPException(status_code=404, detail="Строка не найдена")
+@router.post("/{plan_id}/direction/{direction_id}/{kind}/{row_id}/exclude", name="school_annual_row_exclude")
+async def school_annual_row_exclude(request: Request, plan_id: int, direction_id: int, kind: str, row_id: int,
+        db: AsyncSession = Depends(get_db), user=Depends(require_roles(UserRole.SCHOOL_ADMIN))):
+    return await _annual_row_action(request, db, user, plan_id, direction_id, lambda: set_excluded(
+        db, plan_id=plan_id, direction_id=direction_id, row_id=row_id, kind=kind, excluded=True, user=user))
 
-    if not row.is_custom:
-        raise HTTPException(status_code=403, detail="Нельзя удалить строку из шаблона")
 
-    await db.execute(delete(SchoolPlanRow11).where(SchoolPlanRow11.id == row_id))
-    await db.commit()
-
-    return RedirectResponse(url=f"/planning/school/{plan_id}/direction/{direction_id}", status_code=303)
+@router.post("/{plan_id}/direction/{direction_id}/{kind}/{row_id}/restore", name="school_annual_row_restore")
+async def school_annual_row_restore(request: Request, plan_id: int, direction_id: int, kind: str, row_id: int,
+        db: AsyncSession = Depends(get_db), user=Depends(require_roles(UserRole.SCHOOL_ADMIN))):
+    return await _annual_row_action(request, db, user, plan_id, direction_id, lambda: set_excluded(
+        db, plan_id=plan_id, direction_id=direction_id, row_id=row_id, kind=kind, excluded=False, user=user))
 
 
 # -----------------------------

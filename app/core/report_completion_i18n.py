@@ -45,7 +45,8 @@ def completion_message(value, language):
 def review_places_label(value, language):
     from app.modules.planning.enums import ReviewPlace
     labels = {entry.label_kz for entry in ReviewPlace}
-    return ', '.join(translate(part, language) if part in labels else part
+    from app.modules.planning.review_places import label_for_message
+    return ', '.join(label_for_message(part, language) or (translate(part, language) if part in labels else part)
                      for part in (value or '—').split(', '))
 
 

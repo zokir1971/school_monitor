@@ -5,6 +5,7 @@
 {% endblock %}
 
 {% block content %}
+<p class="muted">{{ 'Мәтін таңдалған тілде сақталады. Бос өрістердің аудармасы әлі толтырылмаған болуы мүмкін.' if ui_language() == 'kk' else 'Текст сохраняется на выбранном языке. Пустое поле может означать, что перевод ещё не заполнен.' }}</p>
 
 <style>
   .row11-page {
@@ -468,6 +469,8 @@
     ) }}"
     class="row11-form"
   >
+<input type="hidden" name="content_language" value="{{ ui_language() }}">
+<input type="hidden" name="content_revision" value="{{ page.content_revision }}">
 
     <!-- ================================================
          1. MAIN DATA

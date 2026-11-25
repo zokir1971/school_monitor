@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from io import BytesIO
+from html import escape
 
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT, TA_JUSTIFY
@@ -52,10 +53,11 @@ class PlanVshkPdf:
             spaceAfter=8,
         )
 
-        district = (meta.district_name or "__________")  # НАЗВАНИЕ района/города
-        school = (meta.school_name or "__________________")  # НАЗВАНИЕ школы
+        ru = getattr(dto, "language", "kk") == "ru"
+        district = escape(meta.district_name or "__________")  # НАЗВАНИЕ района/города
+        school = escape(meta.school_name or "__________________")  # НАЗВАНИЕ школы
         year = getattr(dto.plan, "academic_year", "") or ""
-        fio = meta.director_fio or "________________________"
+        fio = escape(meta.director_fio or "________________________")
 
         # Верх: две колонки
         left_block = [
@@ -77,6 +79,13 @@ class PlanVshkPdf:
             Paragraph("«_____»__________20____ж.", p10r),
         ]
 
+        if ru:
+            left_block = [Paragraph("<b>СОГЛАСОВАНО</b>",p10l),
+                Paragraph(f"Руководитель отдела образования: {district}",p10l),
+                Paragraph("______________________",p10l),Paragraph('«____» __________ 20____ г.',p10l)]
+            right_block = [Paragraph("<b>УТВЕРЖДАЮ</b>",p10r),Paragraph(f"Директор школы «{school}»",p10r),
+                Paragraph(fio,p10r),Paragraph('«____» __________ 20____ г.',p10r)]
+
         # ширина под A4 landscape (297mm) минус поля 12+12 = 273мм
         t = Table([[left_block, right_block]], colWidths=[136.5 * mm, 136.5 * mm])
         t.setStyle(TableStyle([
@@ -97,6 +106,10 @@ class PlanVshkPdf:
             Spacer(1, 200),
             Paragraph(f"{district}   {year} оқу жылы.", p10c),
         ]
+        if ru:
+            center = [Spacer(1,100),Paragraph(f"Школа «{school}»<br/>{year} учебный год",p10c),
+                Spacer(1,10),Paragraph("ПЛАН ВНУТРИШКОЛЬНОГО КОНТРОЛЯ",title_bold),
+                Spacer(1,200),Paragraph(f"{district} · {year} учебный год",p10c)]
         out: list[Flowable] = [t]
         out.extend(center)
         return out
@@ -119,6 +132,8 @@ class PlanVshkPdf:
 
     @staticmethod
     def build(dto, *, meta: ApprovalMeta) -> bytes:
+        lang = getattr(dto,"language","kk")
+        ru = lang == "ru"
         buff = BytesIO()
 
         register_cyrillic_fonts()
@@ -141,7 +156,7 @@ class PlanVshkPdf:
             rightMargin=right,
             topMargin=top,
             bottomMargin=bottom,
-            title="План ВШК",
+            title="План ВШК" if ru else "Мектепішілік бақылау жоспары",
         )
 
         frame = Frame(
@@ -157,7 +172,7 @@ class PlanVshkPdf:
         )
 
         doc.addPageTemplates([
-            PageTemplate(id="All", frames=[frame], onPage=PlanVshkPdf._footer(PlanVshkPdf.FONT))
+            PageTemplate(id="All", frames=[frame], onPage=PlanVshkPdf._footer(PlanVshkPdf.FONT, language=lang))
         ])
 
         styles = getSampleStyleSheet()
@@ -243,7 +258,7 @@ class PlanVshkPdf:
         # =========================================================
         # 2) СОДЕРЖАНИЕ (лист 2)
         # =========================================================
-        story.append(Paragraph("МАЗМҰНЫ:", h_center))
+        story.append(Paragraph("СОДЕРЖАНИЕ" if ru else "МАЗМҰНЫ:", h_center))
         story.append(Spacer(1, 8))
         story.append(toc)
         story.append(PageBreak())
@@ -251,7 +266,7 @@ class PlanVshkPdf:
         # =========================================================
         # 3) ПОЯСНИТЕЛЬНАЯ (лист 3)
         # =========================================================
-        story.append(Paragraph("ТҮСІНІК ХАТ", h_center))
+        story.append(Paragraph("ПОЯСНИТЕЛЬНАЯ ЗАПИСКА" if ru else "ТҮСІНІК ХАТ", h_center))
 
         paragraphs = [
             (
@@ -373,6 +388,9 @@ class PlanVshkPdf:
             ),
         ]
 
+        if ru:
+            from app.utils.plan_pdf_text import EXPLANATION_RU
+            paragraphs = EXPLANATION_RU
         for paragraph in paragraphs:
             story.append(Paragraph(paragraph, p_explain))
         # =========================================================
@@ -385,22 +403,22 @@ class PlanVshkPdf:
             if idx > 1:
                 story.append(PageBreak())
 
-            story.append(Paragraph(f"{idx}. {b.direction.short_title}", h3))
+            story.append(Paragraph(f"{idx}. {escape(b.direction.short_title or chr(8212))}", h3))
             if b.direction.full_title:
-                story.append(Paragraph(b.direction.full_title, small))
+                story.append(Paragraph(escape(b.direction.full_title), small))
             story.append(Spacer(1, 4))
 
             if b.rows4:
-                story.append(Paragraph("Бақылау нысандары", small))
+                story.append(Paragraph("Объекты контроля" if ru else "Бақылау нысандары", small))
                 story.append(Spacer(1, 2))
-                story.append(PlanVshkPdf._table_rows4(b.rows4, PlanVshkPdf.FONT, available_width))
+                story.append(PlanVshkPdf._table_rows4(b.rows4, PlanVshkPdf.FONT, available_width, language=lang))
                 story.append(Spacer(1, 10))
 
             if b.rows11:
                 story.append(PageBreak())
-                story.append(Paragraph("Атқарылатын іс-шаралардың мазмұны", small))
+                story.append(Paragraph("План контрольных мероприятий" if ru else "Атқарылатын іс-шаралардың мазмұны", small))
                 story.append(Spacer(1, 2))
-                story.append(PlanVshkPdf._table_rows11(b.rows11, PlanVshkPdf.FONT, available_width))
+                story.append(PlanVshkPdf._table_rows11(b.rows11, PlanVshkPdf.FONT, available_width, language=lang))
                 story.append(Spacer(1, 12))
 
         # multiBuild обязателен: TOC требует 2 прохода
@@ -408,12 +426,12 @@ class PlanVshkPdf:
         return buff.getvalue()
 
     @staticmethod
-    def _footer(font: str):
+    def _footer(font: str, language="kk"):
         def draw(canvas, doc):
             canvas.saveState()
             canvas.setFont(font, 8)
             canvas.setFillColor(colors.grey)
-            canvas.drawRightString(doc.pagesize[0] - 10 * mm, 7 * mm, f"Стр. {canvas.getPageNumber()}")
+            canvas.drawRightString(doc.pagesize[0] - 10 * mm, 7 * mm, (f"Стр. {canvas.getPageNumber()}" if language == "ru" else f"{canvas.getPageNumber()}-бет"))
             canvas.restoreState()
 
         return draw
@@ -425,7 +443,7 @@ class PlanVshkPdf:
         elif not isinstance(text, str):
             text = str(text)
 
-        safe = text.replace("\n", "<br/>")
+        safe = escape(text).replace("\n", "<br/>")
         st = ParagraphStyle("CELL", fontName=font, fontSize=8, leading=10)
         return Paragraph(safe, st)
 
@@ -464,8 +482,11 @@ class PlanVshkPdf:
         return [first] + scaled_others
 
     @staticmethod
-    def _table_rows4(rows, font: str, available_width: float) -> Table:
+    def _table_rows4(rows, font: str, available_width: float, language="kk") -> Table:
         data = [["№", "Бақылау нысаны", "Мәселелер, тәуекелдер", "Басшылық шешімі"]]
+        if language == "ru":
+            from app.utils.plan_pdf_text import HEADERS_RU
+            data[0] = HEADERS_RU[len(data[0])]
         for i, r in enumerate(rows, start=1):
             data.append([
                 PlanVshkPdf._cell(str(i), font),
@@ -482,7 +503,7 @@ class PlanVshkPdf:
         return t
 
     @staticmethod
-    def _table_rows11(rows, font: str, available_width: float) -> Table:
+    def _table_rows11(rows, font: str, available_width: float, language="kk") -> Table:
         data = [[
             "№",
             "Тақырып", "Мақсаты", "Бақылау нысаны", "Бақылау түрі",
@@ -490,6 +511,9 @@ class PlanVshkPdf:
             "Қарау орны", "Басшылық шешімі", "Екінші бақылау"
         ]]
 
+        if language == "ru":
+            from app.utils.plan_pdf_text import HEADERS_RU
+            data[0] = HEADERS_RU[len(data[0])]
         for i, r in enumerate(rows, start=1):
             data.append([
                 PlanVshkPdf._cell(str(i), font),  # нумерация

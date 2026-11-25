@@ -2,6 +2,7 @@
 from sqlalchemy import and_,false,or_,select
 from app.modules.users.enums import UserRole
 from app.modules.org.models import District,School
+from app.modules.org.governance import school_authority_clause
 
 ADMIN_ROLES={'superuser','region_admin','district_admin','school_admin'}
 
@@ -15,7 +16,7 @@ def allowed_roles(actor_role):
     present={r.value:r for r in UserRole}
     allowed={
         'superuser':set(present)-{'superuser'},
-        'region_admin':{'district_admin','region_staff'},
+        'region_admin':{'district_admin','region_staff','school_admin'},
         'district_admin':{'school_admin','district_staff'},
         'school_admin':{'school_staff','teacher'},
     }.get(value,set())
@@ -31,10 +32,10 @@ def recovery_scope(U,actor):
     if role=='superuser':return base
     if role=='region_admin' and actor.get('region_id'):
         D=District.__table__
-        return and_(base,or_(U.c.region_id==actor['region_id'],U.c.district_id.in_(select(D.c.id).where(D.c.region_id==actor['region_id']))))
+        return and_(base,or_(U.c.region_id==actor['region_id'],U.c.district_id.in_(select(D.c.id).where(D.c.region_id==actor['region_id'])),U.c.school_id.in_(select(School.id).where(school_authority_clause(actor)))))
     if role=='district_admin' and actor.get('district_id'):
         S=School.__table__
-        return and_(base,or_(U.c.district_id==actor['district_id'],U.c.school_id.in_(select(S.c.id).where(S.c.district_id==actor['district_id']))))
+        return and_(base,or_(U.c.district_id==actor['district_id'],U.c.school_id.in_(select(S.c.id).where(school_authority_clause(actor)))))
     if role=='school_admin' and actor.get('school_id'):
         return and_(base,U.c.school_id==actor['school_id'])
     return false()

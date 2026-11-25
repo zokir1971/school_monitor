@@ -1,12 +1,14 @@
 # app/modules/assessment/repositories/knowledge_quality_analytics_repo.py
 
 from __future__ import annotations
+from app.modules.org.governance import filter_school_statement, reporting_district_id, district_school_ids, governance_filter
 
 from dataclasses import dataclass
 from decimal import Decimal
 
 from sqlalchemy import func, select, false, cast, String, case
 from sqlalchemy.ext.asyncio import AsyncSession
+from app.modules.org.governance import district_school_ids
 
 from app.modules.assessment.models import (
     AssessmentQualitySummary, Assessment,
@@ -138,42 +140,42 @@ class KnowledgeQualityAnalyticsRepo:
                       for index,name in enumerate(('baseline','quarter_1','quarter_2','quarter_3','quarter_4','final'))], else_=6)
 
     @classmethod
-    async def get_all_work_rows(cls, db, *, scope, scope_id, teacher_staff_member_id=None,
-                                academic_year_start=None, subject_id=None, grade_level=None,
-                                checkpoint='', offset=0, limit=51):
+    async def get_all_work_rows(cls, db, *, scope, scope_id, teacher_staff_member_id=None, academic_year_start=None, subject_id=None, grade_level=None, checkpoint='', offset=0, limit=51, governance: str=''):
         from app.modules.assessment.repositories.assessment_name_columns import title_column
         from app.modules.assessment.models_diagnostic_sessions import DiagnosticSubject
-        q, a = AssessmentQualitySummary, Assessment
+        q, a = (AssessmentQualitySummary, Assessment)
         logical_id = func.coalesce(a.diagnostic_subject_id, -a.id)
-        entity = q.school_class_id if scope in ('teacher', 'school') else q.school_id if scope == 'district' else q.district_id_snapshot
-        stmt = (select(logical_id.label('logical_id'), entity.label('entity_id'),
-                    func.min(title_column()).label('work_title'),
-                    func.min(cast(q.checkpoint_snapshot, String)).label('checkpoint'),
-                    func.min(q.class_name_snapshot).label('class_name'),
-                    func.min(DiagnosticSubject.session_id).label('session_id'),
-                    *cls._aggregate_columns())
-                .select_from(q).join(a, (a.id == q.assessment_id) & (a.school_id == q.school_id))
-                .outerjoin(DiagnosticSubject, DiagnosticSubject.id == a.diagnostic_subject_id))
-        if not scope_id or scope_id <= 0 or academic_year_start is None:return []
+        entity = q.school_class_id if scope in ('teacher', 'school') else q.school_id if scope == 'district' else reporting_district_id(q.district_id_snapshot, q.region_id_snapshot, school_id=q.school_id)
+        stmt = select(logical_id.label('logical_id'), entity.label('entity_id'), func.min(title_column()).label('work_title'), func.min(cast(q.checkpoint_snapshot, String)).label('checkpoint'), func.min(q.class_name_snapshot).label('class_name'), func.min(DiagnosticSubject.session_id).label('session_id'), *cls._aggregate_columns()).select_from(q).join(a, (a.id == q.assessment_id) & (a.school_id == q.school_id)).outerjoin(DiagnosticSubject, DiagnosticSubject.id == a.diagnostic_subject_id)
+        if not scope_id or scope_id <= 0 or academic_year_start is None:
+            return []
         if scope == 'teacher':
-            if not teacher_staff_member_id or teacher_staff_member_id <= 0:return []
+            if not teacher_staff_member_id or teacher_staff_member_id <= 0:
+                return []
             stmt = stmt.where(q.school_id == scope_id, q.teacher_staff_member_id_snapshot == teacher_staff_member_id)
-        elif scope == 'school':stmt = stmt.where(q.school_id == scope_id)
-        elif scope == 'district':stmt = stmt.where(q.district_id_snapshot == scope_id)
-        elif scope == 'region':stmt = stmt.where(q.region_id_snapshot == scope_id, entity.is_not(None))
-        else:raise ValueError('Invalid analytics scope')
+        elif scope == 'school':
+            stmt = stmt.where(q.school_id == scope_id)
+        elif scope == 'district':
+            stmt = stmt.where(q.district_id_snapshot == scope_id, q.school_id.in_(district_school_ids(scope_id)))
+        elif scope == 'region':
+            stmt = stmt.where(q.region_id_snapshot == scope_id, entity.is_not(None))
+        else:
+            raise ValueError('Invalid analytics scope')
         stmt = stmt.where(q.academic_year_start_snapshot == academic_year_start)
-        if subject_id is not None:stmt = stmt.where(q.subject_id == subject_id)
-        if grade_level is not None:stmt = stmt.where(q.grade_level_snapshot == grade_level)
-        if checkpoint == 'other':stmt = stmt.where(q.checkpoint_snapshot.is_(None))
-        elif checkpoint in ('baseline','quarter_1','quarter_2','quarter_3','quarter_4','final'):
+        if subject_id is not None:
+            stmt = stmt.where(q.subject_id == subject_id)
+        if grade_level is not None:
+            stmt = stmt.where(q.grade_level_snapshot == grade_level)
+        if checkpoint == 'other':
+            stmt = stmt.where(q.checkpoint_snapshot.is_(None))
+        elif checkpoint in ('baseline', 'quarter_1', 'quarter_2', 'quarter_3', 'quarter_4', 'final'):
             stmt = stmt.where(q.checkpoint_snapshot == checkpoint)
-        elif checkpoint:return []
+        elif checkpoint:
+            return []
         rank = cls._checkpoint_rank()
-        stmt = stmt.group_by(logical_id, entity).order_by(func.min(rank).asc(),
-            func.max(a.completed_at).asc().nullslast(), logical_id.asc(), entity.asc())
+        stmt = stmt.group_by(logical_id, entity).order_by(func.min(rank).asc(), func.max(a.completed_at).asc().nullslast(), logical_id.asc(), entity.asc())
         stmt = stmt.offset(max(0, offset)).limit(min(max(1, limit), 50001))
-        return [dict(row._mapping) for row in (await db.execute(stmt)).all()]
+        return [dict(row._mapping) for row in (await db.execute(filter_school_statement(stmt, AssessmentQualitySummary.school_id, governance))).all()]
 
     @staticmethod
     def _apply_work_filter(stmt, work_key):
@@ -188,39 +190,40 @@ class KnowledgeQualityAnalyticsRepo:
             select(Assessment.id).where(condition)))
 
     @staticmethod
-    async def get_work_choices(db, *, scope, scope_id, teacher_staff_member_id=None,
-                               academic_year_start=None, subject_id=None, grade_level=None,
-                               checkpoint='', search=''):
+    async def get_work_choices(db, *, scope, scope_id, teacher_staff_member_id=None, academic_year_start=None, subject_id=None, grade_level=None, checkpoint='', search='', governance: str=''):
         """Bounded, school/teacher scoped selector, one SQL independent of variant count."""
         from app.modules.assessment.repositories.assessment_name_columns import title_column
         from app.modules.assessment.models_diagnostic_sessions import DiagnosticSubject
-        q, a = AssessmentQualitySummary, Assessment
+        q, a = (AssessmentQualitySummary, Assessment)
         logical_id = func.coalesce(a.diagnostic_subject_id, -a.id)
-        stmt = (select(logical_id.label('logical_id'), func.min(title_column()).label('title'),
-                    func.max(a.completed_at).label('completed_at'),
-                    func.min(cast(q.checkpoint_snapshot, String)).label('checkpoint'),
-                    func.min(DiagnosticSubject.session_id).label('session_id'),
-                    func.count(func.distinct(q.school_class_id)).label('classes'))
-                .select_from(q).join(a, (a.id == q.assessment_id) & (a.school_id == q.school_id))
-                .outerjoin(DiagnosticSubject, DiagnosticSubject.id == a.diagnostic_subject_id))
+        stmt = select(logical_id.label('logical_id'), func.min(title_column()).label('title'), func.max(a.completed_at).label('completed_at'), func.min(cast(q.checkpoint_snapshot, String)).label('checkpoint'), func.min(DiagnosticSubject.session_id).label('session_id'), func.count(func.distinct(q.school_class_id)).label('classes')).select_from(q).join(a, (a.id == q.assessment_id) & (a.school_id == q.school_id)).outerjoin(DiagnosticSubject, DiagnosticSubject.id == a.diagnostic_subject_id)
         if scope == 'teacher':
             if not teacher_staff_member_id or teacher_staff_member_id <= 0:
                 return []
-            stmt = stmt.where(q.school_id == scope_id,
-                             q.teacher_staff_member_id_snapshot == teacher_staff_member_id)
-        elif scope == 'school':stmt = stmt.where(q.school_id == scope_id)
-        elif scope == 'district':stmt = stmt.where(q.district_id_snapshot == scope_id)
-        elif scope == 'region':stmt = stmt.where(q.region_id_snapshot == scope_id)
-        else:raise ValueError('Invalid analytics scope')
-        if not scope_id or scope_id <= 0 or academic_year_start is None:return []
+            stmt = stmt.where(q.school_id == scope_id, q.teacher_staff_member_id_snapshot == teacher_staff_member_id)
+        elif scope == 'school':
+            stmt = stmt.where(q.school_id == scope_id)
+        elif scope == 'district':
+            stmt = stmt.where(q.district_id_snapshot == scope_id, q.school_id.in_(district_school_ids(scope_id)))
+        elif scope == 'region':
+            stmt = stmt.where(q.region_id_snapshot == scope_id)
+        else:
+            raise ValueError('Invalid analytics scope')
+        if not scope_id or scope_id <= 0 or academic_year_start is None:
+            return []
         stmt = stmt.where(q.academic_year_start_snapshot == academic_year_start)
-        if subject_id is not None:stmt = stmt.where(q.subject_id == subject_id)
-        if grade_level is not None:stmt = stmt.where(q.grade_level_snapshot == grade_level)
-        if checkpoint == 'other':stmt = stmt.where(q.checkpoint_snapshot.is_(None))
-        elif checkpoint:stmt = stmt.where(q.checkpoint_snapshot == checkpoint)
-        if search:stmt = stmt.where(title_column().icontains(search, autoescape=True))
+        if subject_id is not None:
+            stmt = stmt.where(q.subject_id == subject_id)
+        if grade_level is not None:
+            stmt = stmt.where(q.grade_level_snapshot == grade_level)
+        if checkpoint == 'other':
+            stmt = stmt.where(q.checkpoint_snapshot.is_(None))
+        elif checkpoint:
+            stmt = stmt.where(q.checkpoint_snapshot == checkpoint)
+        if search:
+            stmt = stmt.where(title_column().icontains(search, autoescape=True))
         stmt = stmt.group_by(logical_id).order_by(func.min(KnowledgeQualityAnalyticsRepo._checkpoint_rank()).asc(), func.max(a.completed_at).asc().nullslast(), logical_id.asc()).limit(201)
-        return [dict(row._mapping) for row in (await db.execute(stmt)).all()]
+        return [dict(row._mapping) for row in (await db.execute(filter_school_statement(stmt, AssessmentQualitySummary.school_id, governance))).all()]
 
     @staticmethod
     def _aggregate_columns():
@@ -1049,7 +1052,8 @@ class KnowledgeQualityAnalyticsRepo:
             .where(
                 AssessmentQualitySummary
                 .district_id_snapshot
-                == district_id
+                == district_id,
+                AssessmentQualitySummary.school_id.in_(district_school_ids(district_id))
             )
         )
 
@@ -1094,74 +1098,21 @@ class KnowledgeQualityAnalyticsRepo:
     # =====================================================
 
     @classmethod
-    async def get_region_summary(
-            cls,
-            db: AsyncSession,
-            *,
-            region_id: int,
-            academic_year_start: int | None = None,
-            subject_id: int | None = None,
-            grade_level: int | None = None,
-            district_id: int | None = None,
-            school_id: int | None = None,
-        work_key: str | None = None,
-    ) -> KnowledgeQualityAggregateRow:
-        stmt = (
-            select(
-                *cls._aggregate_columns()
-            )
-            .select_from(
-                AssessmentQualitySummary
-            )
-            .where(
-                AssessmentQualitySummary
-                .region_id_snapshot
-                == region_id
-            )
-        )
-
+    async def get_region_summary(cls, db: AsyncSession, *, region_id: int, academic_year_start: int | None=None, subject_id: int | None=None, grade_level: int | None=None, district_id: int | None=None, school_id: int | None=None, work_key: str | None=None, governance: str='') -> KnowledgeQualityAggregateRow:
+        stmt = select(*cls._aggregate_columns()).select_from(AssessmentQualitySummary).where(AssessmentQualitySummary.region_id_snapshot == region_id)
         if academic_year_start is not None:
-            stmt = stmt.where(
-                AssessmentQualitySummary
-                .academic_year_start_snapshot
-                == academic_year_start
-            )
-
+            stmt = stmt.where(AssessmentQualitySummary.academic_year_start_snapshot == academic_year_start)
         if subject_id is not None:
-            stmt = stmt.where(
-                AssessmentQualitySummary.subject_id
-                == subject_id
-            )
-
+            stmt = stmt.where(AssessmentQualitySummary.subject_id == subject_id)
         if grade_level is not None:
-            stmt = stmt.where(
-                AssessmentQualitySummary
-                .grade_level_snapshot
-                == grade_level
-            )
-
+            stmt = stmt.where(AssessmentQualitySummary.grade_level_snapshot == grade_level)
         if district_id is not None:
-            stmt = stmt.where(
-                AssessmentQualitySummary
-                .district_id_snapshot
-                == district_id
-            )
-
+            stmt = stmt.where(reporting_district_id(AssessmentQualitySummary.district_id_snapshot, AssessmentQualitySummary.region_id_snapshot, school_id=AssessmentQualitySummary.school_id) == district_id)
         if school_id is not None:
-            stmt = stmt.where(
-                AssessmentQualitySummary.school_id
-                == school_id
-            )
-
+            stmt = stmt.where(AssessmentQualitySummary.school_id == school_id)
         stmt = KnowledgeQualityAnalyticsRepo._apply_work_filter(stmt, work_key)
-
-        row = (
-            await db.execute(stmt)
-        ).one()
-
-        return cls._row_to_dto(
-            row
-        )
+        row = (await db.execute(filter_school_statement(stmt, AssessmentQualitySummary.school_id, governance))).one()
+        return cls._row_to_dto(row)
 
     # =====================================================
     # TEACHER -> CLASSES
@@ -1460,7 +1411,8 @@ class KnowledgeQualityAnalyticsRepo:
             .where(
                 AssessmentQualitySummary
                 .district_id_snapshot
-                == district_id
+                == district_id,
+                AssessmentQualitySummary.school_id.in_(district_school_ids(district_id))
             )
         )
 
@@ -1510,88 +1462,24 @@ class KnowledgeQualityAnalyticsRepo:
     # =====================================================
 
     @classmethod
-    async def get_region_district_rows(
-            cls,
-            db: AsyncSession,
-            *,
-            region_id: int,
-            academic_year_start: int | None = None,
-            subject_id: int | None = None,
-            grade_level: int | None = None,
-            work_key: str | None = None,
-    ) -> list[KnowledgeQualityGroupedAggregateRow]:
+    async def get_region_district_rows(cls, db: AsyncSession, *, region_id: int, academic_year_start: int | None=None, subject_id: int | None=None, grade_level: int | None=None, work_key: str | None=None, governance: str='') -> list[KnowledgeQualityGroupedAggregateRow]:
         """
-        Аналитика региона с группировкой по районам.
-        """
-
-        stmt = (
-            select(
-                AssessmentQualitySummary
-                .district_id_snapshot
-                .label(
-                    "entity_id"
-                ),
-                *cls._aggregate_columns(),
-            )
-            .select_from(
-                AssessmentQualitySummary
-            )
-            .where(
-                AssessmentQualitySummary
-                .region_id_snapshot
-                == region_id,
-
-                # В региональной таблице строка
-                # должна принадлежать району.
-                AssessmentQualitySummary
-                .district_id_snapshot
-                .is_not(None),
-            )
-        )
-
+            Аналитика региона с группировкой по районам.
+            """
+        # Reuse one SQL expression and its bound parameter in SELECT/GROUP BY.
+        # Equal Python values in separate expressions are different asyncpg $n parameters.
+        district_group = reporting_district_id(AssessmentQualitySummary.district_id_snapshot, AssessmentQualitySummary.region_id_snapshot, school_id=AssessmentQualitySummary.school_id).label('entity_id')
+        stmt = select(district_group, *cls._aggregate_columns()).select_from(AssessmentQualitySummary).where(AssessmentQualitySummary.region_id_snapshot == region_id, district_group.is_not(None))
         if academic_year_start is not None:
-            stmt = stmt.where(
-                AssessmentQualitySummary
-                .academic_year_start_snapshot
-                == academic_year_start
-            )
-
+            stmt = stmt.where(AssessmentQualitySummary.academic_year_start_snapshot == academic_year_start)
         if subject_id is not None:
-            stmt = stmt.where(
-                AssessmentQualitySummary.subject_id
-                == subject_id
-            )
-
+            stmt = stmt.where(AssessmentQualitySummary.subject_id == subject_id)
         if grade_level is not None:
-            stmt = stmt.where(
-                AssessmentQualitySummary
-                .grade_level_snapshot
-                == grade_level
-            )
-
-        stmt = (
-            stmt
-            .group_by(
-                AssessmentQualitySummary
-                .district_id_snapshot
-            )
-            .order_by(
-                AssessmentQualitySummary
-                .district_id_snapshot
-                .asc()
-            )
-        )
-
+            stmt = stmt.where(AssessmentQualitySummary.grade_level_snapshot == grade_level)
+        stmt = stmt.group_by(district_group).order_by(district_group.asc())
         stmt = KnowledgeQualityAnalyticsRepo._apply_work_filter(stmt, work_key)
-
-        rows = (
-            await db.execute(stmt)
-        ).all()
-
-        return [
-            cls._row_to_grouped_dto(row)
-            for row in rows
-        ]
+        rows = (await db.execute(filter_school_statement(stmt, AssessmentQualitySummary.school_id, governance))).all()
+        return [cls._row_to_grouped_dto(row) for row in rows]
 
     # =====================================================
     # DISTRICT FILTER OPTIONS
@@ -1625,7 +1513,8 @@ class KnowledgeQualityAnalyticsRepo:
             .where(
                 AssessmentQualitySummary
                 .district_id_snapshot
-                == district_id
+                == district_id,
+                AssessmentQualitySummary.school_id.in_(district_school_ids(district_id))
             )
             .distinct()
             .order_by(
@@ -1658,7 +1547,8 @@ class KnowledgeQualityAnalyticsRepo:
             .where(
                 AssessmentQualitySummary
                 .district_id_snapshot
-                == district_id
+                == district_id,
+                AssessmentQualitySummary.school_id.in_(district_school_ids(district_id))
             )
             .distinct()
             .order_by(
@@ -1692,7 +1582,8 @@ class KnowledgeQualityAnalyticsRepo:
             .where(
                 AssessmentQualitySummary
                 .district_id_snapshot
-                == district_id
+                == district_id,
+                AssessmentQualitySummary.school_id.in_(district_school_ids(district_id))
             )
             .distinct()
             .order_by(
@@ -1725,124 +1616,27 @@ class KnowledgeQualityAnalyticsRepo:
     # =====================================================
 
     @staticmethod
-    async def get_region_filter_options(
-            db: AsyncSession,
-            *,
-            region_id: int,
-    ) -> KnowledgeQualityFilterOptionsRow:
+    async def get_region_filter_options(db: AsyncSession, *, region_id: int, governance: str='') -> KnowledgeQualityFilterOptionsRow:
         """
-        Реально доступные фильтры региональной аналитики.
+            Реально доступные фильтры региональной аналитики.
 
-        Источник:
-            AssessmentQualitySummary
-
-        Возвращаются только значения, по которым
-        в регионе существуют аналитические snapshot-строки.
-        """
-
-        # =================================================
-        # ACADEMIC YEARS
-        # =================================================
-
-        academic_year_stmt = (
-            select(
+            Источник:
                 AssessmentQualitySummary
-                .academic_year_start_snapshot
-            )
-            .where(
-                AssessmentQualitySummary
-                .region_id_snapshot
-                == region_id
-            )
-            .distinct()
-            .order_by(
-                AssessmentQualitySummary
-                .academic_year_start_snapshot
-                .desc()
-            )
-        )
 
-        academic_year_result = (
-            await db.execute(
-                academic_year_stmt
-            )
-        )
-
-        academic_years = tuple(
-            int(value)
-            for value
-            in academic_year_result.scalars().all()
-        )
-
-        # =================================================
-        # SUBJECTS
-        # =================================================
-
-        subject_stmt = (
-            select(
-                AssessmentQualitySummary.subject_id
-            )
-            .where(
-                AssessmentQualitySummary
-                .region_id_snapshot
-                == region_id
-            )
-            .distinct()
-            .order_by(
-                AssessmentQualitySummary
-                .subject_id
-                .asc()
-            )
-        )
-
-        subject_result = (
-            await db.execute(
-                subject_stmt
-            )
-        )
-
-        subject_ids = tuple(
-            int(value)
-            for value
-            in subject_result.scalars().all()
-        )
-
-        # =================================================
-        # GRADE LEVELS
-        # =================================================
-
-        grade_level_stmt = (
-            select(
-                AssessmentQualitySummary
-                .grade_level_snapshot
-            )
-            .where(
-                AssessmentQualitySummary
-                .region_id_snapshot
-                == region_id
-            )
-            .distinct()
-            .order_by(
-                AssessmentQualitySummary
-                .grade_level_snapshot
-                .asc()
-            )
-        )
-
-        grade_level_result = (
-            await db.execute(
-                grade_level_stmt
-            )
-        )
-
-        grade_levels = tuple(
-            int(value)
-            for value
-            in grade_level_result.scalars().all()
-        )
-
-        return KnowledgeQualityFilterOptionsRow(
-            academic_years=academic_years,
-            subject_ids=subject_ids,
-            grade_levels=grade_levels,
-        )
+            Возвращаются только значения, по которым
+            в регионе существуют аналитические snapshot-строки.
+            """
+        # Selector metadata belongs to the actor's full regional scope.
+        # A governance filter may have no results; it must not erase the year,
+        # subject or grade, nor silently broaden the requested result filters.
+        governance_filter(governance)
+        academic_year_stmt = select(AssessmentQualitySummary.academic_year_start_snapshot).where(AssessmentQualitySummary.region_id_snapshot == region_id).distinct().order_by(AssessmentQualitySummary.academic_year_start_snapshot.desc())
+        academic_year_result = await db.execute(academic_year_stmt)
+        academic_years = tuple((int(value) for value in academic_year_result.scalars().all()))
+        subject_stmt = select(AssessmentQualitySummary.subject_id).where(AssessmentQualitySummary.region_id_snapshot == region_id).distinct().order_by(AssessmentQualitySummary.subject_id.asc())
+        subject_result = await db.execute(subject_stmt)
+        subject_ids = tuple((int(value) for value in subject_result.scalars().all()))
+        grade_level_stmt = select(AssessmentQualitySummary.grade_level_snapshot).where(AssessmentQualitySummary.region_id_snapshot == region_id).distinct().order_by(AssessmentQualitySummary.grade_level_snapshot.asc())
+        grade_level_result = await db.execute(grade_level_stmt)
+        grade_levels = tuple((int(value) for value in grade_level_result.scalars().all()))
+        return KnowledgeQualityFilterOptionsRow(academic_years=academic_years, subject_ids=subject_ids, grade_levels=grade_levels)

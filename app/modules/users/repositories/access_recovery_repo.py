@@ -16,6 +16,11 @@ async def user(db,user_id,lock=False):
 
 
 async def target(db,actor,user_id,lock=False):
+    if lock:
+        # Same school-first lock order as transfer, registration and issuance.
+        school_id=await db.scalar(select(U.c.school_id).where(U.c.id==user_id))
+        if school_id is not None:
+            await db.execute(select(School.id).where(School.id==school_id).with_for_update())
     q=select(U).where(U.c.id==user_id,recovery_scope(U,actor))
     if lock:q=q.with_for_update()
     return (await db.execute(q)).mappings().one_or_none()
@@ -35,7 +40,13 @@ async def search(db,actor,query):
 
 async def identifier(db,value,lock=False):
     q=select(U).where(or_(U.c.username==value,U.c.iin==value)).order_by(U.c.id).limit(2)
-    if lock:q=q.with_for_update()
+    if lock:
+        school_ids=(await db.execute(select(U.c.school_id).where(or_(U.c.username==value,U.c.iin==value))
+            .order_by(U.c.id).limit(2))).scalars().all()
+        ids=sorted({sid for sid in school_ids if sid is not None})
+        if ids:
+            await db.execute(select(School.id).where(School.id.in_(ids)).order_by(School.id).with_for_update())
+        q=q.with_for_update()
     rows=(await db.execute(q)).mappings().all()
     return rows[0] if len(rows)==1 else None
 

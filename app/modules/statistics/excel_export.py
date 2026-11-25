@@ -38,14 +38,14 @@ async def collect(db, user, params, *, activity=False):
     try:
         if activity:
             data = await ActivityStatisticsService.page(db, actor, params)
-            facts = school_facts(data['start'], data['end'], data['region_id'], data['district_id'], data['q'])
+            facts = school_facts(data['start'], data['end'], data['region_id'], data['district_id'], data['q'], data['governance'])
             if data['attention']:
                 from sqlalchemy import or_
                 facts = select(facts).where(or_(facts.c.ready == 0, facts.c.worked == 0)).cte('export_attention_facts')
             views = ('regions', 'districts', 'schools')
             sheets = []
             for view in views:
-                groups = grouped(facts, view, data['region_id'], data['district_id'])
+                groups = grouped(facts, view, data['region_id'], data['district_id'],data['governance'])
                 metric = {'name': groups.c.name, 'worked': groups.c.worked,
                           'rate': 100.0 * groups.c.worked / func.nullif(groups.c.schools, 0),
                           'last_work': groups.c.last_work}[data['sort']]
@@ -69,12 +69,12 @@ async def collect(db, user, params, *, activity=False):
                         row.update({key: names[row['id']][key] for key in ('region_name', 'district_name')})
                 elif view == 'districts':
                     for row in rows:
-                        district = next(item for item in data['districts'] if item['id'] == row['id'])
-                        row['region_name'] = next(item['name'] for item in data['regions'] if item['id'] == district['region_id'])
+                        rid=-row['id'] if row['id']<0 else next(item['region_id'] for item in data['districts'] if item['id']==row['id'])
+                        row['region_name'] = next(item['name'] for item in data['regions'] if item['id']==rid)
         else:
             data = await TerritorialStatisticsService.page(db, actor, params)
             scope = data['scope']
-            schools = TerritorialStatisticsRepo.school_scope(scope, data['district_id'], data['school_id'], data['q'])
+            schools = TerritorialStatisticsRepo.school_scope(scope, data['district_id'], data['school_id'], data['q'], data['governance'])
             views = ('regions', 'districts', 'schools', 'directions') if scope['kind'] == 'super' else (
                 ('districts', 'schools', 'directions') if scope['kind'] == 'region' else ('schools', 'directions'))
             sheets = []
@@ -185,7 +185,7 @@ def workbook(data, sheets, language, *, activity=False):
         district_name = next((item['name'] for item in data['districts'] if item['id'] == data.get('district_id')), '')
         append([choose('Территория', 'Аумақ'), region_name or choose('Все доступные территории', 'Барлық қолжетімді аумақтар'), district_name, data.get('school_name', '')])
         direction_name = next((item['name'] for item in data.get('directions', []) if item['id'] == data.get('direction_id')), choose('Без направления', 'Бағыт көрсетілмеген') if data.get('direction_id') == 0 else choose('Все направления', 'Барлық бағыттар'))
-        append([choose('Фильтры', 'Сүзгілер'), '' if activity else direction_name, choose('Поиск: ', 'Іздеу: ') + data['q'], choose('Требуют внимания', 'Назар аударуды қажет етеді') if data['attention'] else choose('Все школы', 'Барлық мектептер')])
+        append([choose('Фильтры', 'Сүзгілер'), '' if activity else direction_name, choose('Поиск: ', 'Іздеу: ') + data['q'], choose('Требуют внимания', 'Назар аударуды қажет етеді') if data['attention'] else choose('Все школы', 'Барлық мектептер'), choose('Подчинение: ', 'Бағыныстылық: ') + {'region':choose('Областное','Облыстық'),'district':choose('Районное','Аудандық')}.get(data.get('governance'),choose('Все','Барлығы'))])
         sort_labels = {'name': ('Название / порядок направлений', 'Атауы / бағыттар реті'), 'completed': ('Количество завершённых', 'Аяқталған саны'), 'overdue': ('Количество просрочек', 'Кешігу саны'), 'rate': ('Доля активности' if activity else 'Доля завершения', 'Белсенділік үлесі' if activity else 'Аяқталу үлесі'), 'overdue_rate': ('Доля просрочек', 'Кешігу үлесі'), 'assigned_rate': ('Доля назначений', 'Тағайындау үлесі'), 'submitted_rate': ('Доля сданных отчётов', 'Тапсырылған есептер үлесі'), 'worked': ('Работали', 'Жұмыс істеген'), 'last_work': ('Последняя работа', 'Соңғы жұмыс')}
         append([choose('Сортировка', 'Сұрыптау'), choose(*sort_labels[data['sort']]), choose('По возрастанию', 'Өсу ретімен') if data['order'] == 'asc' else choose('По убыванию', 'Кему ретімен'), choose('Сформировано (UTC+5)', 'Құрылды (UTC+5)'), stamp(datetime.now(LOCAL_TZ))])
         note = (choose('История начата: ', 'Тарих басталды: ') + stamp(data['started_at']) + ('; ' + choose('Период неполный', 'Кезең толық емес') if data['incomplete'] else '')) if activity else choose('Школы по направлениям не суммируются; пустой процент — нет знаменателя. Отчёты считаются по текущим версиям, как на странице.', 'Бағыттардағы мектеп саны қосылмайды; бос пайыз — бөлім жоқ. Есептер беттегідей ағымдағы нұсқалар бойынша саналады.')

@@ -1,5 +1,6 @@
 # app/modules/reports/services/task_reports_service.py
 from __future__ import annotations
+from app.modules.planning.content_i18n import content_text, language
 from types import SimpleNamespace
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -573,11 +574,7 @@ class TaskReportsService:
 
         if source_row11 is not None:
             task_topic = (
-                    getattr(
-                        source_row11,
-                        "topic",
-                        None,
-                    )
+                    content_text(source_row11, 'topic')
                     or "—"
             )
 

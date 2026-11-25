@@ -244,7 +244,7 @@ class ExecutionDocumentRepo:
         stmt = (
             select(SchoolMonthPlanItem.id, SchoolMonthPlanItem.status, SchoolMonthPlanItem.completed_at,
                    SchoolMonthPlanItem.is_included, SchoolMonthPlan.status.label("month_status"),
-                   SchoolPlan.status.label("annual_status"))
+                   SchoolPlan.status.label("annual_status"), SchoolPlan.school_id)
             .join(SchoolMonthPlan, SchoolMonthPlan.id == SchoolMonthPlanItem.month_plan_id)
             .join(SchoolPlan, SchoolPlan.id == SchoolMonthPlan.school_plan_id)
             .where(SchoolMonthPlanItem.id == month_item_id)

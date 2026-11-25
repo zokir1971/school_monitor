@@ -1,6 +1,7 @@
 # app/modules/reports/services/staff_my_reports_service.py
 
 from __future__ import annotations
+from app.modules.planning.content_i18n import content_text
 
 from datetime import date
 from typing import Any
@@ -147,7 +148,7 @@ class StaffMyReportsService:
         for row in rows:
             task_id=int(row['month_item_id'])
             if task_id not in grouped:
-                grouped[task_id]=StaffMyReportTaskDTO(month_item_id=task_id,topic=str(row.get('topic') or '—'),
+                grouped[task_id]=StaffMyReportTaskDTO(month_item_id=task_id,topic=str(content_text(row,'topic') or '—'),
                     planned_start=row['planned_start'],planned_end=row['planned_end'],
                     period_text=cls._build_period_text(row['planned_start'],row['planned_end']),
                     task_status=cls._status_value(row['task_status']),task_status_label=cls._status_label(row['task_status']),

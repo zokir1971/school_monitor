@@ -23,18 +23,18 @@ async def page(request,db,user,error=None,values=None):
     year=integer(values.get('year',request.query_params.get('year',datetime.now().year)),2000,2100)
     chosen=values.get('context_plan_id',request.query_params.get('plan_id'))
     selection=dict(classes=[],regions={},districts={},schools={},class_total=0,class_page=1,class_pages=1,
-                   filter_region_id=None,filter_district_id=None,filter_school_id=None,scope_kind=None)
+                   filter_region_id=None,filter_district_id=None,filter_school_id=None,filter_governance='',scope_kind=None)
     if chosen:
         first=await works.own(db,user,integer(chosen,1,2147483647))
         if first.status!='prepared':raise WorkPlanError('Сначала подготовьте комплект. / Алдымен жинақты дайындаңыз.')
         # A plan opened from search remains selectable even outside the latest 100.
         if not any(p.id==first.id for p in plans):plans.insert(0,first)
-        filters={key:values.get(key,request.query_params.get(key,'')) for key in ('filter_region_id','filter_district_id','filter_school_id','class_page')}
+        filters={key:values.get(key,request.query_params.get(key,'')) for key in ('filter_governance','filter_region_id','filter_district_id','filter_school_id','class_page')}
         if not filters['class_page']:filters['class_page']='1'
         selection=await picker.selection(db,first,year,filters)
     sessions=await repository.recent(db,user.id)
     jobs=await repository.jobs(db,[s.id for s in sessions])
-    query=dict(year=year,plan_id=chosen or '',**{k:selection[k] or '' for k in ('filter_region_id','filter_district_id','filter_school_id')})
+    query=dict(year=year,plan_id=chosen or '',**{k:selection[k] or '' for k in ('filter_governance','filter_region_id','filter_district_id','filter_school_id')})
     def class_url(page):return str(request.url_for('diagnostic_sessions'))+'?'+urlencode(dict(query,class_page=page))
     context=dict(user=user,jobs=jobs,request_key=values.get("request_key") or secrets.token_hex(16),plans=plans,year=year,chosen=chosen,sessions=sessions,error=error,values=values,
         selected_plans=set(values.getlist('plan_ids')) if hasattr(values,'getlist') else ({str(chosen)} if chosen else set()),

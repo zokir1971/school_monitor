@@ -85,6 +85,8 @@ class KnowledgeQualityExportRowDTO:
     # DISPLAY
     # =====================================================
 
+    district_name: str = ''
+
     work_key: str | None = None
     full_work_title: str | None = None
     score_sum: Decimal | None = None
@@ -183,6 +185,13 @@ class KnowledgeQualityExportDTO:
 
     work_summaries: tuple[KnowledgeQualityExportRowDTO, ...] = ()
     all_works: bool = False
+    # Optional five-sheet regional layout; other scopes retain their old DTOs.
+    school_rows: tuple[KnowledgeQualityExportRowDTO, ...] = ()
+    regional_rows: tuple[KnowledgeQualityExportRowDTO, ...] = ()
+    regional_work_summaries: tuple[KnowledgeQualityExportRowDTO, ...] = ()
+    regional_layout: bool = False
+    governance: str = ''
+
 
     work_title: str | None = None
 

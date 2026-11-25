@@ -16,6 +16,14 @@ def association_name(value, language):
 
 
 def association_error(value, language):
+    conflicts = {
+        'Настройки изменились в другой вкладке. Показан текущий выбор. Проверьте его перед сохранением.':
+            'Баптаулар басқа қойындыда өзгерді. Ағымдағы таңдау көрсетілді. Сақтамас бұрын оны тексеріңіз.',
+        'Сохранённые методические объединения содержат конфликтующие записи. Обратитесь к администратору.':
+            'Сақталған әдістемелік бірлестіктерде қайшы жазбалар бар. Әкімшіге хабарласыңыз.',
+    }
+    if isinstance(value, str) and value in conflicts:
+        return conflicts[value] if language in ('kk', 'kz') else value
     source = value if isinstance(value, str) and value in METHOD_ASSOCIATION_ERRORS else 'Не удалось выполнить операцию.'
     return translate(source, language)
 
@@ -30,6 +38,7 @@ METHOD_ASSOCIATION_NAMES = (
     N_('Математика'),
     N_('Информатика'),
     N_('Математика және информатика'),
+    N_('Математика, информатика, физика'),
     N_('Физика және информатика'),
     N_('Химия және биология'),
     N_('Физика'),

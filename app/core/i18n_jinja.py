@@ -4,7 +4,7 @@ from jinja2 import pass_context
 from jinja2.filters import do_tojson
 from jinja2.utils import htmlsafe_json_dumps
 from app.core.render_locale import _active_locale
-from app.core.i18n import SUPPORTED_LANGUAGES, catalog, resolve_language, normalize_language
+from app.core.i18n import SUPPORTED_LANGUAGES, catalog, resolve_language, normalize_language, translate
 
 
 def install_i18n(environment):
@@ -24,7 +24,7 @@ def install_i18n(environment):
             text = snapshot.gettext(message)
         else:
             language = ui_language(context)
-            text = catalog(language).gettext(message)
+            text = translate(message, language)
         return text % values if values else text
 
     @pass_context
@@ -316,6 +316,14 @@ def install_i18n(environment):
     environment.globals.update(completion_feedback=completion_feedback,
         completion_review_places=completion_review_places, verify_report_label=verify_report_label,
         verify_detail_label=verify_detail_label, verify_feedback=verify_feedback)
+
+    @pass_context
+    def review_place_columns(context):
+        from app.modules.planning.enums import ReviewPlace
+        language = ui_language(context)
+        return [dict(value=p.value, field=p.value + '_count', label=p.display_label(language)) for p in ReviewPlace]
+
+    environment.globals['review_place_columns'] = review_place_columns
 
     @pass_context
     def review_result_label(context, value):

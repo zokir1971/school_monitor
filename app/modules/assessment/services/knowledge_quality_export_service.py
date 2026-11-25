@@ -710,135 +710,15 @@ class KnowledgeQualityExportService:
     # =====================================================
 
     @classmethod
-    async def build_region_export(
-        cls,
-        db: AsyncSession,
-        *,
-        region_id: int,
-        academic_year_start: int | None = None,
-        subject_id: int | None = None,
-        grade_level: int | None = None,
-        work_key: str | None = None,
-    ) -> KnowledgeQualityExportDTO:
-        """
-        Подготовить export DTO региона.
-
-        summary:
-            общий итог региона.
-
-        rows:
-            районы региона.
-        """
-
-        # =================================================
-        # SUMMARY
-        # =================================================
-
-        analytics = (
-            await KnowledgeQualityAnalyticsService
-            .get_region_analytics(
-                db,
-                region_id=region_id,
-                academic_year_start=(
-                    academic_year_start
-                ),
-                subject_id=subject_id,
-                grade_level=grade_level,
-                work_key=work_key,
-            )
-        )
-
-        # =================================================
-        # REGION -> DISTRICTS
-        # =================================================
-
-        district_analytics = (
-            await KnowledgeQualityAnalyticsService
-            .get_region_district_analytics(
-                db,
-                region_id=region_id,
-                academic_year_start=(
-                    academic_year_start
-                ),
-                subject_id=subject_id,
-                grade_level=grade_level,
-                work_key=work_key,
-            )
-        )
-
-        # =================================================
-        # ORGANIZATION
-        # =================================================
-
-        region_names = (
-            await OrgLookupRepo
-            .get_region_names_by_ids(
-                db,
-                region_ids=(
-                    region_id,
-                ),
-            )
-        )
-
-        organization_name = (
-            region_names.get(
-                region_id,
-                f"ID {region_id}",
-            )
-        )
-
-        # =================================================
-        # SUBJECT
-        # =================================================
-
-        subject_name = (
-            await cls._resolve_subject_name(
-                db,
-                subject_id=subject_id,
-            )
-        )
-
-        # =================================================
-        # ROWS
-        # =================================================
-
-        rows = tuple(
-            cls._build_drill_down_row(
-                item
-            )
-            for item in district_analytics.items
-        )
-
-        return KnowledgeQualityExportDTO(
-            scope="region",
-
-            title=(
-                "Өңір бойынша білім сапасының "
-                "аналитикасы"
-            ),
-
-            organization_id=region_id,
-            organization_name=(
-                organization_name
-            ),
-
-            academic_year_start=(
-                academic_year_start
-            ),
-
-            subject_id=subject_id,
-            subject_name=subject_name,
-
-            grade_level=grade_level,
-
-            summary=(
-                cls._build_summary(
-                    analytics
-                )
-            ),
-
-            rows=rows,
-        )
+    async def build_region_export(cls, db: AsyncSession, *, region_id: int,
+                                  academic_year_start: int | None=None, subject_id: int | None=None,
+                                  grade_level: int | None=None, work_key: str | None=None,
+                                  governance: str='', checkpoint: str='') -> KnowledgeQualityExportDTO:
+        """Prepare the five regional sheets from one filtered school cohort."""
+        from app.modules.assessment.services.regional_export_service import build
+        return await build(db, region_id=region_id, academic_year_start=academic_year_start,
+                           subject_id=subject_id, grade_level=grade_level, work_key=work_key,
+                           governance=governance, checkpoint=checkpoint)
 
     # =====================================================
     # SUMMARY BUILDER

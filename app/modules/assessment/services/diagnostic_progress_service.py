@@ -1,6 +1,7 @@
 """Authorized server-side filters; response size never exceeds the selected page."""
 from urllib.parse import urlencode
 from app.modules.assessment.repositories import diagnostic_progress_repo as repo
+from app.modules.assessment.repositories.diagnostic_selection_repo import optional_group
 from app.modules.assessment.services.diagnostic_session_service import own
 from app.modules.assessment.services.diagnostic_attempt_service import expire
 from app.modules.assessment.helpers.work_plan_rules import WorkPlanError,integer
@@ -19,7 +20,8 @@ async def progress(db,user,session_id,*,category='all',page=1,values=None):
     page=integer(page,1,1000000)
     page_size=integer(values.get('page_size',25),25,100)
     if page_size not in (25,50,100):raise WorkPlanError('Выберите 25, 50 или 100 строк. / 25, 50 немесе 100 жол таңдаңыз.')
-    filters={key:optional_id(values.get(key)) for key in ('district_id','school_id','class_id','subject_id')}
+    filters={key:optional_id(values.get(key)) for key in ('school_id','class_id','subject_id')}
+    filters['district_id']=optional_group(values.get('district_id'))
     filters.update(q=str(values.get('q','')).strip(),status=values.get('status','all'))
     if len(filters['q'])>100 or filters['status'] not in STATUSES:raise WorkPlanError('Проверьте фильтры. / Сүзгілерді тексеріңіз.')
     districts,schools,classes=await repo.filter_options(db,session.id,filters['district_id'],filters['school_id'])
@@ -52,7 +54,7 @@ async def progress(db,user,session_id,*,category='all',page=1,values=None):
 
 async def filter_choices(db,user,session_id,values):
     session=await own(db,user,session_id)
-    district_id=optional_id(values.get('district_id'));school_id=optional_id(values.get('school_id'))
+    district_id=optional_group(values.get('district_id'));school_id=optional_id(values.get('school_id'))
     districts,schools,classes=await repo.filter_options(db,session.id,district_id,school_id)
     if district_id and district_id not in {r['id'] for r in districts}:raise WorkPlanError('Район не входит в сессию. / Аудан сессияға кірмейді.')
     if school_id and school_id not in {r['school_id'] for r in schools}:raise WorkPlanError('Школа не входит в выбранный район и сессию. / Мектеп таңдалған аудан мен сессияға кірмейді.')

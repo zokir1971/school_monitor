@@ -21,8 +21,10 @@ class MethodAssociationSettingsPageDTO:
 
     school_id: int
     options: list[MethodAssociationSettingsItemDTO]
+    settings_version: str
 
 
 @dataclass(slots=True, frozen=True)
 class MethodAssociationSettingsUpdateDTO:
     selected_codes: list[str]
+    expected_version: str

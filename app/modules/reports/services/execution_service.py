@@ -1,5 +1,6 @@
 # app/modules/reports/services/execution_service.py
 from __future__ import annotations
+from app.modules.planning.content_i18n import content_text, language
 import json
 
 from datetime import date, datetime, timezone
@@ -168,12 +169,12 @@ class ExecutionService:
                 review_place_text = ", ".join(values)
 
         task_topic = (
-                getattr(getattr(task, "source_row11", None), "topic", None)
+                content_text(getattr(task, "source_row11", None), 'topic')
                 or "—"
         )
 
         task_goal = (
-                getattr(getattr(task, "source_row11", None), "goal", None)
+                content_text(getattr(task, "source_row11", None), 'goal')
                 or "—"
         )
 
@@ -226,6 +227,14 @@ class ExecutionService:
         if task.status == PlanItemStatus.DONE:
             raise ValueError("Задача уже завершена.")
 
+        execution = await ExecutionRepo.get_execution_data_for_task(db, month_item_id=month_item_id)
+        saved_mode = cls.build_execution_form_dto(execution).completion_mode if execution else ""
+        if completion_mode == TaskCompletionMode.SIMPLE_FINAL_DOCUMENT and (
+            saved_mode == TaskCompletionMode.FINAL_WITH_SYSTEM_REPORTS.value
+            or (execution is not None and execution.selected_reports)
+        ):
+            raise ValueError("Для этой задачи выбран вариант с системными отчётами. Завершите отчёты и отправьте итоговый документ.")
+
         final_document = await ExecutionDocumentRepo.get_current_final_document_for_task(
             db,
             month_item_id=month_item_id,
@@ -234,15 +243,32 @@ class ExecutionService:
         if not final_document:
             raise ValueError("Сначала загрузите итоговый документ.")
 
-        execution = await ExecutionRepo.get_or_create_execution_data(
-            db,
-            month_item_id=month_item_id,
-        )
+        snapshot = final_document.schema_json or {}
+        assembled_reference = final_document.report_code == 'analytical_reference' and snapshot.get('assembly_version') == 1
+        if assembled_reference:
+            from app.modules.reports.services.final_reference_assembly import fingerprint
+            from app.modules.reports.services.structured_report_service import source_snapshot
+            from app.modules.reports.repositories.structured_report_repo import evidence
+            from app.modules.reports.repositories.report_verify_repo import ReportVerifyRepo
+            if final_document.status != TaskDocumentStatus.SUBMITTED:
+                raise ValueError("Сначала подпишите итоговую справку и сформируйте PDF.")
+            signature = await ReportVerifyRepo.get_active_signature_for_document(db, report_type='analytical_reference', document_id=final_document.id)
+            if signature is None:
+                raise ValueError("Подпись итоговой справки не найдена.")
+            sources = await evidence(db, locked_task['school_id'], month_item_id)
+            if len(sources) > 2000:
+                raise ValueError("Слишком много исходных отчётов.")
+            entries, _ = source_snapshot({'source_reports': sources}, True)
+            if not entries or fingerprint(entries, snapshot.get('source_fingerprint_version', 1)) != snapshot.get('source_fingerprint'):
+                raise ValueError("Исходные отчёты изменились после подписания. Создайте новую версию справки и обновите данные отчётов.")
+
+        if execution is None:
+            execution = await ExecutionRepo.get_or_create_execution_data(db, month_item_id=month_item_id)
 
         execution.completion_mode = completion_mode.value
         db.add(execution)
 
-        if completion_mode == TaskCompletionMode.FINAL_WITH_SYSTEM_REPORTS:
+        if completion_mode == TaskCompletionMode.FINAL_WITH_SYSTEM_REPORTS and not assembled_reference:
             missing_reports = await ExecutionRepo.get_missing_selected_reports(
                 db,
                 month_item_id=month_item_id,

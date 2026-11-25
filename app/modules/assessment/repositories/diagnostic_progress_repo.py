@@ -5,20 +5,21 @@ from app.modules.assessment.models_diagnostic_attempts import DiagnosticAttempt 
 from app.modules.assessment.models import AssessmentResult
 from app.modules.education.models import SchoolClass
 from app.modules.org.models import School,District
+from app.modules.org.governance import reporting_district_id, reporting_district_name
 P=Person.__table__;D=Subject.__table__;T=Attempt.__table__;R=AssessmentResult.__table__;K=SchoolClass.__table__;H=School.__table__;E=District.__table__
 
 
 async def filter_options(db,session_id,district_id=None,school_id=None):
     roster=P.join(K,K.c.id==P.c.school_class_id).join(H,H.c.id==K.c.school_id).join(E,E.c.id==H.c.district_id)
-    districts=list((await db.execute(select(E.c.id,E.c.name).distinct().select_from(roster)
-        .where(P.c.session_id==session_id).order_by(E.c.name,E.c.id))).mappings())
-    school_query=select(K.c.school_id,func.min(P.c.school_name).label('name'),E.c.name.label('district_name')).select_from(roster).where(P.c.session_id==session_id)
-    if district_id:school_query=school_query.where(E.c.id==district_id)
-    schools=list((await db.execute(school_query.group_by(K.c.school_id,E.c.name).order_by(E.c.name,func.min(P.c.school_name),K.c.school_id))).mappings())
+    districts=list((await db.execute(select(reporting_district_id(E.c.id,E.c.region_id,level=H.c.governance_level).label('id'),reporting_district_name(E.c.name,H.c.governance_level).label('name')).distinct().select_from(roster)
+        .where(P.c.session_id==session_id).order_by('name','id'))).mappings())
+    school_query=select(K.c.school_id,func.min(P.c.school_name).label('name'),reporting_district_name(E.c.name,H.c.governance_level).label('district_name')).select_from(roster).where(P.c.session_id==session_id)
+    if district_id:school_query=school_query.where(reporting_district_id(E.c.id,E.c.region_id,level=H.c.governance_level)==district_id)
+    schools=list((await db.execute(school_query.group_by(K.c.school_id,E.c.name,H.c.governance_level).order_by(reporting_district_name(E.c.name,H.c.governance_level),func.min(P.c.school_name),K.c.school_id))).mappings())
     classes=[]
     if school_id is not None:
         query=select(P.c.school_class_id.label('id'),func.min(P.c.class_label).label('name')).select_from(roster).where(P.c.session_id==session_id,K.c.school_id==school_id)
-        if district_id:query=query.where(E.c.id==district_id)
+        if district_id:query=query.where(reporting_district_id(E.c.id,E.c.region_id,level=H.c.governance_level)==district_id)
         classes=list((await db.execute(query.group_by(P.c.school_class_id).order_by(func.min(P.c.class_label),P.c.school_class_id))).mappings())
     return districts,schools,classes
 
@@ -40,7 +41,7 @@ async def page_rows(db,session_id,category,page,*,filters=None,page_size=25):
     summary=base.subquery()
     counts=dict((await db.execute(select(summary.c.state,func.count()).group_by(summary.c.state))).all())
     district_id=filters.get('district_id');school_id=filters.get('school_id');class_id=filters.get('class_id');subject_id=filters.get('subject_id')
-    if district_id:base=base.where(P.c.school_class_id.in_(select(K.c.id).join(H,H.c.id==K.c.school_id).where(H.c.district_id==district_id)))
+    if district_id:base=base.where(P.c.school_class_id.in_(select(K.c.id).join(H,H.c.id==K.c.school_id).join(E,E.c.id==H.c.district_id).where(reporting_district_id(E.c.id,E.c.region_id,level=H.c.governance_level)==district_id)))
     if school_id:base=base.where(P.c.school_class_id.in_(select(K.c.id).where(K.c.school_id==school_id)))
     if class_id:base=base.where(P.c.school_class_id==class_id)
     if filters.get('q'):

@@ -13,12 +13,11 @@ def read_schools_from_xlsx(file_path: str) -> list[dict]:
     wb = load_workbook(file_path, read_only=True, data_only=True)
     try:
         ws = wb.active
-        rows = list(ws.iter_rows(values_only=True))
-
-        if not rows:
+        rows = ws.iter_rows(values_only=True)
+        first = next(rows, None)
+        if first is None:
             return []
-
-        headers = [normalize_text(col) for col in rows[0]]
+        headers = [normalize_text(col) for col in first]
 
         def get_col_index(name: str) -> int:
             if name not in headers:
@@ -36,7 +35,7 @@ def read_schools_from_xlsx(file_path: str) -> list[dict]:
 
         items: list[dict] = []
 
-        for row in rows[1:]:
+        for row in rows:
             region_name = normalize_text(row[idx_region] if idx_region < len(row) else None)
             district_name = normalize_text(row[idx_district] if idx_district < len(row) else None)
             settlement = normalize_text(row[idx_settlement] if idx_settlement < len(row) else None)

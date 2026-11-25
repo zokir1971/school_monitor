@@ -50,6 +50,10 @@ METHOD_ASSOCIATION_OPTIONS: tuple[MethodAssociationOption, ...] = (
         name="Математика және информатика",
     ),
     MethodAssociationOption(
+        code="mathematics_informatics_physics",
+        name="Математика, информатика, физика",
+    ),
+    MethodAssociationOption(
         code="physics_informatics",
         name="Физика және информатика",
     ),

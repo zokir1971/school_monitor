@@ -87,8 +87,13 @@ async def load(db,user,task_id,selected_id,params,*,lock=False,report_code):
     form=dict(saved.get('form') or {})
     form.update({k:str(v) for k,v in params.items() if k in ('check_date','criteria','threshold','text_title','reading_language','date_from','date_to','purpose')})
     form.setdefault('check_date',default_to);form.setdefault('date_from',default_from);form.setdefault('date_to',default_to)
+    if report_code=='analytical_reference':
+        form.setdefault('purpose',(context.get('goal') or '')[:2000])
+        if not saved:
+            form['date_from']=str(context.get('planned_start') or form['date_from'])
+            form['date_to']=str(context.get('planned_end') or form['date_to'])
     form.setdefault('reading_language','kk');page['structured_form']=form
-    for key in ('conclusion','recommendations','document_language'):
+    for key in ('conclusion','recommendations','document_language','analysis_text'):
         if key in params:page['form_values'][key]=str(params[key])
     page['entry_page']=max(1,integer(params.get('entry_page'),1))
     if report_code=='reading_speed_table':
@@ -124,6 +129,11 @@ async def load(db,user,task_id,selected_id,params,*,lock=False,report_code):
         if not assessment_enabled():page['source_reports']=[row for row in page['source_reports'] if row['code']!='knowledge_quality_table' and not (row['code'] in ('class_summary','teacher_analysis') and row.get('totals'))]
         if len(page['source_reports'])>2000:raise QualityReportError('Слишком много отчётов в задаче. Разделите область контроля. / Тапсырмада есептер тым көп. Бақылау ауқымын бөліңіз.')
         entries=[];page['page_size']=PAGE_SIZE
+        from app.modules.reports.services.final_reference_assembly import fingerprint
+        current_entries,_=source_snapshot(page,False)
+        page['source_fingerprint']=fingerprint(current_entries,saved.get('source_fingerprint_version',1))
+        previous_fingerprint=saved.get('source_fingerprint') or (fingerprint(saved['entries']) if saved else '')
+        page['sources_changed']=bool(previous_fingerprint and previous_fingerprint!=page['source_fingerprint'])
     page['page_count']=max(1,math.ceil(max([e.get('key',0) for e in entries],default=0)/page['page_size']))
     if report_code!='document_analysis':page['entry_page']=min(page['entry_page'],page['page_count'])
     start=(page['entry_page']-1)*page['page_size'];end=start+page['page_size']
@@ -215,6 +225,8 @@ def source_snapshot(page,completing):
         entries.append(dict(selected_id=source['selected_id'],document_id=source['document_id'],code=source['code'],
             titles={lang:cfg.get('title_'+lang) or source.get('type_label_'+lang) or source['code'] for lang in ('ru','kk')},
             target=source['target_label'],state=state,finding=source.get('finding','') if state=='completed' else '',revision=source['revision'],version=source['version'],submitted_at=source['submitted_at'],
+            conclusion_text=(source.get('conclusion_text') or '') if state=='completed' else '',
+            recommendations_text=(source.get('recommendations_text') or '') if state=='completed' else '',
             summary=source['summary'] if state=='completed' and isinstance(source.get('summary'),dict) else None,
             totals=[row for row in source['totals'] if isinstance(row,dict)] if state=='completed' and isinstance(source.get('totals'),list) else None,
             score=(source['score'] if source['code']=='lesson_observation' else source['notebook_score']) if state=='completed' else None,
@@ -224,6 +236,7 @@ def source_snapshot(page,completing):
 
 async def calculate(db,user,page,params,language):
     completing=params.get('action')=='complete';code=page['context']['report_code'];form=page['structured_form']
+    assembly={}
     for key in ('criteria','text_title','purpose'):form[key]=text(form,key)
     start=day(form['date_from'],'date_from');end=day(form['date_to'],'date_to')
     if start>end:raise QualityReportError('Начало периода позже окончания. / Кезеңнің басы соңынан кейін.',field='date_to')
@@ -232,11 +245,35 @@ async def calculate(db,user,page,params,language):
         entries,summary=reading_snapshot(page,completing)
     elif code=='document_analysis':entries,summary=await document_snapshot(db,user,page,completing)
     else:
-        entries,summary=source_snapshot(page,completing)
+        assembling=params.get('action')=='assemble'
+        entries,summary=source_snapshot(page,completing or assembling)
+        if (completing or assembling) and not entries:
+            raise QualityReportError('В задаче нет исходных отчётов для сборки справки. / Анықтама құрастыруға бастапқы есептер жоқ.')
+        from app.modules.reports.services.final_reference_assembly import fingerprint, analysis_text, task_metadata
+        previous=((page['document'] or {}).get('schema_json') or {})
+        fingerprint_version=2 if assembling else previous.get('source_fingerprint_version',1)
+        current_fingerprint=fingerprint(entries,fingerprint_version)
+        expected=params.get('source_fingerprint') or previous.get('source_fingerprint')
+        if not assembling and expected and expected!=current_fingerprint:
+            raise QualityReportError('Исходные отчёты изменились. Нажмите «Собрать / обновить данные отчётов»: введённый текст сохранится. / Бастапқы есептер өзгерді. Есеп деректерін жаңартыңыз: енгізілген мәтін сақталады.')
+        if not assembling and completing and previous.get('assembly_version')!=1:
+            raise QualityReportError('Сначала соберите и сохраните черновик итогового документа. / Алдымен қорытынды құжат жобасын құрастырып сақтаңыз.')
+        narrative=text(params,'analysis_text',30000,default=previous.get('analysis_text',''))
+        if assembling and not narrative and 'analysis_text' not in previous:narrative=analysis_text(entries,language)
+        defaults=previous.get('source_text_defaults') or {}
+        if assembling:
+            from app.modules.reports.services.final_reference_assembly import collect_source_texts, merge_source_texts
+            defaults=collect_source_texts(entries,language)
+            replacements=merge_source_texts(params,previous,defaults)
+            params=dict(params,**replacements)
+        assembly=dict(assembly_version=1,source_fingerprint=current_fingerprint,source_fingerprint_version=fingerprint_version,
+            source_text_defaults=defaults,analysis_text=narrative,task_metadata=task_metadata(page['context']))
         if completing and not text(params,'conclusion',10000):raise QualityReportError('Заполните выводы аналитической справки. / Талдау анықтамасының қорытындысын толтырыңыз.',field='conclusion')
+        if completing and not text(params,'recommendations',10000):
+            raise QualityReportError('Заполните рекомендации итоговой справки. / Қорытынды анықтаманың ұсынымдарын толтырыңыз.',field='recommendations')
     # Only needed in the preview; authoritative saved pages are rebuilt from this snapshot.
     return json_value(dict(kind='vsk_structured_report',schema_version=1,report_layout_version=166,report_code=code,
         report_titles={lang:REPORT_TYPES[code]['title_'+lang] for lang in ('ru','kk')},language=language,
         created_at=datetime.now(timezone.utc),school_name=page['context']['school_name'],target_label=page['context']['target_label'],
         mode='complex',filters=page['filters'],form=form,entries=entries,summary=summary,rows=[],states=STATES,categories=CATEGORIES,
-        conclusion=text(params,'conclusion',10000),recommendations=text(params,'recommendations',10000)))
+        conclusion=text(params,'conclusion',10000),recommendations=text(params,'recommendations',10000),**assembly))

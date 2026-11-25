@@ -83,6 +83,17 @@ class UserCrudService:
         # 1. BASIC VALIDATION
         # =========================================================
 
+        if target_role == UserRole.SCHOOL_ADMIN:
+            if region_id is not None or district_id is not None:
+                raise ValueError("Для кода школы укажите только school_id")
+            from app.modules.users.services.registration_code import RegistrationCodeService
+            raw, obj = await RegistrationCodeService.issue_l3_code(
+                db, issued_by_user_id=issuer.id, school_id=school_id, quota_total=quota, expires_days=None)
+            if expires_at is not None:
+                obj.expires_at = expires_at
+                await db.flush()
+            return obj, raw
+
         if quota <= 0:
             raise ValueError(
                 "quota должна быть > 0"

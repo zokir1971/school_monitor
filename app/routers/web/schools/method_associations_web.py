@@ -6,14 +6,17 @@ from typing import cast
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.exc import IntegrityError
 
 from app.db.session import get_db
 from app.modules.schools.method_association_service import (
     SchoolMethodAssociationService,
+    MethodAssociationSettingsConflict,
+    MethodAssociationDataConflict,
 )
 from app.modules.users.deps import require_school_admin_scope
 from app.modules.users.models import User
-from app.routers.web.helpers.render import render, render_error
+from app.routers.web.helpers.render import render, render_error, _normalize_user
 from app.routers.web.web_common import templates
 
 router = APIRouter(
@@ -142,11 +145,29 @@ async def school_method_association_settings_save(
         for code in form.getlist("selected_codes")
     ]
 
+    version_value = form.get("settings_version")
+    settings_version = version_value if isinstance(version_value, str) else ""
+    form_user = _normalize_user(user)
     try:
         await SchoolMethodAssociationService.update_settings(
             db,
             school_id=school_id,
             selected_codes=selected_codes,
+            expected_version=settings_version,
+        )
+
+    except (MethodAssociationSettingsConflict, IntegrityError) as exc:
+        await db.rollback()
+        page_data = await SchoolMethodAssociationService.get_settings_page_data(db, school_id=school_id)
+        return render_error(
+            templates, request, "school_admin/method_associations.html",
+            {"user": form_user, **asdict(page_data), "success": False},
+            error=(
+                "Сохранённые методические объединения содержат конфликтующие записи. Обратитесь к администратору."
+                if isinstance(exc, (MethodAssociationDataConflict, IntegrityError)) else
+                "Настройки изменились в другой вкладке. Показан текущий выбор. Проверьте его перед сохранением."
+            ),
+            status_code=409,
         )
 
     except ValueError:

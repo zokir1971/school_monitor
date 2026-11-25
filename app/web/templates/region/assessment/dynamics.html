@@ -834,6 +834,13 @@
 
 
     <div class="dynamics-header__actions">
+      {% if selected_academic_year is not none %}
+      <a class="dynamics-btn dynamics-btn--primary" data-sm-action="primary"
+         href="{{ url_for('region_assessment_dynamics_export_excel').include_query_params(academic_year_start=selected_academic_year, subject_id=selected_subject_id or '', grade_level=selected_grade_level or '', governance=governance) }}">
+        {{ 'Скачать Excel' if ui_language()=='ru' else 'Excel жүктеу' }}
+      </a>
+      {% endif %}
+
 
       <a
         class="
@@ -867,6 +874,8 @@
       )
     }}"
   >
+<div class="dynamics-filter-field"><label for="governance">{{ 'Подчинение' if ui_language()=='ru' else 'Бағыныстылық' }}</label><select id="governance" class="dynamics-filter-select" name="governance"><option value="">{{ 'Все школы' if ui_language()=='ru' else 'Барлық мектептер' }}</option><option value="district"{% if governance=='district' %} selected{% endif %}>{{ 'Районное' if ui_language()=='ru' else 'Аудандық' }}</option><option value="region"{% if governance=='region' %} selected{% endif %}>{{ 'Областное' if ui_language()=='ru' else 'Облыстық' }}</option></select></div>
+
 
 
     <!-- YEAR -->
@@ -1250,7 +1259,7 @@
         <div>
 
           <h2 class="dynamics-section__title">
-            {{ _('Аудандар бойынша динамика') }}
+            {{ 'Динамика по районам и подчинению' if ui_language()=='ru' else 'Аудандар мен бағыныстылық бойынша динамика' }}
           </h2>
 
           <p class="dynamics-section__description">
@@ -1261,7 +1270,7 @@
 
 
         <div class="dynamics-section__meta">
-          {{ _('Аудандар саны:') }}
+          {{ 'Групп:' if ui_language()=='ru' else 'Топтар:' }}
           {{ district_count }}
         </div>
 
@@ -1285,7 +1294,7 @@
                 <tr>
 
                   <th class="entity-column">
-                    {{ _('Аудан') }}
+                    {{ 'Район / подчинение' if ui_language()=='ru' else 'Аудан / бағыныстылық' }}
                   </th>
 
                   <th>
@@ -1419,7 +1428,7 @@
                           url_for(
                             'region_assessment_knowledge_quality_dynamics'
                           )
-                        }}?academic_year_start={{ selected_academic_year }}{% if selected_subject_id %}&subject_id={{ selected_subject_id }}{% endif %}{% if selected_grade_level %}&grade_level={{ selected_grade_level }}{% endif %}&district_id={{ item.entity_id }}"
+                        }}?governance={{ governance }}&academic_year_start={{ selected_academic_year }}{% if selected_subject_id %}&subject_id={{ selected_subject_id }}{% endif %}{% if selected_grade_level %}&grade_level={{ selected_grade_level }}{% endif %}&district_id={{ item.entity_id }}"
                        data-sm-action="nav">
                         {% if selected_district_id == item.entity_id %}
                           {{ _('Таңдалды') }}
@@ -1563,7 +1572,7 @@
               url_for(
                 'region_assessment_knowledge_quality_dynamics'
               )
-            }}?academic_year_start={{ selected_academic_year }}{% if selected_subject_id %}&subject_id={{ selected_subject_id }}{% endif %}{% if selected_grade_level %}&grade_level={{ selected_grade_level }}{% endif %}"
+            }}?governance={{ governance }}&academic_year_start={{ selected_academic_year }}{% if selected_subject_id %}&subject_id={{ selected_subject_id }}{% endif %}{% if selected_grade_level %}&grade_level={{ selected_grade_level }}{% endif %}"
            data-sm-action="danger">
             {{ _('Аудан таңдауын алып тастау') }}
           </a>

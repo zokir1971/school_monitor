@@ -16,6 +16,7 @@ from typing import TYPE_CHECKING
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
+from app.modules.planning.content_i18n import LocalizedPlanText
 
 if TYPE_CHECKING:
     from app.modules.planning.models_school import SchoolPlan, SchoolPlanRow4, SchoolPlanRow11
@@ -24,7 +25,8 @@ if TYPE_CHECKING:
 # =========================================================
 # 1) Справочник направлений
 # =========================================================
-class PlanDirection(Base):
+class PlanDirection(LocalizedPlanText, Base):
+    __text_fields__ = ('short_title', 'full_title')
     __tablename__ = "plan_directions"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -127,7 +129,8 @@ class PlanTemplate(Base):
 # 3) Направление внутри конкретного шаблона
 #    (template + direction)
 # =========================================================
-class PlanTemplateDirection(Base):
+class PlanTemplateDirection(LocalizedPlanText, Base):
+    __text_fields__ = ('title_override',)
     __tablename__ = "plan_template_directions"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -201,7 +204,8 @@ class PlanTemplateDirection(Base):
 # =========================================================
 # 4) Таблица 4 — объекты контроля (строки)
 # =========================================================
-class PlanTemplateRow4(Base):
+class PlanTemplateRow4(LocalizedPlanText, Base):
+    __text_fields__ = ('control_object', 'risk_text', 'decision_text')
     __tablename__ = "plan_template_rows_4"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -242,7 +246,8 @@ class PlanTemplateRow4(Base):
 # =========================================================
 # 5) Таблица 11 — задачи (строки)
 # =========================================================
-class PlanTemplateRow11(Base):
+class PlanTemplateRow11(LocalizedPlanText, Base):
+    __text_fields__ = ('topic', 'goal', 'control_object', 'control_type', 'methods', 'deadlines', 'responsibles', 'review_place', 'management_decision', 'second_control')
     __tablename__ = "plan_template_rows_11"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)

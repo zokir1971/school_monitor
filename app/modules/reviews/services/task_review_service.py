@@ -1,5 +1,6 @@
 # app/modules/tasks/task_review_service.py
 from __future__ import annotations
+from app.modules.planning.content_i18n import content_text
 
 import logging
 import re
@@ -67,7 +68,7 @@ class TaskReviewService:
         return (
                 getattr(source, "task_name", None)
                 or getattr(source, "title", None)
-                or getattr(source, "topic", None)
+                or content_text(source,"topic")
                 or getattr(source, "control_topic", None)
                 or getattr(source, "activity", None)
                 or getattr(source, "content", None)

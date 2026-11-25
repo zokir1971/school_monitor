@@ -84,11 +84,17 @@ async def save(db,user,page,params,snapshot,request,templates,*,complete=False,r
     if expected!=current:raise reports.QualityReportError('Отчёт изменён в другой вкладке. Обновите страницу. / Есеп басқа қойындыда өзгертілді. Бетті жаңартыңыз.')
     code=page['context'].get('report_code',repo.CODE)
     if not reports.is_snapshot(snapshot,code):raise reports.QualityReportError('Report type mismatch')
+    if code=='analytical_reference' and snapshot.get('assembly_version')==1 and reports.integer(params.get('document_id'),0)!=(previous or {}).get('id',0):
+        raise reports.QualityReportError('Версия документа изменилась. Обновите страницу. / Құжат нұсқасы өзгерді. Бетті жаңартыңыз.')
     if refresh_pdf:
         if reports.integer(params.get('document_id'))!=previous['id'] or params.get('pdf_revision')!=pdf_revision(previous):
             raise reports.QualityReportError('PDF уже изменён. Обновите страницу. / PDF өзгертілген. Бетті жаңартыңыз.')
         snapshot=previous['schema_json']
-    else:snapshot=dict(snapshot,revision=current+1)
+    else:
+        snapshot=dict(snapshot,revision=current+1)
+        if complete and code=='analytical_reference' and snapshot.get('assembly_version')==1:
+            snapshot['signed_by']=dict(user_id=user.id,full_name=user.full_name)
+            snapshot['signed_at']=datetime.now(timezone.utc).isoformat()
     storage=None;new_key=None;commit_started=False
     try:
         if refresh_pdf:
@@ -106,7 +112,7 @@ async def save(db,user,page,params,snapshot,request,templates,*,complete=False,r
                 await ReportVerifyRepo.deactivate_old_signatures(db,report_type=code,report_id=doc_id,document_id=doc_id)
                 signature=await ReportVerifyRepo.create_signature_token(db,token=token,report_type=code,report_id=doc_id,document_id=doc_id)
             qr=ReportSignatureService.generate_qr_data_uri(verify_url=str(request.url_for('report_verify_by_code_page',code=signature.code)))
-            signed_at=previous.get('submitted_at') if refresh_pdf else at
+            signed_at=(datetime.fromisoformat(snapshot['signed_at']) if snapshot.get('signed_at') else previous.get('submitted_at')) if refresh_pdf else at
             # Refreshing the file does not re-date the completed report.
             signature_info=dict(report_id=doc_id,date=(signed_at.astimezone(timezone(timedelta(hours=5))).strftime('%d.%m.%Y %H:%M') if isinstance(signed_at,datetime) else '—'))
             html=templates.get_template('staff/reports/quality_report_pdf.html').render(snapshot=snapshot,ru=snapshot['language']=='ru',qr=qr,signature_info=signature_info)
@@ -148,3 +154,20 @@ async def save(db,user,page,params,snapshot,request,templates,*,complete=False,r
                 await get_storage().delete(object_key=old_key)
         except Exception:logger.exception('Could not remove replaced quality report file')
     return doc_id
+
+
+async def start_final_draft(db,user,page,params):
+    """Explicit version creation, under the task lock acquired by reports.load."""
+    context=page['context'];previous=page['document']
+    if (context['report_code']!='analytical_reference' or not context['can_edit']
+            or context['completed_at'] or any(reports.value(context.get(k))=='archived' for k in ('month_status','annual_status'))
+            or not previous or previous['source']!='generated'
+            or reports.value(previous['status']) not in ('submitted','approved','accepted')
+            or (previous.get('schema_json') or {}).get('assembly_version')!=1):
+        raise reports.QualityReportError('Создание новой версии недоступно. / Жаңа нұсқа жасау қолжетімсіз.')
+    if (reports.integer(params.get('document_id'))!=previous['id']
+            or reports.integer(params.get('revision'),0)!=(previous.get('schema_json') or {}).get('revision',0)):
+        raise reports.QualityReportError('Документ изменился. Обновите страницу. / Құжат өзгерді. Бетті жаңартыңыз.')
+    result=await repo.new_final_draft(db,previous=previous,user=user)
+    await db.commit()
+    return result

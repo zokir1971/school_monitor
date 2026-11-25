@@ -179,13 +179,14 @@ class SchoolMonthlyPlanRepo:
         item_names = ("id", "source_row11_id", "is_included", "week_of_month",
                       "planned_start", "planned_end", "notes", "status")
         source_names = ("topic", "goal", "control_object", "methods", "deadlines",
-                        "period_type", "period_value_int", "period_values", "direction_id")
+                        "period_type", "period_value_int", "period_values", "direction_id", "text_i18n")
         stmt = (select(
             *(i.c[name] for name in item_names),
             r.c.id.label("source_id"),
             *(r.c[name].label("source_" + name) for name in source_names),
             d.c.id.label("direction_id"), d.c.short_title.label("direction_title"),
-            d.c.sort_order.label("direction_order"),
+            d.c.full_title.label("direction_full_title"),
+            d.c.sort_order.label("direction_order"), d.c.text_i18n.label("direction_i18n"),
         ).select_from(i.outerjoin(r, r.c.id == i.c.source_row11_id)
                        .outerjoin(d, d.c.id == r.c.direction_id))
                 .where(i.c.month_plan_id == month_plan_id).order_by(i.c.id))
@@ -211,7 +212,7 @@ class SchoolMonthlyPlanRepo:
                 key = row["direction_id"]
                 if key not in directions:
                     directions[key] = SimpleNamespace(
-                        short_title=row["direction_title"], sort_order=row["direction_order"])
+                        short_title=row["direction_title"], full_title=row["direction_full_title"], sort_order=row["direction_order"], text_i18n=row["direction_i18n"])
                 direction = directions[key]
             source = None
             if row["source_id"] is not None:
@@ -508,7 +509,7 @@ class SchoolMonthlyPlanRepo:
     ) -> list[SchoolPlanRow11]:
         res = await db.execute(
             select(SchoolPlanRow11)
-            .where(SchoolPlanRow11.school_plan_id == school_plan_id)
+            .where(SchoolPlanRow11.school_plan_id == school_plan_id, SchoolPlanRow11.is_excluded.is_(False))
             .options(
                 raiseload("*"),
                 selectinload(SchoolPlanRow11.review_places),
@@ -664,7 +665,7 @@ class SchoolMonthlyPlanRepo:
     async def schedule_periods(db,*,school_plan_id,source_ids):
         if not source_ids:return {}
         r=SchoolPlanRow11.__table__
-        rows=(await db.execute(select(r.c.id,r.c.period_type,r.c.period_value_int,r.c.period_values).where(r.c.school_plan_id==school_plan_id,r.c.id.in_(sorted(source_ids))))).mappings()
+        rows=(await db.execute(select(r.c.id,r.c.period_type,r.c.period_value_int,r.c.period_values,r.c.is_excluded).where(r.c.school_plan_id==school_plan_id,r.c.id.in_(sorted(source_ids))))).mappings()
         return {row['id']:row for row in rows}
 
     @staticmethod

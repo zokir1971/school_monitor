@@ -14,6 +14,7 @@ from app.modules.reports.schemas.execution_dto import ExecutionFormDTO
 from app.modules.reports.schemas.report_assignment_dto import ReportAssignmentInputDTO
 from app.modules.reports.services.report_assignment_service import ReportAssignmentService
 from app.modules.tasks.task_service import StaffTasksService
+from app.modules.reports.repositories.execution_document_repo import ExecutionDocumentRepo
 from app.modules.users.deps import require_roles
 from app.modules.users.enums import UserRole
 from app.modules.users.models import User
@@ -318,6 +319,12 @@ async def staff_task_execute_details(
     control_flow_data = payload.control_flow or {}
     form_state = payload.execution or ExecutionFormDTO()
 
+    completion_final_document = None
+    if form_state.completion_mode == "final_with_system_reports" or form_state.report_types:
+        completion_final_document = await ExecutionDocumentRepo.get_current_final_document_for_task(
+            db, month_item_id=selected_task_id,
+        )
+
     state_json = json.dumps(
         asdict(form_state),
         ensure_ascii=False,
@@ -337,6 +344,7 @@ async def staff_task_execute_details(
             "today": date.today(),
             "current_draft": payload.current_draft,
             "state_json": state_json,
+            "completion_final_document": completion_final_document,
         },
     )
 

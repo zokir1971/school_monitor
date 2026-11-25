@@ -1,5 +1,10 @@
 {% set code=snapshot.report_code %}{% set lang='ru' if ru else 'kk' %}
 <div class="quality-report"><h1>{{ snapshot.report_titles[lang] }}</h1><p>{{ snapshot.school_name }} · {{ snapshot.target_label }} · {{ snapshot.filters.year }}–{{ snapshot.filters.year+1 }}</p><p>{{ snapshot.form.date_from }} — {{ snapshot.form.date_to }}</p>{% if snapshot.form.get('purpose') %}<p>{{ snapshot.form.purpose }}</p>{% endif %}
+{% if snapshot.get('task_metadata') %}{% set meta=snapshot.task_metadata %}
+<p><strong>{{ 'Тема контроля' if ru else 'Бақылау тақырыбы' }}:</strong> {{ meta.topic }}</p>
+<p><strong>{{ 'Цель контроля' if ru else 'Бақылау мақсаты' }}:</strong> {{ meta.goal }}</p>
+<p><strong>{{ 'Объект контроля' if ru else 'Бақылау нысаны' }}:</strong> {{ meta.control_object }}</p>
+{% endif %}
 {% set entries=snapshot.entries %}
 {% if page is defined and code in ['reading_speed_table','document_analysis'] %}
 {% set first=(page.entry_page|default(1)-1)*(25 if code=='reading_speed_table' else 10) %}{% set last=first+(25 if code=='reading_speed_table' else 10) %}
@@ -17,5 +22,6 @@
 {% for work in row.totals or [] %}<div>{{ (work.get('titles') or {}).get(lang) or work.get('title','') }} · {{ work.get('class_names',[])|join(', ') }}: {{ 'качество' if ru else 'сапа' }} {{ work.get('quality_percent') if work.get('quality_percent') is not none else '—' }}%</div>{% endfor %}
 </td></tr>{% else %}<tr><td colspan="3">{{ 'Исходных отчётов нет.' if ru else 'Бастапқы есептер жоқ.' }}</td></tr>{% endfor %}</tbody></table>
 {% endif %}
+{% if snapshot.get('analysis_text') %}<h2>{{ 'Анализ результатов' if ru else 'Нәтижелерді талдау' }}</h2><p style="white-space:pre-wrap;overflow-wrap:anywhere">{{ snapshot.analysis_text }}</p>{% endif %}
 {% if snapshot.conclusion %}<h2>{{ 'Выводы' if ru else 'Қорытындылар' }}</h2><p style="white-space:pre-wrap;overflow-wrap:anywhere">{{ snapshot.conclusion }}</p>{% endif %}{% if snapshot.recommendations %}<h2>{{ 'Рекомендации' if ru else 'Ұсынымдар' }}</h2><p style="white-space:pre-wrap;overflow-wrap:anywhere">{{ snapshot.recommendations }}</p>{% endif %}
 </div>

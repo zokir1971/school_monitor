@@ -241,3 +241,78 @@
       flex-direction: column;
     }
   }
+
+/* School directory: keep actions aligned and help text outside the toolbar. */
+.page.schools-page .toolbar-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px 20px;
+  margin-bottom: 16px;
+}
+.page.schools-page .toolbar-left,
+.page.schools-page .toolbar-right,
+.page.schools-page .import-form,
+.page.schools-page .toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.page.schools-page .toolbar-right {
+  margin-left: auto;
+  min-width: 0;
+  max-width: 100%;
+}
+.page.schools-page .import-form {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  margin: 0;
+  min-width: 0;
+  max-width: 100%;
+}
+.page.schools-page .filters {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.15fr) minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 12px;
+}
+.page.schools-page .field { min-width: 0; }
+.page.schools-page .toolbar-actions { flex-wrap: wrap; }
+.page.schools-page .filters .toolbar-actions { flex-wrap: nowrap; }
+.page.schools-page .toolbar-card .btn {
+  box-sizing: border-box;
+  min-width: 0;
+  height: 38px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.page.schools-page .filters .input,
+.page.schools-page .filters .select {
+  height: 38px;
+  min-height: 38px;
+  padding: 8px 10px;
+}
+.page.schools-page .schools-search-hint {
+  margin: 10px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+}
+@media (max-width: 1100px) {
+  .page.schools-page .filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .page.schools-page .filters .toolbar-actions { grid-column: 1 / -1; justify-content: flex-end; }
+}
+@media (max-width: 700px) {
+  .page.schools-page .filters { grid-template-columns: minmax(0, 1fr); }
+  .page.schools-page .toolbar-right { width: 100%; margin-left: 0; }
+  .page.schools-page .import-form { justify-content: flex-start; }
+  .page.schools-page .file-name { max-width: 100%; flex-basis: 100%; }
+  .page.schools-page .filters .toolbar-actions { justify-content: flex-start; }
+}
+
+/* Governance is a separate administrative filter. */
+@media (min-width: 1101px) {
+  .page.schools-page .filters { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .page.schools-page .schools-search-field { grid-column: span 3; }
+  .page.schools-page .filters .toolbar-actions { justify-content: flex-end; }
+}

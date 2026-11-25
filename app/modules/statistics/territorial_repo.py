@@ -4,6 +4,7 @@ from calendar import monthrange
 from datetime import date
 from sqlalchemy import select,func,case,and_,or_,literal,union,cast,Float
 from app.modules.org.models import School,District,Region
+from app.modules.org.governance import reporting_district_id, reporting_district_name
 from app.modules.planning.models import PlanDirection
 from app.modules.planning.models_school import SchoolPlan,SchoolPlanRow11
 from app.modules.planning.models_month_plan import SchoolMonthPlan,SchoolMonthPlanItem,SchoolMonthPlanItemAssignee,SchoolMonthPlanItemReviewPlace
@@ -22,15 +23,16 @@ def zero(column):return func.coalesce(column,0)
 
 class TerritorialStatisticsRepo:
     @staticmethod
-    def school_scope(scope, district_id=None, school_id=None, search=''):
+    def school_scope(scope, district_id=None, school_id=None, search='', governance=''):
         s,d,r=School.__table__.c,District.__table__.c,Region.__table__.c
-        stmt=select(s.id.label('school_id'),s.name.label('school_name'),d.id.label('district_id'),d.name.label('district_name'),r.id.label('region_id'),r.name.label('region_name')).select_from(School.__table__.join(District.__table__,s.district_id==d.id).join(Region.__table__,d.region_id==r.id))
-        if scope['kind']=='district':stmt=stmt.where(d.id==scope['district_id'])
+        stmt=select(s.id.label('school_id'),s.name.label('school_name'),reporting_district_id(d.id,r.id,level=s.governance_level).label('district_id'),reporting_district_name(d.name,s.governance_level).label('district_name'),r.id.label('region_id'),r.name.label('region_name')).select_from(School.__table__.join(District.__table__,s.district_id==d.id).join(Region.__table__,d.region_id==r.id))
+        if scope['kind']=='district':stmt=stmt.where(d.id==scope['district_id'],s.governance_level=='district')
         elif scope['kind']=='region':stmt=stmt.where(d.region_id==scope['region_id'])
         elif scope['kind']=='super':
             if scope.get('region_id') is not None:stmt=stmt.where(d.region_id==scope['region_id'])
         else:raise ValueError('Unknown territorial scope')
-        if district_id is not None:stmt=stmt.where(d.id==district_id)
+        if governance:stmt=stmt.where(s.governance_level==governance)
+        if district_id is not None:stmt=stmt.where(d.id==district_id,s.governance_level=='district')
         if school_id is not None:stmt=stmt.where(s.id==school_id)
         if search:
             term=search.replace('\\','\\\\').replace('%','\\%').replace('_','\\_')
@@ -45,7 +47,7 @@ class TerritorialStatisticsRepo:
     @classmethod
     async def directions(cls,db,schools,year):
         plans=cls.plans(schools,year);r=SchoolPlanRow11.__table__.c;d=PlanDirection.__table__.c
-        stmt=select(d.id,func.coalesce(func.nullif(d.full_title,''),d.short_title).label('name')).select_from(PlanDirection.__table__.join(SchoolPlanRow11.__table__,r.direction_id==d.id).join(plans,r.school_plan_id==plans.c.plan_id)).group_by(d.id,d.full_title,d.short_title,d.sort_order).order_by(d.sort_order,d.id)
+        stmt=select(d.id,func.coalesce(func.nullif(d.full_title,''),d.short_title).label('name')).select_from(PlanDirection.__table__.join(SchoolPlanRow11.__table__,r.direction_id==d.id).join(plans,r.school_plan_id==plans.c.plan_id)).where(r.is_excluded.is_(False)).group_by(d.id,d.full_title,d.short_title,d.sort_order).order_by(d.sort_order,d.id)
         return [dict(row) for row in (await db.execute(stmt)).mappings()]
 
     @classmethod
@@ -53,7 +55,7 @@ class TerritorialStatisticsRepo:
         plans=cls.plans(schools,year)
         r=SchoolPlanRow11.__table__.c;m=SchoolMonthPlan.__table__.c;i=SchoolMonthPlanItem.__table__.c
         direction=func.coalesce(r.direction_id,0)
-        annual=select(plans.c.school_id, r.direction_id.label('direction_id')).select_from(plans.join(SchoolPlanRow11.__table__,r.school_plan_id==plans.c.plan_id)).distinct().cte('annual_directions')
+        annual=select(plans.c.school_id, r.direction_id.label('direction_id')).select_from(plans.join(SchoolPlanRow11.__table__,r.school_plan_id==plans.c.plan_id)).where(r.is_excluded.is_(False)).distinct().cte('annual_directions')
         calendar=or_(*(and_(m.month==n,m.year==(year if n>=8 else year+1)) for n in MONTHS))
         months=select(m.id.label('month_id'),plans.c.school_id,m.school_plan_id,m.month).join(plans,m.school_plan_id==plans.c.plan_id).where(calendar,m.status.in_(('active','archived')))
         if month is not None:months=months.where(m.month==month)

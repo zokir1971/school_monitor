@@ -36,7 +36,13 @@ def catalog(language):
 
 
 def translate(message, language=DEFAULT_LANGUAGE, **values):
-    text = catalog(language).gettext(message)
+    from app.modules.planning.review_places import label_for_message
+    from app.core.system_message_pairs import paired_message
+    selected_language = normalize_language(language) or DEFAULT_LANGUAGE
+    selected = label_for_message(message, selected_language)
+    if selected is None:
+        selected = paired_message(message, selected_language)
+    text = selected if selected is not None else catalog(language).gettext(message)
     return text % values if values else text
 
 

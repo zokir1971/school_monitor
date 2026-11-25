@@ -1,4 +1,6 @@
 from __future__ import annotations
+from app.modules.planning.content_i18n import content_text, display_view, language
+from app.core.i18n import translate
 
 from collections import defaultdict
 from dataclasses import dataclass, field
@@ -121,7 +123,7 @@ class SchoolPlanExportService:
         if not raw_value:
             return ""
         try:
-            return enum_cls(raw_value).label_kz
+            return translate(enum_cls(raw_value).label_kz, language())
         except (ValueError, TypeError):
             return raw_value
 
@@ -129,7 +131,7 @@ class SchoolPlanExportService:
     def _month_name(cls, month_num: int | None) -> str:
         if not month_num:
             return ""
-        return cls.MONTH_NAMES.get(month_num, str(month_num))
+        return translate(cls.MONTH_NAMES.get(month_num, str(month_num)), language())
 
     @classmethod
     def _normalize_period_values(cls, raw_values) -> list[int]:
@@ -177,13 +179,13 @@ class SchoolPlanExportService:
             return ", ".join([m for m in months if m])
 
         if period_type == PlanPeriodType.MONTHLY.value:
-            return PlanPeriodType.MONTHLY.label_kz
+            return translate(PlanPeriodType.MONTHLY.label_kz, language())
 
         if period_type == PlanPeriodType.QUARTER.value:
-            return PlanPeriodType.QUARTER.label_kz
+            return translate(PlanPeriodType.QUARTER.label_kz, language())
 
         if period_type == PlanPeriodType.ALL_YEAR.value:
-            return PlanPeriodType.ALL_YEAR.label_kz
+            return translate(PlanPeriodType.ALL_YEAR.label_kz, language())
 
         return ""
 
@@ -293,11 +295,11 @@ class SchoolPlanExportService:
         return ExportRow11DTO(
             id=row.id,
             row_order=row.row_order,
-            topic=getattr(row, "topic", None),
-            goal=getattr(row, "goal", None),
-            control_object=getattr(row, "control_object", None),
-            control_type=getattr(row, "control_type", None),
-            methods=getattr(row, "methods", None),
+            topic=content_text(row, "topic"),
+            goal=content_text(row, "goal"),
+            control_object=content_text(row, "control_object"),
+            control_type=content_text(row, "control_type"),
+            methods=content_text(row, "methods"),
 
             period_type=period_type_value or None,
             period_type_label=(
@@ -315,7 +317,7 @@ class SchoolPlanExportService:
             responsibles_text=responsibles_text,
             review_places_text=review_places_text,
             documents_text=documents_text,
-            second_control=getattr(row, "second_control", None)
+            second_control=content_text(row, "second_control")
         )
 
     @staticmethod
@@ -363,12 +365,12 @@ class SchoolPlanExportService:
         # of the number of directions and rows, with no large IN parameter list.
         rows4_all = list((await db.scalars(
             select(SchoolPlanRow4).options(raiseload("*"))
-            .where(SchoolPlanRow4.school_plan_id == school_plan_id)
+            .where(SchoolPlanRow4.school_plan_id == school_plan_id, SchoolPlanRow4.is_excluded.is_(False))
             .order_by(SchoolPlanRow4.row_order.asc(), SchoolPlanRow4.id.asc())
         )).all())
         rows11_all = list((await db.scalars(
             select(SchoolPlanRow11).options(raiseload("*"))
-            .where(SchoolPlanRow11.school_plan_id == school_plan_id)
+            .where(SchoolPlanRow11.school_plan_id == school_plan_id, SchoolPlanRow11.is_excluded.is_(False))
             .order_by(SchoolPlanRow11.row_order.asc(), SchoolPlanRow11.id.asc())
         )).all())
 
@@ -383,7 +385,7 @@ class SchoolPlanExportService:
             return list((await db.scalars(
                 select(model).options(raiseload("*"))
                 .join(SchoolPlanRow11, model.row11_id == SchoolPlanRow11.id)
-                .where(SchoolPlanRow11.school_plan_id == school_plan_id)
+                .where(SchoolPlanRow11.school_plan_id == school_plan_id, SchoolPlanRow11.is_excluded.is_(False))
                 .order_by(model.row11_id.asc(), model.id.asc())
             )).all())
 
@@ -414,6 +416,6 @@ class SchoolPlanExportService:
                 for row in rows11_by_direction.get(direction.id, [])
             ]
             if rows4 or rows11:
-                blocks.append(DirectionBlock(direction=direction, rows4=rows4, rows11=rows11))
+                blocks.append(DirectionBlock(direction=display_view(direction), rows4=display_view(rows4), rows11=rows11))
 
         return FullPlanDTO(plan=plan, directions=blocks, meta=meta)

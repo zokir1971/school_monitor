@@ -71,7 +71,7 @@ class AssessmentCompletionService:
         )
 
         assessment = (
-            await AssessmentRepo.get_for_manual_entry(
+            await AssessmentRepo.get_for_completion(
                 db,
                 assessment_id=assessment_id,
                 school_id=school_id,
@@ -152,7 +152,7 @@ class AssessmentCompletionService:
         # Для формирования итогового summary необходим
         # полный graph Assessment.
         assessment = (
-            await AssessmentRepo.get_for_manual_entry(
+            await AssessmentRepo.get_for_completion(
                 db,
                 assessment_id=assessment_id,
                 school_id=school_id,
@@ -361,7 +361,7 @@ class AssessmentCompletionService:
         Проверить готовность всех участников.
 
         participant.result должен быть eager-loaded
-        методом AssessmentRepo.get_for_manual_entry().
+        методом AssessmentRepo.get_for_completion().
 
         SQL внутри цикла отсутствует.
         """

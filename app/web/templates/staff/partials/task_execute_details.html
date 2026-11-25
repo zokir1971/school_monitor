@@ -68,7 +68,15 @@
   {% endif %}
 
 
+  {% if execution and execution.report_types %}
+    {% set saved_completion_mode = "final_with_system_reports" %}
+  {% endif %}
+
   <style>
+    .completion-mode-option input:disabled + .completion-mode-option__content {
+      opacity: .55;
+      cursor: not-allowed;
+    }
     .completion-mode-card {
       overflow: hidden;
     }
@@ -429,6 +437,7 @@
             type="radio"
             name="task_completion_flow"
             value="simple_final_document"
+            {% if saved_completion_mode == "final_with_system_reports" %}disabled{% endif %}
           >
 
         {% endif %}
@@ -990,7 +999,7 @@
           value="save"
           class="btn btn-secondary"
          data-sm-action="primary">
-          {% if current_draft is not none %}
+          {% if current_draft and current_draft.exists %}
             {{ _('Сохранить изменения') }}
           {% else %}
             {{ _('Сохранить черновик') }}
@@ -998,7 +1007,7 @@
         </button>
 
 
-        {% if current_draft is not none %}
+        {% if current_draft and current_draft.exists %}
 
           <a href="{{ request.url_for('staff_report_assignments_page', month_item_id=task.month_item_id) }}{% if month is not none %}?month={{ month }}{% endif %}"
              class="btn btn-primary" data-sm-action="nav">
@@ -1010,6 +1019,28 @@
       </div>
 
     </form>
+
+    <div class="card" id="task-section-complete" data-task-section data-section-label="{{ 'Завершение' if task_ui_language=='ru' else 'Аяқтау' }}">
+      <h3>{{ 'Итоговый документ и отправка на рассмотрение' if task_ui_language=='ru' else 'Қорытынды құжат және қарауға жіберу' }}</h3>
+      <p class="hint">{{ 'Сначала сохраните алгоритм и завершите назначенные системные отчёты. При отправке система проверит их готовность.' if task_ui_language=='ru' else 'Алдымен алгоритмді сақтап, тағайындалған жүйелік есептерді аяқтаңыз. Жіберу кезінде жүйе олардың дайындығын тексереді.' }}</p>
+      {% if saved_completion_mode == "final_with_system_reports" %}
+        <p><a class="btn btn-secondary" href="{{ request.url_for('staff_report_templates_page', month_item_id=task.month_item_id) }}?month={{ month }}" data-sm-action="nav">{{ 'Перейти к заполнению отчётов' if task_ui_language=='ru' else 'Есептерді толтыруға өту' }}</a></p>
+        {% if completion_final_document and completion_final_document.file_path %}
+          <p>{{ 'Итоговый документ уже сохранён. Повторная загрузка необязательна.' if task_ui_language=='ru' else 'Қорытынды құжат сақталған. Оны қайта жүктеу міндетті емес.' }}</p>
+        {% endif %}
+        <form method="post" action="{{ request.url_for('staff_report_templates_complete_post', month_item_id=task.month_item_id) }}?month={{ month }}" enctype="multipart/form-data" id="system-reports-completion-form">
+          <div class="form-field">
+            <label for="system_final_document">{{ _('Итоговый документ') }}</label>
+            <input type="file" id="system_final_document" name="final_document" accept=".pdf,.doc,.docx,.xls,.xlsx" {% if not completion_final_document or not completion_final_document.file_path %}required{% endif %}>
+          </div>
+          <div class="action-panel task-execution-actions" data-task-actions>
+            <button type="submit" class="btn btn-success" data-sm-action="success">{{ _('Завершить задачу и отправить на рассмотрение') }}</button>
+          </div>
+        </form>
+      {% else %}
+        <button type="button" class="btn btn-secondary" disabled>{{ 'Сначала сохраните алгоритм выполнения' if task_ui_language=='ru' else 'Алдымен орындау алгоритмін сақтаңыз' }}</button>
+      {% endif %}
+    </div>
 
   </div>
 
@@ -1048,6 +1079,8 @@
         }
 
         if (modeValue === "final_with_system_reports") {
+          const simpleMode = root.querySelector('input[name="task_completion_flow"][value="simple_final_document"]');
+          if (simpleMode) simpleMode.disabled = true;
           simpleBlock.hidden = true;
           systemReportsBlock.hidden = false;
           return;

@@ -554,8 +554,8 @@
                        name="completion_mode"
                        value="{{ mode.value }}"
                        required
-                       {% if execution and execution.completion_mode == mode.value %}checked{% endif %}
-                       {% if is_done %}disabled{% endif %}>
+                       {% if execution and ((execution.report_types and mode.value == 'final_with_system_reports') or (not execution.report_types and execution.completion_mode == mode.value)) %}checked{% endif %}
+                       {% if is_done or (mode.value == 'simple_final_document' and execution and (execution.completion_mode == 'final_with_system_reports' or execution.report_types)) %}disabled{% endif %}>
 
                 <div class="radio-card-content">
 

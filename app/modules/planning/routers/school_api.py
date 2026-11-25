@@ -26,6 +26,8 @@ class CellUpdateIn(BaseModel):
     row_id: int
     field: str
     value: str | None = None
+    content_language: str | None = None
+    expected_value: str | None = None
 
 
 class RowAddIn(BaseModel):
@@ -78,6 +80,8 @@ async def api_cell_update(
             row_id=payload.row_id,
             field=payload.field,
             value=payload.value,
+            content_language=payload.content_language,
+            expected_value=payload.expected_value,
             school_plan_id=payload.school_plan_id,
             direction_id=payload.direction_id,
         )

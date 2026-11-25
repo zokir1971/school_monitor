@@ -38,6 +38,13 @@ def reports_message(request,value,status_code=400):
 
 
 async def reports_http_exception_handler(request,exc):
+    # Known bilingual diagnostics are selected before module-specific fallbacks.
+    from app.core.system_message_pairs import paired_message
+    selected = paired_message(exc.detail, resolve_language(request))
+    if selected is not None:
+        return JSONResponse(status_code=exc.status_code, content={'detail': selected},
+            headers={**(exc.headers or {}), 'Content-Language': resolve_language(request),
+                     'Cache-Control': 'no-store', 'Vary': 'Cookie'})
     if not is_reports_request(request):
         return await execution_http_exception_handler(request,exc)
     return JSONResponse(status_code=exc.status_code,content={'detail':reports_message(request,exc.detail,exc.status_code)},

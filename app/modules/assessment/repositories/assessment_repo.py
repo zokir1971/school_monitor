@@ -289,6 +289,23 @@ class AssessmentRepo:
         )
 
     @staticmethod
+    async def get_for_completion(
+            db: AsyncSession, *, assessment_id: int, school_id: int,
+    ) -> Assessment | None:
+        """Only the graph used by validation and quality summaries.
+
+        Keep the full manual-entry loader for pages that need its extra data.
+        selectinload batches large rosters; no query is issued per participant.
+        """
+        stmt = (select(Assessment)
+                .where(Assessment.id == assessment_id, Assessment.school_id == school_id)
+                .options(selectinload(Assessment.groups)
+                         .selectinload(AssessmentGroup.students)
+                         .selectinload(AssessmentStudent.result))
+                .execution_options(populate_existing=True))
+        return (await db.execute(stmt)).scalar_one_or_none()
+
+    @staticmethod
     async def get_for_manual_entry(
             db: AsyncSession,
             *,
@@ -667,6 +684,7 @@ class AssessmentRepo:
             *,
             school_id: int,
             teacher_staff_member_id: int | None = None,
+            assessment_ids=None,
     ):
         """
         Агрегированная статистика участников Assessment.
@@ -759,6 +777,9 @@ class AssessmentRepo:
             )
         )
 
+        if assessment_ids is not None:
+            stmt = stmt.where(AssessmentGroup.assessment_id.in_(assessment_ids))
+
         if teacher_staff_member_id is not None:
             stmt = stmt.where(
                 AssessmentGroup.teacher_staff_member_id
@@ -780,6 +801,7 @@ class AssessmentRepo:
             *,
             school_id: int,
             teacher_staff_member_id: int | None = None,
+            assessment_ids=None,
     ):
         """
         Агрегированные snapshot-данные групп Assessment.
@@ -827,6 +849,9 @@ class AssessmentRepo:
                 == school_id,
             )
         )
+
+        if assessment_ids is not None:
+            stmt = stmt.where(AssessmentGroup.assessment_id.in_(assessment_ids))
 
         if teacher_staff_member_id is not None:
             stmt = stmt.where(
@@ -927,6 +952,19 @@ class AssessmentRepo:
         return stmt
 
     @classmethod
+    def _list_candidates(cls, *, school_id, academic_year_start, subject_id,
+                         grade_level, status, teacher_staff_member_id=None):
+        if all(value is None for value in (academic_year_start, subject_id, grade_level, status)):
+            return None  # No narrower filter: retain the simple school-scoped query.
+        stmt = cls._apply_list_filters(
+            select(Assessment.id).where(Assessment.school_id == school_id),
+            school_id=school_id, academic_year_start=academic_year_start,
+            subject_id=subject_id, grade_level=grade_level, status=status,
+            teacher_staff_member_id=teacher_staff_member_id)
+        candidates = stmt.cte('assessment_list_candidates')
+        return select(candidates.c.id)
+
+    @classmethod
     async def get_school_list_rows(
             cls,
             db: AsyncSession,
@@ -950,14 +988,21 @@ class AssessmentRepo:
         дополнительных запросов классов/учителей нет.
         """
 
+        assessment_ids = cls._list_candidates(
+            school_id=school_id, academic_year_start=academic_year_start,
+            subject_id=subject_id, grade_level=grade_level, status=status,
+            teacher_staff_member_id=None)
+
         participant_stats = (
             cls._build_list_participant_stats_subquery(
+                assessment_ids=assessment_ids,
                 school_id=school_id,
             )
         )
 
         group_metadata = (
             cls._build_list_group_metadata_subquery(
+                assessment_ids=assessment_ids,
                 school_id=school_id,
             )
         )
@@ -1058,14 +1103,17 @@ class AssessmentRepo:
             )
         )
 
-        stmt = cls._apply_list_filters(
-            stmt,
-            school_id=school_id,
-            academic_year_start=academic_year_start,
-            subject_id=subject_id,
-            grade_level=grade_level,
-            status=status,
-        )
+        if assessment_ids is not None:
+            stmt = stmt.where(Assessment.id.in_(assessment_ids))
+        else:
+            stmt = cls._apply_list_filters(
+                stmt,
+                school_id=school_id,
+                academic_year_start=academic_year_start,
+                subject_id=subject_id,
+                grade_level=grade_level,
+                status=status,
+            )
 
         stmt = stmt.order_by(
             Assessment.created_at.desc(),
@@ -1109,8 +1157,14 @@ class AssessmentRepo:
         может ли учитель завершить весь Assessment.
         """
 
+        assessment_ids = cls._list_candidates(
+            school_id=school_id, academic_year_start=academic_year_start,
+            subject_id=subject_id, grade_level=grade_level, status=status,
+            teacher_staff_member_id=teacher_staff_member_id)
+
         participant_stats = (
             cls._build_list_participant_stats_subquery(
+                assessment_ids=assessment_ids,
                 school_id=school_id,
                 teacher_staff_member_id=(
                     teacher_staff_member_id
@@ -1120,6 +1174,7 @@ class AssessmentRepo:
 
         group_metadata = (
             cls._build_list_group_metadata_subquery(
+                assessment_ids=assessment_ids,
                 school_id=school_id,
                 teacher_staff_member_id=(
                     teacher_staff_member_id
@@ -1250,17 +1305,20 @@ class AssessmentRepo:
             )
         )
 
-        stmt = cls._apply_list_filters(
-            stmt,
-            school_id=school_id,
-            academic_year_start=academic_year_start,
-            subject_id=subject_id,
-            grade_level=grade_level,
-            status=status,
-            teacher_staff_member_id=(
-                teacher_staff_member_id
-            ),
-        )
+        if assessment_ids is not None:
+            stmt = stmt.where(Assessment.id.in_(assessment_ids))
+        else:
+            stmt = cls._apply_list_filters(
+                stmt,
+                school_id=school_id,
+                academic_year_start=academic_year_start,
+                subject_id=subject_id,
+                grade_level=grade_level,
+                status=status,
+                teacher_staff_member_id=(
+                    teacher_staff_member_id
+                ),
+            )
 
         stmt = stmt.order_by(
             Assessment.created_at.desc(),

@@ -12,7 +12,9 @@
     <div class="reg-header">
       <div>
         <h1 class="reg-title">{{ _('Выдача кодов L3 (школы)') }}</h1>
-        {% if district %}
+        {% if region %}
+          <p class="reg-subtitle"><b>{{ 'Ваша область:' if ui_language() == 'ru' else 'Сіздің облысыңыз:' }}</b> {{ region.name }} · {{ 'Школы областного подчинения' if ui_language() == 'ru' else 'Облыстық бағыныстағы мектептер' }}</p>
+        {% elif district %}
           <p class="reg-subtitle"><b>{{ _('Ваш район:') }}</b> {{ district.name }}</p>
         {% else %}
           <p class="reg-subtitle">{{ _('Выберите школы, затем задайте квоту и выдайте коды.') }}</p>
@@ -27,7 +29,7 @@
       </div>
     {% endif %}
 
-    <form method="post" action="/l2/issue-l3" class="form" id="issueL3Form">
+    <form method="post" action="{{ issue_url }}" class="form" id="issueL3Form">
       <h2 class="section-title">{{ _('Выбор школ') }}</h2>
       <p class="section-subtitle">
         {{ _('Начните вводить название/адрес, выберите школу из списка и нажмите «Добавить». Ниже будут только выбранные школы.') }}
@@ -43,7 +45,7 @@
               <option value="">{{ _('— выберите школу —') }}</option>
               {% for s in schools %}
                 <option value="{{ s.id }}">
-                  {{ s.name }}{% if s.address %} — {{ s.address }}{% endif %}
+                  {{ s.district_name }} — {{ s.name }}{% if s.address %} — {{ s.address }}{% endif %}
                 </option>
               {% endfor %}
             </select>
@@ -87,7 +89,7 @@
 
       {% else %}
         <div class="alert" role="alert" style="margin-top:12px;">
-          {{ _('В этом районе пока нет школ.') }}
+          {{ 'В вашем подчинении пока нет школ.' if ui_language() == 'ru' else 'Сіздің бағынысыңызда әзірге мектептер жоқ.' }}
         </div>
       {% endif %}
 

@@ -1,5 +1,6 @@
 # app/modules/tasks/task_service.py
 from __future__ import annotations
+from app.modules.planning.content_i18n import content_text, language
 
 import logging
 
@@ -26,6 +27,7 @@ from app.modules.reports.repositories.report_assignment_repo import ReportAssign
 from app.modules.staff.staff_repo import SchoolStaffRepo
 from app.modules.tasks.schemas import MyTaskDTO, CoExecutorTaskDTO
 from app.modules.tasks.task_repo import StaffTasksRepo
+from app.modules.tasks.task_list_repo import TaskListRepo, CoExecutorListContext
 from app.modules.tasks.task_display import review_place_text, execution_fields
 from app.modules.users.models import User
 
@@ -111,6 +113,17 @@ class StaffTasksService:
             month=month,
         )
 
+        assignment_kinds = {
+            task.id: StaffTasksService._resolve_staff_assignment_kind(task, staff_role_ids=staff_role_ids)
+            for task in tasks
+        }
+        staff_member_by_task = {
+            task.id: StaffTasksService._co_executor_staff_member_id(task, staff_role_ids=staff_role_ids)
+            for task in tasks if assignment_kinds[task.id] == AssignmentKind.CO_EXECUTOR
+        }
+        co_executor_context = await TaskListRepo.co_executor_context(
+            db, school_id=cast(int, school_id), staff_member_by_task=staff_member_by_task,
+        )
         today = date.today()
 
         primary_tasks: list[MyTaskDTO] = []
@@ -122,13 +135,7 @@ class StaffTasksService:
 
         for task in tasks:
 
-            assignment_kind = (
-                StaffTasksService
-                ._resolve_staff_assignment_kind(
-                    task,
-                    staff_role_ids=staff_role_ids,
-                )
-            )
+            assignment_kind = assignment_kinds[task.id]
 
             if assignment_kind is None:
                 logger.warning(
@@ -174,6 +181,7 @@ class StaffTasksService:
                         staff_role_ids=staff_role_ids,
                         today=today,
                         month=month,
+                        context=co_executor_context,
                     )
                 )
 
@@ -304,19 +312,19 @@ class StaffTasksService:
                 planned_end,
             ),
             "topic": (
-                    getattr(source_row11, "topic", None)
+                    content_text(source_row11, 'topic')
                     or "—"
             ),
             "goal": (
-                    getattr(source_row11, "goal", None)
+                    content_text(source_row11, 'goal')
                     or "—"
             ),
             "control_object": (
-                    getattr(source_row11, "control_object", None)
+                    content_text(source_row11, 'control_object')
                     or "—"
             ),
             "control_type": (
-                    getattr(source_row11, "control_type", None)
+                    content_text(source_row11, 'control_type')
                     or "—"
             ),
             "review_place": (
@@ -380,57 +388,7 @@ class StaffTasksService:
         )
 
     @classmethod
-    async def _build_co_executor_task_dto(
-            cls,
-            db: AsyncSession,
-            *,
-            task,
-            school_id: int,
-            staff_role_ids: set[int],
-            today: date,
-            month: int,
-    ) -> CoExecutorTaskDTO:
-        """
-        Сформировать DTO задачи соисполнителя.
-
-        Источники истины:
-
-        - роль соисполнителя:
-          SchoolMonthPlanItemAssignee.assignment_kind;
-
-        - ответственный PRIMARY:
-          ReportAssignmentRepo.list_executor_choices();
-
-        - доступ к работе:
-          наличие отчетов, фактически назначенных
-          текущему соисполнителю.
-
-        Для соисполнителя наличие хотя бы одного назначенного отчета
-        означает, что ответственный уже сформировал рабочую часть
-        алгоритма и выполнил распределение отчетов.
-        """
-
-        # =========================================================
-        # COMMON TASK DATA
-        # =========================================================
-
-        data = cls._build_task_common_data(
-            task,
-            today=today,
-        )
-
-        month_item_id = int(
-            data["month_item_id"]
-        )
-
-        task_status = str(
-            data["status"] or ""
-        )
-
-        # =========================================================
-        # CURRENT CO-EXECUTOR
-        # =========================================================
-
+    def _co_executor_staff_member_id(cls, task, *, staff_role_ids: set[int]) -> int | None:
         current_staff_member_id: int | None = None
 
         assignees = (
@@ -495,6 +453,63 @@ class StaffTasksService:
                 )
                 break
 
+        return current_staff_member_id
+
+    @classmethod
+    async def _build_co_executor_task_dto(
+            cls,
+            db: AsyncSession,
+            *,
+            task,
+            school_id: int,
+            staff_role_ids: set[int],
+            today: date,
+            month: int,
+            context: CoExecutorListContext | None = None,
+    ) -> CoExecutorTaskDTO:
+        """
+        Сформировать DTO задачи соисполнителя.
+
+        Источники истины:
+
+        - роль соисполнителя:
+          SchoolMonthPlanItemAssignee.assignment_kind;
+
+        - ответственный PRIMARY:
+          ReportAssignmentRepo.list_executor_choices();
+
+        - доступ к работе:
+          наличие отчетов, фактически назначенных
+          текущему соисполнителю.
+
+        Для соисполнителя наличие хотя бы одного назначенного отчета
+        означает, что ответственный уже сформировал рабочую часть
+        алгоритма и выполнил распределение отчетов.
+        """
+
+        # =========================================================
+        # COMMON TASK DATA
+        # =========================================================
+
+        data = cls._build_task_common_data(
+            task,
+            today=today,
+        )
+
+        month_item_id = int(
+            data["month_item_id"]
+        )
+
+        task_status = str(
+            data["status"] or ""
+        )
+
+        # =========================================================
+        # CURRENT CO-EXECUTOR
+        # =========================================================
+
+        current_staff_member_id = cls._co_executor_staff_member_id(task, staff_role_ids=staff_role_ids)
+
         if current_staff_member_id is None:
             logger.warning(
                 "Cannot resolve staff_member_id for co-executor "
@@ -507,23 +522,26 @@ class StaffTasksService:
         # PRIMARY EXECUTOR
         # =========================================================
 
-        executors = (
-            await ReportAssignmentRepo
-            .list_executor_choices(
-                db,
-                month_item_id=month_item_id,
-                school_id=school_id,
+        if context is not None:
+            primary_executor = context.primary_by_task.get(month_item_id)
+        else:
+            executors = (
+                await ReportAssignmentRepo
+                .list_executor_choices(
+                    db,
+                    month_item_id=month_item_id,
+                    school_id=school_id,
+                )
             )
-        )
 
-        primary_executor = next(
-            (
-                executor
-                for executor in executors
-                if executor.is_primary
-            ),
-            None,
-        )
+            primary_executor = next(
+                (
+                    executor
+                    for executor in executors
+                    if executor.is_primary
+                ),
+                None,
+            )
 
         primary_staff_member_id = (
             primary_executor.staff_member_id
@@ -559,15 +577,21 @@ class StaffTasksService:
 
         assigned_reports_count = 0
 
-        if current_staff_member_id is not None:
+        if context is not None:
             assigned_reports_count = (
-                await ReportAssignmentRepo
-                .count_reports_for_staff(
-                    db,
-                    month_item_id=month_item_id,
-                    staff_member_id=current_staff_member_id,
-                )
+                context.report_counts.get((month_item_id, current_staff_member_id), 0)
+                if current_staff_member_id is not None else 0
             )
+        else:
+            if current_staff_member_id is not None:
+                assigned_reports_count = (
+                    await ReportAssignmentRepo
+                    .count_reports_for_staff(
+                        db,
+                        month_item_id=month_item_id,
+                        staff_member_id=current_staff_member_id,
+                    )
+                )
 
         has_assigned_reports = (
                 assigned_reports_count > 0
@@ -1081,22 +1105,22 @@ class StaffTasksService:
         source_row11 = getattr(task, "source_row11", None)
 
         topic = (
-                getattr(source_row11, "topic", None)
+                content_text(source_row11, 'topic')
                 or getattr(task, "topic", None)
                 or "—"
         )
         goal = (
-                getattr(source_row11, "goal", None)
+                content_text(source_row11, 'goal')
                 or getattr(task, "goal", None)
                 or "—"
         )
         control_object = (
-                getattr(source_row11, "control_object", None)
+                content_text(source_row11, 'control_object')
                 or getattr(task, "control_object", None)
                 or "—"
         )
         control_type = (
-                getattr(source_row11, "control_type", None)
+                content_text(source_row11, 'control_type')
                 or getattr(task, "control_type", None)
                 or "—"
         )

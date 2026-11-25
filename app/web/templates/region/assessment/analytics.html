@@ -71,11 +71,12 @@
   /* ===================================================== */
   /* FILTERS */
   /* ===================================================== */
-  .analytics-filters {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: flex-end;
-    gap: 12px;
+  /* More specific than the shared five-field layout in ui_actions.css. */
+  html body .analytics-page form.analytics-filters[data-sm-quality-filter] {
+    display: grid;
+    grid-template-columns: minmax(128px, .85fr) 124px minmax(140px, 1.2fr) 112px minmax(200px, 1.15fr) minmax(210px, 1.6fr);
+    align-items: end;
+    gap: 12px 10px;
 
     padding: 16px;
     margin-bottom: 22px;
@@ -90,7 +91,29 @@
     flex-direction: column;
     gap: 6px;
 
-    min-width: 210px;
+    min-width: 0;
+  }
+
+  html body .analytics-page form.analytics-filters[data-sm-quality-filter] .analytics-filter-field--work {
+    grid-column: auto;
+  }
+
+  @media (max-width: 1099px) {
+    html body .analytics-page form.analytics-filters[data-sm-quality-filter] {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 760px) {
+    html body .analytics-page form.analytics-filters[data-sm-quality-filter] {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 560px) {
+    html body .analytics-page form.analytics-filters[data-sm-quality-filter] {
+      grid-template-columns: minmax(0, 1fr);
+    }
   }
 
   .analytics-filter-field label {
@@ -508,7 +531,7 @@
     <div class="analytics-header__actions">
       <a class="analytics-btn analytics-btn--secondary analytics-btn--export"
          href="{{ url_for('region_assessment_analytics_export_excel')
-         }}?academic_year_start={{
+         }}?governance={{ governance }}&academic_year_start={{
          selected_academic_year or ''
          }}&subject_id={{
          selected_subject_id or ''
@@ -533,6 +556,8 @@
     }}"
     class="analytics-filters"
   >
+<div class="analytics-filter-field"><label for="governance">{{ 'Подчинение' if ui_language()=='ru' else 'Бағыныстылық' }}</label><select id="governance" class="analytics-filter-select" name="governance"><option value="">{{ 'Все школы' if ui_language()=='ru' else 'Барлық мектептер' }}</option><option value="district"{% if governance=='district' %} selected{% endif %}>{{ 'Районное' if ui_language()=='ru' else 'Аудандық' }}</option><option value="region"{% if governance=='region' %} selected{% endif %}>{{ 'Областное' if ui_language()=='ru' else 'Облыстық' }}</option></select></div>
+
 
     <!-- ACADEMIC YEAR -->
 
@@ -678,6 +703,11 @@
 
   </form>
   {% include 'components/assessment_work_notice.html' %}
+  {% if selected_academic_year is not none and not work_selection.choices %}
+  <div class="analytics-empty" role="status" data-no-matching-results>
+    <p>{{ 'По выбранным фильтрам нет результатов оценивания. Учебный год и остальные фильтры сохранены.' if ui_language()=='ru' else 'Таңдалған сүзгілер бойынша бағалау нәтижелері жоқ. Оқу жылы мен басқа сүзгілер сақталды.' }}</p>
+  </div>
+  {% endif %}
   {% if work_selection.work_key == 'all' %}{% include 'components/assessment_all_works.html' %}{% endif %}
 
 
@@ -850,7 +880,7 @@
     <div>
 
       <h2>
-        {{ _('Аудандар бойынша') }}
+        {{ 'Районы и областные школы' if ui_language()=='ru' else 'Аудандар және облыстық мектептер' }}
       </h2>
 
       <p>
@@ -864,7 +894,7 @@
 
   <div class="analytics-summary-line">
 
-    {{ _('Аудан саны:') }}
+    {{ 'Групп:' if ui_language()=='ru' else 'Топтар:' }}
     <strong>
       {{ district_count }}
     </strong>
@@ -892,7 +922,7 @@
             <tr>
 
               <th>
-                {{ _('Аудан') }}
+                {{ 'Район / подчинение' if ui_language()=='ru' else 'Аудан / бағыныстылық' }}
               </th>
 
               <th>
@@ -1073,5 +1103,5 @@
 
 </div>
 
-<script src="{{ url_for('static', path='js/assessment/analytics_work_filter.js') }}?v=173" defer></script>
+<script src="{{ url_for('static', path='js/assessment/analytics_work_filter.js') }}?v=318" defer></script>
 {% endblock %}

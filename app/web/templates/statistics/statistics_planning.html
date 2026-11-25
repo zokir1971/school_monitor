@@ -461,6 +461,7 @@
 {% endblock %}
 
 {% block content %}
+{% set place_columns = review_place_columns() %}
 <div class="stats-page">
   <div class="stats-page__inner">
 
@@ -606,11 +607,7 @@
             <thead>
     <tr>
       <th>{{ _('Направление') }}</th>
-      <th>{{ _('Пед.кеңес') }}</th>
-      <th>{{ _('Әд.кеңес') }}</th>
-      <th>{{ _('ДЖ.кеңес') }}</th>
-      <th>{{ _('Әк.кеңес') }}</th>
-      <th>{{ _('ӘБ.отырысы') }}</th>
+      {% for column in place_columns %}<th>{{ column.label }}</th>{% endfor %}
       <th>{{ _('Итого') }}</th>
     </tr>
   </thead>
@@ -618,11 +615,7 @@
     {% for row in review_place_stats %}
     <tr>
       <td>{{ row.direction_name }}</td>
-      <td>{{ row.ped_council_count }}</td>
-      <td>{{ row.method_council_count }}</td>
-      <td>{{ row.director_council_count }}</td>
-      <td>{{ row.administrative_council_count }}</td>
-      <td>{{ row.method_assoc_count }}</td>
+      {% for column in place_columns %}<td>{{ row[column.field] }}</td>{% endfor %}
       <td><strong>{{ row.total_review_places_count }}</strong></td>
     </tr>
     {% endfor %}
@@ -630,11 +623,7 @@
   <tfoot>
 <tr>
   <th>{{ _('Итого') }}</th>
-  <th>{{ review_place_totals.ped_council_count }}</th>
-  <th>{{ review_place_totals.method_council_count }}</th>
-  <th>{{ review_place_totals.director_council_count }}</th>
-  <th>{{ review_place_totals.administrative_council_count }}</th>
-  <th>{{ review_place_totals.method_assoc_count }}</th>
+  {% for column in place_columns %}<th>{{ review_place_totals[column.field] }}</th>{% endfor %}
   <th>{{ review_place_totals.total_review_places_count }}</th>
 </tr>
 </tfoot>
@@ -728,32 +717,21 @@
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
 <script>
 const reviewPlaceData = {{ review_place_totals | tojson }};
+const reviewPlaceColumns = {{ place_columns | tojson }};
 
 new Chart(document.getElementById("reviewPlaceChart"), {
   type: "bar",
   data: {
-    labels: [
-      {{ _('Пед.кеңес')|tojson }},
-      {{ _('Әд.кеңес')|tojson }},
-      {{ _('ДЖ.кеңес')|tojson }},
-      {{ _('Әк.кеңес')|tojson }},
-      {{ _('ӘБ.отырысы')|tojson }}
-    ],
+    labels: reviewPlaceColumns.map(column => column.label),
     datasets: [{
       label: {{ _('Количество задач')|tojson }},
-      data: [
-        reviewPlaceData.ped_council_count,
-        reviewPlaceData.method_council_count,
-        reviewPlaceData.director_council_count,
-        reviewPlaceData.administrative_council_count,
-        reviewPlaceData.method_assoc_count
-      ],
+      data: reviewPlaceColumns.map(column => reviewPlaceData[column.field] || 0),
       backgroundColor: [
         "#4e79a7",
         "#f28e2b",
         "#e15759",
         "#76b7b2",
-        "#59a14f"
+        "#59a14f", "#edc948", "#b07aa1", "#ff9da7", "#9c755f"
       ]
     }]
   },

@@ -1,6 +1,5 @@
 """Transactional, batched propagation of annual review places to pending tasks."""
 from collections import defaultdict
-import re
 from sqlalchemy import select, delete, insert, update
 from app.modules.planning.models_school import SchoolPlan, SchoolPlanRow11, SchoolPlanRow11ReviewPlace
 from app.modules.planning.models_month_plan import SchoolMonthPlan, SchoolMonthPlanItem, SchoolMonthPlanItemReviewPlace
@@ -24,24 +23,8 @@ class ReviewPlaceSyncRepo:
 
     @staticmethod
     def legacy_places(raw):
-        if not code(raw):
-            return set()
-        lookup = {v:v for v in ReviewPlace}
-        lookup.update({v.value:v for v in ReviewPlace})
-        lookup.update({v.label_kz:v for v in ReviewPlace})
-        # Confirmed legacy abbreviations; structured selections remain authoritative.
-        lookup.update({
-            "ДЖК": ReviewPlace.DIRECTOR_COUNCIL,
-            "ДЖО": ReviewPlace.DIRECTOR_COUNCIL,
-            "ӘКО": ReviewPlace.METHOD_COUNCIL,
-            "Әдістемелік отырысы": ReviewPlace.METHOD_COUNCIL,
-            "Әдістеме-лік отырысы": ReviewPlace.METHOD_COUNCIL,
-            "ПК": ReviewPlace.PED_COUNCIL,
-        })
-        values = {part.strip() for part in re.split(r'[,;\n]+',code(raw)) if part.strip()}
-        if any(v not in lookup for v in values):
-            return None
-        return {lookup[v].value for v in values}
+        from app.modules.planning.review_places import legacy_places
+        return legacy_places(raw)
 
     @classmethod
     async def replace_annual(cls, db, *, row11_id, values):

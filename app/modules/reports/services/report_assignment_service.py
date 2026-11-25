@@ -1,6 +1,7 @@
 # app/modules/reports/services/report_assignment_service.py
 
 from __future__ import annotations
+from app.modules.planning.content_i18n import content_text, language
 
 from collections.abc import Sequence
 from datetime import date
@@ -120,12 +121,12 @@ class ReportAssignmentService:
             month_item_id=month_item_id,
             month=month,
             task_topic=(
-                getattr(source_row11, "topic", None)
+                content_text(source_row11, 'topic')
                 or getattr(task, "topic", None)
                 or "—"
             ),
             task_goal=(
-                getattr(source_row11, "goal", None)
+                content_text(source_row11, 'goal')
                 or getattr(task, "goal", None)
                 or "—"
             ),

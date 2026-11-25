@@ -17,7 +17,7 @@ def query(*,school_id,staff_member_id,month=None,month_item_id=None,mine_only=Fa
     latest=(select(D.c.id).where(D.c.selected_report_id==T.c.id,D.c.is_final.is_(False),D.c.is_current.is_(True))
         .order_by(D.c.id.desc()).limit(1).correlate(T).scalar_subquery())
     stmt=(select(I.c.id.label('month_item_id'),I.c.planned_start,I.c.planned_end,I.c.status.label('task_status'),I.c.completed_at,
-        R.c.topic,T.c.id.label('selected_report_id'),T.c.target_label,Y.c.code.label('report_code'),Y.c.name_ru,Y.c.name_kz,
+        R.c.topic,R.c.text_i18n,T.c.id.label('selected_report_id'),T.c.target_label,Y.c.code.label('report_code'),Y.c.name_ru,Y.c.name_kz,
         X.c.staff_member_id.label('assigned_staff_id'),X.c.status.label('assignment_status'),F.c.full_name.label('assigned_to'),
         D.c.id.label('document_id'),D.c.status.label('document_status'),D.c.source.label('document_source'),D.c.file_path,
         E.c.completion_mode,M.c.status.label('monthly_status'),P.c.status.label('annual_status'),primary.label('is_primary'))

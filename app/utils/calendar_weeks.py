@@ -7,7 +7,7 @@ def calc_year_from_academic(academic_year: str, month: int) -> int:
     # "2025-2026" -> (2025, 2026)
     y1_s, y2_s = (academic_year or "").split("-", 1)
     y1, y2 = int(y1_s), int(y2_s)
-    return y1 if 9 <= month <= 12 else y2
+    return y1 if 8 <= month <= 12 else y2
 
 
 @dataclass(frozen=True)

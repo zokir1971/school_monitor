@@ -1,7 +1,9 @@
 # app/routers/web/planning/superuser_web.py
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Form, UploadFile, File
+from fastapi import APIRouter, Depends, Form, UploadFile, File, HTTPException
+from app.core.i18n import normalize_language
+from app.core.ui_locale_context import ui_locale
 from fastapi.responses import RedirectResponse
 from sqlalchemy import select, delete, update, func
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -198,6 +200,7 @@ async def super_builder_import(
         template_id: int = Form(...),
         direction_id: int = Form(...),
         file: UploadFile = File(...),
+        content_language: str = Form("kk"),
         db: AsyncSession = Depends(get_db),
         user=Depends(require_roles(UserRole.SUPERUSER)),
 ):
@@ -216,13 +219,20 @@ async def super_builder_import(
             )
 
         data = await file.read()
-        c4, c11 = await SuperuserBuilderService.import_docx_two_tables_replace(
-            db,
-            template_id=template_id,
-            direction_id=direction_id,
-            file_bytes=data,
-        )
-        await db.commit()
+        lang = normalize_language(content_language)
+        if lang is None:
+            raise HTTPException(422, "Invalid document language")
+        token = ui_locale.set(lang)
+        try:
+            c4, c11 = await SuperuserBuilderService.import_docx_two_tables_replace(
+                db,
+                template_id=template_id,
+                direction_id=direction_id,
+                file_bytes=data,
+            )
+            await db.commit()
+        finally:
+            ui_locale.reset(token)
 
         ctx = await SuperuserBuilderService.build_page(db, template_id=template_id, direction_id=direction_id)
         ctx.update({"user": user, "success": f"Импорт завершён: объектов={c4}, задач={c11}"})

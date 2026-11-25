@@ -1,7 +1,7 @@
 """Subject deletion SQL; caller owns transactions. PostgreSQL."""
 from __future__ import annotations
 from typing import Any, cast
-from sqlalchemy import Table, column, delete, func, select, table as sql_table, text
+from sqlalchemy import Table, column, delete, func, select, table as sql_table, text, literal, union_all
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql.elements import ColumnElement
 from sqlalchemy.sql.selectable import FromClause
@@ -35,16 +35,22 @@ class SubjectDeleteRepo:
             JOIN pg_attribute target ON target.attrelid = con.confrelid AND target.attnum = keys.dst
             WHERE con.contype = 'f' AND con.confrelid = 'subjects'::regclass
               AND target.attname = 'id'
-        '''))).mappings()
+        '''))).mappings().all()
         blockers = []
-        for ref in refs:
-            remote = sql_table(str(ref['table_name']), column(str(ref['column_name'])),
-                               schema=str(ref['schema_name']))
-            count = int(await db.scalar(select(func.count()).select_from(remote).where(
-                col(remote, str(ref['column_name'])) == subject_id,
-            )) or 0)
-            if count:
-                blockers.append(dict(table=str(ref['table_name']), count=count))
+        # Keep dynamic catalog coverage, but count references in bounded batches.
+        for start in range(0, len(refs), 100):
+            statements = []
+            for position, ref in enumerate(refs[start:start + 100], start=start):
+                remote = sql_table(str(ref['table_name']), column(str(ref['column_name'])),
+                                   schema=str(ref['schema_name']))
+                statements.append(select(literal(position).label('position'), func.count().label('count'))
+                    .select_from(remote).where(col(remote, str(ref['column_name'])) == subject_id))
+            counts = union_all(*statements).subquery()
+            rows = (await db.execute(select(counts.c.position, counts.c.count)
+                                     .order_by(counts.c.position))).all()
+            for position, count in rows:
+                if count:
+                    blockers.append(dict(table=str(refs[position]['table_name']), count=int(count)))
         return blockers
 
     @staticmethod

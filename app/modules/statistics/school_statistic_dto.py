@@ -32,6 +32,10 @@ class DirectionReviewPlaceStatDTO:
     director_council_count: int = 0
     administrative_council_count: int = 0
     method_assoc_count: int = 0
+    administrative_meeting_count: int = 0
+    scientific_academy_council_count: int = 0
+    class_teacher_meeting_count: int = 0
+    student_self_government_count: int = 0
 
     total_review_places_count: int = 0
 
@@ -43,6 +47,10 @@ class ReviewPlaceTotalsDTO:
     director_council_count: int = 0
     administrative_council_count: int = 0
     method_assoc_count: int = 0
+    administrative_meeting_count: int = 0
+    scientific_academy_council_count: int = 0
+    class_teacher_meeting_count: int = 0
+    student_self_government_count: int = 0
 
     total_review_places_count: int = 0
 

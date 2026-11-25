@@ -3,6 +3,7 @@ from datetime import date, datetime, time, timedelta, timezone
 from fastapi import HTTPException
 from sqlalchemy import select, func, case, literal, and_, or_
 from app.modules.org.models import School, District, Region
+from app.modules.org.governance import governance_filter, reporting_district_id, reporting_district_name
 from app.modules.users.models import User
 from app.modules.statistics.activity_tables import activity_days, activity_state
 from app.modules.statistics.activity_tracking import LOCAL_TZ
@@ -33,7 +34,7 @@ def period(params, today):
     return preset, start, end
 
 
-def school_facts(start, end, region_id=None, district_id=None, search=''):
+def school_facts(start, end, region_id=None, district_id=None, search='', governance=''):
     s, d, u, a = School.__table__.c, District.__table__.c, User.__table__.c, activity_days.c
     accounts = select(u.school_id, literal(1).label('ready')).where(
         u.role == 'school_admin', u.is_active.is_(True), u.school_id.is_not(None),
@@ -47,7 +48,8 @@ def school_facts(start, end, region_id=None, district_id=None, search=''):
         *[func.max(case((a.module == key, 1), else_=0)).label(key) for key in MODULE_LABELS],
     ).where(a.day >= start, a.day <= end).group_by(a.school_id).cte('period_activity')
     stmt = select(
-        s.id.label('school_id'), s.name.label('school_name'), d.id.label('district_id'), d.region_id,
+        s.id.label('school_id'), s.name.label('school_name'), reporting_district_id(d.id,d.region_id,level=s.governance_level).label('district_id'), d.region_id,
+        reporting_district_name(d.name,s.governance_level).label('district_name'),
         literal(1).label('schools'), func.coalesce(accounts.c.ready, 0).label('ready'),
         func.coalesce(activity.c.entered, 0).label('entered'), func.coalesce(activity.c.worked, 0).label('worked'),
         activity.c.last_login, activity.c.last_work,
@@ -58,14 +60,16 @@ def school_facts(start, end, region_id=None, district_id=None, search=''):
     if region_id:
         stmt = stmt.where(d.region_id == region_id)
     if district_id:
-        stmt = stmt.where(d.id == district_id)
+        stmt = stmt.where(d.id == district_id, s.governance_level == 'district')
+    if governance:
+        stmt = stmt.where(s.governance_level == governance)
     if search:
         term = search.replace('\\', '\\\\').replace('%', '\\%').replace('_', '\\_')
         stmt = stmt.where(s.name.ilike('%' + term + '%', escape='\\'))
     return stmt.cte('school_activity_facts')
 
 
-def grouped(facts, view, region_id, district_id):
+def grouped(facts, view, region_id, district_id, governance=''):
     if view == 'schools':
         return select(facts.c.school_id.label('id'), facts.c.school_name.label('name'), *[
             facts.c[key] for key in (*METRICS, 'last_login', 'last_work', *MODULE_LABELS)
@@ -79,7 +83,13 @@ def grouped(facts, view, region_id, district_id):
         stmt = stmt.where(table.c.region_id == region_id)
     if view == 'districts' and district_id:
         stmt = stmt.where(table.c.id == district_id)
-    return stmt.group_by(table.c.id, table.c.name).cte('activity_groups')
+    if view=='districts' and governance=='region':stmt=stmt.where(literal(False))
+    stmt=stmt.group_by(table.c.id, table.c.name)
+    if view=='districts':
+        from sqlalchemy import union_all
+        direct=select(facts.c.district_id.label('id'),func.max(facts.c.district_name).label('name'),func.max(facts.c.last_work).label('last_work'),*[func.sum(facts.c[key]).label(key) for key in METRICS]).where(facts.c.district_id<0).group_by(facts.c.district_id)
+        stmt=union_all(stmt,direct)
+    return stmt.cte('activity_groups')
 
 
 class ActivityStatisticsService:
@@ -131,10 +141,13 @@ class ActivityStatisticsService:
                 raise HTTPException(400, 'Район не принадлежит региону / Аудан өңірге жатпайды')
             region_id = chosen['region_id']
             districts = [row for row in districts if row['region_id'] == region_id]
-        facts = school_facts(start, end, region_id, district_id, q)
+        try:governance=governance_filter(params.get('governance'))
+        except ValueError as exc:raise HTTPException(400,str(exc)) from exc
+        if governance=='region' and district_id is not None:raise HTTPException(400,'Для областных школ очистите выбор района / Облыстық мектептер үшін аудан таңдауын тазалаңыз')
+        facts = school_facts(start, end, region_id, district_id, q,governance)
         if attention:
             facts = select(facts).where(or_(facts.c.ready == 0, facts.c.worked == 0)).cte('attention_activity_facts')
-        groups = grouped(facts, view, region_id, district_id)
+        groups = grouped(facts, view, region_id, district_id,governance)
         totals = dict((await db.execute(select(*[
             func.coalesce(func.sum(facts.c[key]), 0).label(key) for key in METRICS
         ], select(func.count()).select_from(groups).scalar_subquery().label('groups')))).mappings().one())
@@ -152,7 +165,7 @@ class ActivityStatisticsService:
             started_at = started_at.replace(tzinfo=timezone.utc)
         # The installation day is also partial; do not label it complete.
         incomplete = datetime.combine(start, time.min, LOCAL_TZ) < started_at
-        return dict(period=preset, start=start, end=end, region_id=region_id, district_id=district_id,
+        return dict(governance=governance,period=preset, start=start, end=end, region_id=region_id, district_id=district_id,
                     regions=regions, districts=districts, view=view, sort=sort, order=order, attention=attention, q=q, totals=totals,
                     rows=rows, page=page, pages=pages, started_at=started_at.astimezone(LOCAL_TZ),
                     incomplete=incomplete, module_labels=MODULE_LABELS)

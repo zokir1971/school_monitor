@@ -67,6 +67,16 @@ def render(
             c["user"]
         )
 
+    from app.modules.planning.content_i18n import display_view
+    from app.core.i18n import resolve_language
+    selected_language = resolve_language(request, c.get('user'))
+    from app.core.system_message_pairs import paired_message
+    for key in ('error','success','message','warning','row_notice'):
+        if isinstance(c.get(key),str):
+            selected = paired_message(c[key], selected_language)
+            if selected is not None: c[key] = selected
+    c = display_view(c, selected_language)
+
     with indexed_render_urls(c["request"]), planning_render_locale(name, c):
         return templates.TemplateResponse(
             request,

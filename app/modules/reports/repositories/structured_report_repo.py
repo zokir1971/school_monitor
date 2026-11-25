@@ -1,3 +1,4 @@
+from app.modules.planning.content_i18n import content_text
 """Bounded, school-scoped batch reads for the remaining system reports.
 
 No ORM lazy loads; no query is issued per pupil, employee or source report.
@@ -11,6 +12,8 @@ from app.modules.org.models import School
 
 async def final_context(db, *, task_id, selected_id, user, lock=False):
     if selected_id!=0:return None  # Explicit final-document route, never a selected position.
+    from app.modules.planning.models_school import SchoolPlanRow11
+    R=SchoolPlanRow11.__table__
     S=School.__table__
     membership=select(Z.c.id).join(J,J.c.id==Z.c.staff_role_id).where(
         Z.c.month_item_id==I.c.id,J.c.school_id==user.school_id,
@@ -19,13 +22,15 @@ async def final_context(db, *, task_id, selected_id, user, lock=False):
     admin=getattr(user.role,'value',user.role)=='school_admin'
     query=(select(I.c.id.label('task_id'),I.c.completed_at,N.c.month,N.c.status.label('month_status'),
         B.c.status.label('annual_status'),B.c.academic_year,S.c.name.label('school_name'),E.c.algorithm_parameters,E.c.completion_mode,
-        primary.label('is_primary')).select_from(I.join(N,N.c.id==I.c.month_plan_id).join(B,B.c.id==N.c.school_plan_id)
-        .join(S,S.c.id==B.c.school_id).join(E,E.c.month_item_id==I.c.id))
+        primary.label('is_primary'), R.c.topic, R.c.goal, R.c.control_object, R.c.text_i18n,
+        I.c.planned_start, I.c.planned_end).select_from(I.join(N,N.c.id==I.c.month_plan_id).join(B,B.c.id==N.c.school_plan_id)
+        .join(S,S.c.id==B.c.school_id).join(E,E.c.month_item_id==I.c.id).outerjoin(R,R.c.id==I.c.source_row11_id))
         .where(I.c.id==task_id,B.c.school_id==user.school_id,I.c.is_included.is_(True)))
     if not admin:query=query.where(or_(exists(membership),I.c.responsible_user_id==user.id))
     if lock:query=query.with_for_update(of=I)
     row=(await db.execute(query)).mappings().one_or_none()
     if row is None:return None
+    row=dict(row, **{key:content_text(row,key) for key in ('topic','goal','control_object')})
     editable=bool(admin or row['is_primary'])
     return dict(row,selected_id=0,report_code='analytical_reference',report_type_id=None,
         target_kind='complex',target_value=str(task_id),target_label=(row['algorithm_parameters'] or {}).get('context_label') or str(task_id),
@@ -79,6 +84,8 @@ async def evidence(db,school_id,task_id):
         D.c.schema_json['summary'].label('summary'),D.c.schema_json['totals'].label('totals'),
         O.c.total.label('score'),Q.c.total_score.label('notebook_score'),Q.c.max_score.label('notebook_max'),
         D.c.schema_json['max_score'].label('max_score'),
+        func.substr(func.coalesce(func.nullif(D.c.schema_json['conclusion'].as_string(),''),O.c.feedback,Q.c.conclusion,''),1,10001).label('conclusion_text'),
+        func.substr(func.coalesce(func.nullif(D.c.schema_json['recommendations'].as_string(),''),O.c.suggestion_control,Q.c.recommendations,''),1,10001).label('recommendations_text'),
         func.substr(func.coalesce(func.nullif(D.c.schema_json['conclusion'].as_string(),''),O.c.feedback,Q.c.conclusion,''),1,2000).label('finding'))
         .select_from(T.join(E,E.c.id==T.c.execution_data_id).join(I,I.c.id==E.c.month_item_id)
             .join(N,N.c.id==I.c.month_plan_id).join(B,B.c.id==N.c.school_plan_id).join(Y,Y.c.id==T.c.report_type_id)

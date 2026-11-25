@@ -74,7 +74,7 @@ class SchoolPlanStatisticsRepository:
                 SchoolPlanRow11.period_value_int,
                 SchoolPlanRow11.period_values,
             )
-            .where(SchoolPlanRow11.school_plan_id == school_plan_id)
+            .where(SchoolPlanRow11.school_plan_id == school_plan_id, SchoolPlanRow11.is_excluded.is_(False))
             .order_by(
                 SchoolPlanRow11.direction_id,
                 SchoolPlanRow11.row_order,
@@ -101,7 +101,7 @@ class SchoolPlanStatisticsRepository:
                 SchoolPlanRow11ReviewPlace,
                 SchoolPlanRow11ReviewPlace.row11_id == SchoolPlanRow11.id,
             )
-            .where(SchoolPlanRow11.school_plan_id == school_plan_id)
+            .where(SchoolPlanRow11.school_plan_id == school_plan_id, SchoolPlanRow11.is_excluded.is_(False))
             .order_by(
                 SchoolPlanRow11.direction_id,
                 SchoolPlanRow11.row_order,

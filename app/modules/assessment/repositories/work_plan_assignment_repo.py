@@ -11,7 +11,7 @@ def class_query(plan, year):
         SchoolClass.academic_year_start == year, SchoolClass.grade_level == plan.participant_grade,
         SchoolClass.is_active.is_(True))
     if plan.scope_kind == 'school': query = query.where(School.id == plan.school_id)
-    elif plan.scope_kind == 'district': query = query.where(District.id == plan.district_id)
+    elif plan.scope_kind == 'district': query = query.where(District.id == plan.district_id, School.governance_level == 'district')
     else: query = query.where(District.region_id == plan.region_id)
     if plan.participant_grade in (10,11) and plan.education_track in ('emn','ogn'):
         query = query.where(SchoolClass.education_track == plan.education_track)

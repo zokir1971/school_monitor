@@ -135,6 +135,9 @@ class SchoolMonthPlanItem(Base):
 
     is_included: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, index=True)
 
+    # Snapshot used only by reversible exclusion of an annual source row.
+    annual_exclusion_was_included: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+
     week_of_month: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
 
     status: Mapped[PlanItemStatus] = mapped_column(

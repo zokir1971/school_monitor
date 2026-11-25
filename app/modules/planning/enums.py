@@ -163,14 +163,31 @@ class ControlScope(str, enum.Enum):
 
 
 class ReviewPlace(str, enum.Enum):
-    PED_COUNCIL = ("ped_council", "Пед.кеңес")
-    METHOD_COUNCIL = ("method_council", "Әд.кеңес")
-    DIRECTOR_COUNCIL = ("director_council", "ДЖ.кеңес")
-    ADMINISTRATIVE_COUNCIL = ("administrative_council", "Әк.кеңес")
-    METHOD_ASSOC = ("method_assoc", "ӘБ.отырысы")
+    PED_COUNCIL = ("ped_council", "Пед.кеңес", "Педагогический совет", "Педагогикалық кеңес")
+    METHOD_COUNCIL = ("method_council", "Әд.кеңес", "Методический совет", "Әдістемелік кеңес")
+    DIRECTOR_COUNCIL = ("director_council", "ДЖ.кеңес", "Совещание при директоре", "Директор жанындағы кеңес")
+    ADMINISTRATIVE_COUNCIL = ("administrative_council", "Әк.кеңес", "Административный совет", "Әкімшілік кеңес")
+    METHOD_ASSOC = ("method_assoc", "ӘБ.отырысы", "Заседание методического объединения", "Әдістемелік бірлестік отырысы")
+    ADMINISTRATIVE_MEETING = ("administrative_meeting", "МӘЖ", "Заседание администрации школы", "Мектеп әкімшілігінің жиналысы")
+    SCIENTIFIC_ACADEMY_COUNCIL = ("scientific_academy_council", "ОҒАК", "Совет научной академии учащихся", "Оқушылар ғылыми академиясының кеңесі")
+    CLASS_TEACHER_MEETING = ("class_teacher_meeting", "СЖО", "Заседание классных руководителей", "Сынып жетекшілерінің отырысы")
+    STUDENT_SELF_GOVERNMENT = ("student_self_government", "ӨӨБҰО", "Организация ученического самоуправления", "Өзін-өзі басқару ұйымы")
 
-    def __new__(cls, value: str, label_kz: str):
+    def __new__(cls, value: str, label_kz: str, label_ru: str, full_kz: str):
         obj = str.__new__(cls, value)
         obj._value_ = value
         obj.label_kz = label_kz
+        obj.label_ru = label_ru
+        obj.full_kz = full_kz
+        obj.full_ru = label_ru
         return obj
+
+    def display_label(self, language: str = "kk", *, full: bool = False) -> str:
+        if str(language).lower().split('-')[0] == 'ru':
+            return self.full_ru if full else self.label_ru
+        return self.full_kz if full else self.label_kz
+
+    def option_label(self, language: str = "kk") -> str:
+        if str(language).lower().split('-')[0] == 'ru':
+            return self.label_ru
+        return f'{self.label_kz} — {self.full_kz}'

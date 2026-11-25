@@ -84,7 +84,13 @@ async def submit_document(db,doc_id,selected_id,user_id,at,stored):
 
 
 async def document_by_id(db,doc_id,report_code=CODE):
-    return (await db.execute(select(D).where(D.c.id==doc_id,D.c.report_code==report_code))).mappings().one_or_none()
+    kind = D.c.report_code == report_code
+    if report_code == 'analytical_reference':
+        # The final-document page can also show a file uploaded by the executor.
+        # Such files have no system report code; retain their original metadata.
+        kind = or_(kind, and_(D.c.is_final.is_(True), D.c.is_current.is_(True),
+            D.c.source == 'upload', or_(D.c.report_code.is_(None), D.c.report_code == '')))
+    return (await db.execute(select(D).where(D.c.id == doc_id, kind))).mappings().one_or_none()
 
 
 async def storage_context(db,task_id,school_id):
@@ -135,3 +141,16 @@ async def inspection_sources(db, *, school_id, task_id, teacher_ids=None, sectio
         query = query.where(or_(Y.c.code == 'reading_speed_table', and_(
             T.c.target_kind.in_(['teacher', 'primary_teacher']), T.c.target_value.in_([str(tid) for tid in teacher_ids]))))
     return [dict(row) for row in (await db.execute(query)).mappings()]
+
+
+async def new_final_draft(db, *, previous, user):
+    """Keep the signed file/token as history; only the new draft becomes current."""
+    payload=dict(previous['schema_json'],revision=1)
+    payload.pop('signed_by',None)
+    payload.pop('signed_at',None)
+    await db.execute(update(D).where(D.c.id==previous['id']).values(is_current=False))
+    return (await db.execute(insert(D).values(month_item_id=previous['month_item_id'],
+        document_type='reference',source='generated',status='draft',is_final=True,is_current=True,
+        version=previous['version']+1,report_code='analytical_reference',report_label=previous['report_label'],
+        title=previous['title'],schema_json=payload,uploaded_by_user_id=user.id,template_mode='standard')
+        .returning(D.c.id))).scalar_one()

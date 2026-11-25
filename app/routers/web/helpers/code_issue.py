@@ -28,12 +28,21 @@ def _private(response):
 
 
 def _scope_id(user, level):
+    if level == 'L3' and str(getattr(user.role, 'value', user.role)) == 'region_admin':
+        return 'region:' + str(user.region_id)
     return user.region_id if level == 'L2' else user.district_id if level == 'L3' else None
 
 
 def _check_user(user, level):
-    if user.role != LEVELS[level][0] or not user.is_active or (level != 'L1' and _scope_id(user, level) is None):
+    allowed = ('district_admin', 'region_admin') if level == 'L3' else (getattr(LEVELS[level][0], 'value', LEVELS[level][0]),)
+    if str(getattr(user.role, 'value', user.role)) not in allowed or not user.is_active or (level != 'L1' and (user.region_id if str(getattr(user.role, 'value', user.role)) == 'region_admin' else _scope_id(user, level)) is None):
         raise HTTPException(403, 'Нет права выдавать коды этого уровня')
+
+
+def _base_url(user, level):
+    if level == 'L3' and str(getattr(user.role, 'value', user.role)) == 'region_admin':
+        return '/l1/issue-l3'
+    return URLS[level]
 
 
 async def page(request, db, user, level, *, error=None, status_code=200):
@@ -42,7 +51,11 @@ async def page(request, db, user, level, *, error=None, status_code=200):
     context = dict(request=request, user=user, error=error, can_bootstrap_superuser=False)
     context[LISTS[level]] = rows
     if level == 'L2': context['region'] = scope
-    if level == 'L3': context['district'] = scope
+    if level == 'L3':
+        regional = str(getattr(user.role, 'value', user.role)) == 'region_admin'
+        context['district'] = None if regional else scope
+        context['region'] = scope if regional else None
+        context['issue_url'] = _base_url(user, level)
     return _private(templates.TemplateResponse('codes/issue_' + level.lower() + '.html', context, status_code=status_code))
 
 
@@ -55,7 +68,7 @@ async def submit(request, db, user, level, target_ids, quota_total):
     expected = {}
     scope_column = LEVELS[level][4]
     try:
-        scope = await RegistrationCodeService.scope_name(db, actor={'region_id': user.region_id, 'district_id': user.district_id}, level=level)
+        scope = await RegistrationCodeService.scope_name(db, actor={'role': user.role, 'region_id': user.region_id, 'district_id': user.district_id}, level=level)
         result = await RegistrationCodeService.issue_batch(db, issued_by_user_id=user_id, level=level,
                     target_ids=target_ids, quota_total=quota_total, expires_days=30)
         issued = [{scope_column + '_id': obj.region_id if level == 'L1' else obj.district_id if level == 'L2' else obj.school_id,
@@ -90,7 +103,7 @@ async def submit(request, db, user, level, target_ids, quota_total):
                 return await page(request, db, user, level, error=message, status_code=400)
             raise
         logger.warning('Code issuance commit acknowledgement lost; committed batch confirmed')
-    return _private(RedirectResponse(URLS[level] + '/result/' + batch_id, status_code=303))
+    return _private(RedirectResponse(_base_url(user, level) + '/result/' + batch_id, status_code=303))
 
 
 async def result(request, user, level, batch_id):
@@ -101,7 +114,7 @@ async def result(request, user, level, batch_id):
     # Never pass hidden raw codes to HTML after the first display.
     issued = data['issued'] if data['show_codes'] else [dict(row, raw_code='••••••••') for row in data['issued']]
     return _private(templates.TemplateResponse('codes/issue_' + level.lower() + '_result.html',
-        dict(request=request, user=user, batch_id=batch_id, show_codes=data['show_codes'], saved=data['saved'], issued=issued, count=len(issued))))
+        dict(request=request, user=user, batch_id=batch_id, issue_url=_base_url(user, level), show_codes=data['show_codes'], saved=data['saved'], issued=issued, count=len(issued))))
 
 
 async def pdf(request, user, level, batch_id):
@@ -111,7 +124,7 @@ async def pdf(request, user, level, batch_id):
     if data is None: raise HTTPException(404, 'Batch not found or expired')
     arguments = dict(ui_language=resolve_language(request), title=TITLES[level], level_label=level, issued=data['issued'],
                      context_header={'L1': 'Регион', 'L2': 'Район', 'L3': 'Школа'}[level])
-    if level != 'L1': arguments.update(scope_label='Область' if level == 'L2' else 'Район', scope_name=data['scope_name'])
+    if level != 'L1': arguments.update(scope_label='Область' if level == 'L2' or str(getattr(user.role, 'value', user.role)) == 'region_admin' else 'Район', scope_name=data['scope_name'])
     content = await run_in_threadpool(generate_codes_pdf, **arguments)
     await run_in_threadpool(cache_mark_saved, batch_id, owner_id=user.id, level=level, scope_id=scope_id)
     return _private(Response(content=content, media_type='application/pdf',

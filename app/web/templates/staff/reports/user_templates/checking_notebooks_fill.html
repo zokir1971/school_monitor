@@ -4,7 +4,7 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', path='css/template_report.css') }}">
-<link rel="stylesheet" href="{{ url_for('static', path='css/reports/score_cells.css') }}?v=256">
+<link rel="stylesheet" href="{{ url_for('static', path='css/reports/score_cells.css') }}?v=336">
 <link rel="stylesheet" href="{{ url_for('static', path='css/reports/notebook_classes.css') }}?v=268">
 {% endblock %}
 
@@ -250,12 +250,12 @@ report.level: {{ report.level if report else "NO REPORT" }}
 
             {% for value in score_scale %}
               <td class="cell-score" data-report-score-cell>
-                <input type="radio"
+                <label class="report-score-choice" aria-label="{{ report_form_label(criterion_text) }}: {{ value }}"><input type="radio"
                        name="{{ score_name }}"
                        value="{{ value }}"
                        required
                        {% if saved_score is not none and saved_score|string == value|string %}checked{% endif %}
-                       {% if readonly %}disabled{% endif %}>
+                       {% if readonly %}disabled{% endif %}></label>
               </td>
             {% endfor %}
           </tr>

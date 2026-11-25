@@ -566,7 +566,7 @@
   %}
 
   {% if page_data.is_primary_executor %}
-  <p><a class="btn btn-primary" href="{{ url_for('analytical_reference_fill_page',month_item_id=page_data.month_item_id,selected_report_id=0) }}" data-sm-action="primary">{{ 'Аналитическая справка' if ui_language()=='ru' else 'Талдау анықтамасы' }}</a></p>
+  <p><a class="btn btn-primary" href="{{ url_for('analytical_reference_fill_page',month_item_id=page_data.month_item_id,selected_report_id=0) }}" data-sm-action="primary">{{ 'Собрать итоговую справку из отчётов' if ui_language()=='ru' else 'Есептерден қорытынды анықтама құрастыру' }}</a></p>
   {% endif %}
   {% set reports_ready_for_completion =
     page_data.all_reports_resolved

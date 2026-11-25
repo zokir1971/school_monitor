@@ -25,6 +25,9 @@ PATTERNS = {
     'natural_science': r'жаратылыстан|естествознан|natural science',
 }
 MATCHERS = {key: re.compile(pattern) for key, pattern in PATTERNS.items()}
+# Country names identify a place, not the Kazakh language. Mask them only
+# for the language matcher, retaining history/geography and other evidence.
+KAZAKHSTAN_WORD = re.compile(r'\b(?:қазақстан|казахстан|kazakhstan)\w*\b')
 ROLE_FAMILY = {**{key: key for key in ('physics','mathematics','informatics','chemistry','biology','geography','history','natural_science')},
     **{prefix + suffix: prefix for prefix in ('kz','ru') for suffix in ('_language','_literature','_combined')}}
 
@@ -33,7 +36,9 @@ def normalized(value):
     return ' '.join(re.findall(r'[^\W_]+', value, flags=re.UNICODE))
 
 def families(text):
-    return {key for key, matcher in MATCHERS.items() if matcher.search(text)}
+    language_text = KAZAKHSTAN_WORD.sub(' ', text)
+    return {key for key, matcher in MATCHERS.items()
+            if matcher.search(language_text if key == 'kz' else text)}
 
 def build_teacher_choices(teachers, subjects, assignments):
     teachers = list(teachers)

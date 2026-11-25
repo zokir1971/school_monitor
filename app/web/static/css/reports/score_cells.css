@@ -12,3 +12,23 @@ td[data-report-score-cell]:focus-within {
   outline: 2px solid #2563eb;
   outline-offset: -2px;
 }
+
+/* Same score control as the notebook class rubric; native radio semantics remain. */
+td.cell-score[data-report-score-cell] { padding: 3px; text-align: center; vertical-align: middle; }
+td[data-report-score-cell] .report-score-choice {
+  display: inline-flex; align-items: center; justify-content: center;
+  box-sizing: border-box; gap: 6px; width: 100%; min-width: 0;
+  height: 40px; min-height: 40px; padding: 0; margin: 0;
+  border: 1px solid transparent; border-radius: 6px;
+  font-size: 14px; line-height: 20px; cursor: pointer;
+}
+td[data-report-score-cell] .report-score-choice:has(input:checked) {
+  background: #dbeafe; border-color: #2563eb; color: #1e40af;
+}
+td[data-report-score-cell] .report-score-choice:focus-within {
+  outline: 2px solid #2563eb;
+}
+td[data-report-score-cell] .report-score-choice input[type="radio"] {
+  width: 16px; height: 16px; margin: 0; flex: 0 0 auto; accent-color: #2563eb;
+}
+td[data-report-score-cell] .report-score-choice:has(input:disabled) { cursor: default; }

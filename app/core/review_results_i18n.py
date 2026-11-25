@@ -34,7 +34,8 @@ def result_label(value, language):
     labels = {entry.label_kz for enum in (PlanItemStatus, ReviewPlace, AssignmentKind) for entry in enum}
     labels.add(N_('Жауапты'))
     # Labels may combine participation roles; free-form names are never passed here.
-    return ', '.join(translate(part, language) if part in labels else part
+    from app.modules.planning.review_places import label_for_message
+    return ', '.join(label_for_message(part, language) or (translate(part, language) if part in labels else part)
                      for part in (value or '—').split(', '))
 
 

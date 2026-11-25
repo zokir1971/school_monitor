@@ -1,6 +1,7 @@
 # app/modules/reviews/services/review_result_service.py
 
 from __future__ import annotations
+from app.modules.planning.content_i18n import content_text
 
 from datetime import date
 from pathlib import Path
@@ -1070,7 +1071,7 @@ class ReviewResultService:
         if source_row is None:
             return f"Задача №{item.id}"
 
-        topic = source_row.topic.strip()
+        topic = content_text(source_row,"topic").strip()
 
         return topic or f"Задача №{item.id}"
 
@@ -1085,7 +1086,7 @@ class ReviewResultService:
             return None
 
         return cls._normalize_text(
-            source_row.goal
+            content_text(source_row,"goal")
         )
 
     @classmethod

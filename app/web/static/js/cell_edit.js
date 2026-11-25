@@ -61,6 +61,8 @@
 
     const payload = {
       kind,
+      content_language: document.documentElement.lang,
+      expected_value: original,
       row_id: Number(rowId),
       field,
       value,

@@ -19,6 +19,7 @@
 </section>
 <nav aria-label="{{ 'Беттер' if kk else 'Страницы' }}" style="display:flex;justify-content:flex-end;align-items:center;gap:12px;flex-wrap:wrap;margin:16px 0;">
   {% set query = '?work_key=all&academic_year_start=' ~ (selected_academic_year or '') ~ '&subject_id=' ~ (selected_subject_id or '') ~ '&grade_level=' ~ (selected_grade_level or '') ~ '&checkpoint=' ~ (work_selection.checkpoint|urlencode) %}
+  {% if all_work_scope == 'region' and governance|default('') %}{% set query = query ~ '&governance=' ~ (governance|urlencode) %}{% endif %}
   {% if work_page > 1 %}<a data-sm-action="nav" href="{{ query }}&work_page={{ work_page-1 }}">{{ 'Алдыңғы' if kk else 'Предыдущая' }}</a>{% endif %}
   <span>{{ 'Бет' if kk else 'Страница' }} {{ work_page }}</span>
   {% if all_work_next %}<a data-sm-action="nav" href="{{ query }}&work_page={{ work_page+1 }}">{{ 'Келесі' if kk else 'Следующая' }}</a>{% endif %}

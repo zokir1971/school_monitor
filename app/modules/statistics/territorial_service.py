@@ -4,6 +4,7 @@ from zoneinfo import ZoneInfo,ZoneInfoNotFoundError
 from fastapi import HTTPException
 from sqlalchemy import select
 from app.modules.org.models import District,Region
+from app.modules.org.governance import governance_filter
 from app.modules.statistics.territorial_repo import TerritorialStatisticsRepo as Repo,MONTHS
 
 
@@ -60,7 +61,13 @@ class TerritorialStatisticsService:
         order=params.get('order')or('asc' if sort=='name' else 'desc')
         if order not in ('asc','desc'):raise HTTPException(400,'Некорректный порядок / Реті қате')
         attention=integer(params.get('attention'),0,0,1)
+        try:governance=governance_filter(params.get('governance'))
+        except ValueError as exc:raise HTTPException(400,str(exc)) from exc
         scope=await cls.scope(db,user)
+        if scope['kind']=='district':
+            if governance=='region':raise HTTPException(403,'Школы областного подчинения недоступны / Облыстық мектептер қолжетімсіз')
+            governance='district'
+        if governance=='region' and district_id is not None:raise HTTPException(400,'Для областных школ очистите выбор района / Облыстық мектептер үшін аудан таңдауын тазалаңыз')
         regions=scope.get('regions',[])
         districts=scope['districts']
         if scope['kind']=='super':
@@ -77,12 +84,13 @@ class TerritorialStatisticsService:
             region_id=None
         school_name=None
         if school_id is not None:
-            allowed=Repo.school_scope(scope,district_id,school_id)
+            allowed=Repo.school_scope(scope,district_id,school_id,governance=governance)
             chosen=(await db.execute(select(allowed))).mappings().first()
             if chosen is None:raise HTTPException(403,'Школа недоступна / Мектеп қолжетімсіз')
             school_name=chosen['school_name']
             if scope['kind']=='super':
-                region_id,district_id=chosen['region_id'],chosen['district_id']
+                region_id=chosen['region_id']
+                district_id=chosen['district_id'] if chosen['district_id']>0 else None
                 scope=dict(scope,region_id=region_id)
         if scope['kind']=='super':
             if region_id is not None:
@@ -93,8 +101,8 @@ class TerritorialStatisticsService:
         if view not in ('regions','districts','schools','directions') or (scope['kind']=='district' and view=='districts') or (view=='regions' and (scope['kind']!='super' or region_id is not None or school_id is not None)):
             raise HTTPException(400,'Некорректное представление / Көрініс қате')
         if school_id and view!='directions':raise HTTPException(400,'Для школы выберите направления / Мектеп үшін бағыттарды таңдаңыз')
-        schools=Repo.school_scope(scope,district_id,school_id,search)
-        direction_scope=Repo.school_scope(dict(kind='super',region_id=None)) if scope['kind']=='super' else Repo.school_scope(scope,district_id,school_id)
+        schools=Repo.school_scope(scope,district_id,school_id,search,governance)
+        direction_scope=Repo.school_scope(dict(kind='super',region_id=None)) if scope['kind']=='super' else Repo.school_scope(scope,district_id,school_id,governance=governance)
         directions=await Repo.directions(db,direction_scope,year)
         if direction_id not in (None,0) and direction_id not in {row['id']for row in directions}:
             raise HTTPException(400,'Направление отсутствует в выбранных планах / Таңдалған жоспарларда бағыт жоқ')
@@ -108,6 +116,6 @@ class TerritorialStatisticsService:
                 for flag,rz,kz in [(not row.get('has_admin'),'Нет активного администратора','Белсенді әкімші жоқ'),(not row['annual'],'Нет годового плана / направления','Жылдық жоспар / бағыт жоқ'),(not row['monthly'],'Нет выпущенного месячного плана / задач направления','Шығарылған айлық жоспар / бағыт тапсырмасы жоқ'),(row['unassigned']>0,'Есть неназначенные задачи','Тағайындалмаған тапсырмалар бар'),(row['overdue']>0,'Есть просроченные задачи','Мерзімі өткен тапсырмалар бар')]:
                     if flag:row['help_reasons'].append((rz,kz))
             row['percent']=round(100*row['completed']/row['tasks'],1)if row['tasks'] else None
-        return dict(scope=scope,regions=regions,region_id=region_id,year=year,month=month,direction_id=direction_id,district_id=district_id,
+        return dict(governance=governance,scope=scope,regions=regions,region_id=region_id,year=year,month=month,direction_id=direction_id,district_id=district_id,
                     school_id=school_id,school_name=school_name,view=view,sort=sort,order=order,attention=attention,q=search,districts=districts,
                     directions=directions,totals=totals,rows=rows,page=page,pages=pages,today=today)

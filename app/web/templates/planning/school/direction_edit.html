@@ -378,12 +378,51 @@
 
   }
 
+
+
+  /* Keep the row action compact; share remaining space between descriptions. */
+  #pageRoot #grid4 {width:100%;min-width:760px;table-layout:fixed;}
+  #pageRoot #grid4 .direction4-col-number {width:48px;}
+  #pageRoot #grid4 .direction4-col-text {width:calc((100% - 216px) / 3);}
+  #pageRoot #grid4 .direction4-col-actions {width:168px;}
+  #pageRoot #grid4 th {white-space:normal;overflow-wrap:anywhere;}
+  #pageRoot #grid4 td {vertical-align:top;overflow-wrap:anywhere;}
+  #pageRoot #grid4 .cell__text {white-space:pre-wrap;overflow-wrap:anywhere;}
+  #pageRoot #grid4 .annual-row-action button {box-sizing:border-box;width:100%;min-width:0;}
+
+  #pageRoot #grid11 .direction-task-actions > div {min-width:0;width:100%;}
+  #pageRoot #grid11 .direction-task-actions .annual-row-action {width:100%;min-width:0;}
+  #pageRoot #grid11 .direction-task-actions .annual-row-action button {
+    box-sizing:border-box;display:block;width:100%;max-width:100%!important;min-width:0!important;
+    white-space:normal!important;overflow-wrap:anywhere;line-height:1.4;padding:8px 10px;
+  }
+  #pageRoot .annual-row-action {margin:0;}
+  #pageRoot .annual-row-action + .annual-row-action {margin-top:8px;}
+  #pageRoot .annual-row-action button {min-width:0!important;max-width:100%!important;white-space:normal!important;overflow-wrap:anywhere!important;line-height:1.4;}
+  #pageRoot .annual-excluded {margin:20px 0;padding:18px;}
+  #pageRoot .annual-excluded summary {cursor:pointer;font-weight:600;}
+  #pageRoot .annual-row-notice {padding:16px;border:1px solid #f0c36d;background:#fff7e6;border-radius:10px;margin:16px 0;}
+  #pageRoot .annual-row-summary {line-height:1.6;}
+  @media print { #pageRoot .annual-row-action,#pageRoot .annual-excluded,#pageRoot .annual-row-notice {display:none;}}
 </style>
 <link rel="stylesheet" href="{{ url_for('static', path='css/planning/direction_workspace.css') }}?v=177">
 {% endblock %}
 
 {% block content %}
+<p class="muted">{{ 'Мәтін таңдалған тілде сақталады. Бос өрістердің аудармасы әлі толтырылмаған болуы мүмкін.' if ui_language() == 'kk' else 'Текст сохраняется на выбранном языке. Пустое поле может означать, что перевод ещё не заполнен.' }}</p>
 {% set kk = ui_language() == 'kk' %}
+
+{% macro custom_delete(kind, row) -%}
+  {% if row.is_custom %}
+  <form method="post" class="annual-row-action" data-annual-delete
+        action="/planning/school/{{ plan.id }}/direction/{{ direction_id }}/{{ kind }}/{{ row.id }}/delete"
+        data-confirm="{{ 'Қосылған жол жойылсын ба? Бұл әрекетті болдырмау мүмкін емес.' if kk else 'Удалить добавленную строку? Это действие нельзя отменить.' }}"
+        onsubmit="return window.confirm(this.dataset.confirm)">
+    <button type="submit" class="btn" data-sm-action="danger" data-sm-size="compact">{{ 'Жолды жою' if kk else 'Удалить строку' }}</button>
+  </form>
+  {% endif %}
+{%- endmacro %}
+
 
 <div
   id="pageRoot"
@@ -494,6 +533,14 @@
 
     </div>
 
+
+    {% if row_notice %}
+    <div class="annual-row-notice" role="alert">{{ row_notice }}</div>
+    {% endif %}
+    <p class="annual-row-summary">{{ 'Жоспарда тапсырмалар' if kk else 'Задач в направлении' }}: <strong>{{ rows11|length }}</strong> ·
+      {{ 'Алып тасталған' if kk else 'Исключено' }}: {{ excluded_rows11|length }}.
+      {{ 'Алып тастау тек осы мектеп жоспарына әсер етеді.' if kk else 'Исключение действует только в плане этой школы.' }}</p>
+
 <!-- ===================== TABLE 4 ===================== -->
 <details class="direction-description" id="directionDescription">
   <summary>{{ 'Бағыттың сипаттамасы және ұсынымдар' if kk else 'Описание направления и рекомендации' }}</summary>
@@ -501,18 +548,20 @@
   <div class="card__header">
     <div>
       <h3 class="card__title">{{ _('Бақылау нысандары') }}</h3>
-      <div class="card__hint">{{ _('(Жолдарды қосу/жою, ұяшықтарды басу арқылы өңдеу)') }}</div>
+      <div class="card__hint">{{ 'Ұяшықты басып өңдеңіз. Жолды жоспардан алып тастауға және қалпына келтіруге болады.' if kk else 'Нажмите ячейку для редактирования. Строки можно исключать из плана и восстанавливать.' }}</div>
     </div>
   </div>
 
   <div class="table-wrap">
     <table class="grid" id="grid4">
+      <colgroup><col class="direction4-col-number"><col class="direction4-col-text"><col class="direction4-col-text"><col class="direction4-col-text"><col class="direction4-col-actions"></colgroup>
       <thead>
         <tr>
-          <th class="col--num">№</th>
-          <th class="col--wide">{{ _('Бақылау нысаны') }}</th>
-          <th class="col--wide">{{ _('Мәселелер, тәуекелдер') }}</th>
-          <th class="col--wide">{{ _('Басшылық шешімі / Тапсырма') }}</th>
+          <th>№</th>
+          <th>{{ _('Бақылау нысаны') }}</th>
+          <th>{{ _('Мәселелер, тәуекелдер') }}</th>
+          <th>{{ _('Басшылық шешімі / Тапсырма') }}</th>
+          <th>{{ 'Әрекет' if kk else 'Действия' }}</th>
         </tr>
       </thead>
 
@@ -534,27 +583,21 @@
             <td class="cell" data-kind="row4" data-row-id="{{ r.id }}" data-field="decision_text">
               <div class="cell__text">{{ r.decision_text or "" }}</div>
             </td>
+            <td><form method="post" class="annual-row-action" action="/planning/school/{{ plan.id }}/direction/{{ direction_id }}/rows4/{{ r.id }}/exclude">
+      <button type="submit" class="btn" data-sm-action="primary" data-sm-size="compact">{{ 'Жоспардан алып тастау' if kk else 'Исключить из плана' }}</button>
+    </form>{{ custom_delete('rows4', r) }}</td>
           </tr>
         {% endfor %}
       </tbody>
     </table>
 
     <div class="table-footer-actions">
-      <span class="table-hint-badge">{{ _('ℹ️ Жою үшін жол нөмірін басыңыз') }}</span>
       <form method="post"
         action="/planning/school/{{ plan.id }}/direction/{{ direction_id }}/rows4/add"
         style="display:inline;">
         <button class="btn btn--primary" type="submit" data-sm-action="primary">{{ _('+ Қатар қосу') }}</button>
       </form>
-
-        <button id="btnDelete-row4"
-          class="btn btn--danger"
-          type="button"
-          disabled data-sm-action="danger">
-          {{ _('🗑 Қатарды жою') }}
-        </button>
     </div>
-    <form id="deleteForm-row4" method="post" style="display:none;"></form>
   </div>
 </div>
 
@@ -566,7 +609,7 @@
   <div class="card__header">
     <div>
       <h3 class="card__title">{{ _('Бақылау міндеттері') }}</h3>
-      <div class="card__hint">{{ _('(Жолдарды қосу/жою, ұяшықтарды басу арқылы өңдеу)') }}</div>
+      <div class="card__hint">{{ 'Ұяшықты басып өңдеңіз. Жолды жоспардан алып тастауға және қалпына келтіруге болады.' if kk else 'Нажмите ячейку для редактирования. Строки можно исключать из плана и восстанавливать.' }}</div>
     </div>
 
     <div class="card__actions">
@@ -713,6 +756,9 @@
      data-sm-action="edit">
       {{ _('Өңдеу') }}
     </a>
+<form method="post" class="annual-row-action" action="/planning/school/{{ plan.id }}/direction/{{ direction_id }}/rows11/{{ r.id }}/exclude">
+      <button type="submit" class="btn" data-sm-action="primary" data-sm-size="compact">{{ 'Жоспардан алып тастау' if kk else 'Исключить из плана' }}</button>
+    </form>{{ custom_delete('rows11', r) }}
             </div></td>
           </tr>
           <tr id="task-details-{{ r.id }}" class="direction-task-details" hidden>
@@ -766,26 +812,34 @@
     </table>
     <div class="table-footer-actions direction-task-footer">
       <span class="direction-save-hint">{{ 'Ұяшық өзгерістері автоматты сақталады. Барлық параметрлер үшін «Өңдеу» түймесін басыңыз.' if kk else 'Изменения ячеек сохраняются автоматически. Для всех параметров нажмите «Редактировать».' }}</span>
-      <span class="table-hint-badge">{{ _('ℹ️ Жою үшін жол нөмірін басыңыз') }}</span>
-
-
-  <button id="btnDelete-row11"
-          class="btn btn--danger"
-          type="button"
-          disabled data-sm-action="danger">
-    {{ _('🗑 Қатарды жою') }}
-  </button>
 </div>
-
-<form id="deleteForm-row11" method="post" style="display:none;"></form>
   </div>
 </div>
 
   </div>
+
+
+<details class="card annual-excluded">
+  <summary>{{ 'Алып тасталған жолдарды көрсету' if kk else 'Показать исключённые строки' }} ({{ excluded_rows4|length + excluded_rows11|length }})</summary>
+  <p>{{ 'Қалпына келтіру жолды жылдық жоспарға қайтарады. Айлық тапсырмалар автоматты құрылмайды.' if kk else 'Восстановление возвращает строку в годовой план. Месячные задачи автоматически не создаются.' }}</p>
+  {% for kind, entries in [('rows11', excluded_rows11), ('rows4', excluded_rows4)] %}
+    {% if entries %}
+    <h3>{{ ('Тапсырмалар' if kk else 'Задачи') if kind == 'rows11' else ('Бақылау нысандары' if kk else 'Объекты контроля') }}</h3>
+    <div class="table-wrap"><table class="grid"><thead><tr><th>№</th><th>{{ 'Атауы' if kk else 'Название' }}</th><th>{{ 'Әрекет' if kk else 'Действия' }}</th></tr></thead><tbody>
+    {% for r in entries %}
+      <tr><td>{{ r.row_order }}</td><td>{{ r.topic if kind == 'rows11' else r.control_object }}</td><td>
+      <form method="post" class="annual-row-action" action="/planning/school/{{ plan.id }}/direction/{{ direction_id }}/{{ kind }}/{{ r.id }}/restore">
+        <button type="submit" class="btn" data-sm-action="primary">{{ 'Жоспарға қалпына келтіру' if kk else 'Восстановить в плане' }}</button>
+      </form>{{ custom_delete(kind, r) }}</td></tr>
+    {% endfor %}
+    </tbody></table></div>
+    {% endif %}
+  {% endfor %}
+</details>
 
 <!-- scripts -->
-<script src="{{ url_for('static', path='js/cell_edit.js') }}"></script>
-<script src="{{ url_for('static', path='js/row_select.js') }}?v=i18n8"></script>
+<script src="{{ url_for('static', path='js/cell_edit.js') }}?v=331"></script>
+
 
 <script defer src="{{ url_for('static', path='js/planning/direction_workspace.js') }}?v=176"></script>
 </div>

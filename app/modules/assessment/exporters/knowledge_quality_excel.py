@@ -39,8 +39,8 @@ class KnowledgeQualityExcelExporter:
         region
 
     Структура workbook:
-        1. Жиынтық
-        2. Сыныптар / Мектептер / Аудандар бойынша
+        school/district: сводка и детализация;
+        region (regional_layout): пять листов региона и двух видов подчинения.
     """
 
     SUMMARY_SHEET_NAME = "Жиынтық"
@@ -85,6 +85,10 @@ class KnowledgeQualityExcelExporter:
 
         Подходит для StreamingResponse / Response.
         """
+
+        if dto.scope == 'region' and dto.regional_layout:
+            from app.modules.assessment.exporters.regional_knowledge_quality_excel import build
+            return build(dto)
 
         if dto.all_works:
             return cls._build_all_work_workbook(dto)

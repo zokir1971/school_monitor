@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block content %}
+{% set kk = ui_language() == 'kk' %}
+<section class="card" style="max-width:1000px;margin:24px auto;padding:24px;">
+<h2>{{ 'Тілдік нұсқаны өңдеу' if kk else 'Редактирование языковой версии' }}</h2>
+<p>{{ 'Мәтін таңдалған тілде сақталады. Екінші тілдегі нұсқа мен жолдың байланыстары сақталады.' if kk else 'Текст сохраняется на выбранном языке. Версия на другом языке и связи строки сохраняются.' }}</p>
+<form method="post">
+<input type="hidden" name="content_language" value="{{ content_language }}">
+<input type="hidden" name="revision" value="{{ revision }}">
+{% for field in fields %}
+<label style="display:block;margin:14px 0 5px;" for="content-{{ field.name }}">{{ field.label }}</label>
+<textarea id="content-{{ field.name }}" name="{{ field.name }}" rows="3" maxlength="20000" style="width:100%;box-sizing:border-box;">{{ field.value }}</textarea>
+{% endfor %}
+<div style="display:flex;gap:12px;margin-top:20px;">
+<button class="btn btn--primary" type="submit">{{ 'Сақтау' if kk else 'Сохранить' }}</button>
+<a class="btn" href="{{ back }}">{{ 'Артқа' if kk else 'Назад' }}</a>
+</div>
+</form></section>
+{% endblock %}

@@ -10,7 +10,8 @@
 <section class="signature-section"><div class="signature-box"><div class="sign-info"><h2>{{ 'Электронная подпись' if ru else 'Электронды қолтаңба' }}</h2><table><tbody>
 <tr><th>{{ 'Статус' if ru else 'Мәртебесі' }}</th><td>{{ ('Подписан' if ru else 'Қол қойылған') if qr else '—' }}</td></tr>
 <tr><th>{{ 'Дата' if ru else 'Күні' }}</th><td>{{ sign.get('date') or '—' }}</td></tr>
-<tr><th>{{ 'ID отчёта' if ru else 'Есеп ID' }}</th><td>{{ sign.get('report_id') or '—' }}</td></tr>
+{% if snapshot.get('signed_by') %}<tr><th>{{ 'Подписал' if ru else 'Қол қойған' }}</th><td>{{ snapshot.signed_by.full_name }}</td></tr>{% endif %}
+<tr><th>{{ 'ID отчёта'  if ru else 'Есеп ID' }}</th><td>{{ sign.get('report_id') or '—' }}</td></tr>
 </tbody></table></div>{% if qr %}<div class="qr-box"><img src="{{ qr }}" class="qr-code" width="150" height="150" alt="QR"><div class="qr-caption">{{ 'Проверка подлинности' if ru else 'Нақтылығын тексеру' }}</div></div>{% endif %}</div>
 <div class="signature-footer">{{ 'Документ сформирован автоматически системой school_monitor.' if ru else 'Құжат school_monitor жүйесінде автоматты түрде қалыптастырылған.' }}</div></section>
 </body></html>

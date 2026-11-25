@@ -1,26 +1,36 @@
 {% extends "base.html" %}
 {% block title %}{{ _('Сынып пәндері және кіші топтар') }}{% endblock %}
-{% block extra_css %}<link rel="stylesheet" href="{{ url_for('static', path='css/education/class_curriculum.css') }}">{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{{ url_for('static', path='css/education/class_curriculum.css') }}?v=315">{% endblock %}
 {% macro teacher_form(offer, subgroup_id, assignment) %}
-<form method="post" action="{{ request.url_for('school_class_subjects_update') if lazy_teacher_choices else request.url_for('school_class_subjects_update').include_query_params(teacher_choices='full') }}" class="curriculum-inline" data-assignment-form id="curriculum-assignment-{{ offer.id }}-{{ subgroup_id or 0 }}">
-<input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="action" value="assign"><input type="hidden" name="academic_year_start" value="{{ year }}"><input type="hidden" name="offer_id" value="{{ offer.id }}"><input type="hidden" name="subgroup_id" value="{{ subgroup_id or '' }}">
-<select name="staff_id" aria-label="{{ _('Учитель') }}" required {% if lazy_teacher_choices %}data-curriculum-teacher data-subject-id="{{ offer.subject_id }}"{% endif %}><option value="">{{ _('Назначьте учителя') }}</option>
-{% if lazy_teacher_choices %}{% if assignment and assignment.staff_member_id in teachers_by_id %}<option value="{{ assignment.staff_member_id }}" selected>{{ teachers_by_id[assignment.staff_member_id].full_name }}</option>{% endif %}
-{% else %}{% for t in teachers %}{% if assignment and assignment.staff_member_id == t.id %}<option value="{{ t.id }}" selected>{{ t.full_name }}</option>{% else %}<option value="{{ t.id }}">{{ t.full_name }}</option>{% endif %}{% endfor %}{% endif %}</select>{% if lazy_teacher_choices %}<button type="button" class="curriculum-secondary" data-teacher-toggle aria-pressed="false" data-show-all="{{ 'Показать всех' if ui_language()=='ru' else 'Барлығын көрсету' }}" data-show-matching="{{ 'Только по предмету' if ui_language()=='ru' else 'Тек пән бойынша' }}">{{ 'Показать всех' if ui_language()=='ru' else 'Барлығын көрсету' }}</button><span class="curriculum-muted" data-teacher-hint aria-live="polite" data-empty="{{ 'Подходящие учителя не найдены. Проверьте предмет и специальность в карточке сотрудника.' if ui_language()=='ru' else 'Сәйкес мұғалімдер табылмады. Қызметкердің пәні мен мамандығын тексеріңіз.' }}"></span>{% endif %}<button type="submit" data-sm-action="primary">{{ _('Сохранить') }}</button>
-</form>
+{% set field='teacher_' ~ offer.id ~ '_' ~ (subgroup_id or 0) %}
+{% set chosen=posted_assignments.get(field,assignment.staff_member_id|string if assignment and assignment.staff_member_id else '') %}
+<div class="curriculum-inline" data-teacher-choice-row>
+<select name="{{ field }}" aria-label="{{ _('Учитель') }}" required data-class-teacher {% if lazy_teacher_choices %}data-curriculum-teacher data-subject-id="{{ offer.subject_id }}"{% endif %}><option value="">{{ _('Назначьте учителя') }}</option>
+{% if lazy_teacher_choices %}{% if chosen|int in teachers_by_id %}<option value="{{ chosen|int }}" selected>{{ teachers_by_id[chosen|int].full_name }}</option>{% endif %}
+{% else %}{% for t in teachers %}<option value="{{ t.id }}" {% if chosen==t.id|string %}selected{% endif %}>{{ t.full_name }}</option>{% endfor %}{% endif %}</select>
+{% if lazy_teacher_choices %}<button type="button" class="curriculum-secondary" data-teacher-toggle aria-pressed="false" data-show-all="{{ 'Показать всех' if ui_language()=='ru' else 'Барлығын көрсету' }}" data-show-matching="{{ 'Только по предмету' if ui_language()=='ru' else 'Тек пән бойынша' }}">{{ 'Показать всех' if ui_language()=='ru' else 'Барлығын көрсету' }}</button><span class="curriculum-muted" data-teacher-hint aria-live="polite" data-empty="{{ 'Подходящие учителя не найдены. Проверьте предмет и специальность в карточке сотрудника.' if ui_language()=='ru' else 'Сәйкес мұғалімдер табылмады. Қызметкердің пәні мен мамандығын тексеріңіз.' }}"></span>{% endif %}
+</div>
 {% endmacro %}
 {% block content %}
-<div class="curriculum-page" data-curriculum-year="{{ year }}"><header><h1>{{ _('Сынып пәндері және кіші топтар') }}</h1><p>{{ school_name }} · {{ year }}–{{ year + 1 }}</p></header>
+<div class="curriculum-page" data-curriculum-year="{{ year }}" data-curriculum-school="{{ user.school_id }}" data-curriculum-user="{{ user.id }}"><header><h1>{{ _('Сынып пәндері және кіші топтар') }}</h1><p>{{ school_name }} · {{ year }}–{{ year + 1 }}</p></header>
 {% if error %}<div class="curriculum-notice curriculum-error" role="alert">{{ _(error) }}</div>{% endif %}
 {% if notice %}<div class="curriculum-notice" role="status">{{ _(notice) }}</div>{% endif %}
 <noscript><p class="curriculum-notice"><a href="{{ request.url_for('school_class_subjects_page').include_query_params(academic_year_start=year,teacher_choices='full') }}" data-sm-action="nav">{{ 'Открыть полные списки учителей без JavaScript' if ui_language()=='ru' else 'JavaScript қолданбай мұғалімдердің толық тізімін ашу' }}</a></p></noscript>
 <section><div class="curriculum-toolbar"><form method="get" action="{{ request.url_for('school_class_subjects_page') }}" class="curriculum-inline">{% if not lazy_teacher_choices %}<input type="hidden" name="teacher_choices" value="full">{% endif %}<label>{{ _('Учебный год') }}<input type="number" name="academic_year_start" min="2000" max="2100" value="{{ year }}" required></label><button class="curriculum-secondary" type="submit" data-sm-action="nav">{{ _('Показать') }}</button></form>
 <form method="post" action="{{ request.url_for('school_class_subjects_update') if lazy_teacher_choices else request.url_for('school_class_subjects_update').include_query_params(teacher_choices='full') }}"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="action" value="sync"><input type="hidden" name="academic_year_start" value="{{ year }}"><button type="submit" data-sm-action="edit">{{ _('Обновить предметы и подгруппы') }}</button></form></div>
 <p>{{ _('Подгруппы формируются автоматически. При 20 учениках — 10+10, при 25 — 13+12.') }}</p></section>
+<section class="curriculum-assignment-statistics" aria-label="{{ 'Статистика назначений' if ui_language()=='ru' else 'Тағайындау статистикасы' }}">
+<h2>{{ 'Статистика сохранённых назначений' if ui_language()=='ru' else 'Сақталған тағайындаулар статистикасы' }}</h2>
+<p>{{ 'Полностью назначены классы' if ui_language()=='ru' else 'Толық тағайындалған сыныптар' }}: <strong>{{ assignment_summary.complete_classes }} / {{ assignment_summary.total_classes }}</strong> · {{ 'Назначения' if ui_language()=='ru' else 'Тағайындаулар' }}: <strong>{{ assignment_summary.assigned }} / {{ assignment_summary.total }}</strong> · {{ 'Без учителя' if ui_language()=='ru' else 'Мұғалімсіз' }}: <strong>{{ assignment_summary.missing }}</strong></p>
+{% if assignment_summary.unconfigured_classes %}<p class="curriculum-hint">{{ 'Классы без сформированных предметов' if ui_language()=='ru' else 'Пәндері құрылмаған сыныптар' }}: {{ assignment_summary.unconfigured_classes }}</p>{% endif %}
+<details><summary>{{ 'Показать классы и предметы без учителя' if ui_language()=='ru' else 'Мұғалімсіз сыныптар мен пәндерді көрсету' }}</summary>
+<ul>{% for block in class_blocks if block.coverage.missing_count or not block.subject_rows %}<li><a href="#curriculum-class-{{ block.school_class.id }}" data-open-curriculum-class>{{ block.school_class.name }}</a>
+<ul>{% for item in block.coverage.missing %}<li>{{ item.name_ru if ui_language()=='ru' else item.name_kz }}{% if item.subgroup_number %} · {{ _('Подгруппа') }} {{ item.subgroup_number }}{% endif %}</li>{% else %}<li>{{ 'Сначала сформируйте предметы класса' if ui_language()=='ru' else 'Алдымен сынып пәндерін құрыңыз' }}</li>{% endfor %}</ul></li>{% else %}<li>{{ 'Учителя назначены на все предметы и подгруппы.' if ui_language()=='ru' else 'Барлық пәндер мен кіші топтарға мұғалімдер тағайындалған.' }}</li>{% endfor %}</ul>
+</details></section>
 <section><h2>{{ _('Классы, предметы и подгруппы') }}</h2>
 <p class="curriculum-muted">{{ _('Язык обучения сохранён при импорте НОБД. Откройте класс, чтобы увидеть предметы, состав подгрупп и назначения учителей.') }}</p>
 {% for block in class_blocks %}
-<details class="curriculum-class-block" id="curriculum-class-{{ block.school_class.id }}">
+<details class="curriculum-class-block" id="curriculum-class-{{ block.school_class.id }}" {% if posted_class_id==block.school_class.id %}open{% endif %}>
   <summary class="curriculum-class-summary">
     <strong>{{ block.school_class.name }}</strong>
     <span>{{ _(block.language_name) }}</span>
@@ -28,6 +38,9 @@
     <span class="curriculum-muted">{{ block.student_count }} {{ _('учеников ·') }} {{ block.subject_rows|length }} {{ _('предметов ·') }} {{ block.subgroup_count }} {{ _('подгрупп') }}</span>
   </summary>
   <div class="curriculum-class-body">
+<form method="post" action="{{ request.url_for('school_class_subjects_update') if lazy_teacher_choices else request.url_for('school_class_subjects_update').include_query_params(teacher_choices='full') }}" data-assignment-form data-class-assignment-form data-expected-assignment-count="{{ block.coverage.total }}" id="curriculum-class-assignment-{{ block.school_class.id }}" novalidate>
+<input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="action" value="assign_class"><input type="hidden" name="academic_year_start" value="{{ year }}"><input type="hidden" name="class_id" value="{{ block.school_class.id }}"><input type="hidden" name="assignment_version" value="{{ block.assignment_version }}">
+<p class="curriculum-muted">{{ 'Сохранено назначений' if ui_language()=='ru' else 'Сақталған тағайындаулар' }}: {{ block.coverage.assigned }} / {{ block.coverage.total }}. {{ 'Выберите учителей по всем предметам и подгруппам, затем сохраните класс одной кнопкой.' if ui_language()=='ru' else 'Барлық пәндер мен кіші топтарға мұғалім таңдап, сыныпты бір түймемен сақтаңыз.' }}</p>
   {% if not block.school_class.instruction_language %}
     <div class="curriculum-hint">{{ _('Язык класса ещё не сохранён в БД. Загрузите НОБД и подтвердите сохранение импорта.') }}
       <a href="{{ request.url_for('school_nobd_import_page') }}" data-sm-action="nav">{{ _('Открыть импорт НОБД →') }}</a></div>
@@ -37,6 +50,12 @@
 {% if row.offer.split_enabled %}<div class="curriculum-group-grid">{% for item in row.groups %}<div class="curriculum-group"><h4>{{ _('Подгруппа') }} {{ item.group.number }} <span class="curriculum-badge">{{ item.students|length }} {{ _('учеников') }}</span></h4>{{ teacher_form(row.offer,item.group.id,item.assignment) }}<details><summary>{{ _('Состав подгруппы') }}</summary><ol>{% for s in item.students %}<li>{{ s.full_name }}</li>{% else %}<li>{{ _('Нет учеников.') }}</li>{% endfor %}</ol></details></div>{% endfor %}</div>
 {% else %}{{ teacher_form(row.offer,None,row.assignment) }}{% endif %}</article>
 {% else %}<div class="curriculum-hint">{{ _('Предметы класса ещё не сформированы. После сохранения языка в НОБД и настройки типовых наборов нажмите «Обновить предметы и подгруппы».') }}</div>{% endfor %}
+{% if block.subject_rows %}
+{% if not block.configuration_ready %}<p class="curriculum-hint">{{ 'Сначала обновите предметы и подгруппы: состав подгрупп неполный.' if ui_language()=='ru' else 'Алдымен пәндер мен кіші топтарды жаңартыңыз: кіші топ құрамы толық емес.' }}</p>{% endif %}
+<div class="curriculum-class-save"><span data-class-assignment-count aria-live="polite" data-count-label="{{ 'Выбрано в форме (до сохранения)' if ui_language()=='ru' else 'Пішінде таңдалған (сақтауға дейін)' }}"></span>
+<button type="submit" data-sm-action="primary" {% if not block.configuration_ready %}disabled{% endif %}>{{ 'Сохранить назначения класса' if ui_language()=='ru' else 'Сынып тағайындауларын сақтау' }}</button></div>
+<p class="curriculum-notice curriculum-error" data-class-assignment-error hidden role="alert" data-missing-label="{{ 'Не сохранено: выберите учителей для всех предметов и подгрупп. Не заполнено:' if ui_language()=='ru' else 'Сақталмады: барлық пәндер мен кіші топтарға мұғалімдерді таңдаңыз. Толтырылмаған:' }}"></p>
+{% endif %}</form>
   </div>
 </details>
 {% else %}<div class="curriculum-hint">{{ _('Нет активных классов за выбранный учебный год.') }}</div>{% endfor %}
@@ -45,5 +64,6 @@
 
 {% block extra_js %}{{ super() }}
 <script defer src="{{ url_for('static',path='js/education/curriculum_assignment_position.js') }}?v=253"></script>
-{% if lazy_teacher_choices %}<script type="application/json" id="curriculum-teacher-choices">{{ teacher_choices|tojson }}</script><script defer src="{{ url_for('static',path='js/education/curriculum_teacher_choices.js') }}?v=251"></script>{% endif %}
+<script defer src="{{ url_for('static',path='js/education/curriculum_class_assignment.js') }}?v=315"></script>
+{% if lazy_teacher_choices %}<script type="application/json" id="curriculum-teacher-choices">{{ teacher_choices|tojson }}</script><script defer src="{{ url_for('static',path='js/education/curriculum_teacher_choices.js') }}?v=315"></script>{% endif %}
 {% endblock %}

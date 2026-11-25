@@ -1,5 +1,6 @@
 # app/modules/planning/services/month_plan_service.py
 from fastapi import HTTPException
+from app.modules.planning.content_i18n import content_text, language
 from app.modules.planning.utils.month_schedule import MonthSchedule
 from app.modules.planning.repositories.month_correction_repo import MonthCorrectionRepo
 from app.modules.planning.services.month_correction_service import MonthCorrectionService
@@ -172,9 +173,10 @@ class SchoolMonthlyPlanningService:
             )
 
             direction_name = (
-                    getattr(direction, "short_title", None)
+                    content_text(direction, "short_title")
+                    or content_text(direction, "full_title")
                     or getattr(direction, "title", None)
-                    or "Без направления"
+                    or ("Бағыт көрсетілмеген" if language() == "kk" else "Без направления")
             )
 
             direction_sort_order = (
@@ -221,23 +223,23 @@ class SchoolMonthlyPlanningService:
                 status_label=cls._enum_label(item.status),
 
                 topic=(
-                        getattr(source_row, "topic", None)
+                        content_text(source_row, 'topic')
                         or ""
                 ),
                 goal=(
-                        getattr(source_row, "goal", None)
+                        content_text(source_row, 'goal')
                         or ""
                 ),
                 control_object=(
-                        getattr(source_row, "control_object", None)
+                        content_text(source_row, 'control_object')
                         or ""
                 ),
                 methods=(
-                        getattr(source_row, "methods", None)
+                        content_text(source_row, 'methods')
                         or ""
                 ),
                 deadlines=(
-                        getattr(source_row, "deadlines", None)
+                        content_text(source_row, 'deadlines')
                         or ""
                 ),
 
@@ -363,6 +365,11 @@ class SchoolMonthlyPlanningService:
                 status_code=404,
                 detail="Годовой план не найден (или не принадлежит школе)",
             )
+
+        from app.utils.calendar_weeks import calc_year_from_academic
+        expected_year = calc_year_from_academic(school_plan.academic_year, month)
+        if year != expected_year:
+            raise HTTPException(400, f'Для месяца {month} учебного года {school_plan.academic_year} календарный год должен быть {expected_year}. / Күнтізбелік жыл {expected_year} болуы керек.')
 
         # 3) Проверяем статус годового плана
         if school_plan.status != PlanStatus.ACTIVE:

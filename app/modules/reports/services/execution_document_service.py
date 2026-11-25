@@ -122,6 +122,11 @@ class ExecutionDocumentService:
             raise ValueError("Архивную задачу изменять нельзя.")
         if locked_task['completed_at'] or str(getattr(locked_task['status'], 'value', locked_task['status'])) in ('done', 'reviewed'):
             raise ValueError("Задача завершена. Используйте замену документа с указанием причины.")
+        current_final = await ExecutionDocumentRepo.get_current_final_document_for_task(db, month_item_id=month_item_id)
+        if (current_final is not None and current_final.report_code == 'analytical_reference'
+                and (current_final.schema_json or {}).get('assembly_version') == 1):
+            raise ValueError("Для задачи уже собрана итоговая справка. Откройте её; для правок подписанного документа создайте новую версию.")
+
         if required_document_id is not None:
             required = await ExecutionRepo.get_required_documents_for_task(db, month_item_id=month_item_id)
             if required_document_id not in {item.id for item in required}:

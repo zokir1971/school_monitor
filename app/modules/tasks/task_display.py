@@ -1,3 +1,4 @@
+from app.modules.planning.content_i18n import content_text
 """Display persisted planning/execution fields without lazy database reads."""
 from collections.abc import Mapping
 from app.modules.planning.enums import ControlForm, ReviewPlace
@@ -10,13 +11,7 @@ CONTROL_FORMS_RU = {
     'overview': 'Обзорный контроль',
     'complex_generalizing': 'Комплексно-обобщающий контроль',
 }
-REVIEW_PLACES_RU = {
-    'ped_council': 'Педагогический совет',
-    'method_council': 'Методический совет',
-    'director_council': 'Совещание при директоре',
-    'administrative_council': 'Административный совет',
-    'method_assoc': 'Заседание методического объединения',
-}
+REVIEW_PLACES_RU = {place.value:place.label_ru for place in ReviewPlace}
 
 def loaded(obj, name, default=None):
     if obj is None:
@@ -32,6 +27,11 @@ def text(value):
     return str(getattr(value, 'value', value) or '').strip()
 
 def enum_label(value, enum, ru_labels, language):
+    if enum is ReviewPlace:
+        from app.modules.planning.review_places import parse_place
+        place = parse_place(value)
+        if place is not None:
+            return place.display_label(language)
     raw = text(value)
     if not raw:
         return ''
@@ -51,7 +51,7 @@ def review_place_text(task, language='kk'):
                 labels.append(label)
         if labels:
             return ', '.join(labels)
-    legacy = text(loaded(source, 'review_place'))
+    legacy = text(content_text(source, 'review_place', language))
     if not legacy:
         legacy = text(loaded(loaded(task, 'execution'), 'planned_review_place'))
     return enum_label(legacy, ReviewPlace, REVIEW_PLACES_RU, language) or '—'
@@ -62,7 +62,7 @@ def execution_fields(task, execution_data=None):
     if not raw:
         raw = text(loaded(loaded(task, 'execution'), 'control_form'))
     return dict(
-        control_methods=text(loaded(source, 'methods')) or '—',
+        control_methods=text(content_text(source, 'methods')) or '—',
         control_form=enum_label(raw, ControlForm, CONTROL_FORMS_RU, 'kk') or '—',
         control_form_ru=enum_label(raw, ControlForm, CONTROL_FORMS_RU, 'ru') or '—',
         review_place=review_place_text(task, 'kk'),

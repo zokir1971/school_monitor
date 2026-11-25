@@ -1,6 +1,7 @@
 # app/modules/assessment/services/knowledge_quality_dynamics_service.py
 
 from __future__ import annotations
+from app.modules.org.governance import reporting_names
 
 from collections import defaultdict
 from decimal import Decimal, ROUND_HALF_UP
@@ -757,426 +758,118 @@ class KnowledgeQualityDynamicsService:
     # =====================================================
 
     @classmethod
-    async def get_region_filter_options(
-            cls,
-            db: AsyncSession,
-            *,
-            region_id: int,
-            academic_year_start: int | None = None,
-            subject_id: int | None = None,
-            grade_level: int | None = None,
-    ) -> KnowledgeQualityDynamicsFilterOptionsDTO:
+    async def get_region_filter_options(cls, db: AsyncSession, *, region_id: int, academic_year_start: int | None=None, subject_id: int | None=None, grade_level: int | None=None, governance: str='') -> KnowledgeQualityDynamicsFilterOptionsDTO:
         """
-        Каскадные фильтры региональной страницы динамики.
+            Каскадные фильтры региональной страницы динамики.
 
-        Источник:
-            только AssessmentQualitySummary,
-            где checkpoint_snapshot IS NOT NULL.
+            Источник:
+                только AssessmentQualitySummary,
+                где checkpoint_snapshot IS NOT NULL.
 
-        SQL:
-            1 запрос на все уникальные
-            year + subject + grade региона.
-        """
-
-        cls._validate_positive_id(
-            "region_id",
-            region_id,
-        )
-
-        rows = (
-            await KnowledgeQualityDynamicsRepo
-            .get_region_filter_rows(
-                db,
-                region_id=region_id,
-            )
-        )
-
-        academic_years = tuple(
-            sorted(
-                {
-                    item.academic_year_start
-                    for item in rows
-                },
-                reverse=True,
-            )
-        )
-
+            SQL:
+                1 запрос на все уникальные
+                year + subject + grade региона.
+            """
+        cls._validate_positive_id('region_id', region_id)
+        rows = await KnowledgeQualityDynamicsRepo.get_region_filter_rows(db, region_id=region_id, governance=governance)
+        academic_years = tuple(sorted({item.academic_year_start for item in rows}, reverse=True))
         if not academic_years:
-            return KnowledgeQualityDynamicsFilterOptionsDTO(
-                academic_years=(),
-                subject_ids=(),
-                grade_levels=(),
-
-                selected_academic_year=None,
-                selected_subject_id=None,
-                selected_grade_level=None,
-            )
-
-        selected_academic_year = (
-            academic_year_start
-            if academic_year_start in academic_years
-            else academic_years[0]
-        )
-
-        year_rows = tuple(
-            item
-            for item in rows
-            if (
-                    item.academic_year_start
-                    == selected_academic_year
-            )
-        )
-
-        subject_ids = tuple(
-            sorted(
-                {
-                    item.subject_id
-                    for item in year_rows
-                }
-            )
-        )
-
-        selected_subject_id = (
-            subject_id
-            if subject_id in subject_ids
-            else None
-        )
-
-        grade_source_rows = (
-            tuple(
-                item
-                for item in year_rows
-                if (
-                        item.subject_id
-                        == selected_subject_id
-                )
-            )
-            if selected_subject_id is not None
-            else year_rows
-        )
-
-        grade_levels = tuple(
-            sorted(
-                {
-                    item.grade_level
-                    for item in grade_source_rows
-                }
-            )
-        )
-
-        selected_grade_level = (
-            grade_level
-            if grade_level in grade_levels
-            else None
-        )
-
-        return KnowledgeQualityDynamicsFilterOptionsDTO(
-            academic_years=academic_years,
-            subject_ids=subject_ids,
-            grade_levels=grade_levels,
-
-            selected_academic_year=(
-                selected_academic_year
-            ),
-
-            selected_subject_id=(
-                selected_subject_id
-            ),
-
-            selected_grade_level=(
-                selected_grade_level
-            ),
-        )
+            return KnowledgeQualityDynamicsFilterOptionsDTO(academic_years=(), subject_ids=(), grade_levels=(), selected_academic_year=None, selected_subject_id=None, selected_grade_level=None)
+        selected_academic_year = academic_year_start if academic_year_start in academic_years else academic_years[0]
+        year_rows = tuple((item for item in rows if item.academic_year_start == selected_academic_year))
+        subject_ids = tuple(sorted({item.subject_id for item in year_rows}))
+        selected_subject_id = subject_id if subject_id in subject_ids else None
+        grade_source_rows = tuple((item for item in year_rows if item.subject_id == selected_subject_id)) if selected_subject_id is not None else year_rows
+        grade_levels = tuple(sorted({item.grade_level for item in grade_source_rows}))
+        selected_grade_level = grade_level if grade_level in grade_levels else None
+        return KnowledgeQualityDynamicsFilterOptionsDTO(academic_years=academic_years, subject_ids=subject_ids, grade_levels=grade_levels, selected_academic_year=selected_academic_year, selected_subject_id=selected_subject_id, selected_grade_level=selected_grade_level)
 
     @classmethod
-    async def get_region_dynamics(
-            cls,
-            db: AsyncSession,
-            *,
-            region_id: int,
-            academic_year_start: int,
-            subject_id: int | None = None,
-            grade_level: int | None = None,
-            district_id: int | None = None,
-            school_id: int | None = None,
-    ) -> KnowledgeQualityDynamicsDTO:
+    async def get_region_dynamics(cls, db: AsyncSession, *, region_id: int, academic_year_start: int, subject_id: int | None=None, grade_level: int | None=None, district_id: int | None=None, school_id: int | None=None, governance: str='') -> KnowledgeQualityDynamicsDTO:
         """
-        Общая динамика региона.
+            Общая динамика региона.
 
-        Поддерживаемый drill-down:
+            Поддерживаемый drill-down:
 
-            region
-                -> subject
-                -> grade
-                -> district
-                -> school
+                region
+                    -> subject
+                    -> grade
+                    -> district
+                    -> school
 
-        Регион не получает:
-            - class;
-            - teacher;
-            - student.
-        """
-
-        cls._validate_positive_id(
-            "region_id",
-            region_id,
-        )
-
-        cls._validate_academic_year(
-            academic_year_start
-        )
-
-        cls._validate_optional_positive_id(
-            "subject_id",
-            subject_id,
-        )
-
-        cls._validate_optional_positive_id(
-            "grade_level",
-            grade_level,
-        )
-
-        cls._validate_optional_positive_id(
-            "district_id",
-            district_id,
-        )
-
-        cls._validate_optional_positive_id(
-            "school_id",
-            school_id,
-        )
-
-        rows = (
-            await KnowledgeQualityDynamicsRepo
-            .get_region_checkpoint_rows(
-                db,
-                region_id=region_id,
-                academic_year_start=(
-                    academic_year_start
-                ),
-                subject_id=subject_id,
-                grade_level=grade_level,
-                district_id=district_id,
-                school_id=school_id,
-            )
-        )
-
-        points = cls._build_checkpoint_points(
-            rows
-        )
-
-        return KnowledgeQualityDynamicsDTO(
-            scope="region",
-
-            academic_year_start=(
-                academic_year_start
-            ),
-
-            school_id=school_id,
-            district_id=district_id,
-            region_id=region_id,
-
-            subject_id=subject_id,
-            grade_level=grade_level,
-
-            school_class_id=None,
-            teacher_staff_member_id=None,
-
-            points=points,
-        )
+            Регион не получает:
+                - class;
+                - teacher;
+                - student.
+            """
+        cls._validate_positive_id('region_id', region_id)
+        cls._validate_academic_year(academic_year_start)
+        cls._validate_optional_positive_id('subject_id', subject_id)
+        cls._validate_optional_positive_id('grade_level', grade_level)
+        cls._validate_optional_positive_id('district_id', district_id)
+        cls._validate_optional_positive_id('school_id', school_id)
+        rows = await KnowledgeQualityDynamicsRepo.get_region_checkpoint_rows(db, region_id=region_id, academic_year_start=academic_year_start, subject_id=subject_id, grade_level=grade_level, district_id=district_id, school_id=school_id, governance=governance)
+        points = cls._build_checkpoint_points(rows)
+        return KnowledgeQualityDynamicsDTO(scope='region', academic_year_start=academic_year_start, school_id=school_id, district_id=district_id, region_id=region_id, subject_id=subject_id, grade_level=grade_level, school_class_id=None, teacher_staff_member_id=None, points=points)
 
     # =====================================================
     # REGION -> DISTRICTS
     # =====================================================
 
     @classmethod
-    async def get_region_district_dynamics(
-            cls,
-            db: AsyncSession,
-            *,
-            region_id: int,
-            academic_year_start: int,
-            subject_id: int | None = None,
-            grade_level: int | None = None,
-    ) -> KnowledgeQualityEntityDynamicsDTO:
+    async def get_region_district_dynamics(cls, db: AsyncSession, *, region_id: int, academic_year_start: int, subject_id: int | None=None, grade_level: int | None=None, governance: str='') -> KnowledgeQualityEntityDynamicsDTO:
         """
-        Динамика региона с разбивкой по районам.
+            Динамика региона с разбивкой по районам.
 
-        SQL:
-            1 запрос — district + checkpoint.
+            SQL:
+                1 запрос — district + checkpoint.
 
-        Затем:
-            1 batch-запрос — названия районов.
+            Затем:
+                1 batch-запрос — названия районов.
 
-        N+1 отсутствует.
-        """
-
-        cls._validate_positive_id(
-            "region_id",
-            region_id,
-        )
-
-        cls._validate_academic_year(
-            academic_year_start
-        )
-
-        cls._validate_optional_positive_id(
-            "subject_id",
-            subject_id,
-        )
-
-        cls._validate_optional_positive_id(
-            "grade_level",
-            grade_level,
-        )
-
-        rows = (
-            await KnowledgeQualityDynamicsRepo
-            .get_region_district_checkpoint_rows(
-                db,
-                region_id=region_id,
-                academic_year_start=(
-                    academic_year_start
-                ),
-                subject_id=subject_id,
-                grade_level=grade_level,
-            )
-        )
-
-        district_ids = cls._extract_entity_ids(
-            rows
-        )
-
-        district_names = (
-            await OrgLookupRepo
-            .get_district_names_by_ids(
-                db,
-                district_ids=district_ids,
-            )
-            if district_ids
-            else {}
-        )
-
-        items = cls._build_entity_items(
-            rows=rows,
-            names=district_names,
-        )
-
-        return KnowledgeQualityEntityDynamicsDTO(
-            scope="region_districts",
-
-            parent_id=region_id,
-
-            academic_year_start=(
-                academic_year_start
-            ),
-
-            subject_id=subject_id,
-            grade_level=grade_level,
-
-            items=items,
-        )
+            N+1 отсутствует.
+            """
+        cls._validate_positive_id('region_id', region_id)
+        cls._validate_academic_year(academic_year_start)
+        cls._validate_optional_positive_id('subject_id', subject_id)
+        cls._validate_optional_positive_id('grade_level', grade_level)
+        rows = await KnowledgeQualityDynamicsRepo.get_region_district_checkpoint_rows(db, region_id=region_id, academic_year_start=academic_year_start, subject_id=subject_id, grade_level=grade_level, governance=governance)
+        district_ids = cls._extract_entity_ids(rows)
+        district_names = await OrgLookupRepo.get_district_names_by_ids(db, district_ids=district_ids) if district_ids else {}
+        district_names = reporting_names(district_names, district_ids)
+        items = cls._build_entity_items(rows=rows, names=district_names)
+        return KnowledgeQualityEntityDynamicsDTO(scope='region_districts', parent_id=region_id, academic_year_start=academic_year_start, subject_id=subject_id, grade_level=grade_level, items=items)
 
     # =====================================================
     # REGION -> DISTRICT -> SCHOOLS
     # =====================================================
 
     @classmethod
-    async def get_region_school_dynamics(
-            cls,
-            db: AsyncSession,
-            *,
-            region_id: int,
-            district_id: int,
-            academic_year_start: int,
-            subject_id: int | None = None,
-            grade_level: int | None = None,
-    ) -> KnowledgeQualityEntityDynamicsDTO:
+    async def get_region_school_dynamics(cls, db: AsyncSession, *, region_id: int, district_id: int, academic_year_start: int, subject_id: int | None=None, grade_level: int | None=None, governance: str='') -> KnowledgeQualityEntityDynamicsDTO:
         """
-        Динамика школ конкретного района
-        внутри региональной аналитики.
+            Динамика школ конкретного района
+            внутри региональной аналитики.
 
-        Обязательная boundary:
-            region_id + district_id
+            Обязательная boundary:
+                region_id + district_id
 
-        SQL:
-            1 запрос — schools + checkpoints.
+            SQL:
+                1 запрос — schools + checkpoints.
 
-        Затем:
-            1 batch-запрос — названия школ.
-        """
-
-        cls._validate_positive_id(
-            "region_id",
-            region_id,
-        )
-
-        cls._validate_positive_id(
-            "district_id",
-            district_id,
-        )
-
-        cls._validate_academic_year(
-            academic_year_start
-        )
-
-        cls._validate_optional_positive_id(
-            "subject_id",
-            subject_id,
-        )
-
-        cls._validate_optional_positive_id(
-            "grade_level",
-            grade_level,
-        )
-
-        rows = (
-            await KnowledgeQualityDynamicsRepo
-            .get_region_school_checkpoint_rows(
-                db,
-                region_id=region_id,
-                district_id=district_id,
-                academic_year_start=(
-                    academic_year_start
-                ),
-                subject_id=subject_id,
-                grade_level=grade_level,
-            )
-        )
-
-        school_ids = cls._extract_entity_ids(
-            rows
-        )
-
-        school_names = (
-            await OrgLookupRepo
-            .get_school_names_by_ids(
-                db,
-                school_ids=school_ids,
-            )
-            if school_ids
-            else {}
-        )
-
-        items = cls._build_entity_items(
-            rows=rows,
-            names=school_names,
-        )
-
-        return KnowledgeQualityEntityDynamicsDTO(
-            scope="region_schools",
-
-            parent_id=district_id,
-
-            academic_year_start=(
-                academic_year_start
-            ),
-
-            subject_id=subject_id,
-            grade_level=grade_level,
-
-            items=items,
-        )
+            Затем:
+                1 batch-запрос — названия школ.
+            """
+        cls._validate_positive_id('region_id', region_id)
+        if district_id != -region_id:
+            cls._validate_positive_id('district_id', district_id)
+        cls._validate_academic_year(academic_year_start)
+        cls._validate_optional_positive_id('subject_id', subject_id)
+        cls._validate_optional_positive_id('grade_level', grade_level)
+        rows = await KnowledgeQualityDynamicsRepo.get_region_school_checkpoint_rows(db, region_id=region_id, district_id=district_id, academic_year_start=academic_year_start, subject_id=subject_id, grade_level=grade_level, governance=governance)
+        school_ids = cls._extract_entity_ids(rows)
+        school_names = await OrgLookupRepo.get_school_names_by_ids(db, school_ids=school_ids) if school_ids else {}
+        items = cls._build_entity_items(rows=rows, names=school_names)
+        return KnowledgeQualityEntityDynamicsDTO(scope='region_schools', parent_id=district_id, academic_year_start=academic_year_start, subject_id=subject_id, grade_level=grade_level, items=items)
 
     # =====================================================
     # CHECKPOINT POINTS

@@ -1,6 +1,7 @@
 # app/modules/reports/repositories/report_assignment_repo.py
 
 from __future__ import annotations
+from app.modules.planning.content_i18n import content_text
 
 from collections.abc import Sequence
 from datetime import datetime, timezone
@@ -724,6 +725,7 @@ class ReportAssignmentRepo:
                 SchoolMonthPlanItem.planned_end.label("planned_end"),
                 SchoolMonthPlanItem.status.label("task_status"),
                 SchoolPlanRow11.topic.label("topic"),
+                SchoolPlanRow11.text_i18n.label("text_i18n"),
                 func.count(
                     func.distinct(
                         TaskSelectedReportAssignment.selected_report_id
@@ -775,6 +777,7 @@ class ReportAssignmentRepo:
                 SchoolMonthPlanItem.planned_end,
                 SchoolMonthPlanItem.status,
                 SchoolPlanRow11.topic,
+                SchoolPlanRow11.text_i18n,
             )
             .order_by(
                 SchoolMonthPlanItem.planned_start.asc().nulls_last(),
@@ -791,7 +794,7 @@ class ReportAssignmentRepo:
                 "week_of_month": row["week_of_month"],
                 "planned_start": row["planned_start"],
                 "planned_end": row["planned_end"],
-                "topic": str(row["topic"] or "—"),
+                "topic": str(content_text(row,"topic") or "—"),
                 "task_status": row["task_status"],
                 "assigned_reports_count": int(
                     row["assigned_reports_count"] or 0

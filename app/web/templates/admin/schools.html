@@ -8,8 +8,9 @@
 
 
 {% block content %}
+{% import "admin/_school_governance.html" as governance with context %}
 
-<div class="page">
+<div class="page schools-page">
   <div class="page-head">
     <div class="page-title">
       <h1>{{ _('Список школ') }}</h1>
@@ -102,6 +103,15 @@
     </div>
 
     <div class="field">
+      <label for="governance_level">{{ governance.title() }}</label>
+      <select id="governance_level" name="governance_level" class="select">
+        <option value="">{{ 'Все' if ui_language() == 'ru' else 'Барлығы' }}</option>
+        {% for value in ['district', 'region'] %}
+          <option value="{{ value }}" {% if selected_governance_level == value %}selected{% endif %}>{{ governance.label(value) }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="field schools-search-field">
       <label for="q">{{ _('Поиск школы') }}</label>
       <input
         id="q"
@@ -119,6 +129,7 @@
     </div>
   </div>
 </form>
+    <p class="schools-search-hint muted">{{ search_labels.hint }}</p>
   </div>
 
   <form method="post" action="{{ request.url_for('schools_delete_bulk') }}">
@@ -133,6 +144,8 @@
               <th class="nowrap">ID</th>
               <th>{{ _('Область') }}</th>
               <th>{{ _('Район') }}</th>
+              <th>{{ search_labels.settlement }}</th>
+              <th>{{ governance.title() }}</th>
               <th>{{ _('Название школы') }}</th>
               <th>{{ _('Адрес') }}</th>
               <th class="nowrap">{{ _('Действия') }}</th>
@@ -142,8 +155,8 @@
 
 {% if not should_show_schools %}
   <tr>
-    <td colspan="7" class="empty">
-      {{ _('Выберите область, район и населенный пункт, затем нажмите «Применить»') }}
+    <td colspan="9" class="empty">
+      {{ search_labels.hint }}
     </td>
   </tr>
 
@@ -162,6 +175,9 @@
         <td>{{ school.district.region.name }}</td>
 
         <td>{{ school.district.name }}</td>
+
+        <td>{{ school.settlement or "—" }}</td>
+        <td>{{ governance.label(school.governance_level) }}</td>
 
         <td>
           <strong>{{ school.name }}</strong>
@@ -200,8 +216,8 @@
   {% else %}
 
     <tr>
-      <td colspan="7" class="empty">
-        {{ _('В выбранном населенном пункте школы не найдены') }}
+      <td colspan="9" class="empty">
+        {{ search_labels.empty }}
       </td>
     </tr>
 
@@ -421,18 +437,6 @@ if (districtSelect) {
    восстановление выбранных фильтров
 ========================= */
 
-window.addEventListener("DOMContentLoaded", async function () {
-  const selectedRegionId = "{{ selected_region_id or '' }}";
-  const selectedDistrictId = "{{ selected_district_id or '' }}";
-  const selectedSettlement = {{ (selected_settlement or '')|tojson }};
 
-  if (selectedRegionId) {
-    await loadDistricts(selectedRegionId, selectedDistrictId);
-  }
-
-  if (selectedDistrictId) {
-    await loadSettlements(selectedDistrictId, selectedSettlement);
-  }
-});
 </script>
 {% endblock %}

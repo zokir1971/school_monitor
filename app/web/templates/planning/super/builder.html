@@ -60,9 +60,17 @@
         <input type="file" name="file" accept=".docx" required>
       </div>
       <div>
+        <label>{{ 'Құжаттың тілі' if ui_language() == 'kk' else 'Язык документа' }}</label><br>
+        <select name="content_language" required>
+          <option value="kk">{{ 'Қазақша' if ui_language() == 'kk' else 'Казахский' }}</option>
+          <option value="ru">{{ 'Орысша' if ui_language() == 'kk' else 'Русский' }}</option>
+        </select>
+      </div>
+      <div>
         <button class="btn btn--primary" type="submit" data-sm-action="primary">{{ _('Импортировать (REPLACE)') }}</button>
       </div>
     </div>
+    <p>{{ 'Аударманы қосу үшін жолдағы «Өңдеу» түймесін қолданыңыз.' if ui_language() == 'kk' else 'Для добавления перевода используйте «Редактировать» в строке.' }}</p>
     <p style="margin-top:10px; font-size:13px; opacity:.8;">
       {{ _('Внимание: импорт удалит старые строки таблиц №+3 и №+10 для выбранного направления и загрузит новые.') }}
     </p>
@@ -80,6 +88,10 @@
     <div style="margin-top:6px; font-size:18px; font-weight:600;">
       {% if selected_direction %}
         {{ selected_direction.full_title }}
+        <a class="btn" href="/planning/super/content/direction/{{ selected_direction.id }}">{{ 'Атауын өңдеу' if ui_language() == 'kk' else 'Редактировать название' }}</a>
+        {% if selected_template_direction and selected_template_direction.title_override %}
+        <a class="btn" href="/planning/super/content/template-direction/{{ selected_template_direction.id }}">{{ 'Үлгі атауын өңдеу' if ui_language() == 'kk' else 'Название в шаблоне' }}</a>
+        {% endif %}
       {% endif %}
     </div>
   </div>
@@ -105,8 +117,8 @@
         <td style="white-space: pre-line;">{{ r.control_object }}</td>
         <td style="white-space: pre-line;">{{ r.risk_text or "" }}</td>
         <td style="white-space: pre-line;">{{ r.decision_text or "" }}</td>
-        <td>
-          <a class="btn" data-sm-action="edit" style="margin-bottom:6px;" href="{{ request.url_for('super_template_row_edit', table_kind='rows4', row_id=r.id) }}?template_id={{ selected_template_id }}&amp;direction_id={{ selected_direction_id }}">{{ 'Редактировать' if ui_language() == 'ru' else 'Өңдеу' }}</a>
+        <td><a class="btn" href="/planning/super/content/row4/{{ r.id }}">{{ 'Өңдеу' if ui_language() == 'kk' else 'Редактировать' }}</a>
+
           <form method="post"
                 action="/planning/super/builder/rows4/{{ r.id }}/delete"
                 onsubmit="return confirm({{ _('Удалить строку?')|tojson|forceescape }});">
@@ -178,8 +190,8 @@
         <td>{{ r.review_place or "" }}</td>
         <td>{{ r.management_decision or "" }}</td>
         <td>{{ r.second_control or "" }}</td>
-        <td>
-          <a class="btn" data-sm-action="edit" style="margin-bottom:6px;" href="{{ request.url_for('super_template_row_edit', table_kind='rows11', row_id=r.id) }}?template_id={{ selected_template_id }}&amp;direction_id={{ selected_direction_id }}">{{ 'Редактировать' if ui_language() == 'ru' else 'Өңдеу' }}</a>
+        <td><a class="btn" href="/planning/super/content/row11/{{ r.id }}">{{ 'Өңдеу' if ui_language() == 'kk' else 'Редактировать' }}</a>
+
           <form method="post"
                 action="/planning/super/builder/rows11/{{ r.id }}/delete"
                 onsubmit="return confirm({{ _('Удалить строку?')|tojson|forceescape }});">

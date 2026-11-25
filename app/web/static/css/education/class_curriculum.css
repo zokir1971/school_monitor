@@ -112,3 +112,10 @@
 @media (prefers-reduced-motion: reduce) {
   .curriculum-page button { transition: none; }
 }
+
+/* One save action for a complete class. */
+.curriculum-class-save{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-top:20px;padding-top:16px;border-top:1px solid #dce5ef}
+.curriculum-class-save>span{color:#475569;font-size:13px}
+.curriculum-assignment-statistics ul{font-size:13px;line-height:1.7}
+.curriculum-page [aria-invalid="true"]{outline:2px solid #b91c1c;outline-offset:2px}
+@media(max-width:600px){.curriculum-class-save{align-items:stretch;flex-direction:column}.curriculum-class-save button{width:100%}}

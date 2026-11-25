@@ -1,0 +1,5 @@
+{% macro label(value) -%}
+{% set ru = ui_language() == 'ru' %}
+{{ ('Районное' if ru else 'Аудандық') if value == 'district' else ('Областное' if ru else 'Облыстық') }}
+{%- endmacro %}
+{% macro title() -%}{{ 'Подчинение' if ui_language() == 'ru' else 'Бағыныстылық' }}{%- endmacro %}

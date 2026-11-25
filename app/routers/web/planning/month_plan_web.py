@@ -9,7 +9,9 @@ from typing import Any
 from urllib.parse import urlencode
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from app.modules.org.models import School
 from starlette import status
 from starlette.responses import HTMLResponse, RedirectResponse
 
@@ -857,17 +859,13 @@ async def school_monthly_whatsapp(
 
     platform_url = str(request.base_url).rstrip("/")
 
-    school_name: str | None = None
-
-    user_school = getattr(user, "school", None)
-
-    if user_school is not None:
-        school_name = (
-                getattr(user_school, "name", None)
-                or getattr(user_school, "title", None)
+    try:
+        # Do not access user.school: an unloaded async ORM relationship would
+        # perform implicit I/O outside greenlet_spawn (MissingGreenlet).
+        school_name = await db.scalar(
+            select(School.name).where(School.id == school_id)
         )
 
-    try:
         whatsapp_url = await (
             MonthPlanNotificationService.open_recipient_whatsapp(
                 db,

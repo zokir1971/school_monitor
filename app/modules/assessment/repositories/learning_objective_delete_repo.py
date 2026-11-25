@@ -8,7 +8,7 @@ from sqlalchemy.sql.elements import ColumnElement
 from sqlalchemy.sql.selectable import FromClause
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from sqlalchemy import delete, select, text, func, table as sql_table, column
+from sqlalchemy import delete, select, text, func, table as sql_table, column, literal, union_all
 from app.modules.assessment.models import LearningObjective
 from app.modules.assessment.models_learning_objective_reference import (
     LearningObjectiveProgram, LearningObjectiveQuarter, LearningObjectiveFormulation,
@@ -108,19 +108,27 @@ class LearningObjectiveDeleteRepo:
             cast(Table, LearningObjectiveQuarter.__table__).name,
             cast(Table, LearningObjectiveFormulation.__table__).name,
         }
-        blocked: list[dict[str, Any]] = []
+        checks = []
         for ref in refs:
             if ref['table_name'] in own and ref['column_name'] == 'learning_objective_id':
                 continue
             remote = sql_table(ref['table_name'], column(ref['column_name']), schema=ref['schema_name'])
-            count = int(await db.scalar(select(func.count()).select_from(objective).where(
+            # EXISTS counts distinct referenced objectives, not child rows.
+            stmt = select(literal(len(checks)).label('position'), func.count().label('count')).select_from(objective).where(
                 *LearningObjectiveDeleteRepo.scope(subject_id, grade, instruction_language),
                 select(_column(remote, str(ref['column_name']))).where(
                     _column(remote, str(ref['column_name'])) == _column(objective, 'id'),
                 ).exists(),
-            )) or 0)
-            if count:
-                blocked.append({'table': ref['table_name'], 'count': count})
+            )
+            checks.append((ref, stmt))
+        blocked: list[dict[str, Any]] = []
+        for start in range(0, len(checks), 100):
+            counts = union_all(*(stmt for _, stmt in checks[start:start + 100])).subquery()
+            rows = (await db.execute(select(counts.c.position, counts.c.count)
+                                     .order_by(counts.c.position))).all()
+            for position, count in rows:
+                if count:
+                    blocked.append({'table': checks[position][0]['table_name'], 'count': int(count)})
         return blocked
 
     @staticmethod

@@ -1,5 +1,6 @@
 # app/modules/planning/repo_school.py
 from __future__ import annotations
+from copy import deepcopy
 
 from typing import cast, Type
 
@@ -123,7 +124,8 @@ class SchoolPlanningRepo:
             db.add_all(
                 [
                     SchoolPlanRow4(
-                        school_plan_id=school_plan_id,
+                                    text_i18n=deepcopy(tr.text_i18n or {}),
+                                    school_plan_id=school_plan_id,
                         direction_id=direction_id,
                         row_order=tr.row_order,
                         no=tr.no,
@@ -148,7 +150,8 @@ class SchoolPlanningRepo:
             db.add_all(
                 [
                     SchoolPlanRow11(
-                        school_plan_id=school_plan_id,
+                                    text_i18n=deepcopy(tr.text_i18n or {}),
+                                    school_plan_id=school_plan_id,
                         direction_id=direction_id,
                         row_order=tr.row_order,
                         topic=tr.topic,
@@ -412,7 +415,7 @@ class SchoolPlanningRepo:
     # =========================================================
     @staticmethod
     async def list_rows4_by_direction(
-            db: AsyncSession, *, plan_id: int, direction_id: int
+            db: AsyncSession, *, plan_id: int, direction_id: int, include_excluded: bool = False
     ) -> list[SchoolPlanRow4]:
         res = await db.execute(
             select(SchoolPlanRow4).options(raiseload("*"))
@@ -421,13 +424,14 @@ class SchoolPlanningRepo:
                 SchoolPlanRow4.school_plan_id == plan_id,
                 SchoolPlanRow4.direction_id == direction_id,
             )
+            .where(*([] if include_excluded else [SchoolPlanRow4.is_excluded.is_(False)]))
             .order_by(SchoolPlanRow4.row_order.asc(), SchoolPlanRow4.id.asc())
         )
         return cast(list[SchoolPlanRow4], res.scalars().all())
 
     @staticmethod
     async def list_rows11_by_direction(
-            db: AsyncSession, *, plan_id: int, direction_id: int
+            db: AsyncSession, *, plan_id: int, direction_id: int, include_excluded: bool = False
     ) -> list[SchoolPlanRow11]:
         res = await db.execute(
             select(SchoolPlanRow11)
@@ -442,6 +446,7 @@ class SchoolPlanningRepo:
                 SchoolPlanRow11.school_plan_id == plan_id,
                 SchoolPlanRow11.direction_id == direction_id,
             )
+            .where(*([] if include_excluded else [SchoolPlanRow11.is_excluded.is_(False)]))
             .order_by(SchoolPlanRow11.row_order.asc(), SchoolPlanRow11.id.asc())
         )
         return cast(list[SchoolPlanRow11], res.scalars().all())
